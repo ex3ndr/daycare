@@ -1,4 +1,4 @@
-import { xmlEscape } from "../../util/xmlEscape.js";
+import { xmlEscape } from "../../utils/xmlEscape.js";
 import { skillSort } from "./skillSort.js";
 import type { AgentSkill } from "./skillTypes.js";
 

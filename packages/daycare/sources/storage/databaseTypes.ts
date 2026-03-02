@@ -3,7 +3,6 @@ import type {
     AgentLifecycleState,
     AgentPath,
     AgentTokenEntry,
-    AgentTokenStats,
     ExposeEndpointAuth,
     ExposeMode,
     ExposeTarget,
@@ -24,16 +23,15 @@ export type DatabaseAgentRow = {
     model_role: ModelRoleKey | null;
     connector_name: string | null;
     parent_agent_id: string | null;
-    foreground: number;
+    foreground: boolean;
     name: string | null;
     description: string | null;
     system_prompt: string | null;
     workspace_dir: string | null;
     next_sub_index: number;
     active_session_id: string | null;
-    permissions: string;
-    tokens: string | null;
-    stats: string;
+    permissions: unknown;
+    tokens: unknown | null;
     lifecycle: AgentLifecycleState;
     created_at: number;
     updated_at: number;
@@ -55,7 +53,7 @@ export type DatabaseSessionHistoryRow = {
     session_id: string;
     type: string;
     at: number;
-    data: string;
+    data: unknown;
 };
 
 export type DatabaseInboxRow = {
@@ -63,7 +61,7 @@ export type DatabaseInboxRow = {
     agent_id: string;
     posted_at: number;
     type: string;
-    data: string;
+    data: unknown;
 };
 
 export type AgentDbRecord = {
@@ -86,7 +84,6 @@ export type AgentDbRecord = {
     activeSessionId: string | null;
     permissions: SessionPermissions;
     tokens: AgentTokenEntry | null;
-    stats: AgentTokenStats;
     lifecycle: AgentLifecycleState;
     createdAt: number;
     updatedAt: number;
@@ -113,14 +110,12 @@ export type DatabaseCronTaskRow = {
     valid_to: number | null;
     task_id: string;
     user_id: string;
-    name: string;
-    description: string | null;
     schedule: string;
     timezone: string;
     agent_id: string | null;
-    enabled: number;
-    delete_after_run: number;
-    parameters: string | null;
+    enabled: boolean;
+    delete_after_run: boolean;
+    parameters: unknown | null;
     last_run_at: number | null;
     created_at: number;
     updated_at: number;
@@ -133,8 +128,6 @@ export type CronTaskDbRecord = {
     validTo?: number | null;
     taskId: string;
     userId: string;
-    name: string;
-    description: string | null;
     schedule: string;
     timezone: string;
     agentId: string | null;
@@ -181,7 +174,7 @@ export type DatabaseTaskRow = {
     title: string;
     description: string | null;
     code: string;
-    parameters: string | null;
+    parameters: unknown | null;
     created_at: number;
     updated_at: number;
 };
@@ -252,8 +245,8 @@ export type DatabaseSignalEventRow = {
     id: string;
     user_id: string;
     type: string;
-    source: string;
-    data: string | null;
+    source: unknown;
+    data: unknown | null;
     created_at: number;
 };
 
@@ -274,7 +267,7 @@ export type DatabaseSignalSubscriptionRow = {
     user_id: string;
     agent_id: string;
     pattern: string;
-    silent: number;
+    silent: boolean;
     created_at: number;
     updated_at: number;
 };
@@ -297,8 +290,8 @@ export type DatabaseDelayedSignalRow = {
     user_id: string;
     type: string;
     deliver_at: number;
-    source: string;
-    data: string | null;
+    source: unknown;
+    data: unknown | null;
     repeat_key: string | null;
     created_at: number;
     updated_at: number;
@@ -364,7 +357,7 @@ export type DatabaseChannelMessageRow = {
     user_id: string;
     sender_username: string;
     text: string;
-    mentions: string;
+    mentions: unknown;
     created_at: number;
 };
 
@@ -384,11 +377,11 @@ export type DatabaseExposeEndpointRow = {
     valid_from: number;
     valid_to: number | null;
     user_id: string;
-    target: string;
+    target: unknown;
     provider: string;
     domain: string;
     mode: ExposeMode;
-    auth: string | null;
+    auth: unknown | null;
     created_at: number;
     updated_at: number;
 };
@@ -418,13 +411,13 @@ export type DatabaseProcessRow = {
     command: string;
     cwd: string;
     home: string | null;
-    env: string;
-    package_managers: string;
-    allowed_domains: string;
-    allow_local_binding: number;
-    permissions: string;
-    owner: string | null;
-    keep_alive: number;
+    env: unknown;
+    package_managers: unknown;
+    allowed_domains: unknown;
+    allow_local_binding: boolean;
+    permissions: unknown;
+    owner: unknown | null;
+    keep_alive: boolean;
     desired_state: "running" | "stopped";
     status: "running" | "stopped" | "exited";
     pid: number | null;
@@ -502,8 +495,8 @@ export type DatabaseUserRow = {
     version: number;
     valid_from: number;
     valid_to: number | null;
-    is_owner: number;
-    is_swarm: number;
+    is_owner: boolean;
+    is_swarm: boolean;
     parent_user_id: string | null;
     first_name: string | null;
     last_name: string | null;
@@ -512,7 +505,7 @@ export type DatabaseUserRow = {
     country: string | null;
     timezone: string | null;
     system_prompt: string | null;
-    memory: number;
+    memory: boolean;
     nametag: string;
     created_at: number;
     updated_at: number;
@@ -551,8 +544,8 @@ export type DatabaseConnectionRow = {
     version: number;
     valid_from: number;
     valid_to: number | null;
-    requested_a: number;
-    requested_b: number;
+    requested_a: boolean;
+    requested_b: boolean;
     requested_a_at: number | null;
     requested_b_at: number | null;
 };
@@ -676,7 +669,7 @@ export type DatabaseSystemPromptRow = {
     kind: SystemPromptKind;
     condition: string | null;
     prompt: string;
-    enabled: number;
+    enabled: boolean;
     created_at: number;
     updated_at: number;
 };

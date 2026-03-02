@@ -3,7 +3,7 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
 import type { DaycareDb } from "../schema.js";
 import { userConnectorKeysTable, usersTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import type { CreateUserInput, UpdateUserInput, UserWithConnectorKeysDbRecord } from "./databaseTypes.js";
 import { versionAdvance } from "./versionAdvance.js";
 
@@ -141,8 +141,8 @@ export class UsersRepository {
                 version: row.version ?? 1,
                 validFrom: row.validFrom ?? row.createdAt,
                 validTo: row.validTo ?? null,
-                isOwner: row.isOwner === 1,
-                isSwarm: row.isSwarm === 1,
+                isOwner: row.isOwner,
+                isSwarm: row.isSwarm,
                 parentUserId: row.parentUserId ?? null,
                 firstName: row.firstName ?? null,
                 lastName: row.lastName ?? null,
@@ -151,7 +151,7 @@ export class UsersRepository {
                 country: row.country ?? null,
                 timezone: row.timezone ?? null,
                 systemPrompt: row.systemPrompt ?? null,
-                memory: row.memory === 1,
+                memory: row.memory,
                 nametag: row.nametag,
                 createdAt: row.createdAt,
                 updatedAt: row.updatedAt,
@@ -187,7 +187,7 @@ export class UsersRepository {
         const rows = await this.db
             .select({ id: usersTable.id })
             .from(usersTable)
-            .where(and(eq(usersTable.isOwner, 1), isNull(usersTable.validTo)))
+            .where(and(eq(usersTable.isOwner, true), isNull(usersTable.validTo)))
             .limit(1);
         const userId = rows[0]?.id?.trim() ?? "";
         if (!userId) {
@@ -227,8 +227,8 @@ export class UsersRepository {
                         version: 1,
                         validFrom: createdAt,
                         validTo: null,
-                        isOwner: isOwner ? 1 : 0,
-                        isSwarm: isSwarm ? 1 : 0,
+                        isOwner,
+                        isSwarm,
                         parentUserId,
                         firstName,
                         lastName,
@@ -237,7 +237,7 @@ export class UsersRepository {
                         country,
                         timezone,
                         systemPrompt,
-                        memory: memory ? 1 : 0,
+                        memory,
                         nametag,
                         createdAt,
                         updatedAt
@@ -357,8 +357,8 @@ export class UsersRepository {
                             version: row.version ?? 1,
                             validFrom: row.validFrom ?? row.createdAt,
                             validTo: row.validTo ?? null,
-                            isOwner: row.isOwner ? 1 : 0,
-                            isSwarm: row.isSwarm ? 1 : 0,
+                            isOwner: row.isOwner,
+                            isSwarm: row.isSwarm,
                             parentUserId: row.parentUserId,
                             firstName: row.firstName,
                             lastName: row.lastName,
@@ -367,7 +367,7 @@ export class UsersRepository {
                             country: row.country,
                             timezone: row.timezone,
                             systemPrompt: row.systemPrompt,
-                            memory: row.memory ? 1 : 0,
+                            memory: row.memory,
                             nametag: row.nametag,
                             createdAt: row.createdAt,
                             updatedAt: row.updatedAt
@@ -485,8 +485,8 @@ export class UsersRepository {
             version: userRow.version ?? 1,
             validFrom: userRow.validFrom ?? userRow.createdAt,
             validTo: userRow.validTo ?? null,
-            isOwner: userRow.isOwner === 1,
-            isSwarm: userRow.isSwarm === 1,
+            isOwner: userRow.isOwner,
+            isSwarm: userRow.isSwarm,
             parentUserId: userRow.parentUserId ?? null,
             firstName: userRow.firstName ?? null,
             lastName: userRow.lastName ?? null,
@@ -495,7 +495,7 @@ export class UsersRepository {
             country: userRow.country ?? null,
             timezone: userRow.timezone ?? null,
             systemPrompt: userRow.systemPrompt ?? null,
-            memory: userRow.memory === 1,
+            memory: userRow.memory,
             nametag: userRow.nametag,
             createdAt: userRow.createdAt,
             updatedAt: userRow.updatedAt,

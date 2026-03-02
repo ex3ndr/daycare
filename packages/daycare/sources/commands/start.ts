@@ -7,7 +7,7 @@ import { EngineEventBus } from "../engine/ipc/events.js";
 import { startEngineServer } from "../engine/ipc/server.js";
 import { getLogger } from "../log.js";
 import { DEFAULT_SETTINGS_PATH } from "../settings.js";
-import { awaitShutdown, onShutdown } from "../util/shutdown.js";
+import { awaitShutdown, onShutdown } from "../utils/shutdown.js";
 import { promptConfirm } from "./prompts.js";
 
 const logger = getLogger("command.start");

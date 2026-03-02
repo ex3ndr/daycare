@@ -420,9 +420,11 @@ async function exposeEndpointRowRead(
 ): Promise<{ domain: string; auth: { passwordHash: string } | null }> {
     const row = (await storage.connection
         .prepare("SELECT domain, auth FROM expose_endpoints WHERE id = ? AND valid_to IS NULL LIMIT 1")
-        .get(endpointId)) as { domain?: string; auth?: string | null } | undefined;
+        .get(endpointId)) as { domain?: string; auth?: unknown | null } | undefined;
+    const authValue = row?.auth;
+    const auth = authValue ? (typeof authValue === "string" ? JSON.parse(authValue) : authValue) : null;
     return {
         domain: row?.domain ?? "",
-        auth: row?.auth ? (JSON.parse(row.auth) as { passwordHash: string }) : null
+        auth: auth as { passwordHash: string } | null
     };
 }

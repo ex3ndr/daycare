@@ -54,7 +54,6 @@ describe("memorySessionObserve", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -110,7 +109,6 @@ describe("memorySessionObserve", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1

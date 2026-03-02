@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { DaycareDb } from "../schema.js";
 import { agentsTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import type { AgentDbRecord } from "./databaseTypes.js";
 import { versionAdvance } from "./versionAdvance.js";
 
@@ -177,16 +177,15 @@ export class AgentsRepository {
                     modelRole: next.modelRole,
                     connectorName: next.connectorName,
                     parentAgentId: next.parentAgentId,
-                    foreground: next.foreground ? 1 : 0,
+                    foreground: next.foreground,
                     name: next.name,
                     description: next.description,
                     systemPrompt: next.systemPrompt,
                     workspaceDir: next.workspaceDir,
                     nextSubIndex: next.nextSubIndex ?? 0,
                     activeSessionId: next.activeSessionId,
-                    permissions: JSON.stringify(next.permissions),
-                    tokens: next.tokens ? JSON.stringify(next.tokens) : null,
-                    stats: JSON.stringify(next.stats),
+                    permissions: next.permissions,
+                    tokens: next.tokens,
                     lifecycle: next.lifecycle,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
@@ -210,7 +209,6 @@ export class AgentsRepository {
                             activeSessionId: normalized.activeSessionId,
                             permissions: normalized.permissions,
                             tokens: normalized.tokens,
-                            stats: normalized.stats,
                             lifecycle: normalized.lifecycle,
                             createdAt: normalized.createdAt,
                             updatedAt: normalized.updatedAt
@@ -242,16 +240,15 @@ export class AgentsRepository {
                                 modelRole: row.modelRole,
                                 connectorName: row.connectorName,
                                 parentAgentId: row.parentAgentId,
-                                foreground: row.foreground ? 1 : 0,
+                                foreground: row.foreground,
                                 name: row.name,
                                 description: row.description,
                                 systemPrompt: row.systemPrompt,
                                 workspaceDir: row.workspaceDir,
                                 nextSubIndex: row.nextSubIndex ?? 0,
                                 activeSessionId: row.activeSessionId,
-                                permissions: JSON.stringify(row.permissions),
-                                tokens: row.tokens ? JSON.stringify(row.tokens) : null,
-                                stats: JSON.stringify(row.stats),
+                                permissions: row.permissions,
+                                tokens: row.tokens,
                                 lifecycle: row.lifecycle,
                                 createdAt: row.createdAt,
                                 updatedAt: row.updatedAt
@@ -290,7 +287,6 @@ export class AgentsRepository {
                 workspaceDir: data.workspaceDir === undefined ? current.workspaceDir : data.workspaceDir,
                 nextSubIndex: data.nextSubIndex ?? current.nextSubIndex ?? 0,
                 permissions: data.permissions ?? current.permissions,
-                stats: data.stats ?? current.stats,
                 tokens: data.tokens === undefined ? current.tokens : data.tokens
             };
 
@@ -301,8 +297,7 @@ export class AgentsRepository {
                         lifecycle: next.lifecycle,
                         nextSubIndex: next.nextSubIndex ?? 0,
                         activeSessionId: next.activeSessionId,
-                        tokens: next.tokens ? JSON.stringify(next.tokens) : null,
-                        stats: JSON.stringify(next.stats),
+                        tokens: next.tokens,
                         updatedAt: next.updatedAt
                     })
                     .where(
@@ -336,7 +331,6 @@ export class AgentsRepository {
                         activeSessionId: next.activeSessionId,
                         permissions: next.permissions,
                         tokens: next.tokens,
-                        stats: next.stats,
                         lifecycle: next.lifecycle,
                         createdAt: next.createdAt,
                         updatedAt: next.updatedAt
@@ -368,16 +362,15 @@ export class AgentsRepository {
                             modelRole: row.modelRole,
                             connectorName: row.connectorName,
                             parentAgentId: row.parentAgentId,
-                            foreground: row.foreground ? 1 : 0,
+                            foreground: row.foreground,
                             name: row.name,
                             description: row.description,
                             systemPrompt: row.systemPrompt,
                             workspaceDir: row.workspaceDir,
                             nextSubIndex: row.nextSubIndex ?? 0,
                             activeSessionId: row.activeSessionId,
-                            permissions: JSON.stringify(row.permissions),
-                            tokens: row.tokens ? JSON.stringify(row.tokens) : null,
-                            stats: JSON.stringify(row.stats),
+                            permissions: row.permissions,
+                            tokens: row.tokens,
                             lifecycle: row.lifecycle,
                             createdAt: row.createdAt,
                             updatedAt: row.updatedAt
@@ -550,16 +543,15 @@ function agentParse(row: typeof agentsTable.$inferSelect): AgentDbRecord {
         modelRole: row.modelRole as AgentDbRecord["modelRole"],
         connectorName: row.connectorName,
         parentAgentId: row.parentAgentId,
-        foreground: row.foreground > 0,
+        foreground: row.foreground,
         name: row.name,
         description: row.description,
         systemPrompt: row.systemPrompt,
         workspaceDir: row.workspaceDir,
         nextSubIndex: row.nextSubIndex ?? 0,
         activeSessionId: row.activeSessionId,
-        permissions: JSON.parse(row.permissions) as AgentDbRecord["permissions"],
-        tokens: row.tokens ? (JSON.parse(row.tokens) as NonNullable<AgentDbRecord["tokens"]>) : null,
-        stats: JSON.parse(row.stats) as AgentDbRecord["stats"],
+        permissions: jsonValueParse(row.permissions) as AgentDbRecord["permissions"],
+        tokens: row.tokens ? (jsonValueParse(row.tokens) as NonNullable<AgentDbRecord["tokens"]>) : null,
         lifecycle: row.lifecycle as AgentDbRecord["lifecycle"],
         createdAt: row.createdAt,
         updatedAt: row.updatedAt
@@ -569,9 +561,8 @@ function agentParse(row: typeof agentsTable.$inferSelect): AgentDbRecord {
 function agentClone(record: AgentDbRecord): AgentDbRecord {
     return {
         ...record,
-        permissions: JSON.parse(JSON.stringify(record.permissions)) as AgentDbRecord["permissions"],
-        stats: JSON.parse(JSON.stringify(record.stats)) as AgentDbRecord["stats"],
-        tokens: record.tokens ? (JSON.parse(JSON.stringify(record.tokens)) as AgentDbRecord["tokens"]) : null
+        permissions: structuredClone(record.permissions),
+        tokens: record.tokens ? structuredClone(record.tokens) : null
     };
 }
 
@@ -588,8 +579,7 @@ function agentRuntimeOnlyChangeIs(current: AgentDbRecord, next: AgentDbRecord): 
     const nextSubIndexChanged = (current.nextSubIndex ?? 0) !== (next.nextSubIndex ?? 0);
     const activeSessionIdChanged = (current.activeSessionId ?? null) !== (next.activeSessionId ?? null);
     const tokensChanged = !agentJsonEqual(current.tokens, next.tokens);
-    const statsChanged = !agentJsonEqual(current.stats, next.stats);
-    if (!lifecycleChanged && !nextSubIndexChanged && !activeSessionIdChanged && !tokensChanged && !statsChanged) {
+    if (!lifecycleChanged && !nextSubIndexChanged && !activeSessionIdChanged && !tokensChanged) {
         return false;
     }
     return (
@@ -615,4 +605,11 @@ function agentRuntimeOnlyChangeIs(current: AgentDbRecord, next: AgentDbRecord): 
 
 function agentJsonEqual(left: unknown, right: unknown): boolean {
     return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function jsonValueParse(value: unknown): unknown {
+    if (typeof value === "string") {
+        return JSON.parse(value);
+    }
+    return value;
 }

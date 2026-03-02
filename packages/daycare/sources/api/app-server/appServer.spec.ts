@@ -9,7 +9,7 @@ import { configResolve } from "../../config/configResolve.js";
 import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import { ConfigModule } from "../../engine/config/configModule.js";
 import { ModuleRegistry } from "../../engine/modules/moduleRegistry.js";
-import { JWT_SERVICE_WEBHOOK, jwtSign, jwtVerify } from "../../util/jwt.js";
+import { JWT_SERVICE_WEBHOOK, jwtSign, jwtVerify } from "../../utils/jwt.js";
 import type { RouteTaskCallbacks } from "../routes/routeTypes.js";
 import { APP_AUTH_SEED_KEY } from "./appJwtSecretResolve.js";
 import { AppServer } from "./appServer.js";

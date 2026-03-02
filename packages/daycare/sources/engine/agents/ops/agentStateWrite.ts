@@ -27,8 +27,6 @@ export async function agentStateWrite(
     await storage.agents.update(ctx.agentId, {
         activeSessionId: state.activeSessionId ?? existing.activeSessionId ?? null,
         permissions: state.permissions,
-        tokens: state.tokens,
-        stats: state.stats,
         lifecycle: state.state,
         createdAt: state.createdAt,
         updatedAt: state.updatedAt

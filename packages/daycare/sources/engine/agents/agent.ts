@@ -122,8 +122,6 @@ export class Agent {
             activeSessionId: null,
             inferenceSessionId: createId(),
             permissions: basePermissions,
-            tokens: null,
-            stats: {},
             createdAt: now,
             updatedAt: now,
             state: "active"
@@ -498,7 +496,11 @@ export class Agent {
             logger.warn({ agentId: this.id, error }, "error: Failed to write system prompt snapshot");
         }
         const contextTools: InferenceContext["tools"] = [];
-        const usagePromptTokens = agentTokenPromptUsedFromUsage(this.state.tokens);
+        const lastAssistantRecord = [...history].reverse().find((record) => record.type === "assistant_message");
+        const usagePromptTokens =
+            lastAssistantRecord && lastAssistantRecord.type === "assistant_message"
+                ? agentTokenPromptUsedFromUsage(lastAssistantRecord.tokens)
+                : null;
         const compactionStatus = contextCompactionStatus(
             history,
             this.agentSystem.config.current.settings.agents.emergencyContextLimit,
@@ -636,22 +638,6 @@ export class Agent {
 
         if (result.tokenStatsUpdates.length > 0) {
             for (const update of result.tokenStatsUpdates) {
-                const providerStats = this.state.stats[update.provider] ?? {};
-                const modelStats = providerStats[update.model] ?? {
-                    input: 0,
-                    output: 0,
-                    cacheRead: 0,
-                    cacheWrite: 0,
-                    total: 0
-                };
-                modelStats.input += update.size.input;
-                modelStats.output += update.size.output;
-                modelStats.cacheRead += update.size.cacheRead;
-                modelStats.cacheWrite += update.size.cacheWrite;
-                modelStats.total += update.size.total;
-                providerStats[update.model] = modelStats;
-                this.state.stats[update.provider] = providerStats;
-
                 await this.agentSystem.storage.tokenStats.increment(this.ctx, {
                     at: update.at,
                     model: `${update.provider}/${update.model}`,
@@ -662,13 +648,6 @@ export class Agent {
                     cost: update.cost
                 });
             }
-        }
-
-        const lastAssistantRecord = [...result.historyRecords]
-            .reverse()
-            .find((record) => record.type === "assistant_message");
-        if (lastAssistantRecord && lastAssistantRecord.type === "assistant_message") {
-            this.state.tokens = lastAssistantRecord.tokens;
         }
 
         this.state.context = { messages: contextForRun.messages };
@@ -1011,7 +990,6 @@ export class Agent {
             createdAt: now,
             resetMessage: resetMessage.length > 0 ? resetMessage : null
         });
-        this.state.tokens = null;
         this.state.updatedAt = now;
         this.documentLastReadVersions.clear();
         await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
@@ -1491,7 +1469,6 @@ export class Agent {
             createdAt: compactionAt,
             resetMessage
         });
-        this.state.tokens = null;
         this.documentLastReadVersions.clear();
         await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
         await agentHistoryAppend(this.agentSystem.storage, this.ctx, {

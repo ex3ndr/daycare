@@ -156,7 +156,6 @@ describe("Storage", () => {
                         activeSessionId: null,
                         permissions,
                         tokens: null,
-                        stats: {},
                         lifecycle: "active",
                         createdAt,
                         updatedAt: createdAt
@@ -204,7 +203,6 @@ describe("Storage", () => {
                     activeSessionId: null,
                     permissions,
                     tokens: null,
-                    stats: {},
                     lifecycle: "active",
                     createdAt: 1,
                     updatedAt: 1
@@ -250,7 +248,6 @@ describe("Storage", () => {
                     activeSessionId: null,
                     permissions,
                     tokens: null,
-                    stats: {},
                     lifecycle: "active",
                     createdAt: 1,
                     updatedAt: 1

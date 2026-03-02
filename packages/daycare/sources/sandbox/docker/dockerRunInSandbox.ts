@@ -4,9 +4,9 @@ import path from "node:path";
 import type { SandboxRuntimeConfig } from "@anthropic-ai/sandbox-runtime";
 
 import { getLogger } from "../../log.js";
-import { pathMountMapHostToMapped } from "../../util/pathMountMapHostToMapped.js";
-import type { PathMountPoint } from "../../util/pathMountTypes.js";
-import { shellQuote } from "../../util/shellQuote.js";
+import { pathMountMapHostToMapped } from "../../utils/pathMountMapHostToMapped.js";
+import type { PathMountPoint } from "../../utils/pathMountTypes.js";
+import { shellQuote } from "../../utils/shellQuote.js";
 import { sandboxHomeRedefine } from "../sandboxHomeRedefine.js";
 import { dockerContainersShared } from "./dockerContainersShared.js";
 import type { DockerContainerConfig, DockerContainerExecResult } from "./dockerTypes.js";

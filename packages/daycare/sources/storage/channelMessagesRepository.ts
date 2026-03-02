@@ -16,7 +16,6 @@ export class ChannelMessagesRepository {
     }
 
     async create(record: ChannelMessageDbRecord): Promise<void> {
-        const mentions = JSON.stringify(record.mentions);
         await this.db
             .insert(channelMessagesTable)
             .values({
@@ -25,7 +24,7 @@ export class ChannelMessagesRepository {
                 userId: record.userId,
                 senderUsername: record.senderUsername,
                 text: record.text,
-                mentions,
+                mentions: record.mentions,
                 createdAt: record.createdAt
             })
             .onConflictDoUpdate({
@@ -35,7 +34,7 @@ export class ChannelMessagesRepository {
                     userId: record.userId,
                     senderUsername: record.senderUsername,
                     text: record.text,
-                    mentions,
+                    mentions: record.mentions,
                     createdAt: record.createdAt
                 }
             });
@@ -68,9 +67,9 @@ function messageParse(row: typeof channelMessagesTable.$inferSelect): ChannelMes
     };
 }
 
-function mentionsParse(raw: string): string[] {
+function mentionsParse(raw: unknown): string[] {
     try {
-        const parsed = JSON.parse(raw) as unknown;
+        const parsed = typeof raw === "string" ? (JSON.parse(raw) as unknown) : raw;
         if (!Array.isArray(parsed)) {
             return [];
         }

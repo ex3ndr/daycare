@@ -49,8 +49,6 @@ describe("agentStateRead", () => {
                 },
                 activeSessionId: sessionId,
                 permissions: { ...permissions },
-                tokens: null,
-                stats: {},
                 createdAt: 1,
                 updatedAt: 2,
                 state: "active"
@@ -107,8 +105,6 @@ describe("agentStateRead", () => {
             const state: AgentState = {
                 context: { messages: [] },
                 permissions: { ...permissions },
-                tokens: null,
-                stats: {},
                 createdAt: 1,
                 updatedAt: 2,
                 state: "dead"

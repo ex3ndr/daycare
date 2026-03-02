@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { createId } from "@paralleldrive/cuid2";
 import type { StoredFile } from "../../files/types.js";
-import { sanitizeFilename } from "../../util/filename.js";
+import { sanitizeFilename } from "../../utils/filename.js";
 
 /**
  * Stores files into a single filesystem folder.

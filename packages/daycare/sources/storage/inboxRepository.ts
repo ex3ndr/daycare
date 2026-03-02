@@ -15,10 +15,14 @@ export class InboxRepository {
     }
 
     async insert(id: string, agentId: string, postedAt: number, type: string, data: string): Promise<void> {
-        await this.db.insert(inboxTable).values({ id, agentId, postedAt, type, data }).onConflictDoUpdate({
-            target: inboxTable.id,
-            set: { agentId, postedAt, type, data }
-        });
+        const value = jsonValueParse(data);
+        await this.db
+            .insert(inboxTable)
+            .values({ id, agentId, postedAt, type, data: value })
+            .onConflictDoUpdate({
+                target: inboxTable.id,
+                set: { agentId, postedAt, type, data: value }
+            });
     }
 
     async findByAgentId(agentId: string): Promise<InboxDbRecord[]> {
@@ -32,7 +36,7 @@ export class InboxRepository {
             agentId: row.agentId,
             postedAt: row.postedAt,
             type: row.type,
-            data: row.data
+            data: jsonValueStringify(row.data)
         }));
     }
 
@@ -42,5 +46,24 @@ export class InboxRepository {
 
     async deleteByAgentId(agentId: string): Promise<void> {
         await this.db.delete(inboxTable).where(eq(inboxTable.agentId, agentId));
+    }
+}
+
+function jsonValueParse(raw: string): unknown {
+    try {
+        return JSON.parse(raw);
+    } catch {
+        return raw;
+    }
+}
+
+function jsonValueStringify(raw: unknown): string {
+    if (typeof raw === "string") {
+        return raw;
+    }
+    try {
+        return JSON.stringify(raw);
+    } catch {
+        return "";
     }
 }

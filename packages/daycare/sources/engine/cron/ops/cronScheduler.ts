@@ -142,8 +142,6 @@ export class CronScheduler {
             id: triggerId,
             taskId: definition.taskId,
             userId,
-            name: linkedTask.title,
-            description: linkedTask.description,
             schedule: definition.schedule,
             timezone: await this.timezoneResolve(userId, definition.timezone),
             agentId: definition.agentId ?? null,
@@ -187,16 +185,24 @@ export class CronScheduler {
         return this.repository.findById(taskId);
     }
 
-    getTaskContext(taskId: string): CronTaskInfo | null {
+    async getTaskContext(taskId: string): Promise<CronTaskInfo | null> {
         const scheduled = this.tasks.get(taskId);
         if (!scheduled) {
             return null;
         }
 
+        let taskName = scheduled.task.taskId;
+        try {
+            const runtimeTask = await this.taskRuntimeResolve(scheduled.task);
+            taskName = runtimeTask.taskTitle;
+        } catch {
+            // Keep best-effort context available even when linked task was removed.
+        }
+
         return {
             triggerId: scheduled.task.id,
             taskId: scheduled.task.taskId,
-            taskName: scheduled.task.name,
+            taskName,
             timezone: scheduled.task.timezone,
             agentId: scheduled.task.agentId,
             userId: scheduled.task.userId
@@ -302,7 +308,7 @@ export class CronScheduler {
 
             const messageContext: MessageContext = { timezone: task.timezone };
 
-            logger.info({ taskId: task.id, name: task.name }, "execute: Executing cron task");
+            logger.info({ taskId: task.id, linkedTaskId: runtimeTask.taskId }, "execute: Executing cron task");
             await this.onTask(taskContext, messageContext);
             logger.debug(`event: Task execution completed taskId=${task.id}`);
         } catch (error) {

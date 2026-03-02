@@ -1,6 +1,6 @@
 import type { AgentPath } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
-import { AsyncLock } from "../../../util/lock.js";
+import { AsyncLock } from "../../../utils/lock.js";
 import { agentPathSearch, agentPathSub } from "./agentPathBuild.js";
 import { agentPath } from "./agentPathTypes.js";
 

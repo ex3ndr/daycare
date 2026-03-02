@@ -55,8 +55,6 @@ describe("database plugin", () => {
         const state: AgentState = {
             context: { messages: [] },
             permissions,
-            tokens: null,
-            stats: {},
             createdAt: now.getTime(),
             updatedAt: now.getTime(),
             state: "active"

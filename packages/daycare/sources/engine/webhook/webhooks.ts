@@ -85,7 +85,6 @@ export class Webhooks {
                 webhookId: created.id,
                 taskId: created.taskId,
                 userId,
-                name: task.title,
                 routeTemplate
             },
             scopeIds: [userId]
@@ -117,18 +116,17 @@ export class Webhooks {
         const deleted = await this.storage.webhookTasks.delete(triggerId);
         if (deleted) {
             const task = await this.storage.tasks.findById(ctx, existing.taskId);
-            const name = task?.title ?? existing.taskId;
+            const taskLabel = task?.title ?? existing.taskId;
             await topographyObservationEmit(this.storage.observationLog, {
                 userId: ctx.userId,
                 type: TOPO_EVENT_TYPES.WEBHOOK_DELETED,
                 source: TOPO_SOURCE_WEBHOOKS,
-                message: `Webhook deleted: ${name}`,
+                message: `Webhook deleted: ${taskLabel}`,
                 details: `Webhook trigger ${existing.id} deleted for task ${existing.taskId}`,
                 data: {
                     webhookId: existing.id,
                     taskId: existing.taskId,
-                    userId: existing.userId,
-                    name
+                    userId: existing.userId
                 },
                 scopeIds: [ctx.userId]
             });

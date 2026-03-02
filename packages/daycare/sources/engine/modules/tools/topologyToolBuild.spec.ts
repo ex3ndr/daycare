@@ -85,7 +85,6 @@ function createToolContext(options: {
         id: string;
         taskId: string;
         userId: string;
-        name: string;
         schedule: string;
         timezone: string;
         enabled: boolean;
@@ -230,7 +229,6 @@ describe("topologyTool", () => {
                     id: "cron-report",
                     taskId: "task-report",
                     userId: "owner",
-                    name: "Run report",
                     schedule: "0 * * * *",
                     timezone: "UTC",
                     enabled: true,
@@ -275,7 +273,6 @@ describe("topologyTool", () => {
                     id: "sub-cron",
                     taskId: "sub-task",
                     userId: "sub-1",
-                    name: "Sub cron",
                     schedule: "*/30 * * * *",
                     timezone: "UTC",
                     enabled: true,
@@ -287,7 +284,6 @@ describe("topologyTool", () => {
                     id: "owner-cron",
                     taskId: "owner-task",
                     userId: "owner",
-                    name: "Owner cron",
                     schedule: "0 * * * *",
                     timezone: "UTC",
                     enabled: true,

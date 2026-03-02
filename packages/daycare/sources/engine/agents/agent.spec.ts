@@ -1475,8 +1475,6 @@ describe("Agent", () => {
                     workingDir: "/stale/legacy/workspace",
                     writeDirs: ["/stale/old/dir"]
                 },
-                tokens: null,
-                stats: {},
                 createdAt: Date.now(),
                 updatedAt: Date.now(),
                 state: "active"
@@ -2365,8 +2363,6 @@ describe("Agent", () => {
                     workingDir: "/stale/legacy/workspace",
                     writeDirs: ["/stale/old/dir"]
                 },
-                tokens: null,
-                stats: {},
                 createdAt: Date.now(),
                 updatedAt: Date.now(),
                 state: "active"

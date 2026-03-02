@@ -91,11 +91,13 @@ describe("userHomeMigrate", () => {
         );
         await storageUpgrade(config);
         const storage = storageResolve(config);
-        const users = await storage.users.findMany();
-        const firstUser = users[0];
-        if (!firstUser) {
-            throw new Error("Bootstrap user missing");
-        }
+        const firstUser = await storage.users.create({
+            id: "user-no-owner",
+            isOwner: false,
+            createdAt: 1,
+            updatedAt: 1,
+            nametag: "user-no-owner"
+        });
 
         await storage.users.update(firstUser.id, {
             isOwner: false,

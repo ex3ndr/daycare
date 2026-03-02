@@ -2,7 +2,7 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import type { Context } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { signalsEventsTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import type { SignalEventDbRecord } from "./databaseTypes.js";
 
 export type SignalEventsFindManyOptions = {
@@ -39,8 +39,8 @@ export class SignalEventsRepository {
                     id: record.id,
                     userId: record.userId,
                     type: record.type,
-                    source: JSON.stringify(record.source),
-                    data: record.data === undefined ? null : JSON.stringify(record.data),
+                    source: record.source,
+                    data: record.data === undefined ? null : record.data,
                     createdAt: record.createdAt
                 })
                 .onConflictDoUpdate({
@@ -48,8 +48,8 @@ export class SignalEventsRepository {
                     set: {
                         userId: record.userId,
                         type: record.type,
-                        source: JSON.stringify(record.source),
-                        data: record.data === undefined ? null : JSON.stringify(record.data),
+                        source: record.source,
+                        data: record.data === undefined ? null : record.data,
                         createdAt: record.createdAt
                     }
                 });
@@ -207,8 +207,8 @@ function eventParse(row: {
     id: string;
     userId: string;
     type: string;
-    source: string;
-    data: string | null;
+    source: unknown;
+    data: unknown | null;
     createdAt: number;
 }): SignalEventDbRecord {
     return {
@@ -221,20 +221,20 @@ function eventParse(row: {
     };
 }
 
-function sourceParse(raw: string): SignalEventDbRecord["source"] {
+function sourceParse(raw: unknown): SignalEventDbRecord["source"] {
     try {
-        return JSON.parse(raw) as SignalEventDbRecord["source"];
+        return jsonValueParse(raw) as SignalEventDbRecord["source"];
     } catch {
         return { type: "system", userId: "unknown" };
     }
 }
 
-function dataParse(raw: string | null): unknown {
+function dataParse(raw: unknown | null): unknown {
     if (raw === null) {
         return undefined;
     }
     try {
-        return JSON.parse(raw) as unknown;
+        return jsonValueParse(raw);
     } catch {
         return undefined;
     }
@@ -243,8 +243,8 @@ function dataParse(raw: string | null): unknown {
 function signalEventClone(record: SignalEventDbRecord): SignalEventDbRecord {
     return {
         ...record,
-        source: JSON.parse(JSON.stringify(record.source)) as SignalEventDbRecord["source"],
-        data: record.data === undefined ? undefined : (JSON.parse(JSON.stringify(record.data)) as unknown)
+        source: structuredClone(record.source),
+        data: record.data === undefined ? undefined : structuredClone(record.data)
     };
 }
 
@@ -267,4 +267,11 @@ function numberOffsetResolve(value: number | undefined): number {
         return 0;
     }
     return Math.max(0, Math.floor(value));
+}
+
+function jsonValueParse(raw: unknown): unknown {
+    if (typeof raw === "string") {
+        return JSON.parse(raw);
+    }
+    return raw;
 }

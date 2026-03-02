@@ -1,7 +1,5 @@
-import type { AgentTokenEntry } from "./agentTypes.js";
-
 export type MessageContextStatusOptions = {
-    tokens: AgentTokenEntry | null;
+    usedTokens: number | null;
     contextLimit: number;
 };
 
@@ -10,28 +8,19 @@ export type MessageContextStatusOptions = {
  * Expects: contextLimit is a positive integer.
  */
 export function messageContextStatus(options: MessageContextStatusOptions): string {
-    const { tokens, contextLimit } = options;
+    const { usedTokens, contextLimit } = options;
 
-    if (!tokens) {
-        return "📊 Context: no token data yet. Send a message first.";
+    if (usedTokens === null) {
+        return "📊 Context: no message history yet. Send a message first.";
     }
 
-    const { size, provider, model } = tokens;
-    // Context window usage = all prompt tokens (input + cached)
-    const used = size.input + size.cacheRead + size.cacheWrite;
+    const used = Math.max(0, Math.floor(usedTokens));
     const pct = contextLimit > 0 ? Math.min(100, Math.round((used / contextLimit) * 100)) : 0;
     const bar = progressBar(pct);
     const usedK = formatTokensK(used);
     const limitK = formatTokensK(contextLimit);
 
-    const lines = [
-        `📊 Context: ${usedK} / ${limitK} tokens (${pct}%)`,
-        bar,
-        "",
-        `Provider: ${provider}/${model}`,
-        `Input: ${size.input.toLocaleString()}  Output: ${size.output.toLocaleString()}`,
-        `Cache read: ${size.cacheRead.toLocaleString()}  Cache write: ${size.cacheWrite.toLocaleString()}`
-    ];
+    const lines = [`📊 Context: ${usedK} / ${limitK} tokens (${pct}%)`, bar, "", "Estimate based on session messages."];
 
     return lines.join("\n");
 }

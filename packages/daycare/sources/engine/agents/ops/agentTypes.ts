@@ -43,8 +43,6 @@ export type AgentTokenEntry = {
 
 export type AgentAssistantContent = AssistantMessage["content"];
 
-export type AgentTokenStats = Record<string, Record<string, AgentTokenSize>>;
-
 export type AgentModelOverride = { type: "selector"; value: string };
 
 export type AgentState = {
@@ -52,8 +50,6 @@ export type AgentState = {
     activeSessionId?: string | null;
     inferenceSessionId?: string;
     permissions: SessionPermissions;
-    tokens: AgentTokenEntry | null;
-    stats: AgentTokenStats;
     createdAt: number;
     updatedAt: number;
     state: AgentLifecycleState;

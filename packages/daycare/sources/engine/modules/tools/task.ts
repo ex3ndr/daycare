@@ -2,7 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { appJwtSecretResolve } from "../../../api/app-server/appJwtSecretResolve.js";
-import { JWT_SERVICE_WEBHOOK, jwtSign } from "../../../util/jwt.js";
+import { JWT_SERVICE_WEBHOOK, jwtSign } from "../../../utils/jwt.js";
 import { stringSlugify } from "../../../utils/stringSlugify.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
 import { agentPathTask } from "../../agents/ops/agentPathBuild.js";

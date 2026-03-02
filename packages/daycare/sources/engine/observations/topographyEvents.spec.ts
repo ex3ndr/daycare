@@ -126,7 +126,6 @@ describe("topographyObservationEmit", () => {
                         cronId: "cron-1",
                         taskId: "task-1",
                         userId: "user-1",
-                        name: "backup",
                         schedule: "0 * * * *",
                         timezone: "UTC"
                     },
@@ -137,7 +136,7 @@ describe("topographyObservationEmit", () => {
                     source: TOPO_SOURCE_CRONS,
                     message: "Cron deleted: backup",
                     details: "details",
-                    data: { cronId: "cron-1", taskId: "task-1", userId: "user-1", name: "backup" },
+                    data: { cronId: "cron-1", taskId: "task-1", userId: "user-1" },
                     scopeIds: ["user-1"]
                 }),
                 topographyEmitCase({
@@ -145,7 +144,7 @@ describe("topographyObservationEmit", () => {
                     source: TOPO_SOURCE_CRONS,
                     message: "Cron enabled: backup",
                     details: "details",
-                    data: { cronId: "cron-1", taskId: "task-1", userId: "user-1", name: "backup" },
+                    data: { cronId: "cron-1", taskId: "task-1", userId: "user-1" },
                     scopeIds: ["user-1"]
                 }),
                 topographyEmitCase({
@@ -153,7 +152,7 @@ describe("topographyObservationEmit", () => {
                     source: TOPO_SOURCE_CRONS,
                     message: "Cron disabled: backup",
                     details: "details",
-                    data: { cronId: "cron-1", taskId: "task-1", userId: "user-1", name: "backup" },
+                    data: { cronId: "cron-1", taskId: "task-1", userId: "user-1" },
                     scopeIds: ["user-1"]
                 }),
                 topographyEmitCase({
@@ -165,7 +164,6 @@ describe("topographyObservationEmit", () => {
                         webhookId: "wh-1",
                         taskId: "task-1",
                         userId: "user-1",
-                        name: "backup",
                         routeTemplate: "/v1/webhooks/:token"
                     },
                     scopeIds: ["user-1"]
@@ -175,7 +173,7 @@ describe("topographyObservationEmit", () => {
                     source: TOPO_SOURCE_WEBHOOKS,
                     message: "Webhook deleted: backup",
                     details: "details",
-                    data: { webhookId: "wh-1", taskId: "task-1", userId: "user-1", name: "backup" },
+                    data: { webhookId: "wh-1", taskId: "task-1", userId: "user-1" },
                     scopeIds: ["user-1"]
                 }),
                 topographyEmitCase({

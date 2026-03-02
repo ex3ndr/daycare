@@ -2,7 +2,7 @@ import { createId } from "@paralleldrive/cuid2";
 import type { AgentHistoryRecord } from "@/types";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
 import { agentsTable, type DaycareDb, schemaDrizzle, sessionsTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import { AgentsRepository } from "./agentsRepository.js";
 import { ChannelMessagesRepository } from "./channelMessagesRepository.js";
 import { ChannelsRepository } from "./channelsRepository.js";
@@ -163,16 +163,15 @@ export class Storage {
                 modelRole: baseRecord.modelRole,
                 connectorName: baseRecord.connectorName,
                 parentAgentId: baseRecord.parentAgentId,
-                foreground: baseRecord.foreground ? 1 : 0,
+                foreground: baseRecord.foreground,
                 name: baseRecord.name,
                 description: baseRecord.description,
                 systemPrompt: baseRecord.systemPrompt,
                 workspaceDir: baseRecord.workspaceDir,
                 nextSubIndex: baseRecord.nextSubIndex ?? 0,
                 activeSessionId: sessionId,
-                permissions: JSON.stringify(baseRecord.permissions),
-                tokens: baseRecord.tokens ? JSON.stringify(baseRecord.tokens) : null,
-                stats: JSON.stringify(baseRecord.stats),
+                permissions: baseRecord.permissions,
+                tokens: baseRecord.tokens,
                 lifecycle: baseRecord.lifecycle,
                 createdAt: baseRecord.createdAt,
                 updatedAt: Math.max(baseRecord.updatedAt, sessionCreatedAt)

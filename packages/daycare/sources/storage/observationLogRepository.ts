@@ -30,7 +30,7 @@ export class ObservationLogRepository {
             source: record.source,
             message: record.message,
             details: record.details,
-            data: record.data === undefined || record.data === null ? null : JSON.stringify(record.data),
+            data: record.data === undefined || record.data === null ? null : record.data,
             scopeIds: record.scopeIds,
             createdAt: record.createdAt
         });
@@ -115,7 +115,7 @@ function rowParse(row: {
     source: string;
     message: string;
     details: string | null;
-    data: string | null;
+    data: unknown | null;
     scopeIds: string[] | null;
     createdAt: number;
 }): ObservationLogDbRecord {
@@ -132,12 +132,12 @@ function rowParse(row: {
     };
 }
 
-function dataParse(raw: string | null): unknown {
+function dataParse(raw: unknown | null): unknown {
     if (raw === null) {
         return null;
     }
     try {
-        return JSON.parse(raw) as unknown;
+        return jsonValueParse(raw);
     } catch {
         return null;
     }
@@ -155,4 +155,11 @@ function numberOffsetResolve(value: number | undefined): number {
         return 0;
     }
     return Math.max(0, Math.floor(value));
+}
+
+function jsonValueParse(raw: unknown): unknown {
+    if (typeof raw === "string") {
+        return JSON.parse(raw);
+    }
+    return raw;
 }

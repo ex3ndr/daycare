@@ -2,7 +2,7 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { tasksCronTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import type { CronTaskDbRecord } from "./databaseTypes.js";
 import { versionAdvance } from "./versionAdvance.js";
 
@@ -56,7 +56,7 @@ export class CronTasksRepository {
         const includeDisabled = options.includeDisabled === true;
         const conditions = [eq(tasksCronTable.userId, ctx.userId), isNull(tasksCronTable.validTo)];
         if (!includeDisabled) {
-            conditions.push(eq(tasksCronTable.enabled, 1));
+            conditions.push(eq(tasksCronTable.enabled, true));
         }
         const rows = await this.db
             .select()
@@ -81,7 +81,7 @@ export class CronTasksRepository {
             : await this.db
                   .select()
                   .from(tasksCronTable)
-                  .where(and(isNull(tasksCronTable.validTo), eq(tasksCronTable.enabled, 1)))
+                  .where(and(isNull(tasksCronTable.validTo), eq(tasksCronTable.enabled, true)))
                   .orderBy(asc(tasksCronTable.updatedAt));
         const parsed = rows.map((row) => cronTaskParse(row));
 
@@ -140,14 +140,12 @@ export class CronTasksRepository {
                     validTo: next.validTo ?? null,
                     taskId: next.taskId,
                     userId: next.userId,
-                    name: next.name,
-                    description: next.description,
                     schedule: next.schedule,
                     timezone: next.timezone,
                     agentId: next.agentId,
-                    enabled: next.enabled ? 1 : 0,
-                    deleteAfterRun: next.deleteAfterRun ? 1 : 0,
-                    parameters: next.parameters ? JSON.stringify(next.parameters) : null,
+                    enabled: next.enabled,
+                    deleteAfterRun: next.deleteAfterRun,
+                    parameters: next.parameters,
                     lastRunAt: next.lastRunAt,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
@@ -158,8 +156,6 @@ export class CronTasksRepository {
                         changes: {
                             taskId,
                             userId: record.userId,
-                            name: record.name,
-                            description: record.description,
                             schedule: record.schedule,
                             timezone,
                             agentId: record.agentId,
@@ -193,14 +189,12 @@ export class CronTasksRepository {
                                 validTo: row.validTo ?? null,
                                 taskId: row.taskId,
                                 userId: row.userId,
-                                name: row.name,
-                                description: row.description,
                                 schedule: row.schedule,
                                 timezone: row.timezone,
                                 agentId: row.agentId,
-                                enabled: row.enabled ? 1 : 0,
-                                deleteAfterRun: row.deleteAfterRun ? 1 : 0,
-                                parameters: row.parameters ? JSON.stringify(row.parameters) : null,
+                                enabled: row.enabled,
+                                deleteAfterRun: row.deleteAfterRun,
+                                parameters: row.parameters,
                                 lastRunAt: row.lastRunAt,
                                 createdAt: row.createdAt,
                                 updatedAt: row.updatedAt
@@ -230,7 +224,6 @@ export class CronTasksRepository {
                 id: current.id,
                 taskId: data.taskId ?? current.taskId,
                 userId: data.userId === undefined ? current.userId : data.userId,
-                description: data.description === undefined ? current.description : data.description,
                 timezone: data.timezone === undefined ? current.timezone : data.timezone,
                 agentId: data.agentId === undefined ? current.agentId : data.agentId,
                 parameters: data.parameters === undefined ? current.parameters : data.parameters,
@@ -273,8 +266,6 @@ export class CronTasksRepository {
                     changes: {
                         taskId: next.taskId,
                         userId: next.userId,
-                        name: next.name,
-                        description: next.description,
                         schedule: next.schedule,
                         timezone: next.timezone,
                         agentId: next.agentId,
@@ -308,14 +299,12 @@ export class CronTasksRepository {
                             validTo: row.validTo ?? null,
                             taskId: row.taskId,
                             userId: row.userId,
-                            name: row.name,
-                            description: row.description,
                             schedule: row.schedule,
                             timezone: row.timezone,
                             agentId: row.agentId,
-                            enabled: row.enabled ? 1 : 0,
-                            deleteAfterRun: row.deleteAfterRun ? 1 : 0,
-                            parameters: row.parameters ? JSON.stringify(row.parameters) : null,
+                            enabled: row.enabled,
+                            deleteAfterRun: row.deleteAfterRun,
+                            parameters: row.parameters,
                             lastRunAt: row.lastRunAt,
                             createdAt: row.createdAt,
                             updatedAt: row.updatedAt
@@ -397,14 +386,12 @@ function cronTaskParse(row: typeof tasksCronTable.$inferSelect): CronTaskDbRecor
         validTo: row.validTo ?? null,
         taskId,
         userId: row.userId,
-        name: row.name,
-        description: row.description,
         schedule: row.schedule,
         timezone: timezoneNormalize(row.timezone),
         agentId: row.agentId,
-        enabled: row.enabled === 1,
-        deleteAfterRun: row.deleteAfterRun === 1,
-        parameters: row.parameters ? JSON.parse(row.parameters) : null,
+        enabled: row.enabled,
+        deleteAfterRun: row.deleteAfterRun,
+        parameters: row.parameters ? (jsonValueParse(row.parameters) as CronTaskDbRecord["parameters"]) : null,
         lastRunAt: row.lastRunAt,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt
@@ -445,8 +432,6 @@ function cronTaskRuntimeOnlyChangeIs(current: CronTaskDbRecord, next: CronTaskDb
         (current.validTo ?? null) === (next.validTo ?? null) &&
         current.taskId === next.taskId &&
         current.userId === next.userId &&
-        current.name === next.name &&
-        current.description === next.description &&
         current.schedule === next.schedule &&
         current.timezone === next.timezone &&
         current.agentId === next.agentId &&
@@ -469,8 +454,6 @@ function cronTaskNoChangesIs(current: CronTaskDbRecord, next: CronTaskDbRecord):
         (current.validTo ?? null) === (next.validTo ?? null) &&
         current.taskId === next.taskId &&
         current.userId === next.userId &&
-        current.name === next.name &&
-        current.description === next.description &&
         current.schedule === next.schedule &&
         current.timezone === next.timezone &&
         current.agentId === next.agentId &&
@@ -485,4 +468,11 @@ function cronTaskNoChangesIs(current: CronTaskDbRecord, next: CronTaskDbRecord):
 
 function cronTaskJsonEqual(left: unknown, right: unknown): boolean {
     return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function jsonValueParse(value: unknown): unknown {
+    if (typeof value === "string") {
+        return JSON.parse(value);
+    }
+    return value;
 }

@@ -60,7 +60,6 @@ describe("userStateDetect", () => {
                     activeSessionId: null,
                     permissions: { workingDir: "/tmp", writeDirs: [] },
                     tokens: null,
-                    stats: {},
                     lifecycle: "active",
                     createdAt: now - 1000,
                     updatedAt: now
@@ -101,7 +100,6 @@ describe("userStateDetect", () => {
                     activeSessionId: null,
                     permissions: { workingDir: "/tmp", writeDirs: [] },
                     tokens: null,
-                    stats: {},
                     lifecycle: "active",
                     createdAt: oldCreatedAt,
                     updatedAt: now
@@ -148,7 +146,6 @@ describe("userStateDetect", () => {
                     activeSessionId: null,
                     permissions: { workingDir: "/tmp", writeDirs: [] },
                     tokens: null,
-                    stats: {},
                     lifecycle: "active",
                     createdAt: oldCreatedAt,
                     updatedAt: oldUpdatedAt
@@ -194,7 +191,6 @@ describe("userStateDetect", () => {
                     activeSessionId: null,
                     permissions: { workingDir: "/tmp", writeDirs: [] },
                     tokens: null,
-                    stats: {},
                     lifecycle: "active",
                     createdAt: recentCreatedAt,
                     updatedAt: now

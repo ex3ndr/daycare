@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
     renderToPng: vi.fn(async () => Buffer.from("png"))
 }));
 
-vi.mock("../../../util/renderToPng.js", () => ({
+vi.mock("../../../utils/renderToPng.js", () => ({
     renderToPng: mocks.renderToPng
 }));
 

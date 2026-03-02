@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { documentReferencesTable, documentsTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import type { DocumentDbRecord, DocumentReferenceDbRecord, DocumentReferenceKind } from "./databaseTypes.js";
 import { documentBodyRefs } from "./documentBodyRefs.js";
 import { documentSlugNormalize } from "./documentSlugNormalize.js";

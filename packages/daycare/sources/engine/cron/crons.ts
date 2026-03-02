@@ -114,13 +114,12 @@ export class Crons {
             userId: ctx.userId,
             type: TOPO_EVENT_TYPES.CRON_ADDED,
             source: TOPO_SOURCE_CRONS,
-            message: `Cron added: ${task.name}`,
+            message: `Cron added: ${task.id}`,
             details: `Cron trigger ${task.id} added for task ${task.taskId}, schedule "${task.schedule}" tz ${task.timezone}`,
             data: {
                 cronId: task.id,
                 taskId: task.taskId,
                 userId: task.userId,
-                name: task.name,
                 schedule: task.schedule,
                 timezone: task.timezone
             },
@@ -142,13 +141,12 @@ export class Crons {
                 userId: ctx.userId,
                 type: TOPO_EVENT_TYPES.CRON_DELETED,
                 source: TOPO_SOURCE_CRONS,
-                message: `Cron deleted: ${existing.name}`,
+                message: `Cron deleted: ${existing.id}`,
                 details: `Cron trigger ${existing.id} deleted for task ${existing.taskId}`,
                 data: {
                     cronId: existing.id,
                     taskId: existing.taskId,
-                    userId: existing.userId,
-                    name: existing.name
+                    userId: existing.userId
                 },
                 scopeIds: [ctx.userId]
             });
@@ -248,13 +246,12 @@ export class Crons {
             userId,
             type: enabled ? TOPO_EVENT_TYPES.CRON_ENABLED : TOPO_EVENT_TYPES.CRON_DISABLED,
             source: TOPO_SOURCE_CRONS,
-            message: `${enabled ? "Cron enabled" : "Cron disabled"}: ${existing.name}`,
+            message: `${enabled ? "Cron enabled" : "Cron disabled"}: ${existing.id}`,
             details: `Cron trigger ${existing.id} ${enabled ? "enabled" : "disabled"} for task ${existing.taskId}`,
             data: {
                 cronId: existing.id,
                 taskId: existing.taskId,
-                userId: existing.userId,
-                name: existing.name
+                userId: existing.userId
             },
             scopeIds: [userId]
         });

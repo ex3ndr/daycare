@@ -119,8 +119,6 @@ export function permanentAgentToolBuild(): ToolDefinition {
                     activeSessionId: null,
                     inferenceSessionId: createId(),
                     permissions,
-                    tokens: null,
-                    stats: {},
                     createdAt: now,
                     updatedAt: now,
                     state: "active"

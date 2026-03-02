@@ -3,15 +3,7 @@ import path from "node:path";
 
 import Docker from "dockerode";
 
-import type {
-    AgentPath,
-    AgentTokenEntry,
-    Config,
-    ConnectorMessage,
-    ConnectorTarget,
-    Context,
-    MessageContext
-} from "@/types";
+import type { AgentPath, Config, ConnectorMessage, ConnectorTarget, Context, MessageContext } from "@/types";
 import { AppServer } from "../api/app-server/appServer.js";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
@@ -24,13 +16,15 @@ import { databaseMigrate } from "../storage/databaseMigrate.js";
 import { databaseOpen } from "../storage/databaseOpen.js";
 import { Storage } from "../storage/storage.js";
 import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
-import { InvalidateSync } from "../util/sync.js";
-import { valueDeepEqual } from "../util/valueDeepEqual.js";
 import { stringSlugify } from "../utils/stringSlugify.js";
+import { InvalidateSync } from "../utils/sync.js";
+import { valueDeepEqual } from "../utils/valueDeepEqual.js";
 import { AgentSystem } from "./agents/agentSystem.js";
-import { contextForUser } from "./agents/context.js";
+import { contextForAgent, contextForUser } from "./agents/context.js";
+import { agentHistoryLoad } from "./agents/ops/agentHistoryLoad.js";
 import { agentPathConnector } from "./agents/ops/agentPathBuild.js";
 import { agentPath } from "./agents/ops/agentPathTypes.js";
+import { contextEstimateTokens } from "./agents/ops/contextEstimateTokens.js";
 import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
 import { Channels } from "./channels/channels.js";
 import { ConfigModule } from "./config/configModule.js";
@@ -779,15 +773,17 @@ export class Engine {
         if (!connector?.capabilities.sendText) {
             return;
         }
-        let tokens: AgentTokenEntry | null = null;
+        let usedTokens: number | null = null;
         try {
             const ctx = await this.pathContextResolve(path);
-            tokens = await this.agentSystem.tokensForTarget(ctx, { path });
+            const agentId = await this.agentSystem.agentIdForTarget(ctx, { path });
+            const history = await agentHistoryLoad(this.storage, contextForAgent({ userId: ctx.userId, agentId }));
+            usedTokens = history.length > 0 ? contextEstimateTokens(history) : null;
         } catch (error) {
-            logger.warn({ connector: target.connector, error }, "error: Context command failed to load tokens");
+            logger.warn({ connector: target.connector, error }, "error: Context command failed to estimate usage");
         }
         const contextLimit = this.config.current.settings.agents.emergencyContextLimit;
-        const text = messageContextStatus({ tokens, contextLimit });
+        const text = messageContextStatus({ usedTokens, contextLimit });
         try {
             await connector.sendMessage(target.targetId, {
                 text,

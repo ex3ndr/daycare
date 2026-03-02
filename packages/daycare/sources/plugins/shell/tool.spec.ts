@@ -567,8 +567,6 @@ function createContext(
     const state: AgentState = {
         context: { messages: [] },
         permissions: permissionsBuild(workingDir, writeDirs),
-        tokens: null,
-        stats: {},
         createdAt: now,
         updatedAt: now,
         state: "active"

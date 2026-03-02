@@ -1,5 +1,5 @@
 import type { MessageContext, MessageContextEnrichment, UserDbRecord } from "@/types";
-import { timezoneIsValid } from "../../util/timezoneIsValid.js";
+import { timezoneIsValid } from "../../utils/timezoneIsValid.js";
 
 export type MessageContextEnrichIncomingOptions = {
     context: MessageContext;

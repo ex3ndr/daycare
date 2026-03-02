@@ -2,7 +2,7 @@ import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { tasksTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import type { TaskDbRecord } from "./databaseTypes.js";
 import { versionAdvance } from "./versionAdvance.js";
 
@@ -158,7 +158,7 @@ export class TasksRepository {
                     title: next.title,
                     description: next.description,
                     code: next.code,
-                    parameters: next.parameters ? JSON.stringify(next.parameters) : null,
+                    parameters: next.parameters,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
                 });
@@ -200,7 +200,7 @@ export class TasksRepository {
                                 title: row.title,
                                 description: row.description,
                                 code: row.code,
-                                parameters: row.parameters ? JSON.stringify(row.parameters) : null,
+                                parameters: row.parameters,
                                 createdAt: row.createdAt,
                                 updatedAt: row.updatedAt
                             });
@@ -274,7 +274,7 @@ export class TasksRepository {
                             title: row.title,
                             description: row.description,
                             code: row.code,
-                            parameters: row.parameters ? JSON.stringify(row.parameters) : null,
+                            parameters: row.parameters,
                             createdAt: row.createdAt,
                             updatedAt: row.updatedAt
                         });
@@ -384,7 +384,7 @@ function taskParse(row: typeof tasksTable.$inferSelect): TaskDbRecord {
         title: row.title,
         description: row.description,
         code: row.code,
-        parameters: row.parameters ? JSON.parse(row.parameters) : null,
+        parameters: row.parameters ? (jsonValueParse(row.parameters) as TaskDbRecord["parameters"]) : null,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt
     };
@@ -396,4 +396,11 @@ function taskClone(record: TaskDbRecord): TaskDbRecord {
 
 function taskKey(userId: string, id: string): string {
     return `${userId}\u0000${id}`;
+}
+
+function jsonValueParse(value: unknown): unknown {
+    if (typeof value === "string") {
+        return JSON.parse(value);
+    }
+    return value;
 }

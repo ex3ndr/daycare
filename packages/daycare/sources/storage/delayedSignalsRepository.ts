@@ -2,7 +2,7 @@ import { and, asc, eq, lte, ne } from "drizzle-orm";
 import type { Context } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { signalsDelayedTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import type { DelayedSignalDbRecord } from "./databaseTypes.js";
 
 /**
@@ -44,8 +44,8 @@ export class DelayedSignalsRepository {
                         userId: record.userId,
                         type: record.type,
                         deliverAt: record.deliverAt,
-                        source: JSON.stringify(record.source),
-                        data: record.data === undefined ? null : JSON.stringify(record.data),
+                        source: record.source,
+                        data: record.data === undefined ? null : record.data,
                         repeatKey: record.repeatKey,
                         createdAt: record.createdAt,
                         updatedAt: record.updatedAt
@@ -56,8 +56,8 @@ export class DelayedSignalsRepository {
                             userId: record.userId,
                             type: record.type,
                             deliverAt: record.deliverAt,
-                            source: JSON.stringify(record.source),
-                            data: record.data === undefined ? null : JSON.stringify(record.data),
+                            source: record.source,
+                            data: record.data === undefined ? null : record.data,
                             repeatKey: record.repeatKey,
                             createdAt: record.createdAt,
                             updatedAt: record.updatedAt
@@ -238,8 +238,8 @@ function signalParse(row: {
     userId: string;
     type: string;
     deliverAt: number;
-    source: string;
-    data: string | null;
+    source: unknown;
+    data: unknown | null;
     repeatKey: string | null;
     createdAt: number;
     updatedAt: number;
@@ -276,26 +276,33 @@ function contextUserIdRequire(ctx: Context): string {
 function delayedSignalClone(record: DelayedSignalDbRecord): DelayedSignalDbRecord {
     return {
         ...record,
-        source: JSON.parse(JSON.stringify(record.source)) as DelayedSignalDbRecord["source"],
-        data: record.data === undefined ? undefined : (JSON.parse(JSON.stringify(record.data)) as unknown)
+        source: structuredClone(record.source),
+        data: record.data === undefined ? undefined : structuredClone(record.data)
     };
 }
 
-function sourceParse(raw: string): DelayedSignalDbRecord["source"] {
+function sourceParse(raw: unknown): DelayedSignalDbRecord["source"] {
     try {
-        return JSON.parse(raw) as DelayedSignalDbRecord["source"];
+        return jsonValueParse(raw) as DelayedSignalDbRecord["source"];
     } catch {
         return { type: "system", userId: "unknown" };
     }
 }
 
-function dataParse(raw: string | null): unknown {
+function dataParse(raw: unknown | null): unknown {
     if (raw === null) {
         return undefined;
     }
     try {
-        return JSON.parse(raw) as unknown;
+        return jsonValueParse(raw);
     } catch {
         return undefined;
     }
+}
+
+function jsonValueParse(raw: unknown): unknown {
+    if (typeof raw === "string") {
+        return JSON.parse(raw);
+    }
+    return raw;
 }

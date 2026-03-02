@@ -221,7 +221,7 @@ describe("CronScheduler", () => {
 
         await scheduler.start();
 
-        const context = scheduler.getTaskContext("context-test");
+        const context = await scheduler.getTaskContext("context-test");
         expect(context).not.toBeNull();
         expect(context?.triggerId).toBe("context-test");
         expect(context?.taskId).toBe(created.taskId);
@@ -317,8 +317,6 @@ async function cronTaskInsert(
         id: input.id,
         taskId,
         userId: input.userId ?? "user-1",
-        name: input.name,
-        description: null,
         schedule: input.schedule,
         timezone: input.timezone ?? "UTC",
         agentId: null,

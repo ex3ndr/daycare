@@ -3,7 +3,7 @@ import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { toolExecutionResultOutcomeWithTyped } from "../../engine/modules/tools/toolReturnOutcome.js";
 import { sandboxReadPathNormalize } from "../../sandbox/sandboxReadPathNormalize.js";
-import { shellQuote } from "../../util/shellQuote.js";
+import { shellQuote } from "../../utils/shellQuote.js";
 import { lsEntriesFormat } from "./lsEntriesFormat.js";
 
 const LS_DEFAULT_LIMIT = 500;

@@ -31,7 +31,6 @@ describe("swarmAgentResolve", () => {
                 activeSessionId: null,
                 permissions: { workingDir: "/tmp", writeDirs: ["/tmp"] },
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: 10,
                 updatedAt: 10

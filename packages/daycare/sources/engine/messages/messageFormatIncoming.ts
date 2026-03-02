@@ -1,5 +1,5 @@
 import type { ConnectorMessage, MessageContext } from "@/types";
-import { formatTimeAI } from "../../util/timeFormat.js";
+import { formatTimeAI } from "../../utils/timeFormat.js";
 
 export function messageFormatIncoming(
     message: ConnectorMessage,

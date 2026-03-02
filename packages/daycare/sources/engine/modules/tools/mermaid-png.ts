@@ -3,8 +3,8 @@ import { Type } from "@sinclair/typebox";
 import { renderMermaid, THEMES } from "beautiful-mermaid";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { sanitizeFilename } from "../../../util/filename.js";
-import { renderToPng } from "../../../util/renderToPng.js";
+import { sanitizeFilename } from "../../../utils/filename.js";
+import { renderToPng } from "../../../utils/renderToPng.js";
 
 const schema = Type.Object(
     {

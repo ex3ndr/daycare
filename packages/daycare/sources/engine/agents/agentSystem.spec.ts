@@ -549,7 +549,6 @@ describe("AgentSystem", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: now - 10_000,
                 updatedAt: now - 10_000
@@ -558,8 +557,6 @@ describe("AgentSystem", () => {
                 context: { messages: [] },
                 activeSessionId: null,
                 permissions,
-                tokens: null,
-                stats: {},
                 createdAt: now - 10_000,
                 updatedAt: now - 10_000,
                 state: "active",
@@ -578,7 +575,6 @@ describe("AgentSystem", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: now - 1_000,
                 updatedAt: now - 1_000
@@ -587,8 +583,6 @@ describe("AgentSystem", () => {
                 context: { messages: [] },
                 activeSessionId: null,
                 permissions,
-                tokens: null,
-                stats: {},
                 createdAt: now - 1_000,
                 updatedAt: now - 1_000,
                 state: "active",
@@ -640,7 +634,6 @@ describe("AgentSystem", () => {
                 activeSessionId: null,
                 permissions: { workingDir: "/tmp", writeDirs: ["/tmp"] },
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -707,7 +700,6 @@ describe("AgentSystem", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -722,7 +714,6 @@ describe("AgentSystem", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: 2,
                 updatedAt: 2
@@ -737,7 +728,6 @@ describe("AgentSystem", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: 3,
                 updatedAt: 3

@@ -1,5 +1,5 @@
 import type { Config } from "@/types";
-import { ReadWriteLock } from "../../util/readWriteLock.js";
+import { ReadWriteLock } from "../../utils/readWriteLock.js";
 
 /**
  * Owns runtime config state and the shared configuration lock.

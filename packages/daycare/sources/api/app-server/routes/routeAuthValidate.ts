@@ -1,5 +1,5 @@
 import type http from "node:http";
-import { jwtSign, jwtVerify } from "../../../util/jwt.js";
+import { jwtSign, jwtVerify } from "../../../utils/jwt.js";
 import { APP_AUTH_LINK_SERVICE, APP_AUTH_SESSION_EXPIRES_IN_SECONDS } from "../appAuthLinkTool.js";
 import { appReadJsonBody, appSendJson } from "../appHttp.js";
 

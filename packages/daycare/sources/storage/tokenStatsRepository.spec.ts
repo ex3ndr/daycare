@@ -16,7 +16,7 @@ async function createTestEntities(
             validFrom: 1,
             validTo: null,
             nametag: `tag-${userId}`,
-            isOwner: 0,
+            isOwner: false,
             createdAt: 1,
             updatedAt: 1
         });
@@ -29,16 +29,15 @@ async function createTestEntities(
             validTo: null,
             userId: users[0] ?? "user-a",
             path: `/${users[0] ?? "user-a"}/cron/${agentId}`,
-            foreground: 0,
+            foreground: false,
             name: agentId,
             description: null,
             systemPrompt: null,
             workspaceDir: null,
             nextSubIndex: 0,
             activeSessionId: null,
-            permissions: JSON.stringify({ workingDir: "/tmp", writeDirs: ["/tmp"] }),
+            permissions: { workingDir: "/tmp", writeDirs: ["/tmp"] },
             tokens: null,
-            stats: "{}",
             lifecycle: "active",
             createdAt: 1,
             updatedAt: 1

@@ -14,7 +14,7 @@ import {
     updateSettingsFile,
     upsertPlugin
 } from "../../settings.js";
-import { requestShutdown } from "../../util/shutdown.js";
+import { requestShutdown } from "../../utils/shutdown.js";
 import { contextForUser } from "../agents/context.js";
 import { agentBackgroundList } from "../agents/ops/agentBackgroundList.js";
 import { agentHistoryLoadAll } from "../agents/ops/agentHistoryLoadAll.js";

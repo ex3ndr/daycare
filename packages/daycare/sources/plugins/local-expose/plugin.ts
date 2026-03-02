@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import type { ExposeTunnelProvider, SessionPermissions } from "@/types";
 import { definePlugin } from "../../engine/plugins/types.js";
-import { shellQuote } from "../../util/shellQuote.js";
+import { shellQuote } from "../../utils/shellQuote.js";
 
 const LOCAL_EXPOSE_DEFAULT_LISTEN_PORT = 18221;
 const LOCAL_FORWARDER_SCRIPT_NAME = "localTunnelForwarderEntry.js";

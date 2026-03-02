@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import type { DaycareDb } from "../schema.js";
 import { connectionsTable, usersTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import type { ConnectionDbRecord } from "./databaseTypes.js";
 import { versionAdvance } from "./versionAdvance.js";
 
@@ -29,8 +29,8 @@ export class ConnectionsRepository {
                     version: 1,
                     validFrom: requestedAt,
                     validTo: null,
-                    requestedA: requesterId === userAId ? 1 : 0,
-                    requestedB: requesterId === userBId ? 1 : 0,
+                    requestedA: requesterId === userAId,
+                    requestedB: requesterId === userBId,
                     requestedAAt: requesterId === userAId ? requestedAt : null,
                     requestedBAt: requesterId === userBId ? requestedAt : null
                 });
@@ -65,8 +65,8 @@ export class ConnectionsRepository {
                                 version: row.version ?? 1,
                                 validFrom: row.validFrom ?? 0,
                                 validTo: row.validTo ?? null,
-                                requestedA: row.requestedA ? 1 : 0,
-                                requestedB: row.requestedB ? 1 : 0,
+                                requestedA: row.requestedA,
+                                requestedB: row.requestedB,
                                 requestedAAt: row.requestedAAt,
                                 requestedBAt: row.requestedBAt
                             });
@@ -104,8 +104,8 @@ export class ConnectionsRepository {
                                 version: row.version ?? 1,
                                 validFrom: row.validFrom ?? 0,
                                 validTo: row.validTo ?? null,
-                                requestedA: row.requestedA ? 1 : 0,
-                                requestedB: row.requestedB ? 1 : 0,
+                                requestedA: row.requestedA,
+                                requestedB: row.requestedB,
                                 requestedAAt: row.requestedAAt,
                                 requestedBAt: row.requestedBAt
                             });
@@ -157,8 +157,8 @@ export class ConnectionsRepository {
                             version: row.version ?? 1,
                             validFrom: row.validFrom ?? 0,
                             validTo: row.validTo ?? null,
-                            requestedA: row.requestedA ? 1 : 0,
-                            requestedB: row.requestedB ? 1 : 0,
+                            requestedA: row.requestedA,
+                            requestedB: row.requestedB,
                             requestedAAt: row.requestedAAt,
                             requestedBAt: row.requestedBAt
                         });
@@ -198,8 +198,8 @@ export class ConnectionsRepository {
                 and(
                     or(eq(connectionsTable.userAId, userId), eq(connectionsTable.userBId, userId)),
                     isNull(connectionsTable.validTo),
-                    eq(connectionsTable.requestedA, 1),
-                    eq(connectionsTable.requestedB, 1)
+                    eq(connectionsTable.requestedA, true),
+                    eq(connectionsTable.requestedB, true)
                 )
             )
             .orderBy(asc(connectionsTable.userAId), asc(connectionsTable.userBId));
@@ -314,8 +314,8 @@ function connectionParse(row: {
     version: number;
     validFrom: number;
     validTo: number | null;
-    requestedA: number;
-    requestedB: number;
+    requestedA: boolean;
+    requestedB: boolean;
     requestedAAt: number | null;
     requestedBAt: number | null;
 }): ConnectionDbRecord {
@@ -325,8 +325,8 @@ function connectionParse(row: {
         version: row.version ?? 1,
         validFrom: row.validFrom ?? 0,
         validTo: row.validTo ?? null,
-        requestedA: row.requestedA === 1,
-        requestedB: row.requestedB === 1,
+        requestedA: row.requestedA,
+        requestedB: row.requestedB,
         requestedAAt: row.requestedAAt,
         requestedBAt: row.requestedBAt
     };

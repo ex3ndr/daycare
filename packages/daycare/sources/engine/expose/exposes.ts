@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { getLogger } from "../../log.js";
 import type { ExposeEndpointsRepository } from "../../storage/exposeEndpointsRepository.js";
 import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
-import { AsyncLock } from "../../util/lock.js";
+import { AsyncLock } from "../../utils/lock.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import { TOPO_EVENT_TYPES, TOPO_SOURCE_EXPOSES, topographyObservationEmit } from "../observations/topographyEvents.js";

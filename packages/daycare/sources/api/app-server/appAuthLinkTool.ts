@@ -1,7 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { jwtSign } from "../../util/jwt.js";
+import { jwtSign } from "../../utils/jwt.js";
 import { appEndpointNormalize } from "./appEndpointNormalize.js";
 
 export const APP_AUTH_LINK_EXPIRES_IN_SECONDS = 3600;

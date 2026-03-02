@@ -31,14 +31,14 @@ Topography events are defined in `observations/topographyEvents.ts` and emitted 
 - `task:deleted` — `{ taskId, userId, title }`
 
 ### `system:crons`
-- `cron:added` — `{ cronId, taskId, userId, name, schedule, timezone }`
-- `cron:deleted` — `{ cronId, taskId, userId, name }`
-- `cron:enabled` — `{ cronId, taskId, userId, name }`
-- `cron:disabled` — `{ cronId, taskId, userId, name }`
+- `cron:added` — `{ cronId, taskId, userId, schedule, timezone }`
+- `cron:deleted` — `{ cronId, taskId, userId }`
+- `cron:enabled` — `{ cronId, taskId, userId }`
+- `cron:disabled` — `{ cronId, taskId, userId }`
 
 ### `system:webhooks`
-- `webhook:added` — `{ webhookId, taskId, userId, name, routeTemplate }`
-- `webhook:deleted` — `{ webhookId, taskId, userId, name }`
+- `webhook:added` — `{ webhookId, taskId, userId, routeTemplate }`
+- `webhook:deleted` — `{ webhookId, taskId, userId }`
 
 ### `system:signals`
 - `signal:subscribed` — `{ agentId, userId, pattern, silent }`

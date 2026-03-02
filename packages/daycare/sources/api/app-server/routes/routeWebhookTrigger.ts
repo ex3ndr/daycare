@@ -1,5 +1,5 @@
 import type http from "node:http";
-import { JWT_SERVICE_WEBHOOK, jwtVerify } from "../../../util/jwt.js";
+import { JWT_SERVICE_WEBHOOK, jwtVerify } from "../../../utils/jwt.js";
 import { appReadJsonBody, appSendJson } from "../appHttp.js";
 
 export type RouteWebhookTriggerOptions = {

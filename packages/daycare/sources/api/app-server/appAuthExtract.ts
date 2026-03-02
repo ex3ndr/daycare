@@ -1,5 +1,5 @@
 import type http from "node:http";
-import { jwtVerify } from "../../util/jwt.js";
+import { jwtVerify } from "../../utils/jwt.js";
 
 /**
  * Extracts and verifies a JWT from the Authorization: Bearer header.

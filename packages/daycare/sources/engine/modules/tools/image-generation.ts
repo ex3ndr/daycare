@@ -3,7 +3,7 @@ import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { sanitizeFilename } from "../../../util/filename.js";
+import { sanitizeFilename } from "../../../utils/filename.js";
 import { FileFolder } from "../../files/fileFolder.js";
 import type { ImageGenerationRegistry } from "../imageGenerationRegistry.js";
 import type { ImageGenerationRequest } from "../images/types.js";

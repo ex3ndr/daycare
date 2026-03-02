@@ -92,7 +92,7 @@ describe("UsersRepository", () => {
                 .prepare(
                     "INSERT INTO users (id, version, valid_from, valid_to, is_owner, nametag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                 )
-                .run("user-1", 1, 10, null, 0, "brave-wolf-99", 10, 11);
+                .run("user-1", 1, 10, null, false, "brave-wolf-99", 10, 11);
             storage.connection
                 .prepare("INSERT INTO user_connector_keys (user_id, connector_key) VALUES (?, ?)")
                 .run("user-1", "telegram:1");

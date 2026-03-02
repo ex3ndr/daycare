@@ -3,7 +3,7 @@ import path from "node:path";
 import { resolveEngineSocketPath } from "../engine/ipc/socket.js";
 import { DEFAULT_DAYCARE_DIR } from "../paths.js";
 import type { DockerSettings, ResolvedSettingsConfig, SettingsConfig } from "../settings.js";
-import { freezeDeep } from "../util/freezeDeep.js";
+import { freezeDeep } from "../utils/freezeDeep.js";
 import type { Config, ConfigOverrides } from "./configTypes.js";
 
 const DEFAULT_DOCKER_IMAGE = "daycare-sandbox";

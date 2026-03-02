@@ -5,7 +5,6 @@ import type {
     AgentConfig,
     AgentModelOverride,
     AgentPath,
-    AgentTokenEntry,
     Context,
     DelayedSignalCancelRepeatKeyInput,
     DelayedSignalScheduleInput,
@@ -18,7 +17,7 @@ import { getLogger } from "../../log.js";
 import type { AgentDbRecord } from "../../storage/databaseTypes.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageResolve } from "../../storage/storageResolve.js";
-import { AsyncLock } from "../../util/lock.js";
+import { AsyncLock } from "../../utils/lock.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
 import type { EngineEventBus } from "../ipc/events.js";
@@ -348,32 +347,6 @@ export class AgentSystem {
             creationConfig
         );
         return entry.ctx.agentId;
-    }
-
-    async tokensForTarget(
-        ctx: Context,
-        target: AgentPostTarget,
-        creationConfig?: AgentCreationConfig
-    ): Promise<AgentTokenEntry | null> {
-        const entry = await this.resolveEntry(
-            ctx,
-            target,
-            {
-                type: "message",
-                message: { text: null },
-                context: {}
-            },
-            creationConfig
-        );
-        const tokens = entry.agent.state.tokens;
-        if (!tokens) {
-            return null;
-        }
-        return {
-            provider: tokens.provider,
-            model: tokens.model,
-            size: { ...tokens.size }
-        };
     }
 
     async agentExists(agentId: string): Promise<boolean> {

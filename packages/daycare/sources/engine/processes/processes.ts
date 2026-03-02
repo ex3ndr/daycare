@@ -15,9 +15,9 @@ import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPol
 import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
 import type { ProcessDbRecord } from "../../storage/databaseTypes.js";
 import type { ProcessesRepository, ProcessesRuntimeUpdate } from "../../storage/processesRepository.js";
-import { atomicWrite } from "../../util/atomicWrite.js";
-import { envNormalize } from "../../util/envNormalize.js";
-import { AsyncLock } from "../../util/lock.js";
+import { atomicWrite } from "../../utils/atomicWrite.js";
+import { envNormalize } from "../../utils/envNormalize.js";
+import { AsyncLock } from "../../utils/lock.js";
 import { resolveWorkspacePath } from "../permissions.js";
 import { processBootTimeRead } from "./processBootTimeRead.js";
 

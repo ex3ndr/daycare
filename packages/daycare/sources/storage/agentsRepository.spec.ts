@@ -39,7 +39,6 @@ describe("AgentsRepository", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active" as const,
                 createdAt: 1,
                 updatedAt: 1
@@ -87,7 +86,6 @@ describe("AgentsRepository", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -108,17 +106,6 @@ describe("AgentsRepository", () => {
                         total: 14
                     }
                 },
-                stats: {
-                    openai: {
-                        "gpt-5": {
-                            input: 10,
-                            output: 4,
-                            cacheRead: 0,
-                            cacheWrite: 0,
-                            total: 14
-                        }
-                    }
-                },
                 updatedAt: 2
             });
 
@@ -128,12 +115,11 @@ describe("AgentsRepository", () => {
             expect(current?.nextSubIndex).toBe(2);
             expect(current?.activeSessionId).toBe("session-1");
             expect(current?.tokens?.model).toBe("gpt-5");
-            expect(current?.stats.openai?.["gpt-5"]?.total).toBe(14);
             expect(current?.updatedAt).toBe(2);
 
             const rows = (await storage.connection
                 .prepare(
-                    "SELECT version, valid_to, lifecycle, next_sub_index, active_session_id, tokens, stats FROM agents WHERE id = ? ORDER BY version ASC"
+                    "SELECT version, valid_to, lifecycle, next_sub_index, active_session_id, tokens FROM agents WHERE id = ? ORDER BY version ASC"
                 )
                 .all("agent-lifecycle-inplace")) as Array<{
                 version: number;
@@ -141,8 +127,7 @@ describe("AgentsRepository", () => {
                 lifecycle: string;
                 next_sub_index: number;
                 active_session_id: string | null;
-                tokens: string | null;
-                stats: string;
+                tokens: unknown | null;
             }>;
             expect(rows).toHaveLength(1);
             expect(rows[0]?.version).toBe(1);
@@ -150,8 +135,9 @@ describe("AgentsRepository", () => {
             expect(rows[0]?.lifecycle).toBe("sleeping");
             expect(rows[0]?.next_sub_index).toBe(2);
             expect(rows[0]?.active_session_id).toBe("session-1");
-            expect(rows[0]?.tokens).toContain('"gpt-5"');
-            expect(rows[0]?.stats).toContain('"total":14');
+            const tokens = rows[0]?.tokens;
+            const serializedTokens = typeof tokens === "string" ? tokens : JSON.stringify(tokens);
+            expect(serializedTokens).toContain('"gpt-5"');
         } finally {
             storage.connection.close();
         }
@@ -179,7 +165,6 @@ describe("AgentsRepository", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -223,11 +208,10 @@ describe("AgentsRepository", () => {
                     active_session_id,
                     permissions,
                     tokens,
-                    stats,
                     lifecycle,
                     created_at,
                     updated_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `
                 )
                 .run(
@@ -237,7 +221,7 @@ describe("AgentsRepository", () => {
                     null,
                     ownerUser.id,
                     `/${ownerUser.id}/cron/agent-db`,
-                    0,
+                    false,
                     "db",
                     null,
                     null,
@@ -246,7 +230,6 @@ describe("AgentsRepository", () => {
                     null,
                     JSON.stringify(permissions),
                     null,
-                    "{}",
                     "active",
                     1,
                     2
@@ -285,7 +268,6 @@ describe("AgentsRepository", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -304,7 +286,6 @@ describe("AgentsRepository", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: 2,
                 updatedAt: 2

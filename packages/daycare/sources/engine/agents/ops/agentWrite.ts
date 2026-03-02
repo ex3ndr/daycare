@@ -44,7 +44,6 @@ export async function agentWrite(
         activeSessionId: existing?.activeSessionId ?? null,
         permissions: nextPermissions,
         tokens: existing?.tokens ?? null,
-        stats: existing?.stats ?? {},
         lifecycle: existing?.lifecycle ?? "active",
         createdAt: existing?.createdAt ?? now,
         updatedAt: now

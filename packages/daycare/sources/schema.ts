@@ -3,9 +3,11 @@ import { sql } from "drizzle-orm";
 import { drizzle as drizzleNodePg } from "drizzle-orm/node-postgres";
 import {
     bigint,
+    boolean,
     check,
     index,
     integer,
+    jsonb,
     pgTable,
     primaryKey,
     real,
@@ -28,8 +30,8 @@ export const usersTable = pgTable(
         version: integer("version").notNull().default(1),
         validFrom: bigint("valid_from", { mode: "number" }).notNull(),
         validTo: bigint("valid_to", { mode: "number" }),
-        isOwner: integer("is_owner").notNull().default(0),
-        isSwarm: integer("is_swarm").notNull().default(0),
+        isOwner: boolean("is_owner").notNull().default(false),
+        isSwarm: boolean("is_swarm").notNull().default(false),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
         parentUserId: text("parent_user_id"),
@@ -40,7 +42,7 @@ export const usersTable = pgTable(
         country: text("country"),
         timezone: text("timezone"),
         systemPrompt: text("system_prompt"),
-        memory: integer("memory").notNull().default(0),
+        memory: boolean("memory").notNull().default(false),
         nametag: text("nametag").notNull()
     },
     (table) => [
@@ -49,7 +51,7 @@ export const usersTable = pgTable(
         uniqueIndex("idx_users_nametag").on(table.nametag).where(sql`${table.validTo} IS NULL`),
         uniqueIndex("idx_users_single_owner")
             .on(table.isOwner)
-            .where(sql`${table.isOwner} = 1 AND ${table.validTo} IS NULL`),
+            .where(sql`${table.isOwner} = true AND ${table.validTo} IS NULL`),
         index("idx_users_parent").on(table.parentUserId).where(sql`${table.parentUserId} IS NOT NULL`),
         index("idx_users_id_valid_to").on(table.id, table.validTo)
     ]
@@ -77,16 +79,15 @@ export const agentsTable = pgTable(
         modelRole: text("model_role"),
         connectorName: text("connector_name"),
         parentAgentId: text("parent_agent_id"),
-        foreground: integer("foreground").notNull().default(0),
+        foreground: boolean("foreground").notNull().default(false),
         name: text("name"),
         description: text("description"),
         systemPrompt: text("system_prompt"),
         workspaceDir: text("workspace_dir"),
         nextSubIndex: integer("next_sub_index").notNull().default(0),
         activeSessionId: text("active_session_id"),
-        permissions: text("permissions").notNull(),
-        tokens: text("tokens"),
-        stats: text("stats").notNull().default("{}"),
+        permissions: jsonb("permissions").notNull(),
+        tokens: jsonb("tokens"),
         lifecycle: text("lifecycle").notNull().default("active"),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
@@ -128,7 +129,7 @@ export const sessionHistoryTable = pgTable(
             .references(() => sessionsTable.id, { onDelete: "cascade" }),
         type: text("type").notNull(),
         at: bigint("at", { mode: "number" }).notNull(),
-        data: text("data").notNull()
+        data: jsonb("data").notNull()
     },
     (table) => [index("idx_session_history_session").on(table.sessionId)]
 );
@@ -140,7 +141,7 @@ export const inboxTable = pgTable(
         agentId: text("agent_id").notNull(),
         postedAt: bigint("posted_at", { mode: "number" }).notNull(),
         type: text("type").notNull(),
-        data: text("data").notNull()
+        data: jsonb("data").notNull()
     },
     (table) => [index("idx_inbox_agent_order").on(table.agentId, table.postedAt)]
 );
@@ -156,7 +157,7 @@ export const tasksTable = pgTable(
         title: text("title").notNull(),
         description: text("description"),
         code: text("code").notNull(),
-        parameters: text("parameters"),
+        parameters: jsonb("parameters"),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },
@@ -226,14 +227,12 @@ export const tasksCronTable = pgTable(
         validTo: bigint("valid_to", { mode: "number" }),
         taskId: text("task_id").notNull(),
         userId: text("user_id").notNull(),
-        name: text("name").notNull(),
-        description: text("description"),
         schedule: text("schedule").notNull(),
         timezone: text("timezone").notNull().default("UTC"),
         agentId: text("agent_id"),
-        enabled: integer("enabled").notNull().default(1),
-        deleteAfterRun: integer("delete_after_run").notNull().default(0),
-        parameters: text("parameters"),
+        enabled: boolean("enabled").notNull().default(true),
+        deleteAfterRun: boolean("delete_after_run").notNull().default(false),
+        parameters: jsonb("parameters"),
         lastRunAt: bigint("last_run_at", { mode: "number" }),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
@@ -276,8 +275,8 @@ export const signalsEventsTable = pgTable(
         id: text("id").primaryKey(),
         userId: text("user_id").notNull(),
         type: text("type").notNull(),
-        source: text("source").notNull(),
-        data: text("data"),
+        source: jsonb("source").notNull(),
+        data: jsonb("data"),
         createdAt: bigint("created_at", { mode: "number" }).notNull()
     },
     (table) => [
@@ -297,7 +296,7 @@ export const signalsSubscriptionsTable = pgTable(
         userId: text("user_id").notNull(),
         agentId: text("agent_id").notNull(),
         pattern: text("pattern").notNull(),
-        silent: integer("silent").notNull().default(0),
+        silent: boolean("silent").notNull().default(false),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },
@@ -318,8 +317,8 @@ export const signalsDelayedTable = pgTable(
         userId: text("user_id").notNull(),
         type: text("type").notNull(),
         deliverAt: bigint("deliver_at", { mode: "number" }).notNull(),
-        source: text("source").notNull(),
-        data: text("data"),
+        source: jsonb("source").notNull(),
+        data: jsonb("data"),
         repeatKey: text("repeat_key"),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
@@ -373,7 +372,7 @@ export const channelMessagesTable = pgTable(
         userId: text("user_id").notNull(),
         senderUsername: text("sender_username").notNull(),
         text: text("text").notNull(),
-        mentions: text("mentions").notNull(),
+        mentions: jsonb("mentions").notNull(),
         createdAt: bigint("created_at", { mode: "number" }).notNull()
     },
     (table) => [index("idx_channel_messages_channel_created").on(table.channelId, table.createdAt)]
@@ -387,11 +386,11 @@ export const exposeEndpointsTable = pgTable(
         validFrom: bigint("valid_from", { mode: "number" }).notNull(),
         validTo: bigint("valid_to", { mode: "number" }),
         userId: text("user_id").notNull(),
-        target: text("target").notNull(),
+        target: jsonb("target").notNull(),
         provider: text("provider").notNull(),
         domain: text("domain").notNull(),
         mode: text("mode").notNull(),
-        auth: text("auth"),
+        auth: jsonb("auth"),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },
@@ -415,13 +414,13 @@ export const processesTable = pgTable(
         command: text("command").notNull(),
         cwd: text("cwd").notNull(),
         home: text("home"),
-        env: text("env").notNull(),
-        packageManagers: text("package_managers").notNull(),
-        allowedDomains: text("allowed_domains").notNull(),
-        allowLocalBinding: integer("allow_local_binding").notNull().default(0),
-        permissions: text("permissions").notNull(),
-        owner: text("owner"),
-        keepAlive: integer("keep_alive").notNull().default(0),
+        env: jsonb("env").notNull(),
+        packageManagers: jsonb("package_managers").notNull(),
+        allowedDomains: jsonb("allowed_domains").notNull(),
+        allowLocalBinding: boolean("allow_local_binding").notNull().default(false),
+        permissions: jsonb("permissions").notNull(),
+        owner: jsonb("owner"),
+        keepAlive: boolean("keep_alive").notNull().default(false),
         desiredState: text("desired_state").notNull().default("running"),
         status: text("status").notNull().default("running"),
         pid: integer("pid"),
@@ -452,8 +451,8 @@ export const connectionsTable = pgTable(
         version: integer("version").notNull().default(1),
         validFrom: bigint("valid_from", { mode: "number" }).notNull(),
         validTo: bigint("valid_to", { mode: "number" }),
-        requestedA: integer("requested_a").notNull().default(0),
-        requestedB: integer("requested_b").notNull().default(0),
+        requestedA: boolean("requested_a").notNull().default(false),
+        requestedB: boolean("requested_b").notNull().default(false),
         requestedAAt: bigint("requested_a_at", { mode: "number" }),
         requestedBAt: bigint("requested_b_at", { mode: "number" })
     },
@@ -477,7 +476,7 @@ export const systemPromptsTable = pgTable(
         kind: text("kind").notNull(),
         condition: text("condition"),
         prompt: text("prompt").notNull(),
-        enabled: integer("enabled").notNull().default(1),
+        enabled: boolean("enabled").notNull().default(true),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },
@@ -537,7 +536,7 @@ export const observationLogTable = pgTable(
         source: text("source").notNull(),
         message: text("message").notNull(),
         details: text("details"),
-        data: text("data"),
+        data: jsonb("data"),
         scopeIds: text("scope_ids").array().notNull().default([]),
         createdAt: bigint("created_at", { mode: "number" }).notNull()
     },

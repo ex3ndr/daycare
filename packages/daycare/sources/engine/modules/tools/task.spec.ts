@@ -8,7 +8,7 @@ import { configResolve } from "../../../config/configResolve.js";
 import type { AppServerSettings } from "../../../settings.js";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
-import { JWT_SERVICE_WEBHOOK, jwtVerify } from "../../../util/jwt.js";
+import { JWT_SERVICE_WEBHOOK, jwtVerify } from "../../../utils/jwt.js";
 import { contextForAgent } from "../../agents/context.js";
 import { agentPathTask } from "../../agents/ops/agentPathBuild.js";
 import { ConfigModule } from "../../config/configModule.js";

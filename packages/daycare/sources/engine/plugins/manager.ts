@@ -14,7 +14,7 @@ import type { AuthStore } from "../../auth/store.js";
 import { getLogger } from "../../log.js";
 import type { PluginInstanceSettings, SettingsConfig } from "../../settings.js";
 import { listEnabledPlugins } from "../../settings.js";
-import { valueDeepEqual } from "../../util/valueDeepEqual.js";
+import { valueDeepEqual } from "../../utils/valueDeepEqual.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { FileFolder } from "../files/fileFolder.js";
 import type { EngineEventBus } from "../ipc/events.js";

@@ -3,7 +3,7 @@ import type { Context } from "@/types";
 import { exposeDomainNormalize, exposeTargetParse } from "../engine/expose/exposeTypes.js";
 import type { DaycareDb } from "../schema.js";
 import { exposeEndpointsTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import type { ExposeEndpointDbRecord } from "./databaseTypes.js";
 import { versionAdvance } from "./versionAdvance.js";
 
@@ -61,11 +61,11 @@ export class ExposeEndpointsRepository {
                                   validFrom: row.validFrom ?? row.createdAt,
                                   validTo: row.validTo ?? null,
                                   userId: row.userId,
-                                  target: JSON.stringify(row.target),
+                                  target: row.target,
                                   provider: row.provider,
                                   domain: exposeDomainNormalize(row.domain),
                                   mode: row.mode,
-                                  auth: row.auth ? JSON.stringify(row.auth) : null,
+                                  auth: row.auth,
                                   createdAt: row.createdAt,
                                   updatedAt: row.updatedAt
                               });
@@ -87,11 +87,11 @@ export class ExposeEndpointsRepository {
                     validFrom: next.validFrom ?? next.createdAt,
                     validTo: next.validTo ?? null,
                     userId: next.userId,
-                    target: JSON.stringify(next.target),
+                    target: next.target,
                     provider: next.provider,
                     domain: exposeDomainNormalize(next.domain),
                     mode: next.mode,
-                    auth: next.auth ? JSON.stringify(next.auth) : null,
+                    auth: next.auth,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
                 });
@@ -233,11 +233,11 @@ export class ExposeEndpointsRepository {
                             validFrom: row.validFrom ?? row.createdAt,
                             validTo: row.validTo ?? null,
                             userId: row.userId,
-                            target: JSON.stringify(row.target),
+                            target: row.target,
                             provider: row.provider,
                             domain: row.domain,
                             mode: row.mode,
-                            auth: row.auth ? JSON.stringify(row.auth) : null,
+                            auth: row.auth,
                             createdAt: row.createdAt,
                             updatedAt: row.updatedAt
                         });
@@ -321,20 +321,20 @@ function endpointParse(row: typeof exposeEndpointsTable.$inferSelect): ExposeEnd
     };
 }
 
-function targetParse(raw: string): ExposeEndpointDbRecord["target"] {
+function targetParse(raw: unknown): ExposeEndpointDbRecord["target"] {
     try {
-        return exposeTargetParse(JSON.parse(raw));
+        return exposeTargetParse(jsonValueParse(raw));
     } catch {
         return { type: "port", port: 80 };
     }
 }
 
-function authParse(raw: string | null): ExposeEndpointDbRecord["auth"] {
+function authParse(raw: unknown | null): ExposeEndpointDbRecord["auth"] {
     if (!raw) {
         return null;
     }
     try {
-        const parsed = JSON.parse(raw) as unknown;
+        const parsed = jsonValueParse(raw);
         if (!parsed || typeof parsed !== "object") {
             return null;
         }
@@ -358,11 +358,18 @@ function authParse(raw: string | null): ExposeEndpointDbRecord["auth"] {
 function endpointClone(record: ExposeEndpointDbRecord): ExposeEndpointDbRecord {
     return {
         ...record,
-        target: JSON.parse(JSON.stringify(record.target)) as ExposeEndpointDbRecord["target"],
+        target: structuredClone(record.target),
         auth: record.auth ? { ...record.auth } : null
     };
 }
 
 function exposeEndpointsSort(records: ExposeEndpointDbRecord[]): ExposeEndpointDbRecord[] {
     return records.slice().sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id));
+}
+
+function jsonValueParse(raw: unknown): unknown {
+    if (typeof raw === "string") {
+        return JSON.parse(raw);
+    }
+    return raw;
 }

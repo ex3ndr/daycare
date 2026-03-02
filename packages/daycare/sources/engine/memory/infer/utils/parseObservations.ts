@@ -1,4 +1,4 @@
-import { tagExtract, tagExtractAll } from "../../../../util/tagExtract.js";
+import { tagExtract, tagExtractAll } from "../../../../utils/tagExtract.js";
 import type { InferObservation } from "../inferObservations.js";
 
 /**

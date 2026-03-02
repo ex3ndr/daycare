@@ -3,7 +3,7 @@ import type { Context } from "@/types";
 import { signalTypeMatchesPattern } from "../engine/signals/signalTypeMatchesPattern.js";
 import type { DaycareDb } from "../schema.js";
 import { signalsSubscriptionsTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import type { SignalSubscriptionDbRecord } from "./databaseTypes.js";
 import { versionAdvance } from "./versionAdvance.js";
 
@@ -69,7 +69,7 @@ export class SignalSubscriptionsRepository {
                                   userId: row.userId,
                                   agentId: row.agentId,
                                   pattern: row.pattern,
-                                  silent: row.silent ? 1 : 0,
+                                  silent: row.silent,
                                   createdAt: row.createdAt,
                                   updatedAt: row.updatedAt
                               });
@@ -92,7 +92,7 @@ export class SignalSubscriptionsRepository {
                     userId: next.userId,
                     agentId: next.agentId,
                     pattern: next.pattern,
-                    silent: next.silent ? 1 : 0,
+                    silent: next.silent,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
                 });
@@ -291,7 +291,7 @@ function subscriptionParse(row: {
     userId: string;
     agentId: string;
     pattern: string;
-    silent: number;
+    silent: boolean;
     createdAt: number;
     updatedAt: number;
 }): SignalSubscriptionDbRecord {
@@ -303,7 +303,7 @@ function subscriptionParse(row: {
         userId: row.userId,
         agentId: row.agentId,
         pattern: row.pattern,
-        silent: row.silent === 1,
+        silent: row.silent,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt
     };

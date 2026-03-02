@@ -1,5 +1,5 @@
 import type Docker from "dockerode";
-import type { PathMountPoint } from "../../util/pathMountTypes.js";
+import type { PathMountPoint } from "../../utils/pathMountTypes.js";
 
 export type DockerContainerConfig = {
     image: string;

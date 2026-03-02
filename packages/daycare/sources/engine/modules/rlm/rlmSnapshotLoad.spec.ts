@@ -29,7 +29,6 @@ describe("rlmSnapshotLoad", () => {
                     activeSessionId: null,
                     permissions,
                     tokens: null,
-                    stats: {},
                     lifecycle: "active",
                     createdAt: 1,
                     updatedAt: 1

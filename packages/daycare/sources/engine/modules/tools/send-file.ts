@@ -9,7 +9,7 @@ import type {
     ToolExecutionContext,
     ToolResultContract
 } from "@/types";
-import { sanitizeFilename } from "../../../util/filename.js";
+import { sanitizeFilename } from "../../../utils/filename.js";
 import { agentPathTargetResolve } from "../../agents/ops/agentPathTargetResolve.js";
 
 const schema = Type.Object(

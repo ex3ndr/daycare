@@ -2,7 +2,7 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { processesTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import type { ProcessDbRecord, ProcessOwnerDbRecord } from "./databaseTypes.js";
 import { versionAdvance } from "./versionAdvance.js";
 
@@ -331,10 +331,10 @@ function recordParse(row: typeof processesTable.$inferSelect): ProcessDbRecord {
         env: jsonRecordParse(row.env),
         packageManagers: jsonStringArrayParse(row.packageManagers),
         allowedDomains: jsonStringArrayParse(row.allowedDomains),
-        allowLocalBinding: row.allowLocalBinding === 1,
+        allowLocalBinding: row.allowLocalBinding,
         permissions: permissionsParse(row.permissions),
         owner: ownerParse(row.owner),
-        keepAlive: row.keepAlive === 1,
+        keepAlive: row.keepAlive,
         desiredState: row.desiredState as ProcessDbRecord["desiredState"],
         status: row.status as ProcessDbRecord["status"],
         pid: row.pid,
@@ -427,13 +427,13 @@ function processRowUpdate(
         command: record.command,
         cwd: record.cwd,
         home: record.home,
-        env: JSON.stringify(record.env),
-        packageManagers: JSON.stringify(record.packageManagers),
-        allowedDomains: JSON.stringify(record.allowedDomains),
-        allowLocalBinding: record.allowLocalBinding ? 1 : 0,
-        permissions: JSON.stringify(record.permissions),
-        owner: record.owner ? JSON.stringify(record.owner) : null,
-        keepAlive: record.keepAlive ? 1 : 0,
+        env: record.env,
+        packageManagers: record.packageManagers,
+        allowedDomains: record.allowedDomains,
+        allowLocalBinding: record.allowLocalBinding,
+        permissions: record.permissions,
+        owner: record.owner,
+        keepAlive: record.keepAlive,
         desiredState: record.desiredState,
         status: record.status,
         pid: record.pid,
@@ -548,9 +548,9 @@ function processesSort(records: ProcessDbRecord[]): ProcessDbRecord[] {
     return records.slice().sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id));
 }
 
-function jsonRecordParse(raw: string): Record<string, string> {
+function jsonRecordParse(raw: unknown): Record<string, string> {
     try {
-        const parsed = JSON.parse(raw) as unknown;
+        const parsed = jsonValueParse(raw);
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
             return {};
         }
@@ -563,9 +563,9 @@ function jsonRecordParse(raw: string): Record<string, string> {
     }
 }
 
-function jsonStringArrayParse(raw: string): string[] {
+function jsonStringArrayParse(raw: unknown): string[] {
     try {
-        const parsed = JSON.parse(raw) as unknown;
+        const parsed = jsonValueParse(raw);
         if (!Array.isArray(parsed)) {
             return [];
         }
@@ -575,9 +575,9 @@ function jsonStringArrayParse(raw: string): string[] {
     }
 }
 
-function permissionsParse(raw: string): ProcessDbRecord["permissions"] {
+function permissionsParse(raw: unknown): ProcessDbRecord["permissions"] {
     try {
-        const parsed = JSON.parse(raw) as Partial<ProcessDbRecord["permissions"]>;
+        const parsed = jsonValueParse(raw) as Partial<ProcessDbRecord["permissions"]>;
         if (typeof parsed.workingDir !== "string" || !Array.isArray(parsed.writeDirs)) {
             throw new Error("Invalid permissions");
         }
@@ -598,12 +598,12 @@ function permissionsParse(raw: string): ProcessDbRecord["permissions"] {
     }
 }
 
-function ownerParse(raw: string | null): ProcessOwnerDbRecord | null {
+function ownerParse(raw: unknown | null): ProcessOwnerDbRecord | null {
     if (!raw) {
         return null;
     }
     try {
-        const parsed = JSON.parse(raw) as { type?: unknown; id?: unknown };
+        const parsed = jsonValueParse(raw) as { type?: unknown; id?: unknown };
         if (parsed.type !== "plugin" || typeof parsed.id !== "string" || !parsed.id.trim()) {
             return null;
         }
@@ -611,4 +611,11 @@ function ownerParse(raw: string | null): ProcessOwnerDbRecord | null {
     } catch {
         return null;
     }
+}
+
+function jsonValueParse(raw: unknown): unknown {
+    if (typeof raw === "string") {
+        return JSON.parse(raw);
+    }
+    return raw;
 }

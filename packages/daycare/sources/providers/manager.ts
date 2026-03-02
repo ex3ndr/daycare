@@ -5,7 +5,7 @@ import type { ImageGenerationRegistry } from "../engine/modules/imageGenerationR
 import type { InferenceRegistry } from "../engine/modules/inferenceRegistry.js";
 import { getLogger } from "../log.js";
 import { listProviders, type ProviderSettings } from "../settings.js";
-import { valueDeepEqual } from "../util/valueDeepEqual.js";
+import { valueDeepEqual } from "../utils/valueDeepEqual.js";
 import { getProviderDefinition, listProviderDefinitions } from "./catalog.js";
 import type { ProviderDefinition, ProviderInstance } from "./types.js";
 

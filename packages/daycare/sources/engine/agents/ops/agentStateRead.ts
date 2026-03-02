@@ -23,8 +23,6 @@ export async function agentStateRead(storageOrConfig: Storage | Config, ctx: Con
         activeSessionId: record.activeSessionId ?? null,
         inferenceSessionId: activeSession?.inferenceSessionId ?? undefined,
         permissions: record.permissions,
-        tokens: record.tokens,
-        stats: record.stats,
         createdAt: record.createdAt,
         updatedAt: record.updatedAt,
         state: record.lifecycle

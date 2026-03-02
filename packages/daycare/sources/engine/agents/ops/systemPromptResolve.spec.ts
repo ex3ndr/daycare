@@ -66,7 +66,6 @@ async function setupUserWithAgent(
             activeSessionId: null,
             permissions: { workingDir: "/tmp", writeDirs: [] },
             tokens: null,
-            stats: {},
             lifecycle: "active",
             createdAt,
             updatedAt

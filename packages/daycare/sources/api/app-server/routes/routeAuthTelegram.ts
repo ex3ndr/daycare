@@ -1,5 +1,5 @@
 import type http from "node:http";
-import { jwtSign } from "../../../util/jwt.js";
+import { jwtSign } from "../../../utils/jwt.js";
 import { APP_AUTH_SESSION_EXPIRES_IN_SECONDS } from "../appAuthLinkTool.js";
 import { appReadJsonBody, appSendJson } from "../appHttp.js";
 import { appTelegramInitDataValidate } from "../appTelegramInitDataValidate.js";

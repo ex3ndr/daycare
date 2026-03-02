@@ -9,7 +9,7 @@ import type {
 import { getLogger } from "../../log.js";
 import type { DelayedSignalDbRecord } from "../../storage/databaseTypes.js";
 import type { DelayedSignalsRepository } from "../../storage/delayedSignalsRepository.js";
-import { AsyncLock } from "../../util/lock.js";
+import { AsyncLock } from "../../utils/lock.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import type { Signals } from "./signals.js";

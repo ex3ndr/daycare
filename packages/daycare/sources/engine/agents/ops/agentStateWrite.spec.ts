@@ -39,8 +39,6 @@ describe("agentStateWrite", () => {
                 activeSessionId: undefined,
                 inferenceSessionId: undefined,
                 permissions,
-                tokens: null,
-                stats: {},
                 createdAt: now,
                 updatedAt: now + 1,
                 state: "sleeping"

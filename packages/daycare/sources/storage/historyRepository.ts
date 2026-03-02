@@ -60,7 +60,7 @@ export class HistoryRepository {
                 sessionId,
                 type,
                 at,
-                data: JSON.stringify(data)
+                data
             })
             .returning({ id: sessionHistoryTable.id });
         const first = inserted[0];
@@ -100,12 +100,12 @@ export class HistoryRepository {
     }
 }
 
-function historyParse(row: { type: string; at: number; data: string }): AgentHistoryRecord | null {
+function historyParse(row: { type: string; at: number; data: unknown }): AgentHistoryRecord | null {
     try {
         if (!historyRecordTypeIs(row.type)) {
             return null;
         }
-        const data = JSON.parse(row.data) as Record<string, unknown>;
+        const data = jsonObjectParse(row.data);
         return {
             type: row.type,
             at: row.at,
@@ -114,6 +114,16 @@ function historyParse(row: { type: string; at: number; data: string }): AgentHis
     } catch {
         return null;
     }
+}
+
+function jsonObjectParse(value: unknown): Record<string, unknown> {
+    if (typeof value === "string") {
+        return JSON.parse(value) as Record<string, unknown>;
+    }
+    if (!value || typeof value !== "object") {
+        return {};
+    }
+    return value as Record<string, unknown>;
 }
 
 function historyRecordTypeIs(value: string): value is AgentHistoryRecord["type"] {

@@ -1,7 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { xmlEscape } from "../../../util/xmlEscape.js";
+import { xmlEscape } from "../../../utils/xmlEscape.js";
 import { messageBuildSystemText } from "../../messages/messageBuildSystemText.js";
 
 const schema = Type.Object(

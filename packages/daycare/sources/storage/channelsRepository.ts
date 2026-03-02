@@ -2,7 +2,7 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { channelMembersTable, channelsTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import type { ChannelDbRecord, ChannelMemberDbRecord } from "./databaseTypes.js";
 import { versionAdvance } from "./versionAdvance.js";
 

@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { pathMountMapMappedToHost } from "../../util/pathMountMapMappedToHost.js";
+import { pathMountMapMappedToHost } from "../../utils/pathMountMapMappedToHost.js";
 import { dockerContainersShared } from "./dockerContainersShared.js";
 import { dockerRunInSandbox } from "./dockerRunInSandbox.js";
 

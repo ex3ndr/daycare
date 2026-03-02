@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import type { Config, Context } from "@/types";
-import { atomicWrite } from "../../../util/atomicWrite.js";
+import { atomicWrite } from "../../../utils/atomicWrite.js";
 import { agentPath } from "./agentPath.js";
 
 const systemPromptCache = new Map<string, string>();

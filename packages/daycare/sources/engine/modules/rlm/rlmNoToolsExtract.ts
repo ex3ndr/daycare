@@ -1,4 +1,4 @@
-import { tagExtractAll } from "../../../util/tagExtract.js";
+import { tagExtractAll } from "../../../utils/tagExtract.js";
 
 /**
  * Extracts Python code from all complete <run_python>...</run_python> blocks.

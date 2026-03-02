@@ -26,7 +26,6 @@ export type {
     AgentTokenEntry,
     AgentTokenSize,
     AgentTokenSnapshotSize,
-    AgentTokenStats,
     BackgroundAgentState
 } from "./engine/agents/ops/agentTypes.js";
 // Channels

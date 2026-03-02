@@ -107,7 +107,6 @@ export type CronAddedData = {
     cronId: string;
     taskId: string;
     userId: string;
-    name: string;
     schedule: string;
     timezone: string;
 };
@@ -116,28 +115,24 @@ export type CronDeletedData = {
     cronId: string;
     taskId: string;
     userId: string;
-    name: string;
 };
 
 export type CronEnabledData = {
     cronId: string;
     taskId: string;
     userId: string;
-    name: string;
 };
 
 export type CronDisabledData = {
     cronId: string;
     taskId: string;
     userId: string;
-    name: string;
 };
 
 export type WebhookAddedData = {
     webhookId: string;
     taskId: string;
     userId: string;
-    name: string;
     routeTemplate: string;
 };
 
@@ -145,7 +140,6 @@ export type WebhookDeletedData = {
     webhookId: string;
     taskId: string;
     userId: string;
-    name: string;
 };
 
 export type SignalSubscribedData = {

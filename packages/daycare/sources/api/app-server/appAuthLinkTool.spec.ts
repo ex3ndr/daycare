@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import { contextForUser } from "../../engine/agents/context.js";
-import { jwtVerify } from "../../util/jwt.js";
+import { jwtVerify } from "../../utils/jwt.js";
 import { APP_AUTH_LINK_SERVICE, appAuthLinkGenerate, appAuthLinkTool, appAuthLinkUrlBuild } from "./appAuthLinkTool.js";
 
 describe("appAuthLinkUrlBuild", () => {

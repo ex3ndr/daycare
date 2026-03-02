@@ -33,7 +33,6 @@ async function createTestStorage() {
         activeSessionId: null,
         permissions,
         tokens: null,
-        stats: {},
         lifecycle: "active",
         createdAt: 1,
         updatedAt: 1
@@ -142,7 +141,6 @@ describe("MemoryWorker", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1
@@ -187,7 +185,6 @@ describe("MemoryWorker", () => {
                 activeSessionId: null,
                 permissions,
                 tokens: null,
-                stats: {},
                 lifecycle: "active",
                 createdAt: 1,
                 updatedAt: 1

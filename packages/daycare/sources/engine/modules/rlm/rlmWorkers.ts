@@ -5,8 +5,8 @@ import { fileURLToPath } from "node:url";
 import { createId } from "@paralleldrive/cuid2";
 
 import { getLogger } from "../../../log.js";
-import { AsyncLock } from "../../../util/lock.js";
-import { onShutdown } from "../../../util/shutdown.js";
+import { AsyncLock } from "../../../utils/lock.js";
+import { onShutdown } from "../../../utils/shutdown.js";
 import type { RlmVmProgress } from "./rlmVmProgress.js";
 import { RlmWorkerError, rlmWorkerErrorFromSerialized } from "./rlmWorkerError.js";
 import type { RlmWorkerRequest, RlmWorkerResponse } from "./rlmWorkerProtocol.js";

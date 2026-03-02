@@ -27,7 +27,6 @@ const topologyCronTriggerSchema = Type.Object(
         id: Type.String(),
         taskId: Type.String(),
         userId: Type.String(),
-        name: Type.String(),
         schedule: Type.String(),
         timezone: Type.String(),
         enabled: Type.Boolean(),
@@ -174,7 +173,6 @@ type TopologyCronTrigger = {
     id: string;
     taskId: string;
     userId: string;
-    name: string;
     schedule: string;
     timezone: string;
     enabled: boolean;
@@ -342,7 +340,6 @@ export function topologyTool(
                     id: task.id,
                     taskId: task.taskId,
                     userId: task.userId,
-                    name: task.name,
                     schedule: task.schedule,
                     timezone: task.timezone,
                     enabled: task.enabled !== false,

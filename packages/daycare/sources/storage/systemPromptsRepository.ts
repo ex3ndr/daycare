@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull, or } from "drizzle-orm";
 import type { DaycareDb } from "../schema.js";
 import { systemPromptsTable } from "../schema.js";
-import { AsyncLock } from "../util/lock.js";
+import { AsyncLock } from "../utils/lock.js";
 import type { SystemPromptDbRecord, SystemPromptScope } from "./databaseTypes.js";
 import { versionAdvance } from "./versionAdvance.js";
 
@@ -100,7 +100,7 @@ export class SystemPromptsRepository {
                 .from(systemPromptsTable)
                 .where(
                     and(
-                        eq(systemPromptsTable.enabled, 1),
+                        eq(systemPromptsTable.enabled, true),
                         isNull(systemPromptsTable.validTo),
                         or(
                             eq(systemPromptsTable.scope, "global"),
@@ -116,7 +116,7 @@ export class SystemPromptsRepository {
             .from(systemPromptsTable)
             .where(
                 and(
-                    eq(systemPromptsTable.enabled, 1),
+                    eq(systemPromptsTable.enabled, true),
                     eq(systemPromptsTable.scope, "global"),
                     isNull(systemPromptsTable.validTo)
                 )
@@ -167,7 +167,7 @@ export class SystemPromptsRepository {
                                   kind: row.kind,
                                   condition: row.condition,
                                   prompt: row.prompt,
-                                  enabled: row.enabled ? 1 : 0,
+                                  enabled: row.enabled,
                                   createdAt: row.createdAt,
                                   updatedAt: row.updatedAt
                               });
@@ -192,7 +192,7 @@ export class SystemPromptsRepository {
                     kind: next.kind,
                     condition: next.condition,
                     prompt: next.prompt,
-                    enabled: next.enabled ? 1 : 0,
+                    enabled: next.enabled,
                     createdAt: next.createdAt,
                     updatedAt: next.updatedAt
                 });
@@ -256,7 +256,7 @@ export class SystemPromptsRepository {
                             kind: row.kind,
                             condition: row.condition,
                             prompt: row.prompt,
-                            enabled: row.enabled ? 1 : 0,
+                            enabled: row.enabled,
                             createdAt: row.createdAt,
                             updatedAt: row.updatedAt
                         });
@@ -335,7 +335,7 @@ function promptParse(row: typeof systemPromptsTable.$inferSelect): SystemPromptD
         kind: row.kind as SystemPromptDbRecord["kind"],
         condition: row.condition as SystemPromptDbRecord["condition"],
         prompt: row.prompt,
-        enabled: row.enabled === 1,
+        enabled: row.enabled,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt
     };

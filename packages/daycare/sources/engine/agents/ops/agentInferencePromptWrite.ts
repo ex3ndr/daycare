@@ -5,7 +5,7 @@ import type { Context } from "@mariozechner/pi-ai";
 
 import type { Config, Context as DaycareContext } from "@/types";
 import type { ProviderSettings } from "../../../settings.js";
-import { atomicWrite } from "../../../util/atomicWrite.js";
+import { atomicWrite } from "../../../utils/atomicWrite.js";
 import { agentPath } from "./agentPath.js";
 
 type AgentInferencePromptWriteOptions = {
