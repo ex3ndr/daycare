@@ -153,7 +153,8 @@ function renderTaskList(listElement, countElement, tasks, emptyText, titleKey = 
     .slice(0, MAX_LIST_ITEMS)
     .map((task) => {
       const title = task[titleKey] || task.id || "Untitled";
-      const detail = task.schedule || task.prompt || task.status || "-";
+      const baseDetail = task.scheduleHuman || task.schedule || task.prompt || task.status || "-";
+      const detail = task.nextRunText ? `${baseDetail} Next: ${task.nextRunText}` : baseDetail;
       return `<li><strong>${escapeHtml(title)}</strong><span>${escapeHtml(detail)}</span></li>`;
     })
     .join("");

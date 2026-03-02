@@ -180,4 +180,58 @@ describe("startEngineServer", () => {
         expect(payload.ok).toBe(true);
         expect(payload.triggerId).toBe("nightly");
     });
+
+    it("returns readable cron details with next expected run", async () => {
+        const runtime = {
+            crons: {
+                listScheduledTasks: () => [
+                    {
+                        id: "nightly",
+                        taskId: "task-1",
+                        userId: "user-1",
+                        schedule: "0 9 * * 1-5",
+                        timezone: "UTC",
+                        agentId: null,
+                        enabled: true,
+                        deleteAfterRun: false,
+                        parameters: null,
+                        lastRunAt: null,
+                        createdAt: 0,
+                        updatedAt: 0
+                    }
+                ]
+            }
+        } as unknown as import("../engine.js").Engine;
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "dces-cron-list-"));
+        activeDirs.push(dir);
+
+        const server = await startEngineServer({
+            socketPath: path.join(dir, "engine.sock"),
+            settingsPath: path.join(dir, "settings.json"),
+            runtime,
+            eventBus: new EngineEventBus()
+        });
+        activeServers.push(server);
+
+        const response = await requestSocket({
+            socketPath: server.socketPath,
+            path: "/v1/engine/cron/tasks"
+        });
+
+        expect(response.statusCode).toBe(200);
+        const payload = JSON.parse(response.body) as {
+            ok: boolean;
+            tasks: Array<{
+                id: string;
+                scheduleHuman?: string;
+                nextRunAt?: number | null;
+                nextRunText?: string | null;
+            }>;
+        };
+        expect(payload.ok).toBe(true);
+        expect(payload.tasks[0]?.id).toBe("nightly");
+        expect(payload.tasks[0]?.scheduleHuman).toBe("On Monday through Friday at 09:00.");
+        expect(typeof payload.tasks[0]?.nextRunAt).toBe("number");
+        expect(payload.tasks[0]?.nextRunText).toContain("UTC");
+    });
 });

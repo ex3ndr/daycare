@@ -14,11 +14,13 @@ import {
     updateSettingsFile,
     upsertPlugin
 } from "../../settings.js";
+import type { CronTaskDbRecord } from "../../storage/databaseTypes.js";
 import { requestShutdown } from "../../utils/shutdown.js";
 import { contextForUser } from "../agents/context.js";
 import { agentBackgroundList } from "../agents/ops/agentBackgroundList.js";
 import { agentHistoryLoadAll } from "../agents/ops/agentHistoryLoadAll.js";
 import { agentList } from "../agents/ops/agentList.js";
+import { cronScheduleDescribe } from "../cron/ops/cronScheduleDescribe.js";
 import type { Engine } from "../engine.js";
 import { buildPluginCatalog } from "../plugins/catalog.js";
 import { resolveExclusivePlugins } from "../plugins/exclusive.js";
@@ -205,7 +207,7 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
 
     app.get("/v1/engine/cron/tasks", async (_request, reply) => {
         logger.debug("event: GET /v1/engine/cron/tasks");
-        const tasks = options.runtime.crons.listScheduledTasks();
+        const tasks = cronTasksViewBuild(options.runtime.crons.listScheduledTasks());
         logger.debug(`event: Cron tasks retrieved taskCount=${tasks.length}`);
         return reply.send({ ok: true, tasks });
     });
@@ -752,7 +754,7 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
             type: "init",
             payload: {
                 status: options.runtime.getStatus(),
-                cron: options.runtime.crons.listScheduledTasks(),
+                cron: cronTasksViewBuild(options.runtime.crons.listScheduledTasks()),
                 backgroundAgents: await agentBackgroundList(options.runtime.storage)
             },
             timestamp: new Date().toISOString()
@@ -855,6 +857,21 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
             logger.debug("event: Engine server closed");
         }
     };
+}
+
+function cronTasksViewBuild(tasks: CronTaskDbRecord[]) {
+    return tasks.map((task) => {
+        const schedule = cronScheduleDescribe({
+            expression: task.schedule,
+            timezone: task.timezone
+        });
+        return {
+            ...task,
+            scheduleHuman: schedule.description,
+            nextRunAt: schedule.nextRunAt,
+            nextRunText: schedule.nextRunText
+        };
+    });
 }
 
 function parseBody<T>(schema: z.ZodSchema<T>, body: unknown, reply: FastifyReply): T | null {
