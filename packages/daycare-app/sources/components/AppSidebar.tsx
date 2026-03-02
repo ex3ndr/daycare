@@ -12,17 +12,26 @@ import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 
 export const SIDEBAR_WIDTH = 240;
 
-const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicons>["name"]; label: string }> = [
-    { mode: "home", icon: "home", label: "Home" },
-    { mode: "todos", icon: "checklist", label: "Todos" },
-    { mode: "people", icon: "people", label: "People" },
-    { mode: "documents", icon: "file", label: "Documents" },
-    { mode: "email", icon: "mail", label: "Email" },
-    { mode: "inbox", icon: "inbox", label: "Inbox" },
-    { mode: "agents", icon: "device-desktop", label: "Agents" },
-    { mode: "routines", icon: "clock", label: "Routines" },
-    { mode: "costs", icon: "credit-card", label: "Costs" },
-    { mode: "settings", icon: "gear", label: "Settings" }
+type Segment = { mode: AppMode; icon: React.ComponentProps<typeof Octicons>["name"]; label: string };
+
+/** Sidebar items grouped with visual spacing between groups. */
+const segmentGroups: Segment[][] = [
+    [{ mode: "home", icon: "home", label: "Home" }],
+    [{ mode: "todos", icon: "checklist", label: "Todos" }],
+    [
+        { mode: "people", icon: "people", label: "People" },
+        { mode: "documents", icon: "file", label: "Documents" }
+    ],
+    [
+        { mode: "email", icon: "mail", label: "Email" },
+        { mode: "inbox", icon: "inbox", label: "Inbox" }
+    ],
+    [
+        { mode: "agents", icon: "device-desktop", label: "Agents" },
+        { mode: "routines", icon: "clock", label: "Routines" },
+        { mode: "costs", icon: "credit-card", label: "Costs" }
+    ],
+    [{ mode: "settings", icon: "gear", label: "Settings" }]
 ];
 
 /** Sub-items for each mode that expand when the mode is active. */
@@ -146,137 +155,158 @@ export const AppSidebar = React.memo<AppSidebarProps>(({ onNavigate }) => {
 
             {/* Tree navigation */}
             <ScrollView style={styles.treeContainer} showsVerticalScrollIndicator={false}>
-                {segments.map((seg) => {
-                    const isActive = activeMode === seg.mode;
-                    const isDocuments = seg.mode === "documents";
-                    const items = modeItems[seg.mode];
-                    const hasStaticItems = items.length > 0;
-                    const hasItems = hasStaticItems || (isDocuments && isActive);
+                {segmentGroups.map((group, groupIndex) => (
+                    <View
+                        key={group.map((s) => s.mode).join("-")}
+                        style={groupIndex > 0 ? styles.groupSpacer : undefined}
+                    >
+                        {group.map((seg) => {
+                            const isActive = activeMode === seg.mode;
+                            const isDocumentsMode = seg.mode === "documents";
+                            const items = modeItems[seg.mode];
+                            const hasStaticItems = items.length > 0;
+                            const hasItems = hasStaticItems || (isDocumentsMode && isActive);
 
-                    return (
-                        <View key={seg.mode}>
-                            <Pressable
-                                testID={`sidebar-${seg.mode}`}
-                                onPress={() => handleModePress(seg.mode)}
-                                style={[styles.modeRow, isActive && { backgroundColor: theme.colors.primaryContainer }]}
-                            >
-                                <Octicons
-                                    name={seg.icon}
-                                    size={16}
-                                    color={isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant}
-                                />
-                                <Text
-                                    style={[
-                                        styles.modeLabel,
-                                        {
-                                            color: isActive
-                                                ? theme.colors.onPrimaryContainer
-                                                : theme.colors.onSurfaceVariant
-                                        },
-                                        isActive && styles.modeLabelActive
-                                    ]}
-                                >
-                                    {seg.label}
-                                </Text>
-                                {hasItems && (
-                                    <Octicons
-                                        name={isActive ? "chevron-down" : "chevron-right"}
-                                        size={12}
-                                        color={
-                                            isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant
-                                        }
-                                    />
-                                )}
-                            </Pressable>
-
-                            {/* Documents sub-items (dynamic from store) */}
-                            {isDocuments && isActive && (
-                                <View style={styles.subItems}>
-                                    {sidebarDocs.map((doc) => {
-                                        const isSelected = documentsSelected === doc.id;
-                                        return (
-                                            <Pressable
-                                                key={doc.id}
-                                                testID={`sidebar-doc-${doc.id}`}
-                                                onPress={() => handleDocumentPress(doc.id)}
-                                                style={[
-                                                    styles.subItemRow,
-                                                    isSelected && {
-                                                        backgroundColor: theme.colors.surfaceContainerHigh
-                                                    }
-                                                ]}
-                                            >
-                                                <Text
-                                                    style={[
-                                                        styles.subItemLabel,
-                                                        {
-                                                            color: isSelected
-                                                                ? theme.colors.onSurface
-                                                                : theme.colors.onSurfaceVariant
-                                                        }
-                                                    ]}
-                                                    numberOfLines={1}
-                                                >
-                                                    {doc.title}
-                                                </Text>
-                                            </Pressable>
-                                        );
-                                    })}
+                            return (
+                                <View key={seg.mode}>
                                     <Pressable
-                                        testID="sidebar-doc-create"
-                                        onPress={() => setCreateDialogVisible(true)}
-                                        style={styles.subItemRow}
+                                        testID={`sidebar-${seg.mode}`}
+                                        onPress={() => handleModePress(seg.mode)}
+                                        style={[
+                                            styles.modeRow,
+                                            isActive && { backgroundColor: theme.colors.primaryContainer }
+                                        ]}
                                     >
                                         <Octicons
-                                            name="plus"
-                                            size={14}
-                                            color={theme.colors.onSurfaceVariant}
-                                            style={styles.createIcon}
+                                            name={seg.icon}
+                                            size={16}
+                                            color={
+                                                isActive
+                                                    ? theme.colors.onPrimaryContainer
+                                                    : theme.colors.onSurfaceVariant
+                                            }
                                         />
-                                        <Text style={[styles.subItemLabel, { color: theme.colors.onSurfaceVariant }]}>
-                                            New Document
+                                        <Text
+                                            style={[
+                                                styles.modeLabel,
+                                                {
+                                                    color: isActive
+                                                        ? theme.colors.onPrimaryContainer
+                                                        : theme.colors.onSurfaceVariant
+                                                },
+                                                isActive && styles.modeLabelActive
+                                            ]}
+                                        >
+                                            {seg.label}
                                         </Text>
+                                        {hasItems && (
+                                            <Octicons
+                                                name={isActive ? "chevron-down" : "chevron-right"}
+                                                size={12}
+                                                color={
+                                                    isActive
+                                                        ? theme.colors.onPrimaryContainer
+                                                        : theme.colors.onSurfaceVariant
+                                                }
+                                            />
+                                        )}
                                     </Pressable>
-                                </View>
-                            )}
 
-                            {/* Static sub-items for other modes */}
-                            {!isDocuments && isActive && hasStaticItems && (
-                                <View style={styles.subItems}>
-                                    {items.map((item) => {
-                                        const isSelected = selectedItem === item.id;
-                                        return (
+                                    {/* Documents sub-items (dynamic from store) */}
+                                    {isDocumentsMode && isActive && (
+                                        <View style={styles.subItems}>
+                                            {sidebarDocs.map((doc) => {
+                                                const isSelected = documentsSelected === doc.id;
+                                                return (
+                                                    <Pressable
+                                                        key={doc.id}
+                                                        testID={`sidebar-doc-${doc.id}`}
+                                                        onPress={() => handleDocumentPress(doc.id)}
+                                                        style={[
+                                                            styles.subItemRow,
+                                                            isSelected && {
+                                                                backgroundColor: theme.colors.surfaceContainerHigh
+                                                            }
+                                                        ]}
+                                                    >
+                                                        <Text
+                                                            style={[
+                                                                styles.subItemLabel,
+                                                                {
+                                                                    color: isSelected
+                                                                        ? theme.colors.onSurface
+                                                                        : theme.colors.onSurfaceVariant
+                                                                }
+                                                            ]}
+                                                            numberOfLines={1}
+                                                        >
+                                                            {doc.title}
+                                                        </Text>
+                                                    </Pressable>
+                                                );
+                                            })}
                                             <Pressable
-                                                key={item.id}
-                                                testID={`sidebar-item-${item.id}`}
-                                                onPress={() => handleItemPress(seg.mode, item.id)}
-                                                style={[
-                                                    styles.subItemRow,
-                                                    isSelected && {
-                                                        backgroundColor: theme.colors.surfaceContainerHigh
-                                                    }
-                                                ]}
+                                                testID="sidebar-doc-create"
+                                                onPress={() => setCreateDialogVisible(true)}
+                                                style={styles.subItemRow}
                                             >
+                                                <Octicons
+                                                    name="plus"
+                                                    size={14}
+                                                    color={theme.colors.onSurfaceVariant}
+                                                    style={styles.createIcon}
+                                                />
                                                 <Text
                                                     style={[
                                                         styles.subItemLabel,
-                                                        {
-                                                            color: isSelected
-                                                                ? theme.colors.onSurface
-                                                                : theme.colors.onSurfaceVariant
-                                                        }
+                                                        { color: theme.colors.onSurfaceVariant }
                                                     ]}
                                                 >
-                                                    {item.title}
+                                                    New Document
                                                 </Text>
                                             </Pressable>
-                                        );
-                                    })}
+                                        </View>
+                                    )}
+
+                                    {/* Static sub-items for other modes */}
+                                    {!isDocumentsMode && isActive && hasStaticItems && (
+                                        <View style={styles.subItems}>
+                                            {items.map((item) => {
+                                                const isSelected = selectedItem === item.id;
+                                                return (
+                                                    <Pressable
+                                                        key={item.id}
+                                                        testID={`sidebar-item-${item.id}`}
+                                                        onPress={() => handleItemPress(seg.mode, item.id)}
+                                                        style={[
+                                                            styles.subItemRow,
+                                                            isSelected && {
+                                                                backgroundColor: theme.colors.surfaceContainerHigh
+                                                            }
+                                                        ]}
+                                                    >
+                                                        <Text
+                                                            style={[
+                                                                styles.subItemLabel,
+                                                                {
+                                                                    color: isSelected
+                                                                        ? theme.colors.onSurface
+                                                                        : theme.colors.onSurfaceVariant
+                                                                }
+                                                            ]}
+                                                        >
+                                                            {item.title}
+                                                        </Text>
+                                                    </Pressable>
+                                                );
+                                            })}
+                                        </View>
+                                    )}
                                 </View>
-                            )}
-                        </View>
-                    );
-                })}
+                            );
+                        })}
+                    </View>
+                ))}
             </ScrollView>
 
             {/* Footer with avatar */}
@@ -313,6 +343,9 @@ const styles = StyleSheet.create({
     treeContainer: {
         flex: 1,
         paddingHorizontal: 8
+    },
+    groupSpacer: {
+        marginTop: 12
     },
     modeRow: {
         flexDirection: "row",
