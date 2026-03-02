@@ -5,14 +5,6 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 
 type Theme = ReturnType<typeof useUnistyles>["theme"];
 
-// -- Fonts --
-const FONT = {
-    display: "BricolageGrotesque-Bold",
-    heading: "IBMPlexSans-SemiBold",
-    body: "IBMPlexSans-Regular",
-    mono: "IBMPlexMono-Regular"
-};
-
 // -- Mock data --
 
 const PLAYER = {
@@ -163,7 +155,7 @@ const AGENTS = [
 ];
 
 /**
- * Home dashboard — business command center with classical styling.
+ * Home dashboard — business command center with subtle gamification.
  */
 export function HomeView() {
     const { theme } = useUnistyles();
@@ -177,25 +169,8 @@ export function HomeView() {
             showsVerticalScrollIndicator={false}
         >
             {/* Player status bar */}
-            <View
-                style={[
-                    styles.statusBar,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer,
-                        borderColor: theme.colors.outlineVariant,
-                        borderBottomColor: theme.colors.primary
-                    }
-                ]}
-            >
-                <View
-                    style={[
-                        styles.levelBadge,
-                        {
-                            backgroundColor: theme.colors.primaryContainer,
-                            borderColor: theme.colors.primary
-                        }
-                    ]}
-                >
+            <View style={[styles.statusBar, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <View style={[styles.levelBadge, { backgroundColor: theme.colors.primaryContainer }]}>
                     <Text style={[styles.levelText, { color: theme.colors.onPrimaryContainer }]}>{PLAYER.level}</Text>
                 </View>
                 <View style={styles.statusInfo}>
@@ -211,30 +186,14 @@ export function HomeView() {
                         </Text>
                     </View>
                 </View>
-                <View
-                    style={[
-                        styles.streakPill,
-                        {
-                            backgroundColor: theme.colors.surfaceContainerHigh,
-                            borderColor: theme.colors.outlineVariant
-                        }
-                    ]}
-                >
+                <View style={[styles.streakPill, { backgroundColor: theme.colors.surfaceContainerHigh }]}>
                     <Octicons name="flame" size={14} color={theme.colors.primary} />
                     <Text style={[styles.streakValue, { color: theme.colors.onSurface }]}>{PLAYER.streak}</Text>
                 </View>
             </View>
 
             {/* Overnight summary */}
-            <View
-                style={[
-                    styles.overnightCard,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer,
-                        borderColor: theme.colors.outlineVariant
-                    }
-                ]}
-            >
+            <View style={[styles.overnightCard, { backgroundColor: theme.colors.surfaceContainer }]}>
                 <View style={styles.overnightHeader}>
                     <Octicons name="sun" size={14} color={theme.colors.primary} />
                     <Text style={[styles.overnightTitle, { color: theme.colors.onSurface }]}>While you were away</Text>
@@ -244,22 +203,13 @@ export function HomeView() {
                 </View>
                 {OVERNIGHT.map((o) => (
                     <Text key={o.agent} style={[styles.overnightLine, { color: theme.colors.onSurfaceVariant }]}>
-                        <Text style={[styles.overnightAgent, { color: theme.colors.onSurface }]}>{o.agent}</Text>{" "}
-                        {o.action}
+                        <Text style={{ fontWeight: "600", color: theme.colors.onSurface }}>{o.agent}</Text> {o.action}
                     </Text>
                 ))}
             </View>
 
             {/* Next best move */}
-            <View
-                style={[
-                    styles.nextMoveCard,
-                    {
-                        backgroundColor: theme.colors.tertiaryContainer,
-                        borderColor: theme.colors.tertiary
-                    }
-                ]}
-            >
+            <View style={[styles.nextMoveCard, { backgroundColor: theme.colors.tertiaryContainer }]}>
                 <View style={styles.nextMoveHeader}>
                     <Octicons name="light-bulb" size={16} color={theme.colors.onTertiaryContainer} />
                     <Text style={[styles.nextMoveTitle, { color: theme.colors.onTertiaryContainer }]}>
@@ -278,15 +228,7 @@ export function HomeView() {
             <View style={styles.topRow}>
                 <View style={styles.topLeft}>
                     {/* Revenue card */}
-                    <View
-                        style={[
-                            styles.revenueCard,
-                            {
-                                backgroundColor: theme.colors.primaryContainer,
-                                borderColor: theme.colors.primary
-                            }
-                        ]}
-                    >
+                    <View style={[styles.revenueCard, { backgroundColor: theme.colors.primaryContainer }]}>
                         <View style={styles.revenueTop}>
                             <Text style={[styles.revenueLabel, { color: theme.colors.onPrimaryContainer }]}>
                                 REVENUE
@@ -306,7 +248,7 @@ export function HomeView() {
                                                 {
                                                     height: `${(d.amount / barMax) * 100}%`,
                                                     backgroundColor: theme.colors.onPrimaryContainer,
-                                                    opacity: 0.35
+                                                    opacity: 0.4
                                                 }
                                             ]}
                                         />
@@ -318,9 +260,6 @@ export function HomeView() {
                             ))}
                         </View>
 
-                        {/* Divider */}
-                        <View style={[styles.cardDivider, { backgroundColor: theme.colors.onPrimaryContainer }]} />
-
                         <View style={styles.revenueMetrics}>
                             <RevenueMetric label="Ad Spend" value="$21.5K" theme={theme} />
                             <RevenueMetric label="ROAS" value="8.2x" theme={theme} />
@@ -330,21 +269,13 @@ export function HomeView() {
                     </View>
 
                     {/* Funnel */}
-                    <View
-                        style={[
-                            styles.funnelCard,
-                            {
-                                backgroundColor: theme.colors.surfaceContainer,
-                                borderColor: theme.colors.outlineVariant
-                            }
-                        ]}
-                    >
+                    <View style={[styles.funnelCard, { backgroundColor: theme.colors.surfaceContainer }]}>
                         <FunnelStep label="Impressions" value={FUNNEL.impressions} theme={theme} />
-                        <Text style={[styles.funnelArrow, { color: theme.colors.outline }]}>{"\u203A"}</Text>
+                        <Octicons name="chevron-right" size={12} color={theme.colors.outline} />
                         <FunnelStep label="Clicks" value={FUNNEL.clicks} theme={theme} />
-                        <Text style={[styles.funnelArrow, { color: theme.colors.outline }]}>{"\u203A"}</Text>
+                        <Octicons name="chevron-right" size={12} color={theme.colors.outline} />
                         <FunnelStep label="Signups" value={FUNNEL.signups} theme={theme} />
-                        <Text style={[styles.funnelArrow, { color: theme.colors.outline }]}>{"\u203A"}</Text>
+                        <Octicons name="chevron-right" size={12} color={theme.colors.outline} />
                         <FunnelStep label="Paying" value={FUNNEL.paying} theme={theme} />
                     </View>
 
@@ -357,13 +288,7 @@ export function HomeView() {
                             return (
                                 <View
                                     key={m.id}
-                                    style={[
-                                        styles.milestoneCard,
-                                        {
-                                            backgroundColor: theme.colors.surfaceContainer,
-                                            borderColor: done ? theme.colors.tertiary : theme.colors.outlineVariant
-                                        }
-                                    ]}
+                                    style={[styles.milestoneCard, { backgroundColor: theme.colors.surfaceContainer }]}
                                 >
                                     <View style={styles.milestoneTop}>
                                         <Octicons
@@ -414,21 +339,12 @@ export function HomeView() {
                 </View>
 
                 {/* Silly face */}
-                <View
-                    style={[
-                        styles.faceCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer,
-                            borderColor: theme.colors.outlineVariant
-                        }
-                    ]}
-                >
+                <View style={[styles.faceCard, { backgroundColor: theme.colors.surfaceContainer }]}>
                     <Text style={[styles.faceText, { transform: [{ scaleX: -1 }] }]}>
                         {"( \u0361\u00B0 \u035C\u0296 \u0361\u00B0)"}
                     </Text>
-                    <View style={[styles.faceDivider, { backgroundColor: theme.colors.outlineVariant }]} />
                     <Text style={[styles.faceHint, { color: theme.colors.onSurfaceVariant }]}>
-                        Next unlock at Lv.{PLAYER.level + 1}
+                        Next unlock at Lv.{PLAYER.level + 1}:
                     </Text>
                     <Text style={[styles.facePerk, { color: theme.colors.primary }]}>Viral Machine</Text>
                     <Text style={[styles.faceHint, { color: theme.colors.onSurfaceVariant }]}>
@@ -441,7 +357,7 @@ export function HomeView() {
             <View style={styles.grid}>
                 {/* Left column */}
                 <View style={styles.col}>
-                    {/* Ads */}
+                    {/* Ads with column headers and benchmarks */}
                     <SectionHeader title="Ad Campaigns" icon="broadcast" theme={theme} first />
                     <View style={styles.sectionBody}>
                         <View style={styles.adHeaderRow}>
@@ -459,13 +375,7 @@ export function HomeView() {
                             return (
                                 <View
                                     key={ad.id}
-                                    style={[
-                                        styles.row,
-                                        {
-                                            backgroundColor: theme.colors.surfaceContainer,
-                                            borderColor: theme.colors.outlineVariant
-                                        }
-                                    ]}
+                                    style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}
                                 >
                                     <View style={styles.rowMain}>
                                         <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
@@ -496,18 +406,10 @@ export function HomeView() {
                         })}
                     </View>
 
-                    {/* Twitter */}
+                    {/* Twitter with growth stats */}
                     <SectionHeader title="Twitter" icon="megaphone" theme={theme} />
                     <View style={styles.sectionBody}>
-                        <View
-                            style={[
-                                styles.twitterStats,
-                                {
-                                    backgroundColor: theme.colors.surfaceContainer,
-                                    borderColor: theme.colors.outlineVariant
-                                }
-                            ]}
-                        >
+                        <View style={[styles.twitterStats, { backgroundColor: theme.colors.surfaceContainer }]}>
                             <View style={styles.twitterStat}>
                                 <Text style={[styles.twitterStatValue, { color: theme.colors.onSurface }]}>
                                     +{TWITTER.followersGained}
@@ -516,7 +418,6 @@ export function HomeView() {
                                     followers
                                 </Text>
                             </View>
-                            <View style={[styles.twitterDivider, { backgroundColor: theme.colors.outlineVariant }]} />
                             <View style={styles.twitterStat}>
                                 <Text style={[styles.twitterStatValue, { color: theme.colors.onSurface }]}>
                                     {TWITTER.profileVisits.toLocaleString()}
@@ -525,7 +426,6 @@ export function HomeView() {
                                     profile visits
                                 </Text>
                             </View>
-                            <View style={[styles.twitterDivider, { backgroundColor: theme.colors.outlineVariant }]} />
                             <View style={[styles.twitterStat, { flex: 2 }]}>
                                 <Text
                                     style={[styles.twitterStatValue, { color: theme.colors.onSurface }]}
@@ -542,16 +442,7 @@ export function HomeView() {
                             </View>
                         </View>
                         {TWITTER.posts.map((tw) => (
-                            <View
-                                key={tw.id}
-                                style={[
-                                    styles.row,
-                                    {
-                                        backgroundColor: theme.colors.surfaceContainer,
-                                        borderColor: theme.colors.outlineVariant
-                                    }
-                                ]}
-                            >
+                            <View key={tw.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
                                 <Octicons
                                     name={tw.trending ? "arrow-up" : "dot-fill"}
                                     size={14}
@@ -577,16 +468,7 @@ export function HomeView() {
                     <SectionHeader title="Recent Documents" icon="file" theme={theme} />
                     <View style={styles.sectionBody}>
                         {DOCUMENTS.map((doc) => (
-                            <View
-                                key={doc.id}
-                                style={[
-                                    styles.row,
-                                    {
-                                        backgroundColor: theme.colors.surfaceContainer,
-                                        borderColor: theme.colors.outlineVariant
-                                    }
-                                ]}
-                            >
+                            <View key={doc.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
                                 <Octicons name="file" size={14} color={theme.colors.onSurfaceVariant} />
                                 <View style={styles.rowMain}>
                                     <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
@@ -603,30 +485,18 @@ export function HomeView() {
 
                 {/* Right column */}
                 <View style={styles.col}>
-                    {/* Agent Rankings */}
+                    {/* Agent Rankings with today's action */}
                     <SectionHeader title="Agent Rankings" icon="people" theme={theme} first />
                     <View style={styles.sectionBody}>
                         {AGENTS.map((agent) => (
                             <View
                                 key={agent.id}
-                                style={[
-                                    styles.agentRow,
-                                    {
-                                        backgroundColor: theme.colors.surfaceContainer,
-                                        borderColor: theme.colors.outlineVariant
-                                    }
-                                ]}
+                                style={[styles.agentRow, { backgroundColor: theme.colors.surfaceContainer }]}
                             >
                                 <View
-                                    style={[
-                                        styles.rankBadge,
-                                        {
-                                            backgroundColor: theme.colors.surfaceContainerHigh,
-                                            borderColor: theme.colors.primary
-                                        }
-                                    ]}
+                                    style={[styles.rankBadge, { backgroundColor: theme.colors.surfaceContainerHigh }]}
                                 >
-                                    <Text style={[styles.rankText, { color: theme.colors.primary }]}>
+                                    <Text style={[styles.rankText, { color: theme.colors.onSurfaceVariant }]}>
                                         #{agent.rank}
                                     </Text>
                                 </View>
@@ -651,13 +521,7 @@ export function HomeView() {
                         {TASKS.map((task) => (
                             <View
                                 key={task.id}
-                                style={[
-                                    styles.row,
-                                    {
-                                        backgroundColor: theme.colors.surfaceContainer,
-                                        borderColor: theme.colors.outlineVariant
-                                    }
-                                ]}
+                                style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}
                             >
                                 <Octicons name="dot-fill" size={12} color={theme.colors.primary} />
                                 <View style={styles.rowMain}>
@@ -679,13 +543,7 @@ export function HomeView() {
                         {EMAILS.map((email) => (
                             <View
                                 key={email.id}
-                                style={[
-                                    styles.row,
-                                    {
-                                        backgroundColor: theme.colors.surfaceContainer,
-                                        borderColor: theme.colors.outlineVariant
-                                    }
-                                ]}
+                                style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}
                             >
                                 <Octicons
                                     name={
@@ -719,19 +577,13 @@ export function HomeView() {
                 </View>
             </View>
 
-            {/* Achievements */}
+            {/* Achievements — unlocked + locked */}
             <SectionHeader title="Achievements" icon="verified" theme={theme} first />
             <View style={styles.achievementsRow}>
                 {ACHIEVEMENTS_UNLOCKED.map((a) => (
                     <View
                         key={a.id}
-                        style={[
-                            styles.achievementCard,
-                            {
-                                backgroundColor: theme.colors.surfaceContainer,
-                                borderColor: theme.colors.primary
-                            }
-                        ]}
+                        style={[styles.achievementCard, { backgroundColor: theme.colors.surfaceContainer }]}
                     >
                         <Octicons name={a.icon} size={20} color={theme.colors.primary} />
                         <Text style={[styles.achievementTitle, { color: theme.colors.onSurface }]}>{a.title}</Text>
@@ -743,11 +595,7 @@ export function HomeView() {
                         key={a.id}
                         style={[
                             styles.achievementCard,
-                            {
-                                backgroundColor: theme.colors.surfaceContainer,
-                                borderColor: theme.colors.outlineVariant,
-                                opacity: 0.4
-                            }
+                            { backgroundColor: theme.colors.surfaceContainer, opacity: 0.4 }
                         ]}
                     >
                         <Octicons name={a.icon} size={20} color={theme.colors.outline} />
@@ -780,10 +628,8 @@ function SectionHeader({
 }) {
     return (
         <View style={[styles.sectionHeader, first && { marginTop: 0 }]}>
-            <View style={[styles.sectionRule, { backgroundColor: theme.colors.outlineVariant }]} />
-            <Octicons name={icon} size={13} color={theme.colors.primary} />
+            <Octicons name={icon} size={14} color={theme.colors.onSurfaceVariant} />
             <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>{title}</Text>
-            <View style={[styles.sectionRule, { backgroundColor: theme.colors.outlineVariant }]} />
         </View>
     );
 }
@@ -808,256 +654,189 @@ function FunnelStep({ label, value, theme }: { label: string; value: string; the
 
 const styles = StyleSheet.create({
     scroll: { flex: 1 },
-    scrollContent: { padding: 28, paddingBottom: 56 },
+    scrollContent: { padding: 24, paddingBottom: 48 },
 
-    // Status bar — gold bottom border accent
+    // Status bar
     statusBar: {
         flexDirection: "row",
-        borderRadius: 6,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderBottomWidth: 2,
-        padding: 18,
+        borderRadius: 12,
+        padding: 16,
         marginBottom: 16,
         alignItems: "center",
-        gap: 16
+        gap: 14
     },
     levelBadge: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        borderWidth: 2,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         alignItems: "center",
         justifyContent: "center"
     },
-    levelText: { fontSize: 20, fontFamily: FONT.display },
-    statusInfo: { flex: 1, gap: 8 },
-    statusTitle: { fontSize: 17, fontFamily: FONT.heading, letterSpacing: 0.3 },
-    xpRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-    xpTrack: { flex: 1, height: 5, borderRadius: 3, overflow: "hidden" },
+    levelText: { fontSize: 18, fontWeight: "800" },
+    statusInfo: { flex: 1, gap: 6 },
+    statusTitle: { fontSize: 16, fontWeight: "600" },
+    xpRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+    xpTrack: { flex: 1, height: 6, borderRadius: 3, overflow: "hidden" },
     xpFill: { height: "100%", borderRadius: 3 },
-    xpLabel: { fontSize: 11, fontFamily: FONT.mono, minWidth: 100 },
+    xpLabel: { fontSize: 11, minWidth: 90 },
     streakPill: {
         flexDirection: "row",
         alignItems: "center",
         gap: 6,
-        paddingHorizontal: 14,
-        paddingVertical: 7,
-        borderRadius: 4,
-        borderWidth: StyleSheet.hairlineWidth
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16
     },
-    streakValue: { fontSize: 16, fontFamily: FONT.heading },
+    streakValue: { fontSize: 15, fontWeight: "700" },
 
-    // Overnight — thin border card
-    overnightCard: {
-        borderRadius: 6,
-        borderWidth: StyleSheet.hairlineWidth,
-        padding: 18,
-        marginBottom: 14,
-        gap: 8
-    },
-    overnightHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-    overnightTitle: { fontSize: 14, fontFamily: FONT.heading, letterSpacing: 0.3, flex: 1 },
-    overnightXp: { fontSize: 13, fontFamily: FONT.heading },
-    overnightAgent: { fontFamily: FONT.heading },
-    overnightLine: { fontSize: 13, fontFamily: FONT.body, lineHeight: 20, paddingLeft: 24 },
+    // Overnight
+    overnightCard: { borderRadius: 12, padding: 16, marginBottom: 12, gap: 6 },
+    overnightHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+    overnightTitle: { fontSize: 14, fontWeight: "600", flex: 1 },
+    overnightXp: { fontSize: 13, fontWeight: "700" },
+    overnightLine: { fontSize: 13, lineHeight: 18, paddingLeft: 22 },
 
-    // Next move — accent border
-    nextMoveCard: {
-        borderRadius: 6,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderLeftWidth: 3,
-        padding: 18,
-        marginBottom: 24,
-        gap: 8
-    },
-    nextMoveHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-    nextMoveTitle: { fontSize: 15, fontFamily: FONT.heading, letterSpacing: 0.2 },
-    nextMoveReason: { fontSize: 13, fontFamily: FONT.body, lineHeight: 20 },
-    nextMoveImpact: { fontSize: 13, fontFamily: FONT.heading },
+    // Next move
+    nextMoveCard: { borderRadius: 12, padding: 16, marginBottom: 20, gap: 6 },
+    nextMoveHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+    nextMoveTitle: { fontSize: 14, fontWeight: "700" },
+    nextMoveReason: { fontSize: 13, lineHeight: 18 },
+    nextMoveImpact: { fontSize: 13, fontWeight: "600" },
 
     // Top row
-    topRow: { flexDirection: "row", gap: 24, marginBottom: 28 },
+    topRow: { flexDirection: "row", gap: 24, marginBottom: 24 },
     topLeft: { flex: 1 },
     faceCard: {
         width: 200,
-        borderRadius: 6,
-        borderWidth: StyleSheet.hairlineWidth,
+        borderRadius: 16,
         alignItems: "center",
         justifyContent: "center",
-        gap: 10,
-        padding: 20
+        gap: 8
     },
     faceText: { fontSize: 36 },
-    faceDivider: { width: 40, height: StyleSheet.hairlineWidth, marginVertical: 4 },
-    faceHint: { fontSize: 11, fontFamily: FONT.body, textAlign: "center" },
-    facePerk: { fontSize: 14, fontFamily: FONT.heading },
+    faceHint: { fontSize: 11, textAlign: "center" },
+    facePerk: { fontSize: 14, fontWeight: "700" },
 
-    // Revenue — gold border, generous spacing
-    revenueCard: {
-        borderRadius: 6,
-        borderWidth: 1,
-        padding: 28,
-        marginBottom: 14
-    },
+    // Revenue
+    revenueCard: { borderRadius: 16, padding: 24, marginBottom: 12 },
     revenueTop: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
         marginBottom: 4
     },
-    revenueLabel: { fontSize: 11, fontFamily: FONT.heading, letterSpacing: 2.5 },
-    revenueDelta: { fontSize: 14, fontFamily: FONT.heading },
-    revenueValue: { fontSize: 48, fontFamily: FONT.display, marginBottom: 8 },
-    sparkRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
+    revenueLabel: { fontSize: 12, fontWeight: "700", letterSpacing: 1.5 },
+    revenueDelta: { fontSize: 14, fontWeight: "700" },
+    revenueValue: { fontSize: 44, fontWeight: "800", marginBottom: 4 },
+    sparkRow: { flexDirection: "row", gap: 6, marginBottom: 12 },
     sparkCol: { flex: 1, alignItems: "center", gap: 4 },
-    sparkBarWrap: { width: "100%", height: 36, justifyContent: "flex-end" },
+    sparkBarWrap: { width: "100%", height: 32, justifyContent: "flex-end" },
     sparkBar: { width: "100%", borderRadius: 2 },
-    sparkLabel: { fontSize: 10, fontFamily: FONT.mono, opacity: 0.5 },
-    cardDivider: { height: StyleSheet.hairlineWidth, opacity: 0.2, marginBottom: 14 },
-    revenueMetrics: { flexDirection: "row", gap: 32 },
-    revenueMetric: { gap: 3 },
-    revenueMetricValue: { fontSize: 17, fontFamily: FONT.heading },
-    revenueMetricLabel: {
-        fontSize: 10,
-        fontFamily: FONT.body,
-        letterSpacing: 0.5,
-        textTransform: "uppercase",
-        opacity: 0.6
-    },
+    sparkLabel: { fontSize: 10, opacity: 0.6 },
+    revenueMetrics: { flexDirection: "row", gap: 28, marginTop: 4 },
+    revenueMetric: { gap: 2 },
+    revenueMetricValue: { fontSize: 16, fontWeight: "700" },
+    revenueMetricLabel: { fontSize: 11, opacity: 0.7 },
 
-    // Funnel — bordered, wide spacing
+    // Funnel
     funnelCard: {
         flexDirection: "row",
-        borderRadius: 6,
-        borderWidth: StyleSheet.hairlineWidth,
-        padding: 16,
+        borderRadius: 10,
+        padding: 14,
         alignItems: "center",
         justifyContent: "space-between",
         marginBottom: 4
     },
-    funnelStep: { alignItems: "center", gap: 3 },
-    funnelValue: { fontSize: 17, fontFamily: FONT.heading },
-    funnelLabel: { fontSize: 10, fontFamily: FONT.body, letterSpacing: 0.3, textTransform: "uppercase" },
-    funnelArrow: { fontSize: 20, fontFamily: FONT.body },
+    funnelStep: { alignItems: "center", gap: 2 },
+    funnelValue: { fontSize: 16, fontWeight: "700" },
+    funnelLabel: { fontSize: 10 },
 
     // Grid
-    grid: { flexDirection: "row", gap: 28, marginBottom: 28 },
+    grid: { flexDirection: "row", gap: 24, marginBottom: 24 },
     col: { flex: 1 },
 
-    // Sections — centered rule with icon
+    // Sections
     sectionHeader: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 10,
-        marginBottom: 12,
-        marginTop: 24
+        gap: 8,
+        marginBottom: 10,
+        marginTop: 20
     },
-    sectionRule: { flex: 1, height: StyleSheet.hairlineWidth },
     sectionTitle: {
-        fontSize: 11,
-        fontFamily: FONT.heading,
+        fontSize: 13,
+        fontWeight: "600",
         textTransform: "uppercase",
-        letterSpacing: 2
+        letterSpacing: 0.5
     },
-    sectionBody: { gap: 6 },
+    sectionBody: { gap: 4 },
 
-    // Milestones — bordered cards
-    milestoneCard: {
-        borderRadius: 6,
-        borderWidth: StyleSheet.hairlineWidth,
-        padding: 14,
-        gap: 10
-    },
-    milestoneTop: { flexDirection: "row", alignItems: "center", gap: 10 },
-    milestoneTitle: { fontSize: 14, fontFamily: FONT.body, flex: 1 },
-    milestoneDetail: { fontSize: 11, fontFamily: FONT.mono },
-    milestoneReward: { fontSize: 12, fontFamily: FONT.heading },
-    progressTrack: { height: 3, borderRadius: 2, overflow: "hidden" },
+    // Milestones
+    milestoneCard: { borderRadius: 10, padding: 12, gap: 8 },
+    milestoneTop: { flexDirection: "row", alignItems: "center", gap: 8 },
+    milestoneTitle: { fontSize: 14, fontWeight: "500", flex: 1 },
+    milestoneDetail: { fontSize: 11 },
+    milestoneReward: { fontSize: 12, fontWeight: "600" },
+    progressTrack: { height: 4, borderRadius: 2, overflow: "hidden" },
     progressFill: { height: "100%", borderRadius: 2 },
 
-    // Rows — thin borders instead of just bg
-    row: {
-        flexDirection: "row",
-        alignItems: "center",
-        borderRadius: 6,
-        borderWidth: StyleSheet.hairlineWidth,
-        padding: 14,
-        gap: 12
-    },
-    rowMain: { flex: 1, gap: 3 },
-    rowTitle: { fontSize: 14, fontFamily: FONT.body },
-    rowSub: { fontSize: 12, fontFamily: FONT.body },
-    rowMeta: { fontSize: 12, fontFamily: FONT.mono },
+    // Rows
+    row: { flexDirection: "row", alignItems: "center", borderRadius: 10, padding: 12, gap: 10 },
+    rowMain: { flex: 1, gap: 2 },
+    rowTitle: { fontSize: 14, fontWeight: "500" },
+    rowSub: { fontSize: 12 },
+    rowMeta: { fontSize: 12 },
 
     // Ads
-    adHeaderRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, gap: 12 },
-    adStats: { flexDirection: "row", gap: 14, alignItems: "center" },
-    adStat: { fontSize: 12, fontFamily: FONT.mono, minWidth: 48, textAlign: "right" },
-    adColHeader: {
-        fontSize: 9,
-        fontFamily: FONT.heading,
-        minWidth: 48,
-        textAlign: "right",
-        textTransform: "uppercase",
-        letterSpacing: 1
-    },
+    adHeaderRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 10 },
+    adStats: { flexDirection: "row", gap: 12, alignItems: "center" },
+    adStat: { fontSize: 12, fontWeight: "500", minWidth: 44, textAlign: "right" },
+    adColHeader: { fontSize: 10, fontWeight: "600", minWidth: 44, textAlign: "right", textTransform: "uppercase" },
 
-    // Twitter — vertical dividers between stats
+    // Twitter
     twitterStats: {
         flexDirection: "row",
-        borderRadius: 6,
-        borderWidth: StyleSheet.hairlineWidth,
-        padding: 14,
-        gap: 16,
-        alignItems: "stretch"
+        borderRadius: 10,
+        padding: 12,
+        gap: 16
     },
-    twitterStat: { flex: 1, gap: 3 },
-    twitterStatValue: { fontSize: 15, fontFamily: FONT.heading },
-    twitterStatLabel: { fontSize: 11, fontFamily: FONT.body },
-    twitterDivider: { width: StyleSheet.hairlineWidth },
+    twitterStat: { flex: 1, gap: 2 },
+    twitterStatValue: { fontSize: 14, fontWeight: "700" },
+    twitterStatLabel: { fontSize: 11 },
 
     // Tasks
-    taskXp: { fontSize: 12, fontFamily: FONT.heading },
+    taskXp: { fontSize: 12, fontWeight: "600" },
 
-    // Agents — gold rank badge border
-    agentRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        borderRadius: 6,
-        borderWidth: StyleSheet.hairlineWidth,
-        padding: 14,
-        gap: 12
-    },
+    // Agents
+    agentRow: { flexDirection: "row", alignItems: "center", borderRadius: 10, padding: 12, gap: 10 },
     rankBadge: {
-        width: 30,
-        height: 30,
-        borderRadius: 15,
-        borderWidth: 1.5,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         alignItems: "center",
         justifyContent: "center"
     },
-    rankText: { fontSize: 12, fontFamily: FONT.heading },
-    agentXp: { fontSize: 13, fontFamily: FONT.heading },
+    rankText: { fontSize: 12, fontWeight: "700" },
+    agentXp: { fontSize: 13, fontWeight: "600" },
 
-    // Achievements — gold borders for unlocked
-    achievementsRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 28 },
+    // Achievements
+    achievementsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 24 },
     achievementCard: {
-        borderRadius: 6,
-        borderWidth: 1,
-        padding: 16,
+        borderRadius: 10,
+        padding: 14,
         alignItems: "center",
-        gap: 8,
+        gap: 6,
         minWidth: 100,
         flex: 1
     },
-    achievementTitle: { fontSize: 12, fontFamily: FONT.heading, textAlign: "center", letterSpacing: 0.3 },
-    achievementWhen: { fontSize: 10, fontFamily: FONT.mono },
+    achievementTitle: { fontSize: 12, fontWeight: "600", textAlign: "center" },
+    achievementWhen: { fontSize: 11 },
 
     // Footer
     footer: {
         borderTopWidth: StyleSheet.hairlineWidth,
-        paddingTop: 20,
+        paddingTop: 16,
         alignItems: "center"
     },
-    footerText: { fontSize: 11, fontFamily: FONT.mono, letterSpacing: 0.5 }
+    footerText: { fontSize: 12 }
 });
