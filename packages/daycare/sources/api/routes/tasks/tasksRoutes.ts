@@ -1,5 +1,5 @@
 import type http from "node:http";
-import type { Context, TaskActiveSummary } from "@/types";
+import type { Context, TaskActiveSummary, TaskListAllResult } from "@/types";
 import type { RouteTaskCallbacks } from "../routeTypes.js";
 import { tasksCreate } from "./tasksCreate.js";
 import { tasksDelete } from "./tasksDelete.js";
@@ -14,6 +14,7 @@ export type TasksRouteContext = {
     sendJson: (response: http.ServerResponse, statusCode: number, payload: Record<string, unknown>) => void;
     readJsonBody: (request: http.IncomingMessage) => Promise<Record<string, unknown>>;
     tasksListActive: ((ctx: Context) => Promise<TaskActiveSummary[]>) | null;
+    tasksListAll: ((ctx: Context) => Promise<TaskListAllResult>) | null;
     callbacks: RouteTaskCallbacks | null;
 };
 
@@ -29,6 +30,20 @@ export async function tasksRouteHandle(
     pathname: string,
     context: TasksRouteContext
 ): Promise<boolean> {
+    if (pathname === "/tasks" && request.method === "GET") {
+        if (!context.tasksListAll) {
+            context.sendJson(response, 503, {
+                ok: false,
+                error: "Task runtime unavailable."
+            });
+            return true;
+        }
+
+        const result = await context.tasksListAll(context.ctx);
+        context.sendJson(response, 200, { ok: true, ...result });
+        return true;
+    }
+
     if (pathname === "/tasks/active" && request.method === "GET") {
         if (!context.tasksListActive) {
             context.sendJson(response, 503, {

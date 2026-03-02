@@ -107,6 +107,7 @@ import { Swarms } from "./swarms/swarms.js";
 import { taskDeleteSuccessResolve } from "./tasks/taskDeleteSuccessResolve.js";
 import { TaskExecutions } from "./tasks/taskExecutions.js";
 import { taskListActive } from "./tasks/taskListActive.js";
+import { taskListAll } from "./tasks/taskListAll.js";
 import { userHomeEnsure } from "./users/userHomeEnsure.js";
 import { userHomeMigrate } from "./users/userHomeMigrate.js";
 import { Webhooks } from "./webhook/webhooks.js";
@@ -424,6 +425,7 @@ export class Engine {
                 return skills.list();
             },
             tasksListActive: (ctx) => taskListActive({ storage: this.storage, ctx }),
+            tasksListAll: (ctx) => taskListAll({ storage: this.storage, ctx }),
             taskCallbacks: {
                 tasksCreate: async (ctx, input) => {
                     const taskId = await taskIdGenerateFromTitle(this.storage, ctx, input.title);

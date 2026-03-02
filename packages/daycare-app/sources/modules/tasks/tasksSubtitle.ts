@@ -1,23 +1,20 @@
-import type { TaskActiveSummary } from "./tasksTypes";
+import type { CronTriggerSummary, WebhookTriggerSummary } from "./tasksTypes";
 
 /**
- * Builds a display subtitle from a task's trigger configuration.
+ * Builds a display subtitle from a task's trigger lists.
  * Shows cron schedules and webhook trigger count.
- *
- * Expects: task has at least one trigger (API guarantees this for active tasks).
  */
-export function tasksSubtitle(task: TaskActiveSummary): string {
+export function tasksSubtitle(cron: CronTriggerSummary[], webhook: WebhookTriggerSummary[]): string {
     const parts: string[] = [];
 
-    for (const cron of task.triggers.cron) {
-        const tz = cron.timezone !== "UTC" ? ` (${cron.timezone})` : "";
-        parts.push(`${cron.schedule}${tz}`);
+    for (const trigger of cron) {
+        const tz = trigger.timezone !== "UTC" ? ` (${trigger.timezone})` : "";
+        parts.push(`${trigger.schedule}${tz}`);
     }
 
-    const webhookCount = task.triggers.webhook.length;
-    if (webhookCount > 0) {
-        parts.push(webhookCount === 1 ? "1 webhook" : `${webhookCount} webhooks`);
+    if (webhook.length > 0) {
+        parts.push(webhook.length === 1 ? "1 webhook" : `${webhook.length} webhooks`);
     }
 
-    return parts.join(" · ");
+    return parts.length > 0 ? parts.join(" · ") : "No triggers";
 }

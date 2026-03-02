@@ -1,29 +1,34 @@
 import { create } from "zustand";
 import { tasksFetch } from "./tasksFetch";
-import type { TaskActiveSummary } from "./tasksTypes";
+import type { CronTriggerSummary, TaskSummary, WebhookTriggerSummary } from "./tasksTypes";
 
 export type TasksStore = {
-    tasks: TaskActiveSummary[];
+    tasks: TaskSummary[];
+    triggers: {
+        cron: CronTriggerSummary[];
+        webhook: WebhookTriggerSummary[];
+    };
     loading: boolean;
     error: string | null;
     fetch: (baseUrl: string, token: string) => Promise<void>;
 };
 
 /**
- * Creates a zustand store for active task data.
- * Manages fetching and raw task storage.
+ * Creates a zustand store for task data.
+ * Stores all tasks and triggers separately.
  * Derived data (status, subtitle) is computed in the view via pure helpers.
  */
 export function tasksStoreCreate() {
     return create<TasksStore>((set) => ({
         tasks: [],
+        triggers: { cron: [], webhook: [] },
         loading: false,
         error: null,
         fetch: async (baseUrl, token) => {
             set({ loading: true, error: null });
             try {
-                const tasks = await tasksFetch(baseUrl, token);
-                set({ tasks, loading: false });
+                const result = await tasksFetch(baseUrl, token);
+                set({ tasks: result.tasks, triggers: result.triggers, loading: false });
             } catch (err) {
                 set({
                     loading: false,

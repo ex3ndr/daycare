@@ -58,6 +58,39 @@ sequenceDiagram
   M->>C: Enforce task_id NOT NULL
 ```
 
+## API Routes
+
+### `GET /tasks` — all tasks with triggers separated
+
+Returns all tasks for the authenticated user regardless of trigger state, with triggers as a separate collection. Includes disabled cron triggers.
+
+```json
+{
+  "ok": true,
+  "tasks": [
+    { "id": "daily-check", "title": "Daily Check", "description": null, "createdAt": 1000, "updatedAt": 2000, "lastExecutedAt": 3000 }
+  ],
+  "triggers": {
+    "cron": [
+      { "id": "c1", "taskId": "daily-check", "schedule": "0 9 * * *", "timezone": "UTC", "agentId": null, "enabled": true, "lastExecutedAt": 3000 }
+    ],
+    "webhook": []
+  }
+}
+```
+
+### `GET /tasks/active` — legacy: only tasks with active triggers
+
+Returns tasks that have at least one enabled trigger. Triggers are nested inside each task object.
+
+```mermaid
+flowchart LR
+  GET_tasks[GET /tasks] --> taskListAll[taskListAll]
+  GET_active[GET /tasks/active] --> taskListActive[taskListActive]
+  taskListAll --> AllTasks[All tasks + all triggers]
+  taskListActive --> ActiveOnly[Tasks with enabled triggers only]
+```
+
 ## Runtime Resolution
 
 - `CronScheduler` resolves code from `tasksRepository.findById(task_id)` and errors if the linked task is missing.

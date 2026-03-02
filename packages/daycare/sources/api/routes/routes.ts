@@ -1,5 +1,5 @@
 import type http from "node:http";
-import type { AgentSkill, Context, TaskActiveSummary } from "@/types";
+import type { AgentSkill, Context, TaskActiveSummary, TaskListAllResult } from "@/types";
 import type { EngineEventBus } from "../../engine/ipc/events.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
@@ -24,6 +24,7 @@ export type ApiRouteContext = {
     eventBus: EngineEventBus | null;
     skills: { list: () => Promise<AgentSkill[]> } | null;
     tasksListActive: ((ctx: Context) => Promise<TaskActiveSummary[]>) | null;
+    tasksListAll: ((ctx: Context) => Promise<TaskListAllResult>) | null;
     taskCallbacks: RouteTaskCallbacks | null;
     tokenStatsFetch: ((ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>) | null;
     documents: DocumentsRepository | null;
@@ -66,6 +67,7 @@ export async function apiRouteHandle(
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody,
             tasksListActive: context.tasksListActive,
+            tasksListAll: context.tasksListAll,
             callbacks: context.taskCallbacks
         });
     }

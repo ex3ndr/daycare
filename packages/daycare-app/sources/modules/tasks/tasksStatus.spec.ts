@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { tasksStatus } from "./tasksStatus";
-import type { TaskActiveSummary } from "./tasksTypes";
+import type { TaskSummary } from "./tasksTypes";
 
-function task(overrides: Partial<TaskActiveSummary> = {}): TaskActiveSummary {
+function task(overrides: Partial<TaskSummary> = {}): TaskSummary {
     return {
         id: "t1",
         title: "Test Task",
@@ -10,7 +10,6 @@ function task(overrides: Partial<TaskActiveSummary> = {}): TaskActiveSummary {
         createdAt: 1000,
         updatedAt: 2000,
         lastExecutedAt: null,
-        triggers: { cron: [], webhook: [] },
         ...overrides
     };
 }

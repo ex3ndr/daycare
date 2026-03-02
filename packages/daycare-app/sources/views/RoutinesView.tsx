@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
@@ -9,7 +9,7 @@ import { useTasksStore } from "@/modules/tasks/tasksContext";
 import { tasksFormatLastRun } from "@/modules/tasks/tasksFormatLastRun";
 import { tasksStatus } from "@/modules/tasks/tasksStatus";
 import { tasksSubtitle } from "@/modules/tasks/tasksSubtitle";
-import type { TaskStatus } from "@/modules/tasks/tasksTypes";
+import type { CronTriggerSummary, TaskStatus, WebhookTriggerSummary } from "@/modules/tasks/tasksTypes";
 
 function RoutineStatus({ status, label }: { status: TaskStatus; label: string }) {
     const { theme } = useUnistyles();
@@ -62,6 +62,7 @@ export function RoutinesView() {
     const token = useAuthStore((s) => s.token);
 
     const tasks = useTasksStore((s) => s.tasks);
+    const triggers = useTasksStore((s) => s.triggers);
     const loading = useTasksStore((s) => s.loading);
     const error = useTasksStore((s) => s.error);
     const fetchTasks = useTasksStore((s) => s.fetch);
@@ -71,6 +72,35 @@ export function RoutinesView() {
             void fetchTasks(baseUrl, token);
         }
     }, [baseUrl, token, fetchTasks]);
+
+    // Index triggers by taskId for efficient lookup
+    const triggersByTask = useMemo(() => {
+        const cronByTask = new Map<string, CronTriggerSummary[]>();
+        const webhookByTask = new Map<string, WebhookTriggerSummary[]>();
+        for (const cron of triggers.cron) {
+            const existing = cronByTask.get(cron.taskId);
+            if (existing) {
+                existing.push(cron);
+            } else {
+                cronByTask.set(cron.taskId, [cron]);
+            }
+        }
+        for (const webhook of triggers.webhook) {
+            const existing = webhookByTask.get(webhook.taskId);
+            if (existing) {
+                existing.push(webhook);
+            } else {
+                webhookByTask.set(webhook.taskId, [webhook]);
+            }
+        }
+        return { cronByTask, webhookByTask };
+    }, [triggers]);
+
+    const taskCron = useCallback((taskId: string) => triggersByTask.cronByTask.get(taskId) ?? [], [triggersByTask]);
+    const taskWebhook = useCallback(
+        (taskId: string) => triggersByTask.webhookByTask.get(taskId) ?? [],
+        [triggersByTask]
+    );
 
     // Recalculate "now" when tasks change so relative times are fresh
     // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally recompute when tasks update
@@ -95,19 +125,19 @@ export function RoutinesView() {
     if (tasks.length === 0) {
         return (
             <View style={[styles.centered, { flex: 1 }]}>
-                <Text style={[styles.errorText, { color: theme.colors.onSurfaceVariant }]}>No active routines</Text>
+                <Text style={[styles.errorText, { color: theme.colors.onSurfaceVariant }]}>No routines</Text>
             </View>
         );
     }
 
     return (
         <ItemListStatic>
-            <ItemGroup title="Active Routines">
+            <ItemGroup title="Routines">
                 {tasks.map((task) => (
                     <Item
                         key={task.id}
                         title={task.title}
-                        subtitle={tasksSubtitle(task)}
+                        subtitle={tasksSubtitle(taskCron(task.id), taskWebhook(task.id))}
                         rightElement={
                             <RoutineStatus
                                 status={tasksStatus(task)}

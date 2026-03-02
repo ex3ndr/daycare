@@ -145,6 +145,12 @@ export type {
     TaskActiveSummary,
     TaskActiveWebhookTrigger
 } from "./engine/tasks/taskListActive.js";
+export type {
+    CronTriggerSummary,
+    TaskListAllResult,
+    TaskSummary,
+    WebhookTriggerSummary
+} from "./engine/tasks/taskListAll.js";
 // Files
 export type { FileReference } from "./files/types.js";
 // Sandbox

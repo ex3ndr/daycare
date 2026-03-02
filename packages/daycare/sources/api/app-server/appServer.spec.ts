@@ -182,6 +182,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
             }
             return options.tasksListActive(ctx.userId);
         },
+        tasksListAll: async () => ({ tasks: [], triggers: { cron: [], webhook: [] } }),
         taskCallbacks: options.taskCallbacks ?? null,
         tokenStatsFetch: async () => [],
         documents: null,

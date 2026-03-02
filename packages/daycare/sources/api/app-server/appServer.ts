@@ -1,5 +1,13 @@
 import http from "node:http";
-import type { AgentPath, AgentSkill, ConnectorMessage, ConnectorTarget, Context, TaskActiveSummary } from "@/types";
+import type {
+    AgentPath,
+    AgentSkill,
+    ConnectorMessage,
+    ConnectorTarget,
+    Context,
+    TaskActiveSummary,
+    TaskListAllResult
+} from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import { contextForUser } from "../../engine/agents/context.js";
 import type { ConfigModule } from "../../engine/config/configModule.js";
@@ -42,6 +50,7 @@ export type AppServerOptions = {
     eventBus: EngineEventBus | null;
     skills: ((ctx: Context) => Promise<AgentSkill[]>) | null;
     tasksListActive: (ctx: Context) => Promise<TaskActiveSummary[]>;
+    tasksListAll: (ctx: Context) => Promise<TaskListAllResult>;
     taskCallbacks: RouteTaskCallbacks | null;
     tokenStatsFetch: (ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>;
     documents: DocumentsRepository | null;
@@ -66,6 +75,7 @@ export class AppServer {
     private readonly eventBus: EngineEventBus | null;
     private readonly skills: ((ctx: Context) => Promise<AgentSkill[]>) | null;
     private readonly tasksListActive: AppServerOptions["tasksListActive"];
+    private readonly tasksListAll: AppServerOptions["tasksListAll"];
     private readonly taskCallbacks: RouteTaskCallbacks | null;
     private readonly tokenStatsFetch: AppServerOptions["tokenStatsFetch"];
     private readonly documents: DocumentsRepository | null;
@@ -88,6 +98,7 @@ export class AppServer {
         this.eventBus = options.eventBus;
         this.skills = options.skills;
         this.tasksListActive = options.tasksListActive;
+        this.tasksListAll = options.tasksListAll;
         this.taskCallbacks = options.taskCallbacks;
         this.tokenStatsFetch = options.tokenStatsFetch;
         this.documents = options.documents;
@@ -227,6 +238,7 @@ export class AppServer {
                   }
                 : null,
             tasksListActive: this.tasksListActive,
+            tasksListAll: this.tasksListAll,
             taskCallbacks: this.taskCallbacks,
             tokenStatsFetch: this.tokenStatsFetch,
             documents: this.documents
