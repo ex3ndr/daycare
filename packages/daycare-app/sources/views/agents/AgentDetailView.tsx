@@ -60,10 +60,17 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps) {
     }, [router]);
 
     return (
-        <View style={[styles.root, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLowest }]}>
             {/* Header */}
             <View
-                style={[styles.header, { paddingTop: insets.top + 8, borderBottomColor: theme.colors.outlineVariant }]}
+                style={[
+                    styles.header,
+                    {
+                        paddingTop: insets.top + 8,
+                        borderBottomColor: theme.colors.outlineVariant,
+                        backgroundColor: theme.colors.surfaceContainerLowest
+                    }
+                ]}
             >
                 <Pressable onPress={handleBack} style={styles.backButton} hitSlop={12}>
                     <Octicons name="chevron-left" size={20} color={theme.colors.onSurface} />
@@ -96,7 +103,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         paddingHorizontal: 12,
         paddingBottom: 12,
-        borderBottomWidth: 1,
+        borderBottomWidth: StyleSheet.hairlineWidth,
         gap: 8
     },
     backButton: {
@@ -107,8 +114,8 @@ const styles = StyleSheet.create({
     },
     title: {
         flex: 1,
-        fontSize: 17,
-        fontFamily: "IBMPlexSans-SemiBold"
+        fontSize: 14,
+        fontFamily: "IBMPlexMono-SemiBold"
     },
     headerSpacer: {
         width: 32

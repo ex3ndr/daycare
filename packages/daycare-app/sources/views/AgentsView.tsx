@@ -160,6 +160,13 @@ const KIND_META: Record<string, KindMeta> = {
     }
 };
 
+/** Color for the lifecycle status dot. */
+const LIFECYCLE_COLOR: Record<string, string> = {
+    active: "#4CAF50",
+    sleeping: "#FFC107",
+    dead: "#9E9E9E"
+};
+
 const DEFAULT_KIND_META: KindMeta = {
     icon: "question",
     label: "Other",
@@ -256,13 +263,18 @@ export function AgentsView() {
                             const cardBg = isDark ? meta.darkBg : meta.lightBg;
                             const iconColor = isDark ? meta.darkIcon : meta.lightIcon;
 
+                            const dotColor = LIFECYCLE_COLOR[agent.lifecycle] ?? LIFECYCLE_COLOR.dead;
+
                             return (
                                 <Pressable
                                     key={agent.agentId}
                                     style={[styles.card, { backgroundColor: cardBg }]}
                                     onPress={() => handleAgentPress(agent.agentId)}
                                 >
-                                    <Octicons name={meta.icon} size={18} color={iconColor} style={styles.cardIcon} />
+                                    <View style={styles.cardTopRow}>
+                                        <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
+                                        <Octicons name={meta.icon} size={18} color={iconColor} />
+                                    </View>
                                     <Text
                                         style={[styles.cardTitle, { color: theme.colors.onSurface }]}
                                         numberOfLines={2}
@@ -301,8 +313,8 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 13,
-        fontFamily: "IBMPlexSans-Medium",
-        fontWeight: "500",
+        fontFamily: "IBMPlexSans-SemiBold",
+        fontWeight: "600",
         textTransform: "uppercase",
         letterSpacing: 0.5,
         marginBottom: 12
@@ -317,17 +329,22 @@ const styles = StyleSheet.create({
         height: CARD_SIZE,
         borderRadius: 12,
         padding: 12,
-        justifyContent: "flex-end"
+        justifyContent: "space-between"
     },
-    cardIcon: {
-        position: "absolute",
-        top: 12,
-        right: 12
+    cardTopRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center"
+    },
+    statusDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4
     },
     cardTitle: {
         fontSize: 14,
-        fontFamily: "IBMPlexSans-Medium",
-        fontWeight: "500",
+        fontFamily: "IBMPlexSans-SemiBold",
+        fontWeight: "600",
         lineHeight: 18
     }
 });

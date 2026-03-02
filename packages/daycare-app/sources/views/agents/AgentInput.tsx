@@ -1,6 +1,6 @@
 import { Octicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Platform, Pressable, TextInput, View } from "react-native";
+import { Platform, Pressable, Text, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 
 export type AgentInputProps = {
@@ -8,8 +8,7 @@ export type AgentInputProps = {
 };
 
 /**
- * Minimal message input — multi-line text field + send button.
- * Ported from happy's AgentInput, stripped to essentials.
+ * Terminal-style message input — monospace prompt with send button.
  */
 export function AgentInput({ onSend }: AgentInputProps) {
     const { theme } = useUnistyles();
@@ -27,7 +26,7 @@ export function AgentInput({ onSend }: AgentInputProps) {
     const handleKeyPress = React.useCallback(
         (e: { nativeEvent: { key: string; shiftKey?: boolean } }) => {
             if (Platform.OS === "web" && e.nativeEvent.key === "Enter" && !e.nativeEvent.shiftKey) {
-                e.nativeEvent = { ...e.nativeEvent }; // prevent default newline
+                e.nativeEvent = { ...e.nativeEvent };
                 (e as { preventDefault?: () => void }).preventDefault?.();
                 handleSend();
             }
@@ -39,12 +38,15 @@ export function AgentInput({ onSend }: AgentInputProps) {
         <View
             style={[
                 styles.container,
-                { backgroundColor: theme.colors.surfaceContainerHighest, borderTopColor: theme.colors.outlineVariant }
+                {
+                    backgroundColor: theme.colors.surfaceContainerLowest,
+                    borderTopColor: theme.colors.outlineVariant
+                }
             ]}
         >
+            <Text style={[styles.prompt, { color: theme.colors.primary }]}>{">"}</Text>
             <TextInput
                 style={[styles.input, { color: theme.colors.onSurface }]}
-                placeholder="Message..."
                 placeholderTextColor={theme.colors.onSurfaceVariant}
                 value={text}
                 onChangeText={setText}
@@ -63,7 +65,7 @@ export function AgentInput({ onSend }: AgentInputProps) {
             >
                 <Octicons
                     name="arrow-up"
-                    size={18}
+                    size={14}
                     color={hasText ? theme.colors.onPrimary : theme.colors.onSurfaceVariant}
                 />
             </Pressable>
@@ -76,23 +78,28 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "flex-end",
         paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingVertical: 6,
         gap: 8,
-        borderTopWidth: 1
+        borderTopWidth: StyleSheet.hairlineWidth
+    },
+    prompt: {
+        fontSize: 13,
+        fontFamily: "IBMPlexMono-Regular",
+        lineHeight: 20,
+        marginBottom: 6
     },
     input: {
         flex: 1,
-        fontSize: 15,
-        fontFamily: "IBMPlexSans-Regular",
+        fontSize: 13,
+        fontFamily: "IBMPlexMono-Regular",
         maxHeight: 120,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        lineHeight: 22
+        paddingVertical: 4,
+        lineHeight: 20
     },
     sendButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
         alignItems: "center",
         justifyContent: "center",
         marginBottom: 4

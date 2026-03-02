@@ -22,9 +22,11 @@ export const AgentMessageList = React.memo(({ records, loading }: AgentMessageLi
         []
     );
 
+    const bg = { backgroundColor: theme.colors.surfaceContainerLowest };
+
     if (loading && records.length === 0) {
         return (
-            <View style={styles.centered}>
+            <View style={[styles.centered, bg]}>
                 <ActivityIndicator color={theme.colors.primary} />
             </View>
         );
@@ -32,14 +34,15 @@ export const AgentMessageList = React.memo(({ records, loading }: AgentMessageLi
 
     if (records.length === 0) {
         return (
-            <View style={styles.centered}>
-                <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>No messages yet</Text>
+            <View style={[styles.centered, bg]}>
+                <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>waiting for input...</Text>
             </View>
         );
     }
 
     return (
         <FlatList
+            style={bg}
             data={sorted}
             inverted
             keyExtractor={keyExtractor}
@@ -58,8 +61,8 @@ const styles = StyleSheet.create({
         padding: 32
     },
     emptyText: {
-        fontSize: 14,
-        fontFamily: "IBMPlexSans-Regular"
+        fontSize: 13,
+        fontFamily: "IBMPlexMono-Regular"
     },
     listContent: {
         paddingVertical: 8
