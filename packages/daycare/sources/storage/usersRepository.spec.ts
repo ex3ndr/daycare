@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { storageOpenTest } from "./storageOpenTest.js";
 import { UsersRepository } from "./usersRepository.js";
 
 describe("UsersRepository", () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it("supports CRUD and connector key operations", async () => {
         const storage = await storageOpenTest();
         try {
@@ -38,6 +42,7 @@ describe("UsersRepository", () => {
             const updated = await users.findById(created.id);
             expect(updated?.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:1", "slack:1"]);
 
+            vi.spyOn(Date, "now").mockReturnValue(3);
             await users.update(created.id, {
                 isOwner: false,
                 firstName: "Steven",

@@ -1,10 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CronTasksRepository } from "./cronTasksRepository.js";
 import type { CronTaskDbRecord } from "./databaseTypes.js";
 import { storageOpenTest } from "./storageOpenTest.js";
 
 describe("CronTasksRepository", () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it("supports create, find, update, and delete", async () => {
         const storage = await storageOpenTest();
         try {
@@ -146,6 +150,7 @@ describe("CronTasksRepository", () => {
                 updatedAt: 1
             });
 
+            vi.spyOn(Date, "now").mockReturnValue(20);
             await repo.update("runtime-task", {
                 lastRunAt: 20,
                 updatedAt: 20

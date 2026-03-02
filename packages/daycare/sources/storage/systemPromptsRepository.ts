@@ -128,9 +128,11 @@ export class SystemPromptsRepository {
     async create(record: SystemPromptDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
             const current = this.promptsById.get(record.id) ?? (await this.promptLoadById(record.id));
+            const now = Date.now();
             const next = current
                 ? await this.db.transaction(async (tx) =>
                       versionAdvance<SystemPromptDbRecord>({
+                          now,
                           changes: {
                               scope: record.scope,
                               userId: record.userId,
@@ -138,8 +140,8 @@ export class SystemPromptsRepository {
                               condition: record.condition,
                               prompt: record.prompt,
                               enabled: record.enabled,
-                              createdAt: record.createdAt,
-                              updatedAt: record.updatedAt
+                              createdAt: current.createdAt,
+                              updatedAt: now
                           },
                           findCurrent: async () => current,
                           closeCurrent: async (row, now) => {
@@ -211,15 +213,19 @@ export class SystemPromptsRepository {
             if (!current) {
                 throw new Error(`System prompt not found: ${id}`);
             }
+            const now = Date.now();
 
             const next: SystemPromptDbRecord = {
                 ...current,
                 ...data,
-                id: current.id
+                id: current.id,
+                createdAt: current.createdAt,
+                updatedAt: now
             };
 
             const advanced = await this.db.transaction(async (tx) =>
                 versionAdvance<SystemPromptDbRecord>({
+                    now,
                     changes: {
                         scope: next.scope,
                         userId: next.userId,
@@ -227,8 +233,8 @@ export class SystemPromptsRepository {
                         condition: next.condition,
                         prompt: next.prompt,
                         enabled: next.enabled,
-                        createdAt: next.createdAt,
-                        updatedAt: next.updatedAt
+                        createdAt: current.createdAt,
+                        updatedAt: now
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {

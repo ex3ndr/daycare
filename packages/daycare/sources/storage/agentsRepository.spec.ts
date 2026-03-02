@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions } from "@/types";
 import { AgentsRepository } from "./agentsRepository.js";
@@ -10,6 +10,10 @@ const permissions: SessionPermissions = {
 };
 
 describe("AgentsRepository", () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it("supports create, find and update", async () => {
         const storage = await storageOpenTest();
         try {
@@ -47,13 +51,14 @@ describe("AgentsRepository", () => {
             const byId = await repo.findById("agent-1");
             expect(byId).toEqual(record);
 
+            vi.spyOn(Date, "now").mockReturnValue(20);
             await repo.update("agent-1", {
                 lifecycle: "sleeping",
                 updatedAt: 2
             });
             const updated = await repo.findById("agent-1");
             expect(updated?.lifecycle).toBe("sleeping");
-            expect(updated?.updatedAt).toBe(2);
+            expect(updated?.updatedAt).toBe(20);
 
             const listed = await repo.findMany();
             expect(listed).toHaveLength(1);
@@ -89,6 +94,7 @@ describe("AgentsRepository", () => {
                 updatedAt: 1
             });
 
+            vi.spyOn(Date, "now").mockReturnValue(30);
             await repo.update("agent-lifecycle-inplace", {
                 lifecycle: "sleeping",
                 nextSubIndex: 2,
@@ -101,7 +107,7 @@ describe("AgentsRepository", () => {
             expect(current?.lifecycle).toBe("sleeping");
             expect(current?.nextSubIndex).toBe(2);
             expect(current?.activeSessionId).toBe("session-1");
-            expect(current?.updatedAt).toBe(2);
+            expect(current?.updatedAt).toBe(30);
 
             const rows = (await storage.connection
                 .prepare(
@@ -120,6 +126,116 @@ describe("AgentsRepository", () => {
             expect(rows[0]?.lifecycle).toBe("sleeping");
             expect(rows[0]?.next_sub_index).toBe(2);
             expect(rows[0]?.active_session_id).toBe("session-1");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("updates updatedAt in place without advancing version", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const ownerUser = (await storage.users.findMany())[0];
+            if (!ownerUser) {
+                throw new Error("Owner user missing");
+            }
+            const repo = new AgentsRepository(storage.db);
+            await repo.create({
+                id: "agent-updated-at-inplace",
+                userId: ownerUser.id,
+                path: `/${ownerUser.id}/cron/agent-updated-at-inplace`,
+                foreground: false,
+                name: "updated-at",
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null,
+                type: "cron",
+                descriptor: { type: "cron", id: "agent-updated-at-inplace", name: "updated-at" },
+                activeSessionId: null,
+                permissions,
+                lifecycle: "active",
+                createdAt: 10,
+                updatedAt: 10
+            });
+
+            vi.spyOn(Date, "now").mockReturnValue(42);
+            await repo.update("agent-updated-at-inplace", { updatedAt: 11 });
+
+            const current = await repo.findById("agent-updated-at-inplace");
+            expect(current?.version).toBe(1);
+            expect(current?.updatedAt).toBe(42);
+
+            const rows = (await storage.connection
+                .prepare("SELECT version, valid_to, updated_at FROM agents WHERE id = ? ORDER BY version ASC")
+                .all("agent-updated-at-inplace")) as Array<{
+                version: number;
+                valid_to: number | null;
+                updated_at: number;
+            }>;
+            expect(rows).toHaveLength(1);
+            expect(rows[0]?.version).toBe(1);
+            expect(rows[0]?.valid_to).toBeNull();
+            expect(rows[0]?.updated_at).toBe(42);
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("keeps createdAt from current row when creating a new version", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const ownerUser = (await storage.users.findMany())[0];
+            if (!ownerUser) {
+                throw new Error("Owner user missing");
+            }
+            const repo = new AgentsRepository(storage.db);
+            await repo.create({
+                id: "agent-created-at-preserved",
+                userId: ownerUser.id,
+                path: `/${ownerUser.id}/cron/agent-created-at-preserved`,
+                foreground: false,
+                name: "created-at-preserved",
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null,
+                type: "cron",
+                descriptor: { type: "cron", id: "agent-created-at-preserved", name: "created-at-preserved" },
+                activeSessionId: null,
+                permissions,
+                lifecycle: "active",
+                createdAt: 5,
+                updatedAt: 5
+            });
+
+            vi.spyOn(Date, "now").mockReturnValue(100);
+            await repo.update("agent-created-at-preserved", {
+                name: "created-at-preserved-v2",
+                createdAt: 999,
+                updatedAt: 999
+            });
+
+            const current = await repo.findById("agent-created-at-preserved");
+            expect(current?.version).toBe(2);
+            expect(current?.createdAt).toBe(5);
+            expect(current?.updatedAt).toBe(100);
+
+            const rows = (await storage.connection
+                .prepare(
+                    "SELECT version, valid_to, created_at, updated_at FROM agents WHERE id = ? ORDER BY version ASC"
+                )
+                .all("agent-created-at-preserved")) as Array<{
+                version: number;
+                valid_to: number | null;
+                created_at: number;
+                updated_at: number;
+            }>;
+            expect(rows).toHaveLength(2);
+            expect(rows[0]?.version).toBe(1);
+            expect(rows[0]?.created_at).toBe(5);
+            expect(rows[0]?.updated_at).toBe(5);
+            expect(rows[1]?.version).toBe(2);
+            expect(rows[1]?.valid_to).toBeNull();
+            expect(rows[1]?.created_at).toBe(5);
+            expect(rows[1]?.updated_at).toBe(100);
         } finally {
             storage.connection.close();
         }

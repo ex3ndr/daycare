@@ -190,8 +190,10 @@ export class AgentsRepository {
                     updatedAt: next.updatedAt
                 });
             } else {
+                const now = Date.now();
                 next = await this.db.transaction(async (tx) =>
                     versionAdvance<AgentDbRecord>({
+                        now,
                         changes: {
                             userId: normalized.userId,
                             path: normalized.path,
@@ -208,8 +210,8 @@ export class AgentsRepository {
                             activeSessionId: normalized.activeSessionId,
                             permissions: normalized.permissions,
                             lifecycle: normalized.lifecycle,
-                            createdAt: normalized.createdAt,
-                            updatedAt: normalized.updatedAt
+                            createdAt: current.createdAt,
+                            updatedAt: now
                         },
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {
@@ -268,6 +270,7 @@ export class AgentsRepository {
             if (!current) {
                 throw new Error(`Agent not found: ${id}`);
             }
+            const now = Date.now();
             const next: AgentDbRecord = {
                 ...current,
                 ...data,
@@ -283,7 +286,9 @@ export class AgentsRepository {
                 systemPrompt: data.systemPrompt === undefined ? current.systemPrompt : data.systemPrompt,
                 workspaceDir: data.workspaceDir === undefined ? current.workspaceDir : data.workspaceDir,
                 nextSubIndex: data.nextSubIndex ?? current.nextSubIndex ?? 0,
-                permissions: data.permissions ?? current.permissions
+                permissions: data.permissions ?? current.permissions,
+                createdAt: current.createdAt,
+                updatedAt: now
             };
 
             if (agentRuntimeOnlyChangeIs(current, next)) {
@@ -293,7 +298,7 @@ export class AgentsRepository {
                         lifecycle: next.lifecycle,
                         nextSubIndex: next.nextSubIndex ?? 0,
                         activeSessionId: next.activeSessionId,
-                        updatedAt: next.updatedAt
+                        updatedAt: now
                     })
                     .where(
                         and(
@@ -310,6 +315,7 @@ export class AgentsRepository {
 
             const advanced = await this.db.transaction(async (tx) =>
                 versionAdvance<AgentDbRecord>({
+                    now,
                     changes: {
                         userId: next.userId,
                         path: next.path,
@@ -326,8 +332,8 @@ export class AgentsRepository {
                         activeSessionId: next.activeSessionId,
                         permissions: next.permissions,
                         lifecycle: next.lifecycle,
-                        createdAt: next.createdAt,
-                        updatedAt: next.updatedAt
+                        createdAt: current.createdAt,
+                        updatedAt: now
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {
@@ -566,12 +572,6 @@ function agentsSort(records: AgentDbRecord[]): AgentDbRecord[] {
  * Expects: `next` is merged from `current` and user-provided patch data.
  */
 function agentRuntimeOnlyChangeIs(current: AgentDbRecord, next: AgentDbRecord): boolean {
-    const lifecycleChanged = current.lifecycle !== next.lifecycle;
-    const nextSubIndexChanged = (current.nextSubIndex ?? 0) !== (next.nextSubIndex ?? 0);
-    const activeSessionIdChanged = (current.activeSessionId ?? null) !== (next.activeSessionId ?? null);
-    if (!lifecycleChanged && !nextSubIndexChanged && !activeSessionIdChanged) {
-        return false;
-    }
     return (
         current.id === next.id &&
         (current.version ?? 1) === (next.version ?? 1) &&

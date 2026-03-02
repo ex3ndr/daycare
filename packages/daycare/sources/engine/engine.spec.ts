@@ -256,7 +256,7 @@ describe("Engine timezone mismatch handling", () => {
                     },
                     {
                         key: "profile_name_notice",
-                        value: "User first/last name are not set. Ask the user and call user_profile_update ASAP."
+                        value: "User first/last name are not set. If the name is visible from the context (e.g. connector profile, message signature), set it via user_profile_update. Otherwise, ask the user for their name."
                     }
                 ])
             );

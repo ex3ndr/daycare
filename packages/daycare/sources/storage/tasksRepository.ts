@@ -163,16 +163,18 @@ export class TasksRepository {
                     updatedAt: next.updatedAt
                 });
             } else {
+                const now = Date.now();
                 next = await this.db.transaction(async (tx) =>
                     versionAdvance<TaskDbRecord>({
+                        now,
                         changes: {
                             userId,
                             title: record.title,
                             description: record.description,
                             code: record.code,
                             parameters: record.parameters,
-                            createdAt: record.createdAt,
-                            updatedAt: record.updatedAt
+                            createdAt: current.createdAt,
+                            updatedAt: now
                         },
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {
@@ -227,6 +229,7 @@ export class TasksRepository {
             if (!current) {
                 throw new Error(`Task not found: ${id}`);
             }
+            const now = Date.now();
 
             const next: TaskDbRecord = {
                 ...current,
@@ -234,19 +237,22 @@ export class TasksRepository {
                 id: current.id,
                 userId: data.userId?.trim() || current.userId,
                 description: data.description === undefined ? current.description : data.description,
-                parameters: data.parameters === undefined ? current.parameters : data.parameters
+                parameters: data.parameters === undefined ? current.parameters : data.parameters,
+                createdAt: current.createdAt,
+                updatedAt: now
             };
 
             const advanced = await this.db.transaction(async (tx) =>
                 versionAdvance<TaskDbRecord>({
+                    now,
                     changes: {
                         userId: next.userId,
                         title: next.title,
                         description: next.description,
                         code: next.code,
                         parameters: next.parameters,
-                        createdAt: next.createdAt,
-                        updatedAt: next.updatedAt
+                        createdAt: current.createdAt,
+                        updatedAt: now
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {

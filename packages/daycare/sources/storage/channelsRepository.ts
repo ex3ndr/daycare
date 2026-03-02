@@ -26,15 +26,17 @@ export class ChannelsRepository {
     async create(record: ChannelDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
             const current = this.channelsById.get(record.id) ?? (await this.channelLoadById(record.id));
+            const now = Date.now();
             const next = current
                 ? await this.db.transaction(async (tx) =>
                       versionAdvance<ChannelDbRecord>({
+                          now,
                           changes: {
                               userId: record.userId,
                               name: record.name,
                               leader: record.leader,
-                              createdAt: record.createdAt,
-                              updatedAt: record.updatedAt
+                              createdAt: current.createdAt,
+                              updatedAt: now
                           },
                           findCurrent: async () => current,
                           closeCurrent: async (row, now) => {
@@ -185,6 +187,7 @@ export class ChannelsRepository {
             if (!current) {
                 throw new Error(`Channel not found: ${id}`);
             }
+            const now = Date.now();
 
             const next: ChannelDbRecord = {
                 ...current,
@@ -193,18 +196,19 @@ export class ChannelsRepository {
                 userId: data.userId ?? current.userId,
                 name: data.name ?? current.name,
                 leader: data.leader ?? current.leader,
-                createdAt: data.createdAt ?? current.createdAt,
-                updatedAt: data.updatedAt ?? current.updatedAt
+                createdAt: current.createdAt,
+                updatedAt: now
             };
 
             const advanced = await this.db.transaction(async (tx) =>
                 versionAdvance<ChannelDbRecord>({
+                    now,
                     changes: {
                         userId: next.userId,
                         name: next.name,
                         leader: next.leader,
-                        createdAt: next.createdAt,
-                        updatedAt: next.updatedAt
+                        createdAt: current.createdAt,
+                        updatedAt: now
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {

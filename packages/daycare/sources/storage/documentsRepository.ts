@@ -311,8 +311,8 @@ export class DocumentsRepository {
                 title: input.title?.trim() || current.title,
                 description: input.description === undefined ? current.description : input.description.trim(),
                 body: input.body === undefined ? current.body : input.body,
-                createdAt: input.createdAt ?? current.createdAt,
-                updatedAt: input.updatedAt ?? Date.now()
+                createdAt: current.createdAt,
+                updatedAt: Date.now()
             };
 
             const refs = await this.documentReferencesResolve(ctx, {
@@ -331,15 +331,17 @@ export class DocumentsRepository {
                 }
 
                 const advanced = await this.db.transaction(async (tx) => {
+                    const now = Date.now();
                     const next = await versionAdvance<DocumentDbRecord>({
+                        now,
                         changes: {
                             userId,
                             slug: merged.slug,
                             title: merged.title,
                             description: merged.description,
                             body: merged.body,
-                            createdAt: merged.createdAt,
-                            updatedAt: merged.updatedAt
+                            createdAt: current.createdAt,
+                            updatedAt: now
                         },
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {

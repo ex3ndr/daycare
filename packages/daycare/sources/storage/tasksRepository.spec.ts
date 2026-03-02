@@ -1,10 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { contextForAgent } from "../engine/agents/context.js";
 import type { TaskDbRecord } from "./databaseTypes.js";
 import { storageOpenTest } from "./storageOpenTest.js";
 import { TasksRepository } from "./tasksRepository.js";
 
 describe("TasksRepository", () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it("supports create, find, update, and delete", async () => {
         const storage = await storageOpenTest();
         try {
@@ -33,6 +37,7 @@ describe("TasksRepository", () => {
             expect(byUser).toHaveLength(1);
             expect(byUser[0]?.id).toBe("task-1");
 
+            vi.spyOn(Date, "now").mockReturnValue(20);
             await repo.update(ctx, "task-1", {
                 title: "Daily report updated",
                 code: "print('updated')",

@@ -151,8 +151,10 @@ export class CronTasksRepository {
                     updatedAt: next.updatedAt
                 });
             } else {
+                const now = Date.now();
                 next = await this.db.transaction(async (tx) =>
                     versionAdvance<CronTaskDbRecord>({
+                        now,
                         changes: {
                             taskId,
                             userId: record.userId,
@@ -163,8 +165,8 @@ export class CronTasksRepository {
                             deleteAfterRun: record.deleteAfterRun,
                             parameters: record.parameters,
                             lastRunAt: record.lastRunAt,
-                            createdAt: record.createdAt,
-                            updatedAt: record.updatedAt
+                            createdAt: current.createdAt,
+                            updatedAt: now
                         },
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {
@@ -227,7 +229,9 @@ export class CronTasksRepository {
                 timezone: data.timezone === undefined ? current.timezone : data.timezone,
                 agentId: data.agentId === undefined ? current.agentId : data.agentId,
                 parameters: data.parameters === undefined ? current.parameters : data.parameters,
-                lastRunAt: data.lastRunAt === undefined ? current.lastRunAt : data.lastRunAt
+                lastRunAt: data.lastRunAt === undefined ? current.lastRunAt : data.lastRunAt,
+                createdAt: current.createdAt,
+                updatedAt: current.updatedAt
             };
             if (!next.taskId.trim()) {
                 throw new Error("Cron trigger taskId is required.");
@@ -242,11 +246,16 @@ export class CronTasksRepository {
             }
 
             if (cronTaskRuntimeOnlyChangeIs(current, next)) {
+                const now = Date.now();
+                const runtimeNext: CronTaskDbRecord = {
+                    ...next,
+                    updatedAt: now
+                };
                 await this.db
                     .update(tasksCronTable)
                     .set({
-                        lastRunAt: next.lastRunAt,
-                        updatedAt: next.updatedAt
+                        lastRunAt: runtimeNext.lastRunAt,
+                        updatedAt: now
                     })
                     .where(
                         and(
@@ -256,13 +265,15 @@ export class CronTasksRepository {
                         )
                     );
                 await this.cacheLock.inLock(() => {
-                    this.taskCacheSet(next);
+                    this.taskCacheSet(runtimeNext);
                 });
                 return;
             }
 
+            const now = Date.now();
             const advanced = await this.db.transaction(async (tx) =>
                 versionAdvance<CronTaskDbRecord>({
+                    now,
                     changes: {
                         taskId: next.taskId,
                         userId: next.userId,
@@ -273,8 +284,8 @@ export class CronTasksRepository {
                         deleteAfterRun: next.deleteAfterRun,
                         parameters: next.parameters,
                         lastRunAt: next.lastRunAt,
-                        createdAt: next.createdAt,
-                        updatedAt: next.updatedAt
+                        createdAt: current.createdAt,
+                        updatedAt: now
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {
@@ -420,8 +431,7 @@ function timezoneNormalize(value: string): string {
  */
 function cronTaskRuntimeOnlyChangeIs(current: CronTaskDbRecord, next: CronTaskDbRecord): boolean {
     const lastRunAtChanged = (current.lastRunAt ?? null) !== (next.lastRunAt ?? null);
-    const updatedAtChanged = current.updatedAt !== next.updatedAt;
-    if (!lastRunAtChanged && !updatedAtChanged) {
+    if (!lastRunAtChanged) {
         return false;
     }
 
@@ -438,7 +448,8 @@ function cronTaskRuntimeOnlyChangeIs(current: CronTaskDbRecord, next: CronTaskDb
         current.enabled === next.enabled &&
         current.deleteAfterRun === next.deleteAfterRun &&
         cronTaskJsonEqual(current.parameters, next.parameters) &&
-        current.createdAt === next.createdAt
+        current.createdAt === next.createdAt &&
+        current.updatedAt === next.updatedAt
     );
 }
 
@@ -461,8 +472,7 @@ function cronTaskNoChangesIs(current: CronTaskDbRecord, next: CronTaskDbRecord):
         current.deleteAfterRun === next.deleteAfterRun &&
         cronTaskJsonEqual(current.parameters, next.parameters) &&
         (current.lastRunAt ?? null) === (next.lastRunAt ?? null) &&
-        current.createdAt === next.createdAt &&
-        current.updatedAt === next.updatedAt
+        current.createdAt === next.createdAt
     );
 }
 

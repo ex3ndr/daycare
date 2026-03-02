@@ -64,9 +64,16 @@ export class ProcessesRepository {
                 await this.db.insert(processesTable).values(processRowInsert(next));
             } else {
                 const resolved = processRecordCurrentResolve(current, record);
+                const now = Date.now();
+                const nextRecord: ProcessDbRecord = {
+                    ...resolved,
+                    createdAt: current.createdAt,
+                    updatedAt: now
+                };
                 next = await this.db.transaction(async (tx) =>
                     versionAdvance<ProcessDbRecord>({
-                        changes: processVersionChanges(resolved),
+                        now,
+                        changes: processVersionChanges(nextRecord),
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {
                             const closedRows = await tx
@@ -178,10 +185,12 @@ export class ProcessesRepository {
             if (!current) {
                 throw new Error(`Process not found: ${id}`);
             }
+            const now = Date.now();
 
-            const next = processRecordMerge(current, data);
+            const next = processRecordMerge(current, data, now);
             const advanced = await this.db.transaction(async (tx) =>
                 versionAdvance<ProcessDbRecord>({
+                    now,
                     changes: processVersionChanges(next),
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {
@@ -217,7 +226,7 @@ export class ProcessesRepository {
             if (!current) {
                 throw new Error(`Process not found: ${id}`);
             }
-            const next = processRuntimeMerge(current, data);
+            const next = processRuntimeMerge(current, data, Date.now());
             await this.db
                 .update(processesTable)
                 .set(processRowRuntimeUpdate(next))
@@ -485,7 +494,7 @@ function processRowRuntimeUpdate(
     };
 }
 
-function processRecordMerge(current: ProcessDbRecord, data: Partial<ProcessDbRecord>): ProcessDbRecord {
+function processRecordMerge(current: ProcessDbRecord, data: Partial<ProcessDbRecord>, now: number): ProcessDbRecord {
     return {
         ...current,
         ...data,
@@ -514,14 +523,14 @@ function processRecordMerge(current: ProcessDbRecord, data: Partial<ProcessDbRec
         nextRestartAt: data.nextRestartAt === undefined ? current.nextRestartAt : data.nextRestartAt,
         settingsPath: data.settingsPath ?? current.settingsPath,
         logPath: data.logPath ?? current.logPath,
-        createdAt: data.createdAt ?? current.createdAt,
-        updatedAt: data.updatedAt ?? current.updatedAt,
+        createdAt: current.createdAt,
+        updatedAt: now,
         lastStartedAt: data.lastStartedAt === undefined ? current.lastStartedAt : data.lastStartedAt,
         lastExitedAt: data.lastExitedAt === undefined ? current.lastExitedAt : data.lastExitedAt
     };
 }
 
-function processRuntimeMerge(current: ProcessDbRecord, data: ProcessesRuntimeUpdate): ProcessDbRecord {
+function processRuntimeMerge(current: ProcessDbRecord, data: ProcessesRuntimeUpdate, now: number): ProcessDbRecord {
     return {
         ...current,
         id: current.id,
@@ -537,8 +546,8 @@ function processRuntimeMerge(current: ProcessDbRecord, data: ProcessesRuntimeUpd
         nextRestartAt: data.nextRestartAt === undefined ? current.nextRestartAt : data.nextRestartAt,
         settingsPath: data.settingsPath ?? current.settingsPath,
         logPath: data.logPath ?? current.logPath,
-        createdAt: data.createdAt ?? current.createdAt,
-        updatedAt: data.updatedAt ?? current.updatedAt,
+        createdAt: current.createdAt,
+        updatedAt: now,
         lastStartedAt: data.lastStartedAt === undefined ? current.lastStartedAt : data.lastStartedAt,
         lastExitedAt: data.lastExitedAt === undefined ? current.lastExitedAt : data.lastExitedAt
     };

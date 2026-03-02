@@ -38,12 +38,14 @@ export class SignalSubscriptionsRepository {
                 )
                 .limit(1);
             const current = currentRows[0] ? subscriptionParse(currentRows[0]) : null;
+            const now = Date.now();
             const next = current
                 ? await this.db.transaction(async (tx) =>
                       versionAdvance<SignalSubscriptionDbRecord>({
+                          now,
                           changes: {
                               silent: record.silent,
-                              updatedAt: record.updatedAt
+                              updatedAt: now
                           },
                           findCurrent: async () => current,
                           closeCurrent: async (row, now) => {

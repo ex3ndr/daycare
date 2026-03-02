@@ -26,9 +26,11 @@ export class ExposeEndpointsRepository {
     async create(record: ExposeEndpointDbRecord): Promise<void> {
         await this.createLock.inLock(async () => {
             const current = this.endpointsById.get(record.id) ?? (await this.endpointLoadById(record.id));
+            const now = Date.now();
             const next = current
                 ? await this.db.transaction(async (tx) =>
                       versionAdvance<ExposeEndpointDbRecord>({
+                          now,
                           changes: {
                               userId: record.userId,
                               target: record.target,
@@ -36,8 +38,8 @@ export class ExposeEndpointsRepository {
                               domain: exposeDomainNormalize(record.domain),
                               mode: record.mode,
                               auth: record.auth,
-                              createdAt: record.createdAt,
-                              updatedAt: record.updatedAt
+                              createdAt: current.createdAt,
+                              updatedAt: now
                           },
                           findCurrent: async () => current,
                           closeCurrent: async (row, now) => {
@@ -184,6 +186,7 @@ export class ExposeEndpointsRepository {
             if (!current) {
                 throw new Error(`Expose endpoint not found: ${id}`);
             }
+            const now = Date.now();
 
             const next: ExposeEndpointDbRecord = {
                 ...current,
@@ -195,12 +198,13 @@ export class ExposeEndpointsRepository {
                 domain: data.domain ? exposeDomainNormalize(data.domain) : current.domain,
                 mode: data.mode ?? current.mode,
                 auth: data.auth === undefined ? current.auth : data.auth,
-                createdAt: data.createdAt ?? current.createdAt,
-                updatedAt: data.updatedAt ?? current.updatedAt
+                createdAt: current.createdAt,
+                updatedAt: now
             };
 
             const advanced = await this.db.transaction(async (tx) =>
                 versionAdvance<ExposeEndpointDbRecord>({
+                    now,
                     changes: {
                         userId: next.userId,
                         target: next.target,
@@ -208,8 +212,8 @@ export class ExposeEndpointsRepository {
                         domain: next.domain,
                         mode: next.mode,
                         auth: next.auth,
-                        createdAt: next.createdAt,
-                        updatedAt: next.updatedAt
+                        createdAt: current.createdAt,
+                        updatedAt: now
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {

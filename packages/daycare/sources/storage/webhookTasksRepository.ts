@@ -126,15 +126,17 @@ export class WebhookTasksRepository {
                     updatedAt: next.updatedAt
                 });
             } else {
+                const now = Date.now();
                 next = await this.db.transaction(async (tx) =>
                     versionAdvance<WebhookTaskDbRecord>({
+                        now,
                         changes: {
                             taskId,
                             userId: record.userId,
                             agentId: record.agentId,
                             lastRunAt: record.lastRunAt,
-                            createdAt: record.createdAt,
-                            updatedAt: record.updatedAt
+                            createdAt: current.createdAt,
+                            updatedAt: now
                         },
                         findCurrent: async () => current,
                         closeCurrent: async (row, now) => {

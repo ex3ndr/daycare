@@ -303,6 +303,7 @@ export class UsersRepository {
             if (!current) {
                 throw new Error(`User not found: ${id}`);
             }
+            const now = Date.now();
 
             const next: UserWithConnectorKeysDbRecord = {
                 ...current,
@@ -316,12 +317,13 @@ export class UsersRepository {
                 ...(data.timezone === undefined ? {} : { timezone: textNullableNormalize(data.timezone) }),
                 ...(data.systemPrompt === undefined ? {} : { systemPrompt: textNullableNormalize(data.systemPrompt) }),
                 ...(data.memory === undefined ? {} : { memory: data.memory }),
-                createdAt: data.createdAt ?? current.createdAt,
-                updatedAt: data.updatedAt ?? current.updatedAt
+                createdAt: current.createdAt,
+                updatedAt: now
             };
 
             const advanced = await this.db.transaction(async (tx) =>
                 versionAdvance<UserWithConnectorKeysDbRecord>({
+                    now,
                     changes: {
                         isOwner: next.isOwner,
                         isSwarm: next.isSwarm,
@@ -333,8 +335,8 @@ export class UsersRepository {
                         timezone: next.timezone,
                         systemPrompt: next.systemPrompt,
                         memory: next.memory,
-                        createdAt: next.createdAt,
-                        updatedAt: next.updatedAt
+                        createdAt: current.createdAt,
+                        updatedAt: now
                     },
                     findCurrent: async () => current,
                     closeCurrent: async (row, now) => {

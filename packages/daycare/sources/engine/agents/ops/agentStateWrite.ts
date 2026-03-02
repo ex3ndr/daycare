@@ -28,7 +28,8 @@ export async function agentStateWrite(
         activeSessionId: state.activeSessionId ?? existing.activeSessionId ?? null,
         permissions: state.permissions,
         lifecycle: state.state,
-        createdAt: state.createdAt,
+        // Agent createdAt is immutable in storage; keep persisted value to avoid accidental version churn.
+        createdAt: existing.createdAt,
         updatedAt: state.updatedAt
     });
 
