@@ -15,14 +15,38 @@ const PLAYER = {
     streak: 12
 };
 
-const MILESTONES = [
-    { id: "m1", title: "Launch Spring Campaign", reward: "+500 XP", progress: 0.8 },
-    { id: "m2", title: "Send 50 Outreach Emails", reward: "+300 XP", progress: 0.62 },
-    { id: "m3", title: "Reach 1K Twitter Impressions", reward: "+200 XP", progress: 0.95 },
-    { id: "m4", title: "Hit $10K Monthly Revenue", reward: "Completed", progress: 1 }
+const OVERNIGHT = [
+    { agent: "Scout", action: "sent 3 outreach emails", xp: 45 },
+    { agent: "Builder", action: "fixed tracking pixel on landing page", xp: 80 },
+    { agent: "Operator", action: "published weekly metrics report", xp: 30 }
 ];
 
-const ACHIEVEMENTS = [
+const NEXT_MOVE = {
+    title: "Pause TikTok UGC campaign",
+    reason: "CTR dropped to 1.8% — below your 2.5% threshold. Swap creatives or reallocate $520/mo to Google where CTR is 4.7%.",
+    impact: "+$180 estimated savings"
+};
+
+const REVENUE_DAILY = [
+    { day: "Mon", amount: 420 },
+    { day: "Tue", amount: 380 },
+    { day: "Wed", amount: 510 },
+    { day: "Thu", amount: 460 },
+    { day: "Fri", amount: 590 },
+    { day: "Sat", amount: 320 },
+    { day: "Sun", amount: 280 }
+];
+
+const FUNNEL = { impressions: "240K", clicks: "6,480", signups: "312", paying: "47", convRate: "0.02%" };
+
+const MILESTONES = [
+    { id: "m1", title: "Launch Spring Campaign", reward: "+500 XP", progress: 0.8, detail: "4/5 channels live" },
+    { id: "m2", title: "Send 50 Outreach Emails", reward: "+300 XP", progress: 0.62, detail: "31/50 sent" },
+    { id: "m3", title: "Reach 1K Twitter Impressions", reward: "+200 XP", progress: 0.95, detail: "952/1,000" },
+    { id: "m4", title: "Hit $10K Monthly Revenue", reward: "Completed", progress: 1, detail: "$12,840" }
+];
+
+const ACHIEVEMENTS_UNLOCKED = [
     { id: "a1", title: "First Dollar", when: "Day 1", icon: "star" as const },
     { id: "a2", title: "10 Users", when: "Week 2", icon: "people" as const },
     { id: "a3", title: "7-Day Streak", when: "Week 3", icon: "flame" as const },
@@ -31,11 +55,50 @@ const ACHIEVEMENTS = [
     { id: "a6", title: "100 Emails", when: "Month 3", icon: "mail" as const }
 ];
 
+const ACHIEVEMENTS_LOCKED = [
+    { id: "a7", title: "50K Impressions", icon: "eye" as const },
+    { id: "a8", title: "1K Followers", icon: "heart" as const },
+    { id: "a9", title: "$50K Revenue", icon: "diamond" as const },
+    { id: "a10", title: "30-Day Streak", icon: "zap" as const }
+];
+
 const ADS = [
-    { id: "ad1", network: "Meta", campaign: "Spring promo", spend: "$1,240", impressions: "48.2K", ctr: "3.1%" },
-    { id: "ad2", network: "Google", campaign: "Brand search", spend: "$860", impressions: "31.5K", ctr: "4.7%" },
-    { id: "ad3", network: "TikTok", campaign: "UGC push", spend: "$520", impressions: "112K", ctr: "1.8%" },
-    { id: "ad4", network: "LinkedIn", campaign: "B2B retarget", spend: "$340", impressions: "8.1K", ctr: "2.4%" }
+    {
+        id: "ad1",
+        network: "Meta",
+        campaign: "Spring promo",
+        spend: "$1,240",
+        impressions: "48.2K",
+        ctr: "3.1%",
+        benchmark: "1.9%"
+    },
+    {
+        id: "ad2",
+        network: "Google",
+        campaign: "Brand search",
+        spend: "$860",
+        impressions: "31.5K",
+        ctr: "4.7%",
+        benchmark: "3.2%"
+    },
+    {
+        id: "ad3",
+        network: "TikTok",
+        campaign: "UGC push",
+        spend: "$520",
+        impressions: "112K",
+        ctr: "1.8%",
+        benchmark: "2.5%"
+    },
+    {
+        id: "ad4",
+        network: "LinkedIn",
+        campaign: "B2B retarget",
+        spend: "$340",
+        impressions: "8.1K",
+        ctr: "2.4%",
+        benchmark: "0.8%"
+    }
 ];
 
 const TASKS = [
@@ -57,11 +120,24 @@ const EMAILS = [
     { id: "e3", to: "lisa@agency.com", subject: "Creative assets handoff", sent: "Yesterday", status: "delivered" }
 ];
 
-const TWEETS = [
-    { id: "tw1", text: "Just shipped our new onboarding flow!", likes: 42, retweets: 12, trending: false },
-    { id: "tw2", text: "Thread: 5 things we learned scaling to 10K users", likes: 128, retweets: 47, trending: true },
-    { id: "tw3", text: "Announcing partnerships with three new agencies", likes: 0, retweets: 0, trending: false }
-];
+const TWITTER = {
+    followersGained: 34,
+    profileVisits: 1_280,
+    bestPost: "Thread: 5 things we learned scaling to 10K users",
+    bestLikes: 128,
+    bestRT: 47,
+    posts: [
+        { id: "tw1", text: "Just shipped our new onboarding flow!", likes: 42, retweets: 12, trending: false },
+        {
+            id: "tw2",
+            text: "Thread: 5 things we learned scaling to 10K users",
+            likes: 128,
+            retweets: 47,
+            trending: true
+        },
+        { id: "tw3", text: "Announcing partnerships with three new agencies", likes: 0, retweets: 0, trending: false }
+    ]
+};
 
 const DOCUMENTS = [
     { id: "d1", title: "Q1 Campaign Brief", updated: "2h ago" },
@@ -70,9 +146,9 @@ const DOCUMENTS = [
 ];
 
 const AGENTS = [
-    { id: "l1", name: "Scout", role: "Recon", xp: 1_240, rank: 1 },
-    { id: "l2", name: "Builder", role: "Code", xp: 980, rank: 2 },
-    { id: "l3", name: "Operator", role: "Ops", xp: 620, rank: 3 }
+    { id: "l1", name: "Scout", role: "Recon", xp: 1_240, rank: 1, today: "Sent 3 outreach emails" },
+    { id: "l2", name: "Builder", role: "Code", xp: 980, rank: 2, today: "Shipped 2 fixes" },
+    { id: "l3", name: "Operator", role: "Ops", xp: 620, rank: 3, today: "Published weekly report" }
 ];
 
 /**
@@ -81,6 +157,7 @@ const AGENTS = [
 export function HomeView() {
     const { theme } = useUnistyles();
     const xpPct = Math.round((PLAYER.xp / PLAYER.xpNext) * 100);
+    const barMax = Math.max(...REVENUE_DAILY.map((d) => d.amount));
 
     return (
         <ScrollView
@@ -112,7 +189,39 @@ export function HomeView() {
                 </View>
             </View>
 
-            {/* Top row: revenue + milestones on the left, silly face square on the right */}
+            {/* Overnight summary */}
+            <View style={[styles.overnightCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <View style={styles.overnightHeader}>
+                    <Octicons name="sun" size={14} color={theme.colors.primary} />
+                    <Text style={[styles.overnightTitle, { color: theme.colors.onSurface }]}>While you were away</Text>
+                    <Text style={[styles.overnightXp, { color: theme.colors.primary }]}>
+                        +{OVERNIGHT.reduce((sum, o) => sum + o.xp, 0)} XP
+                    </Text>
+                </View>
+                {OVERNIGHT.map((o) => (
+                    <Text key={o.agent} style={[styles.overnightLine, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text style={{ fontWeight: "600", color: theme.colors.onSurface }}>{o.agent}</Text> {o.action}
+                    </Text>
+                ))}
+            </View>
+
+            {/* Next best move */}
+            <View style={[styles.nextMoveCard, { backgroundColor: theme.colors.tertiaryContainer }]}>
+                <View style={styles.nextMoveHeader}>
+                    <Octicons name="light-bulb" size={16} color={theme.colors.onTertiaryContainer} />
+                    <Text style={[styles.nextMoveTitle, { color: theme.colors.onTertiaryContainer }]}>
+                        {NEXT_MOVE.title}
+                    </Text>
+                </View>
+                <Text style={[styles.nextMoveReason, { color: theme.colors.onTertiaryContainer }]}>
+                    {NEXT_MOVE.reason}
+                </Text>
+                <Text style={[styles.nextMoveImpact, { color: theme.colors.onTertiaryContainer }]}>
+                    {NEXT_MOVE.impact}
+                </Text>
+            </View>
+
+            {/* Top row: revenue + milestones | face */}
             <View style={styles.topRow}>
                 <View style={styles.topLeft}>
                     {/* Revenue card */}
@@ -124,6 +233,30 @@ export function HomeView() {
                             <Text style={[styles.revenueDelta, { color: theme.colors.onPrimaryContainer }]}>+18%</Text>
                         </View>
                         <Text style={[styles.revenueValue, { color: theme.colors.onPrimaryContainer }]}>$12,840</Text>
+
+                        {/* Sparkline */}
+                        <View style={styles.sparkRow}>
+                            {REVENUE_DAILY.map((d) => (
+                                <View key={d.day} style={styles.sparkCol}>
+                                    <View style={styles.sparkBarWrap}>
+                                        <View
+                                            style={[
+                                                styles.sparkBar,
+                                                {
+                                                    height: `${(d.amount / barMax) * 100}%`,
+                                                    backgroundColor: theme.colors.onPrimaryContainer,
+                                                    opacity: 0.4
+                                                }
+                                            ]}
+                                        />
+                                    </View>
+                                    <Text style={[styles.sparkLabel, { color: theme.colors.onPrimaryContainer }]}>
+                                        {d.day}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+
                         <View style={styles.revenueMetrics}>
                             <RevenueMetric label="Ad Spend" value="$2.6K" theme={theme} />
                             <RevenueMetric label="ROAS" value="4.9x" theme={theme} />
@@ -132,8 +265,19 @@ export function HomeView() {
                         </View>
                     </View>
 
+                    {/* Funnel */}
+                    <View style={[styles.funnelCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                        <FunnelStep label="Impressions" value={FUNNEL.impressions} theme={theme} />
+                        <Octicons name="chevron-right" size={12} color={theme.colors.outline} />
+                        <FunnelStep label="Clicks" value={FUNNEL.clicks} theme={theme} />
+                        <Octicons name="chevron-right" size={12} color={theme.colors.outline} />
+                        <FunnelStep label="Signups" value={FUNNEL.signups} theme={theme} />
+                        <Octicons name="chevron-right" size={12} color={theme.colors.outline} />
+                        <FunnelStep label="Paying" value={FUNNEL.paying} theme={theme} />
+                    </View>
+
                     {/* Milestones */}
-                    <SectionHeader title="Milestones" icon="milestone" theme={theme} />
+                    <SectionHeader title="Milestones" icon="milestone" theme={theme} first />
                     <View style={styles.sectionBody}>
                         {MILESTONES.map((m) => {
                             const pct = Math.round(m.progress * 100);
@@ -154,6 +298,11 @@ export function HomeView() {
                                             numberOfLines={1}
                                         >
                                             {m.title}
+                                        </Text>
+                                        <Text
+                                            style={[styles.milestoneDetail, { color: theme.colors.onSurfaceVariant }]}
+                                        >
+                                            {m.detail}
                                         </Text>
                                         <Text
                                             style={[
@@ -186,10 +335,17 @@ export function HomeView() {
                     </View>
                 </View>
 
-                {/* Silly face square */}
+                {/* Silly face */}
                 <View style={[styles.faceCard, { backgroundColor: theme.colors.surfaceContainer }]}>
                     <Text style={[styles.faceText, { transform: [{ scaleX: -1 }] }]}>
                         {"( \u0361\u00B0 \u035C\u0296 \u0361\u00B0)"}
+                    </Text>
+                    <Text style={[styles.faceHint, { color: theme.colors.onSurfaceVariant }]}>
+                        Next unlock at Lv.{PLAYER.level + 1}:
+                    </Text>
+                    <Text style={[styles.facePerk, { color: theme.colors.primary }]}>Viral Machine</Text>
+                    <Text style={[styles.faceHint, { color: theme.colors.onSurfaceVariant }]}>
+                        Auto-boost top tweets
                     </Text>
                 </View>
             </View>
@@ -198,26 +354,182 @@ export function HomeView() {
             <View style={styles.grid}>
                 {/* Left column */}
                 <View style={styles.col}>
-                    {/* Ads */}
-                    <SectionHeader title="Ad Campaigns" icon="broadcast" theme={theme} />
+                    {/* Ads with column headers and benchmarks */}
+                    <SectionHeader title="Ad Campaigns" icon="broadcast" theme={theme} first />
                     <View style={styles.sectionBody}>
-                        {ADS.map((ad) => (
-                            <View key={ad.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
+                        <View style={styles.adHeaderRow}>
+                            <View style={styles.rowMain} />
+                            <View style={styles.adStats}>
+                                <Text style={[styles.adColHeader, { color: theme.colors.outline }]}>Impr</Text>
+                                <Text style={[styles.adColHeader, { color: theme.colors.outline }]}>CTR</Text>
+                                <Text style={[styles.adColHeader, { color: theme.colors.outline }]}>Spend</Text>
+                            </View>
+                        </View>
+                        {ADS.map((ad) => {
+                            const ctrNum = Number.parseFloat(ad.ctr);
+                            const benchNum = Number.parseFloat(ad.benchmark);
+                            const beating = ctrNum >= benchNum;
+                            return (
+                                <View
+                                    key={ad.id}
+                                    style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}
+                                >
+                                    <View style={styles.rowMain}>
+                                        <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
+                                            {ad.campaign}
+                                        </Text>
+                                        <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
+                                            {ad.network} / avg {ad.benchmark}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.adStats}>
+                                        <Text style={[styles.adStat, { color: theme.colors.onSurfaceVariant }]}>
+                                            {ad.impressions}
+                                        </Text>
+                                        <Text
+                                            style={[
+                                                styles.adStat,
+                                                { color: beating ? theme.colors.tertiary : theme.colors.error }
+                                            ]}
+                                        >
+                                            {ad.ctr}
+                                        </Text>
+                                        <Text style={[styles.adStat, { color: theme.colors.onSurface }]}>
+                                            {ad.spend}
+                                        </Text>
+                                    </View>
+                                </View>
+                            );
+                        })}
+                    </View>
+
+                    {/* Twitter with growth stats */}
+                    <SectionHeader title="Twitter" icon="megaphone" theme={theme} />
+                    <View style={styles.sectionBody}>
+                        <View style={[styles.twitterStats, { backgroundColor: theme.colors.surfaceContainer }]}>
+                            <View style={styles.twitterStat}>
+                                <Text style={[styles.twitterStatValue, { color: theme.colors.onSurface }]}>
+                                    +{TWITTER.followersGained}
+                                </Text>
+                                <Text style={[styles.twitterStatLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                    followers
+                                </Text>
+                            </View>
+                            <View style={styles.twitterStat}>
+                                <Text style={[styles.twitterStatValue, { color: theme.colors.onSurface }]}>
+                                    {TWITTER.profileVisits.toLocaleString()}
+                                </Text>
+                                <Text style={[styles.twitterStatLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                    profile visits
+                                </Text>
+                            </View>
+                            <View style={[styles.twitterStat, { flex: 2 }]}>
+                                <Text
+                                    style={[styles.twitterStatValue, { color: theme.colors.onSurface }]}
+                                    numberOfLines={1}
+                                >
+                                    {TWITTER.bestLikes} likes / {TWITTER.bestRT} RT
+                                </Text>
+                                <Text
+                                    style={[styles.twitterStatLabel, { color: theme.colors.onSurfaceVariant }]}
+                                    numberOfLines={1}
+                                >
+                                    best: {TWITTER.bestPost}
+                                </Text>
+                            </View>
+                        </View>
+                        {TWITTER.posts.map((tw) => (
+                            <View key={tw.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
+                                <Octicons
+                                    name={tw.trending ? "arrow-up" : "dot-fill"}
+                                    size={14}
+                                    color={tw.trending ? theme.colors.tertiary : theme.colors.onSurfaceVariant}
+                                />
                                 <View style={styles.rowMain}>
-                                    <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
-                                        {ad.campaign}
+                                    <Text
+                                        style={[styles.rowTitle, { color: theme.colors.onSurface }]}
+                                        numberOfLines={1}
+                                    >
+                                        {tw.text}
                                     </Text>
                                     <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
-                                        {ad.network}
+                                        {tw.likes} likes / {tw.retweets} RT
+                                        {tw.trending ? " — trending" : ""}
                                     </Text>
                                 </View>
-                                <View style={styles.adStats}>
-                                    <Text style={[styles.adStat, { color: theme.colors.onSurfaceVariant }]}>
-                                        {ad.impressions}
+                            </View>
+                        ))}
+                    </View>
+
+                    {/* Documents */}
+                    <SectionHeader title="Recent Documents" icon="file" theme={theme} />
+                    <View style={styles.sectionBody}>
+                        {DOCUMENTS.map((doc) => (
+                            <View key={doc.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
+                                <Octicons name="file" size={14} color={theme.colors.onSurfaceVariant} />
+                                <View style={styles.rowMain}>
+                                    <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
+                                        {doc.title}
                                     </Text>
-                                    <Text style={[styles.adStat, { color: theme.colors.primary }]}>{ad.ctr}</Text>
-                                    <Text style={[styles.adStat, { color: theme.colors.onSurface }]}>{ad.spend}</Text>
                                 </View>
+                                <Text style={[styles.rowMeta, { color: theme.colors.onSurfaceVariant }]}>
+                                    {doc.updated}
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+                </View>
+
+                {/* Right column */}
+                <View style={styles.col}>
+                    {/* Agent Rankings with today's action */}
+                    <SectionHeader title="Agent Rankings" icon="people" theme={theme} first />
+                    <View style={styles.sectionBody}>
+                        {AGENTS.map((agent) => (
+                            <View
+                                key={agent.id}
+                                style={[styles.agentRow, { backgroundColor: theme.colors.surfaceContainer }]}
+                            >
+                                <View
+                                    style={[styles.rankBadge, { backgroundColor: theme.colors.surfaceContainerHigh }]}
+                                >
+                                    <Text style={[styles.rankText, { color: theme.colors.onSurfaceVariant }]}>
+                                        #{agent.rank}
+                                    </Text>
+                                </View>
+                                <View style={styles.rowMain}>
+                                    <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
+                                        {agent.name}
+                                    </Text>
+                                    <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
+                                        {agent.today}
+                                    </Text>
+                                </View>
+                                <Text style={[styles.agentXp, { color: theme.colors.primary }]}>
+                                    {agent.xp.toLocaleString()} XP
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+
+                    {/* Tasks */}
+                    <SectionHeader title="Active Tasks" icon="tasklist" theme={theme} />
+                    <View style={styles.sectionBody}>
+                        {TASKS.map((task) => (
+                            <View
+                                key={task.id}
+                                style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}
+                            >
+                                <Octicons name="dot-fill" size={12} color={theme.colors.primary} />
+                                <View style={styles.rowMain}>
+                                    <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
+                                        {task.title}
+                                    </Text>
+                                    <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
+                                        {task.agent} / {task.due}
+                                    </Text>
+                                </View>
+                                <Text style={[styles.taskXp, { color: theme.colors.primary }]}>+{task.xp}</Text>
                             </View>
                         ))}
                     </View>
@@ -260,111 +572,12 @@ export function HomeView() {
                         ))}
                     </View>
                 </View>
-
-                {/* Right column */}
-                <View style={styles.col}>
-                    {/* Agent Rankings */}
-                    <SectionHeader title="Agent Rankings" icon="people" theme={theme} />
-                    <View style={styles.sectionBody}>
-                        {AGENTS.map((agent) => (
-                            <View
-                                key={agent.id}
-                                style={[styles.agentRow, { backgroundColor: theme.colors.surfaceContainer }]}
-                            >
-                                <View
-                                    style={[styles.rankBadge, { backgroundColor: theme.colors.surfaceContainerHigh }]}
-                                >
-                                    <Text style={[styles.rankText, { color: theme.colors.onSurfaceVariant }]}>
-                                        #{agent.rank}
-                                    </Text>
-                                </View>
-                                <View style={styles.rowMain}>
-                                    <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
-                                        {agent.name}
-                                    </Text>
-                                    <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
-                                        {agent.role}
-                                    </Text>
-                                </View>
-                                <Text style={[styles.agentXp, { color: theme.colors.primary }]}>
-                                    {agent.xp.toLocaleString()} XP
-                                </Text>
-                            </View>
-                        ))}
-                    </View>
-
-                    {/* Tasks */}
-                    <SectionHeader title="Active Tasks" icon="tasklist" theme={theme} />
-                    <View style={styles.sectionBody}>
-                        {TASKS.map((task) => (
-                            <View
-                                key={task.id}
-                                style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}
-                            >
-                                <Octicons name="dot-fill" size={12} color={theme.colors.primary} />
-                                <View style={styles.rowMain}>
-                                    <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
-                                        {task.title}
-                                    </Text>
-                                    <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
-                                        {task.agent} / {task.due}
-                                    </Text>
-                                </View>
-                                <Text style={[styles.taskXp, { color: theme.colors.primary }]}>+{task.xp}</Text>
-                            </View>
-                        ))}
-                    </View>
-
-                    {/* Twitter */}
-                    <SectionHeader title="Twitter" icon="megaphone" theme={theme} />
-                    <View style={styles.sectionBody}>
-                        {TWEETS.map((tw) => (
-                            <View key={tw.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
-                                <Octicons
-                                    name={tw.trending ? "arrow-up" : "dot-fill"}
-                                    size={14}
-                                    color={tw.trending ? theme.colors.tertiary : theme.colors.onSurfaceVariant}
-                                />
-                                <View style={styles.rowMain}>
-                                    <Text
-                                        style={[styles.rowTitle, { color: theme.colors.onSurface }]}
-                                        numberOfLines={1}
-                                    >
-                                        {tw.text}
-                                    </Text>
-                                    <Text style={[styles.rowSub, { color: theme.colors.onSurfaceVariant }]}>
-                                        {tw.likes} likes / {tw.retweets} RT
-                                        {tw.trending ? " — trending" : ""}
-                                    </Text>
-                                </View>
-                            </View>
-                        ))}
-                    </View>
-
-                    {/* Documents */}
-                    <SectionHeader title="Recent Documents" icon="file" theme={theme} />
-                    <View style={styles.sectionBody}>
-                        {DOCUMENTS.map((doc) => (
-                            <View key={doc.id} style={[styles.row, { backgroundColor: theme.colors.surfaceContainer }]}>
-                                <Octicons name="file" size={14} color={theme.colors.onSurfaceVariant} />
-                                <View style={styles.rowMain}>
-                                    <Text style={[styles.rowTitle, { color: theme.colors.onSurface }]}>
-                                        {doc.title}
-                                    </Text>
-                                </View>
-                                <Text style={[styles.rowMeta, { color: theme.colors.onSurfaceVariant }]}>
-                                    {doc.updated}
-                                </Text>
-                            </View>
-                        ))}
-                    </View>
-                </View>
             </View>
 
-            {/* Achievements */}
-            <SectionHeader title="Achievements" icon="verified" theme={theme} />
+            {/* Achievements — unlocked + locked */}
+            <SectionHeader title="Achievements" icon="verified" theme={theme} first />
             <View style={styles.achievementsRow}>
-                {ACHIEVEMENTS.map((a) => (
+                {ACHIEVEMENTS_UNLOCKED.map((a) => (
                     <View
                         key={a.id}
                         style={[styles.achievementCard, { backgroundColor: theme.colors.surfaceContainer }]}
@@ -374,13 +587,24 @@ export function HomeView() {
                         <Text style={[styles.achievementWhen, { color: theme.colors.onSurfaceVariant }]}>{a.when}</Text>
                     </View>
                 ))}
+                {ACHIEVEMENTS_LOCKED.map((a) => (
+                    <View
+                        key={a.id}
+                        style={[
+                            styles.achievementCard,
+                            { backgroundColor: theme.colors.surfaceContainer, opacity: 0.4 }
+                        ]}
+                    >
+                        <Octicons name={a.icon} size={20} color={theme.colors.outline} />
+                        <Text style={[styles.achievementTitle, { color: theme.colors.outline }]}>{a.title}</Text>
+                        <Octicons name="lock" size={10} color={theme.colors.outline} />
+                    </View>
+                ))}
             </View>
 
-            {/* Status footer */}
+            {/* Footer */}
             <View style={[styles.footer, { borderTopColor: theme.colors.outlineVariant }]}>
-                <Text style={[styles.footerText, { color: theme.colors.onSurfaceVariant }]}>
-                    Level {PLAYER.level} / {xpPct}% to next level / {PLAYER.streak}-day streak
-                </Text>
+                <Text style={[styles.footerText, { color: theme.colors.onSurfaceVariant }]}>Last synced 2 min ago</Text>
             </View>
         </ScrollView>
     );
@@ -391,14 +615,16 @@ export function HomeView() {
 function SectionHeader({
     title,
     icon,
-    theme
+    theme,
+    first
 }: {
     title: string;
     icon: React.ComponentProps<typeof Octicons>["name"];
     theme: Theme;
+    first?: boolean;
 }) {
     return (
-        <View style={styles.sectionHeader}>
+        <View style={[styles.sectionHeader, first && { marginTop: 0 }]}>
             <Octicons name={icon} size={14} color={theme.colors.onSurfaceVariant} />
             <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>{title}</Text>
         </View>
@@ -414,6 +640,15 @@ function RevenueMetric({ label, value, theme }: { label: string; value: string; 
     );
 }
 
+function FunnelStep({ label, value, theme }: { label: string; value: string; theme: Theme }) {
+    return (
+        <View style={styles.funnelStep}>
+            <Text style={[styles.funnelValue, { color: theme.colors.onSurface }]}>{value}</Text>
+            <Text style={[styles.funnelLabel, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
+        </View>
+    );
+}
+
 const styles = StyleSheet.create({
     scroll: { flex: 1 },
     scrollContent: { padding: 24, paddingBottom: 48 },
@@ -423,7 +658,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         borderRadius: 12,
         padding: 16,
-        marginBottom: 20,
+        marginBottom: 16,
         alignItems: "center",
         gap: 14
     },
@@ -451,19 +686,36 @@ const styles = StyleSheet.create({
     },
     streakValue: { fontSize: 15, fontWeight: "700" },
 
-    // Top row (revenue + milestones | face)
+    // Overnight
+    overnightCard: { borderRadius: 12, padding: 16, marginBottom: 12, gap: 6 },
+    overnightHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+    overnightTitle: { fontSize: 14, fontWeight: "600", flex: 1 },
+    overnightXp: { fontSize: 13, fontWeight: "700" },
+    overnightLine: { fontSize: 13, lineHeight: 18, paddingLeft: 22 },
+
+    // Next move
+    nextMoveCard: { borderRadius: 12, padding: 16, marginBottom: 20, gap: 6 },
+    nextMoveHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+    nextMoveTitle: { fontSize: 14, fontWeight: "700" },
+    nextMoveReason: { fontSize: 13, lineHeight: 18 },
+    nextMoveImpact: { fontSize: 13, fontWeight: "600" },
+
+    // Top row
     topRow: { flexDirection: "row", gap: 24, marginBottom: 24 },
     topLeft: { flex: 1 },
     faceCard: {
         width: 200,
         borderRadius: 16,
         alignItems: "center",
-        justifyContent: "center"
+        justifyContent: "center",
+        gap: 8
     },
     faceText: { fontSize: 36 },
+    faceHint: { fontSize: 11, textAlign: "center" },
+    facePerk: { fontSize: 14, fontWeight: "700" },
 
     // Revenue
-    revenueCard: { borderRadius: 16, padding: 24, marginBottom: 16 },
+    revenueCard: { borderRadius: 16, padding: 24, marginBottom: 12 },
     revenueTop: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -472,11 +724,29 @@ const styles = StyleSheet.create({
     },
     revenueLabel: { fontSize: 12, fontWeight: "700", letterSpacing: 1.5 },
     revenueDelta: { fontSize: 14, fontWeight: "700" },
-    revenueValue: { fontSize: 44, fontWeight: "800", marginBottom: 8 },
-    revenueMetrics: { flexDirection: "row", gap: 28, marginTop: 8 },
+    revenueValue: { fontSize: 44, fontWeight: "800", marginBottom: 4 },
+    sparkRow: { flexDirection: "row", gap: 6, marginBottom: 12 },
+    sparkCol: { flex: 1, alignItems: "center", gap: 4 },
+    sparkBarWrap: { width: "100%", height: 32, justifyContent: "flex-end" },
+    sparkBar: { width: "100%", borderRadius: 2 },
+    sparkLabel: { fontSize: 10, opacity: 0.6 },
+    revenueMetrics: { flexDirection: "row", gap: 28, marginTop: 4 },
     revenueMetric: { gap: 2 },
     revenueMetricValue: { fontSize: 16, fontWeight: "700" },
     revenueMetricLabel: { fontSize: 11, opacity: 0.7 },
+
+    // Funnel
+    funnelCard: {
+        flexDirection: "row",
+        borderRadius: 10,
+        padding: 14,
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 4
+    },
+    funnelStep: { alignItems: "center", gap: 2 },
+    funnelValue: { fontSize: 16, fontWeight: "700" },
+    funnelLabel: { fontSize: 10 },
 
     // Grid
     grid: { flexDirection: "row", gap: 24, marginBottom: 24 },
@@ -502,6 +772,7 @@ const styles = StyleSheet.create({
     milestoneCard: { borderRadius: 10, padding: 12, gap: 8 },
     milestoneTop: { flexDirection: "row", alignItems: "center", gap: 8 },
     milestoneTitle: { fontSize: 14, fontWeight: "500", flex: 1 },
+    milestoneDetail: { fontSize: 11 },
     milestoneReward: { fontSize: 12, fontWeight: "600" },
     progressTrack: { height: 4, borderRadius: 2, overflow: "hidden" },
     progressFill: { height: "100%", borderRadius: 2 },
@@ -512,8 +783,23 @@ const styles = StyleSheet.create({
     rowTitle: { fontSize: 14, fontWeight: "500" },
     rowSub: { fontSize: 12 },
     rowMeta: { fontSize: 12 },
+
+    // Ads
+    adHeaderRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 10 },
     adStats: { flexDirection: "row", gap: 12, alignItems: "center" },
     adStat: { fontSize: 12, fontWeight: "500", minWidth: 44, textAlign: "right" },
+    adColHeader: { fontSize: 10, fontWeight: "600", minWidth: 44, textAlign: "right", textTransform: "uppercase" },
+
+    // Twitter
+    twitterStats: {
+        flexDirection: "row",
+        borderRadius: 10,
+        padding: 12,
+        gap: 16
+    },
+    twitterStat: { flex: 1, gap: 2 },
+    twitterStatValue: { fontSize: 14, fontWeight: "700" },
+    twitterStatLabel: { fontSize: 11 },
 
     // Tasks
     taskXp: { fontSize: 12, fontWeight: "600" },
@@ -537,7 +823,7 @@ const styles = StyleSheet.create({
         padding: 14,
         alignItems: "center",
         gap: 6,
-        minWidth: 110,
+        minWidth: 100,
         flex: 1
     },
     achievementTitle: { fontSize: 12, fontWeight: "600", textAlign: "center" },
