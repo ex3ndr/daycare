@@ -1,13 +1,13 @@
+import { Octicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { Item } from "@/components/Item";
-import { ItemGroup } from "@/components/ItemGroup";
-import { ItemListStatic } from "@/components/ItemList";
 import { useAgentsStore } from "@/modules/agents/agentsContext";
-import type { AgentLifecycleState, AgentListItem } from "@/modules/agents/agentsTypes";
+import type { AgentListItem } from "@/modules/agents/agentsTypes";
 import { useAuthStore } from "@/modules/auth/authContext";
+
+const CARD_SIZE = 120;
 
 /** Capitalizes the first letter of a string. */
 function capitalize(value: string): string {
@@ -65,85 +65,136 @@ function agentDisplayName(agent: AgentListItem): string {
     return `Agent ${agent.agentId.slice(0, 8)}`;
 }
 
-/** Derives a subtitle from agent metadata. */
-function agentSubtitle(agent: AgentListItem): string {
-    if (agent.path?.trim()) {
-        return agent.path.trim();
-    }
-    return `ID: ${agent.agentId}`;
-}
-
-const lifecycleColors: Record<AgentLifecycleState, string> = {
-    active: "#2e7d32",
-    sleeping: "#ed6c02",
-    dead: "#d32f2f"
+type KindMeta = {
+    icon: React.ComponentProps<typeof Octicons>["name"];
+    label: string;
+    lightBg: string;
+    darkBg: string;
+    lightIcon: string;
+    darkIcon: string;
+    order: number;
 };
 
-const lifecycleLabels: Record<AgentLifecycleState, string> = {
-    active: "Active",
-    sleeping: "Sleeping",
-    dead: "Dead"
+/** Visual config per agent kind. */
+const KIND_META: Record<string, KindMeta> = {
+    agent: {
+        icon: "hubot",
+        label: "Agents",
+        lightBg: "#F0DFB4",
+        darkBg: "#3C2D00",
+        lightIcon: "#6B4F12",
+        darkIcon: "#DFC070",
+        order: 0
+    },
+    connector: {
+        icon: "plug",
+        label: "Connectors",
+        lightBg: "#C8DAEF",
+        darkBg: "#0E2B48",
+        lightIcon: "#2A4666",
+        darkIcon: "#A8C4E0",
+        order: 1
+    },
+    cron: {
+        icon: "clock",
+        label: "Cron Tasks",
+        lightBg: "#C6DBB6",
+        darkBg: "#1C3210",
+        lightIcon: "#4A5F3A",
+        darkIcon: "#AACA98",
+        order: 2
+    },
+    task: {
+        icon: "tasklist",
+        label: "Tasks",
+        lightBg: "#FFDAD6",
+        darkBg: "#690005",
+        lightIcon: "#BA1A1A",
+        darkIcon: "#FFB4AB",
+        order: 3
+    },
+    memory: {
+        icon: "database",
+        label: "Memory",
+        lightBg: "#E7E1D7",
+        darkBg: "#2B2822",
+        lightIcon: "#4B4639",
+        darkIcon: "#D0C7B4",
+        order: 4
+    },
+    search: {
+        icon: "search",
+        label: "Search",
+        lightBg: "#EDE7DD",
+        darkBg: "#36332D",
+        lightIcon: "#7D7668",
+        darkIcon: "#D0C7B4",
+        order: 5
+    },
+    sub: {
+        icon: "git-branch",
+        label: "Subagents",
+        lightBg: "#C8DAEF",
+        darkBg: "#0E2B48",
+        lightIcon: "#2A4666",
+        darkIcon: "#A8C4E0",
+        order: 6
+    },
+    subuser: {
+        icon: "person",
+        label: "Subusers",
+        lightBg: "#F0DFB4",
+        darkBg: "#3C2D00",
+        lightIcon: "#6B4F12",
+        darkIcon: "#DFC070",
+        order: 7
+    },
+    swarm: {
+        icon: "iterations",
+        label: "Swarms",
+        lightBg: "#C6DBB6",
+        darkBg: "#1C3210",
+        lightIcon: "#4A5F3A",
+        darkIcon: "#AACA98",
+        order: 8
+    }
 };
 
-function AgentStatus({ lifecycle }: { lifecycle: AgentLifecycleState }) {
-    const { theme } = useUnistyles();
-    return (
-        <View style={agentStatusStyles.container}>
-            <Text style={[agentStatusStyles.label, { color: theme.colors.onSurfaceVariant }]}>
-                {lifecycleLabels[lifecycle]}
-            </Text>
-            <View style={[agentStatusStyles.dot, { backgroundColor: lifecycleColors[lifecycle] }]} />
-        </View>
-    );
+const DEFAULT_KIND_META: KindMeta = {
+    icon: "question",
+    label: "Other",
+    lightBg: "#E7E1D7",
+    darkBg: "#2B2822",
+    lightIcon: "#4B4639",
+    darkIcon: "#D0C7B4",
+    order: 99
+};
+
+function kindMeta(kind: string): KindMeta {
+    return KIND_META[kind] ?? DEFAULT_KIND_META;
 }
 
-const agentStatusStyles = StyleSheet.create({
-    container: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8
-    },
-    dot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4
-    },
-    label: {
-        fontSize: 13,
-        fontFamily: "IBMPlexSans-Regular"
-    }
-});
-
-/** Groups agents by lifecycle state for display. */
-function groupAgents(agents: AgentListItem[]): Record<string, AgentListItem[]> {
-    const active: AgentListItem[] = [];
-    const sleeping: AgentListItem[] = [];
-    const dead: AgentListItem[] = [];
-
+/** Groups agents by kind, sorted by display order. */
+function groupByKind(agents: AgentListItem[]): Array<{ kind: string; meta: KindMeta; items: AgentListItem[] }> {
+    const map = new Map<string, AgentListItem[]>();
     for (const agent of agents) {
-        switch (agent.lifecycle) {
-            case "active":
-                active.push(agent);
-                break;
-            case "sleeping":
-                sleeping.push(agent);
-                break;
-            case "dead":
-                dead.push(agent);
-                break;
+        const list = map.get(agent.kind);
+        if (list) {
+            list.push(agent);
+        } else {
+            map.set(agent.kind, [agent]);
         }
     }
 
-    const groups: Record<string, AgentListItem[]> = {};
-    if (active.length > 0) groups.Active = active;
-    if (sleeping.length > 0) groups.Sleeping = sleeping;
-    if (dead.length > 0) groups.Dead = dead;
-    return groups;
+    return Array.from(map.entries())
+        .map(([kind, items]) => ({ kind, meta: kindMeta(kind), items }))
+        .sort((a, b) => a.meta.order - b.meta.order);
 }
 
 export function AgentsView() {
     const { theme } = useUnistyles();
     const router = useRouter();
+    const isDark = theme.dark;
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
@@ -190,25 +241,41 @@ export function AgentsView() {
         );
     }
 
-    const groups = groupAgents(agents);
+    const groups = groupByKind(agents);
 
     return (
-        <ItemListStatic>
-            {Object.entries(groups).map(([title, groupAgents]) => (
-                <ItemGroup key={title} title={title}>
-                    {groupAgents.map((agent) => (
-                        <Item
-                            key={agent.agentId}
-                            title={agentDisplayName(agent)}
-                            subtitle={agentSubtitle(agent)}
-                            rightElement={<AgentStatus lifecycle={agent.lifecycle} />}
-                            onPress={() => handleAgentPress(agent.agentId)}
-                            showChevron
-                        />
-                    ))}
-                </ItemGroup>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+            {groups.map((group) => (
+                <View key={group.kind} style={styles.section}>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>
+                        {group.meta.label}
+                    </Text>
+                    <View style={styles.grid}>
+                        {group.items.map((agent) => {
+                            const meta = group.meta;
+                            const cardBg = isDark ? meta.darkBg : meta.lightBg;
+                            const iconColor = isDark ? meta.darkIcon : meta.lightIcon;
+
+                            return (
+                                <Pressable
+                                    key={agent.agentId}
+                                    style={[styles.card, { backgroundColor: cardBg }]}
+                                    onPress={() => handleAgentPress(agent.agentId)}
+                                >
+                                    <Octicons name={meta.icon} size={18} color={iconColor} style={styles.cardIcon} />
+                                    <Text
+                                        style={[styles.cardTitle, { color: theme.colors.onSurface }]}
+                                        numberOfLines={2}
+                                    >
+                                        {agentDisplayName(agent)}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+                </View>
             ))}
-        </ItemListStatic>
+        </ScrollView>
     );
 }
 
@@ -222,5 +289,45 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontFamily: "IBMPlexSans-Regular",
         textAlign: "center"
+    },
+    scroll: {
+        flex: 1
+    },
+    scrollContent: {
+        padding: 20
+    },
+    section: {
+        marginBottom: 24
+    },
+    sectionTitle: {
+        fontSize: 13,
+        fontFamily: "IBMPlexSans-Medium",
+        fontWeight: "500",
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+        marginBottom: 12
+    },
+    grid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8
+    },
+    card: {
+        width: CARD_SIZE,
+        height: CARD_SIZE,
+        borderRadius: 12,
+        padding: 12,
+        justifyContent: "flex-end"
+    },
+    cardIcon: {
+        position: "absolute",
+        top: 12,
+        right: 12
+    },
+    cardTitle: {
+        fontSize: 14,
+        fontFamily: "IBMPlexSans-Medium",
+        fontWeight: "500",
+        lineHeight: 18
     }
 });

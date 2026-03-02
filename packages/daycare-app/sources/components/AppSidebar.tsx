@@ -1,60 +1,40 @@
 import { Octicons } from "@expo/vector-icons";
+import { createId } from "@paralleldrive/cuid2";
 import { usePathname, useRouter } from "expo-router";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { type AppMode, appModes } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
+import { useAuthStore } from "@/modules/auth/authContext";
+import { useDocumentsStore } from "@/modules/documents/documentsContext";
+import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 
 export const SIDEBAR_WIDTH = 240;
 
 const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicons>["name"]; label: string }> = [
     { mode: "home", icon: "home", label: "Home" },
-    { mode: "agents", icon: "device-desktop", label: "Agents" },
+    { mode: "todos", icon: "checklist", label: "Todos" },
     { mode: "people", icon: "people", label: "People" },
+    { mode: "documents", icon: "file", label: "Documents" },
     { mode: "email", icon: "mail", label: "Email" },
     { mode: "inbox", icon: "inbox", label: "Inbox" },
-    { mode: "todos", icon: "checklist", label: "Todos" },
+    { mode: "agents", icon: "device-desktop", label: "Agents" },
     { mode: "routines", icon: "clock", label: "Routines" },
     { mode: "costs", icon: "credit-card", label: "Costs" },
-    { mode: "documents", icon: "file", label: "Documents" },
     { mode: "settings", icon: "gear", label: "Settings" }
 ];
 
 /** Sub-items for each mode that expand when the mode is active. */
 const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     home: [],
-    agents: [
-        { id: "a1", title: "Scout" },
-        { id: "a2", title: "Builder" },
-        { id: "a3", title: "Operator" }
-    ],
-    people: [
-        { id: "p1", title: "Team" },
-        { id: "p2", title: "External" }
-    ],
-    email: [
-        { id: "e1", title: "Inbox" },
-        { id: "e2", title: "Sent" },
-        { id: "e3", title: "Archive" }
-    ],
-    inbox: [
-        { id: "i1", title: "Action Required" },
-        { id: "i2", title: "Notifications" }
-    ],
-    todos: [
-        { id: "t1", title: "Today" },
-        { id: "t2", title: "This Week" },
-        { id: "t3", title: "Completed" }
-    ],
-    routines: [
-        { id: "r1", title: "Active" },
-        { id: "r2", title: "Disabled" }
-    ],
-    costs: [
-        { id: "co1", title: "This Month" },
-        { id: "co2", title: "Last Month" }
-    ],
+    agents: [],
+    people: [],
+    email: [],
+    inbox: [],
+    todos: [],
+    routines: [],
+    costs: [],
     documents: [],
     settings: []
 };
@@ -98,6 +78,31 @@ export const AppSidebar = React.memo<AppSidebarProps>(({ onNavigate }) => {
     const activeMode = extractModeFromPath(pathname);
     const selectedItem = extractItemFromPath(pathname);
 
+    // Documents store
+    const baseUrl = useAuthStore((s) => s.baseUrl);
+    const token = useAuthStore((s) => s.token);
+    const documents = useDocumentsStore((s) => s.items);
+    const fetchDocuments = useDocumentsStore((s) => s.fetch);
+    const createDocument = useDocumentsStore((s) => s.createDocument);
+    const documentsSelected = useDocumentsStore((s) => s.selectedId);
+    const selectDocument = useDocumentsStore((s) => s.select);
+
+    const [createDialogVisible, setCreateDialogVisible] = React.useState(false);
+
+    // Fetch documents when the documents mode is active
+    React.useEffect(() => {
+        if (activeMode === "documents" && baseUrl && token) {
+            void fetchDocuments(baseUrl, token);
+        }
+    }, [activeMode, baseUrl, token, fetchDocuments]);
+
+    // Documents under ~/document (children of the root "document" folder)
+    const sidebarDocs = React.useMemo(() => {
+        const docRoot = documents.find((d) => d.slug === "document" && d.parentId === null);
+        if (!docRoot) return [];
+        return documents.filter((d) => d.parentId === docRoot.id).sort((a, b) => a.title.localeCompare(b.title));
+    }, [documents]);
+
     const handleModePress = React.useCallback(
         (mode: AppMode) => {
             router.replace(`/${mode}` as `/${string}`);
@@ -114,6 +119,23 @@ export const AppSidebar = React.memo<AppSidebarProps>(({ onNavigate }) => {
         [router, onNavigate]
     );
 
+    const handleDocumentPress = React.useCallback(
+        (docId: string) => {
+            selectDocument(docId);
+            router.replace("/documents" as `/${string}`);
+            onNavigate?.();
+        },
+        [selectDocument, router, onNavigate]
+    );
+
+    const handleCreateDocument = React.useCallback(
+        (input: { title: string; slug: string; parentId: string | null }) => {
+            if (!baseUrl || !token) return;
+            void createDocument(baseUrl, token, { id: createId(), ...input });
+        },
+        [baseUrl, token, createDocument]
+    );
+
     return (
         <View style={[styles.sidebar, { backgroundColor: theme.colors.surface }]}>
             {/* Logo header */}
@@ -126,8 +148,10 @@ export const AppSidebar = React.memo<AppSidebarProps>(({ onNavigate }) => {
             <ScrollView style={styles.treeContainer} showsVerticalScrollIndicator={false}>
                 {segments.map((seg) => {
                     const isActive = activeMode === seg.mode;
+                    const isDocuments = seg.mode === "documents";
                     const items = modeItems[seg.mode];
-                    const hasItems = items.length > 0;
+                    const hasStaticItems = items.length > 0;
+                    const hasItems = hasStaticItems || (isDocuments && isActive);
 
                     return (
                         <View key={seg.mode}>
@@ -165,8 +189,59 @@ export const AppSidebar = React.memo<AppSidebarProps>(({ onNavigate }) => {
                                 )}
                             </Pressable>
 
-                            {/* Expanded sub-items */}
-                            {isActive && hasItems && (
+                            {/* Documents sub-items (dynamic from store) */}
+                            {isDocuments && isActive && (
+                                <View style={styles.subItems}>
+                                    {sidebarDocs.map((doc) => {
+                                        const isSelected = documentsSelected === doc.id;
+                                        return (
+                                            <Pressable
+                                                key={doc.id}
+                                                testID={`sidebar-doc-${doc.id}`}
+                                                onPress={() => handleDocumentPress(doc.id)}
+                                                style={[
+                                                    styles.subItemRow,
+                                                    isSelected && {
+                                                        backgroundColor: theme.colors.surfaceContainerHigh
+                                                    }
+                                                ]}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.subItemLabel,
+                                                        {
+                                                            color: isSelected
+                                                                ? theme.colors.onSurface
+                                                                : theme.colors.onSurfaceVariant
+                                                        }
+                                                    ]}
+                                                    numberOfLines={1}
+                                                >
+                                                    {doc.title}
+                                                </Text>
+                                            </Pressable>
+                                        );
+                                    })}
+                                    <Pressable
+                                        testID="sidebar-doc-create"
+                                        onPress={() => setCreateDialogVisible(true)}
+                                        style={styles.subItemRow}
+                                    >
+                                        <Octicons
+                                            name="plus"
+                                            size={14}
+                                            color={theme.colors.onSurfaceVariant}
+                                            style={styles.createIcon}
+                                        />
+                                        <Text style={[styles.subItemLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                            New Document
+                                        </Text>
+                                    </Pressable>
+                                </View>
+                            )}
+
+                            {/* Static sub-items for other modes */}
+                            {!isDocuments && isActive && hasStaticItems && (
                                 <View style={styles.subItems}>
                                     {items.map((item) => {
                                         const isSelected = selectedItem === item.id;
@@ -208,6 +283,14 @@ export const AppSidebar = React.memo<AppSidebarProps>(({ onNavigate }) => {
             <View style={[styles.footer, { borderTopColor: theme.colors.outlineVariant }]}>
                 <Avatar id="daycare-user" size={32} />
             </View>
+
+            {/* Document create dialog */}
+            <DocumentCreateDialog
+                visible={createDialogVisible}
+                parentId={null}
+                onClose={() => setCreateDialogVisible(false)}
+                onCreate={handleCreateDocument}
+            />
         </View>
     );
 });
@@ -253,16 +336,20 @@ const styles = StyleSheet.create({
         marginBottom: 4
     },
     subItemRow: {
+        flexDirection: "row",
+        alignItems: "center",
         paddingHorizontal: 12,
         paddingLeft: 22,
         height: 32,
         borderRadius: 6,
-        justifyContent: "center",
         marginVertical: 1
     },
     subItemLabel: {
         fontSize: 13,
         fontWeight: "400"
+    },
+    createIcon: {
+        marginRight: 6
     },
     footer: {
         paddingHorizontal: 20,

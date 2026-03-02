@@ -12,7 +12,7 @@ export type ContentPanelLayoutProps = {
 
 /**
  * Simplified 2-panel layout for use with AppSidebar.
- * Content fills the space without card styling — the sidebar is the card.
+ * Card styling (background, border-radius, shadow) is applied by the parent layout.
  */
 export const ContentPanelLayout = React.memo<ContentPanelLayoutProps>(({ panel2, panel3 }) => {
     const hasPanel3 = !!panel3;
@@ -43,19 +43,17 @@ export const ContentPanelLayout = React.memo<ContentPanelLayoutProps>(({ panel2,
     );
 });
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create({
     container: {
         flex: 1,
         flexDirection: "row"
     },
     panel2: {
         flex: 1,
-        overflow: "hidden",
-        backgroundColor: theme.colors.surface
+        overflow: "hidden"
     },
     panel3: {
         overflow: "hidden",
-        backgroundColor: theme.colors.surface,
         flexBasis: 0
     }
-}));
+});

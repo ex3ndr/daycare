@@ -32,13 +32,23 @@ function DesktopLayout() {
                         marginTop: 12 + insets.top,
                         marginBottom: 12 + insets.bottom,
                         backgroundColor: theme.colors.surface,
-                        boxShadow: theme.elevation.level1
+                        boxShadow: `0px 1px 2px ${theme.colors.shadow}0D, 0px 1px 3px ${theme.colors.shadow}14`
                     }
                 ]}
             >
                 <AppSidebar />
             </View>
-            <View style={styles.content}>
+            <View
+                style={[
+                    styles.contentCard,
+                    {
+                        marginTop: 12 + insets.top,
+                        marginBottom: 12 + insets.bottom,
+                        backgroundColor: theme.colors.surface,
+                        boxShadow: `0px 1px 2px ${theme.colors.shadow}0D, 0px 1px 3px ${theme.colors.shadow}14`
+                    }
+                ]}
+            >
                 <Slot />
             </View>
         </View>
@@ -95,14 +105,26 @@ const styles = StyleSheet.create({
     root: {
         flexGrow: 1,
         flexBasis: 0,
-        flexDirection: "row"
+        flexDirection: "row",
+        gap: 8,
+        paddingHorizontal: 12
     },
     sidebarCard: {
         width: SIDEBAR_WIDTH,
-        marginLeft: 12,
-        borderRadius: 16,
+        borderTopLeftRadius: 16,
+        borderBottomLeftRadius: 16,
+        borderTopRightRadius: 8,
+        borderBottomRightRadius: 8,
         overflow: "hidden",
         flexShrink: 0
+    },
+    contentCard: {
+        flex: 1,
+        borderTopLeftRadius: 8,
+        borderBottomLeftRadius: 8,
+        borderTopRightRadius: 16,
+        borderBottomRightRadius: 16,
+        overflow: "hidden"
     },
     content: {
         flex: 1
