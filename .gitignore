@@ -7,3 +7,5 @@ packages/daycare-dashboard/out
 .data
 *.tsbuildinfo
 :memory:
+packages/daycare-app/android
+packages/daycare-app/ios

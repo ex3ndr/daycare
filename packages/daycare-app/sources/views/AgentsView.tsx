@@ -80,9 +80,9 @@ function groupAgents(agents: AgentListItem[]): Record<string, AgentListItem[]> {
     }
 
     const groups: Record<string, AgentListItem[]> = {};
-    if (active.length > 0) groups["Active"] = active;
-    if (sleeping.length > 0) groups["Sleeping"] = sleeping;
-    if (dead.length > 0) groups["Dead"] = dead;
+    if (active.length > 0) groups.Active = active;
+    if (sleeping.length > 0) groups.Sleeping = sleeping;
+    if (dead.length > 0) groups.Dead = dead;
     return groups;
 }
 
