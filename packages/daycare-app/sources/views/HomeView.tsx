@@ -8,58 +8,61 @@ type Theme = ReturnType<typeof useUnistyles>["theme"];
 // -- Mock data --
 
 const PLAYER = {
-    level: 14,
-    title: "Growth Hacker III",
-    xp: 2_840,
-    xpNext: 4_000,
-    streak: 12
+    level: 42,
+    title: "Growth Overlord",
+    xp: 18_720,
+    xpNext: 20_000,
+    streak: 47
 };
 
 const OVERNIGHT = [
-    { agent: "Scout", action: "sent 3 outreach emails", xp: 45 },
-    { agent: "Builder", action: "fixed tracking pixel on landing page", xp: 80 },
-    { agent: "Operator", action: "published weekly metrics report", xp: 30 }
+    { agent: "Scout", action: "sent 14 outreach emails, booked 3 demos", xp: 320 },
+    { agent: "Builder", action: "shipped A/B test variant, +18% conversion lift", xp: 450 },
+    { agent: "Operator", action: "auto-scaled campaign budgets across 4 channels", xp: 280 }
 ];
 
 const NEXT_MOVE = {
-    title: "Pause TikTok UGC campaign",
-    reason: "CTR dropped to 1.8% — below your 2.5% threshold. Swap creatives or reallocate $520/mo to Google where CTR is 4.7%.",
-    impact: "+$180 estimated savings"
+    title: "Double down on Google Ads",
+    reason: "CTR hit 6.2% — 2x industry avg. Shifting $3K from underperforming TikTok could yield 240 extra signups this month.",
+    impact: "+$8,400 projected revenue"
 };
 
 const REVENUE_DAILY = [
-    { day: "Mon", amount: 420 },
-    { day: "Tue", amount: 380 },
-    { day: "Wed", amount: 510 },
-    { day: "Thu", amount: 460 },
-    { day: "Fri", amount: 590 },
-    { day: "Sat", amount: 320 },
-    { day: "Sun", amount: 280 }
+    { day: "Mon", amount: 2_840 },
+    { day: "Tue", amount: 3_120 },
+    { day: "Wed", amount: 4_680 },
+    { day: "Thu", amount: 5_210 },
+    { day: "Fri", amount: 6_930 },
+    { day: "Sat", amount: 4_100 },
+    { day: "Sun", amount: 3_890 }
 ];
 
-const FUNNEL = { impressions: "240K", clicks: "6,480", signups: "312", paying: "47", convRate: "0.02%" };
+const FUNNEL = { impressions: "1.8M", clicks: "52,400", signups: "4,180", paying: "623", convRate: "0.035%" };
 
 const MILESTONES = [
-    { id: "m1", title: "Launch Spring Campaign", reward: "+500 XP", progress: 0.8, detail: "4/5 channels live" },
-    { id: "m2", title: "Send 50 Outreach Emails", reward: "+300 XP", progress: 0.62, detail: "31/50 sent" },
-    { id: "m3", title: "Reach 1K Twitter Impressions", reward: "+200 XP", progress: 0.95, detail: "952/1,000" },
-    { id: "m4", title: "Hit $10K Monthly Revenue", reward: "Completed", progress: 1, detail: "$12,840" }
+    { id: "m1", title: "Hit $100K Monthly Revenue", reward: "+2,000 XP", progress: 0.87, detail: "$87,200/$100K" },
+    { id: "m2", title: "Send 500 Outreach Emails", reward: "+800 XP", progress: 0.78, detail: "391/500 sent" },
+    { id: "m3", title: "Reach 50K Twitter Followers", reward: "+1,500 XP", progress: 0.92, detail: "46,100/50,000" },
+    { id: "m4", title: "Hit $10K Monthly Revenue", reward: "Completed", progress: 1, detail: "$12,840" },
+    { id: "m5", title: "Hit $50K Monthly Revenue", reward: "Completed", progress: 1, detail: "$58,400" }
 ];
 
 const ACHIEVEMENTS_UNLOCKED = [
     { id: "a1", title: "First Dollar", when: "Day 1", icon: "star" as const },
-    { id: "a2", title: "10 Users", when: "Week 2", icon: "people" as const },
-    { id: "a3", title: "7-Day Streak", when: "Week 3", icon: "flame" as const },
-    { id: "a4", title: "$10K Revenue", when: "Month 2", icon: "trophy" as const },
+    { id: "a2", title: "1K Users", when: "Week 4", icon: "people" as const },
+    { id: "a3", title: "30-Day Streak", when: "Month 2", icon: "flame" as const },
+    { id: "a4", title: "$50K Revenue", when: "Month 3", icon: "trophy" as const },
     { id: "a5", title: "CTR > 5%", when: "Month 2", icon: "graph" as const },
-    { id: "a6", title: "100 Emails", when: "Month 3", icon: "mail" as const }
+    { id: "a6", title: "500 Emails", when: "Month 4", icon: "mail" as const },
+    { id: "a7", title: "10K Followers", when: "Month 5", icon: "heart" as const },
+    { id: "a8", title: "Viral Post", when: "Month 5", icon: "rocket" as const }
 ];
 
 const ACHIEVEMENTS_LOCKED = [
-    { id: "a7", title: "50K Impressions", icon: "eye" as const },
-    { id: "a8", title: "1K Followers", icon: "heart" as const },
-    { id: "a9", title: "$50K Revenue", icon: "diamond" as const },
-    { id: "a10", title: "30-Day Streak", icon: "zap" as const }
+    { id: "a9", title: "100K Followers", icon: "eye" as const },
+    { id: "a10", title: "$1M Revenue", icon: "diamond" as const },
+    { id: "a11", title: "100-Day Streak", icon: "zap" as const },
+    { id: "a12", title: "IPO Ready", icon: "briefcase" as const }
 ];
 
 const ADS = [
@@ -67,45 +70,45 @@ const ADS = [
         id: "ad1",
         network: "Meta",
         campaign: "Spring promo",
-        spend: "$1,240",
-        impressions: "48.2K",
-        ctr: "3.1%",
+        spend: "$8,400",
+        impressions: "420K",
+        ctr: "5.8%",
         benchmark: "1.9%"
     },
     {
         id: "ad2",
         network: "Google",
         campaign: "Brand search",
-        spend: "$860",
-        impressions: "31.5K",
-        ctr: "4.7%",
+        spend: "$6,200",
+        impressions: "285K",
+        ctr: "6.2%",
         benchmark: "3.2%"
     },
     {
         id: "ad3",
         network: "TikTok",
         campaign: "UGC push",
-        spend: "$520",
-        impressions: "112K",
-        ctr: "1.8%",
+        spend: "$4,800",
+        impressions: "1.2M",
+        ctr: "3.4%",
         benchmark: "2.5%"
     },
     {
         id: "ad4",
         network: "LinkedIn",
         campaign: "B2B retarget",
-        spend: "$340",
-        impressions: "8.1K",
-        ctr: "2.4%",
+        spend: "$2,100",
+        impressions: "64K",
+        ctr: "4.1%",
         benchmark: "0.8%"
     }
 ];
 
 const TASKS = [
-    { id: "t1", title: "Review campaign creatives", agent: "Scout", due: "Today", xp: 50 },
-    { id: "t2", title: "Fix tracking pixel", agent: "Builder", due: "Today", xp: 80 },
-    { id: "t3", title: "Send weekly digest", agent: "Operator", due: "Tomorrow", xp: 30 },
-    { id: "t4", title: "Update audience segments", agent: "Scout", due: "Mar 4", xp: 60 }
+    { id: "t1", title: "Review campaign creatives", agent: "Scout", due: "Today", xp: 250 },
+    { id: "t2", title: "Launch retargeting funnel v3", agent: "Builder", due: "Today", xp: 400 },
+    { id: "t3", title: "Negotiate $20K enterprise deal", agent: "Operator", due: "Tomorrow", xp: 600 },
+    { id: "t4", title: "Scale winning ad set to $5K/day", agent: "Scout", due: "Mar 4", xp: 350 }
 ];
 
 const EMAILS = [
@@ -121,21 +124,21 @@ const EMAILS = [
 ];
 
 const TWITTER = {
-    followersGained: 34,
-    profileVisits: 1_280,
-    bestPost: "Thread: 5 things we learned scaling to 10K users",
-    bestLikes: 128,
-    bestRT: 47,
+    followersGained: 1_842,
+    profileVisits: 48_600,
+    bestPost: "Thread: How we went from $0 to $87K MRR in 6 months",
+    bestLikes: 4_200,
+    bestRT: 1_380,
     posts: [
-        { id: "tw1", text: "Just shipped our new onboarding flow!", likes: 42, retweets: 12, trending: false },
+        { id: "tw1", text: "Just crossed 45K followers. Wild.", likes: 890, retweets: 210, trending: false },
         {
             id: "tw2",
-            text: "Thread: 5 things we learned scaling to 10K users",
-            likes: 128,
-            retweets: 47,
+            text: "Thread: How we went from $0 to $87K MRR in 6 months",
+            likes: 4_200,
+            retweets: 1_380,
             trending: true
         },
-        { id: "tw3", text: "Announcing partnerships with three new agencies", likes: 0, retweets: 0, trending: false }
+        { id: "tw3", text: "Announcing our Series A partnership", likes: 620, retweets: 180, trending: false }
     ]
 };
 
@@ -146,9 +149,9 @@ const DOCUMENTS = [
 ];
 
 const AGENTS = [
-    { id: "l1", name: "Scout", role: "Recon", xp: 1_240, rank: 1, today: "Sent 3 outreach emails" },
-    { id: "l2", name: "Builder", role: "Code", xp: 980, rank: 2, today: "Shipped 2 fixes" },
-    { id: "l3", name: "Operator", role: "Ops", xp: 620, rank: 3, today: "Published weekly report" }
+    { id: "l1", name: "Scout", role: "Recon", xp: 12_400, rank: 1, today: "Booked 3 demos, sent 14 emails" },
+    { id: "l2", name: "Builder", role: "Code", xp: 9_800, rank: 2, today: "Shipped A/B test, +18% conversion" },
+    { id: "l3", name: "Operator", role: "Ops", xp: 7_620, rank: 3, today: "Auto-scaled 4 campaigns" }
 ];
 
 /**
@@ -230,9 +233,9 @@ export function HomeView() {
                             <Text style={[styles.revenueLabel, { color: theme.colors.onPrimaryContainer }]}>
                                 REVENUE
                             </Text>
-                            <Text style={[styles.revenueDelta, { color: theme.colors.onPrimaryContainer }]}>+18%</Text>
+                            <Text style={[styles.revenueDelta, { color: theme.colors.onPrimaryContainer }]}>+142%</Text>
                         </View>
-                        <Text style={[styles.revenueValue, { color: theme.colors.onPrimaryContainer }]}>$12,840</Text>
+                        <Text style={[styles.revenueValue, { color: theme.colors.onPrimaryContainer }]}>$87,240</Text>
 
                         {/* Sparkline */}
                         <View style={styles.sparkRow}>
@@ -258,10 +261,10 @@ export function HomeView() {
                         </View>
 
                         <View style={styles.revenueMetrics}>
-                            <RevenueMetric label="Ad Spend" value="$2.6K" theme={theme} />
-                            <RevenueMetric label="ROAS" value="4.9x" theme={theme} />
-                            <RevenueMetric label="Customers" value="847" theme={theme} />
-                            <RevenueMetric label="Avg LTV" value="$38" theme={theme} />
+                            <RevenueMetric label="Ad Spend" value="$21.5K" theme={theme} />
+                            <RevenueMetric label="ROAS" value="8.2x" theme={theme} />
+                            <RevenueMetric label="Customers" value="4,180" theme={theme} />
+                            <RevenueMetric label="Avg LTV" value="$142" theme={theme} />
                         </View>
                     </View>
 
