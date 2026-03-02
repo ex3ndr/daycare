@@ -1,11 +1,12 @@
+import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import * as React from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { SinglePanelLayout } from "@/components/layout/SinglePanelLayout";
 import { authTelegramExchange } from "@/modules/auth/authApi";
 import { useAuthStore } from "@/modules/auth/authContext";
-import { authLinkPayloadParse } from "@/modules/auth/authLinkPayloadParse";
+import { authLinkPayloadFromUrl } from "@/modules/auth/authLinkPayloadFromUrl";
 import { authTelegramWebAppContextParse } from "@/modules/auth/authTelegramWebAppContextParse";
 
 type TelegramWindow = Window & {
@@ -20,14 +21,41 @@ type TelegramWindow = Window & {
 export default function AuthMagicLinkScreen() {
     const { theme } = useUnistyles();
     const login = useAuthStore((state) => state.login);
-    const magicPayload = React.useMemo(() => {
-        if (typeof window === "undefined") {
-            return null;
+    const incomingLinkUrl = Linking.useURL();
+    const [initialLinkUrl, setInitialLinkUrl] = React.useState<string | null | undefined>(undefined);
+    React.useEffect(() => {
+        if (Platform.OS === "web") {
+            return;
         }
-        return authLinkPayloadParse(window.location.hash);
+
+        let isMounted = true;
+        void Linking.getInitialURL().then((url) => {
+            if (!isMounted) {
+                return;
+            }
+            setInitialLinkUrl(url ?? null);
+        });
+        return () => {
+            isMounted = false;
+        };
     }, []);
+    const authUrl = React.useMemo(() => {
+        if (Platform.OS === "web") {
+            if (typeof window === "undefined") {
+                return null;
+            }
+            return window.location.href;
+        }
+        return incomingLinkUrl ?? initialLinkUrl ?? null;
+    }, [incomingLinkUrl, initialLinkUrl]);
+    const isAuthUrlPending = Platform.OS !== "web" && initialLinkUrl === undefined && !incomingLinkUrl;
+
+    const magicPayload = React.useMemo(() => {
+        return authLinkPayloadFromUrl(authUrl);
+    }, [authUrl]);
+
     const telegramWebAppContext = React.useMemo(() => {
-        if (typeof window === "undefined") {
+        if (Platform.OS !== "web" || typeof window === "undefined") {
             return null;
         }
         const telegramWindow = window as TelegramWindow;
@@ -58,6 +86,23 @@ export default function AuthMagicLinkScreen() {
         const telegramWindow = window as TelegramWindow;
         telegramWindow.Telegram?.WebApp?.ready?.();
     }, [telegramWebAppContext]);
+
+    React.useEffect(() => {
+        if (!__DEV__ || isAuthUrlPending) {
+            return;
+        }
+        console.info(`[daycare-app] auth incoming-link url=${authUrl ?? "none"}`);
+    }, [authUrl, isAuthUrlPending]);
+
+    React.useEffect(() => {
+        if (!__DEV__ || isAuthUrlPending) {
+            return;
+        }
+        if (magicPayload || telegramWebAppContext) {
+            return;
+        }
+        console.warn(`[daycare-app] auth invalid-link fullUrl=${authUrl ?? "none"}`);
+    }, [authUrl, isAuthUrlPending, magicPayload, telegramWebAppContext]);
 
     const enterMagic = React.useCallback(async () => {
         if (!magicPayload || isSubmitting) {
@@ -164,6 +209,10 @@ export default function AuthMagicLinkScreen() {
                             )}
                         </Pressable>
                     </>
+                ) : isAuthUrlPending ? (
+                    <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
+                        Resolving login link...
+                    </Text>
                 ) : (
                     <Text style={[styles.message, { color: theme.colors.error }]}>
                         Invalid login link. Request a new /app link or open this page from Telegram WebApp menu.

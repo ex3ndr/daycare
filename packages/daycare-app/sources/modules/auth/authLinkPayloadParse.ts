@@ -10,23 +10,27 @@ export type AuthLinkPayload = {
 export function authLinkPayloadParse(hash: string): AuthLinkPayload | null {
     const encoded = hash.startsWith("#") ? hash.slice(1) : hash;
     if (!encoded) {
+        authLinkPayloadInvalidLog("missing-hash-payload", encoded.length);
         return null;
     }
 
     const decoded = authLinkPayloadDecode(encoded);
     if (!decoded) {
+        authLinkPayloadInvalidLog("invalid-base64-payload", encoded.length);
         return null;
     }
 
     try {
         const parsed = JSON.parse(decoded) as { backendUrl?: unknown; token?: unknown };
         if (typeof parsed.backendUrl !== "string" || typeof parsed.token !== "string") {
+            authLinkPayloadInvalidLog("missing-required-fields", encoded.length);
             return null;
         }
 
         const backendUrl = authLinkPayloadBackendUrlNormalize(parsed.backendUrl);
         const token = parsed.token.trim();
         if (!backendUrl || !token) {
+            authLinkPayloadInvalidLog("invalid-field-values", encoded.length);
             return null;
         }
 
@@ -35,6 +39,7 @@ export function authLinkPayloadParse(hash: string): AuthLinkPayload | null {
             token
         };
     } catch {
+        authLinkPayloadInvalidLog("invalid-json-payload", encoded.length);
         return null;
     }
 }
@@ -71,4 +76,8 @@ function authLinkPayloadBackendUrlNormalize(value: string): string | null {
     } catch {
         return null;
     }
+}
+
+function authLinkPayloadInvalidLog(reason: string, encodedLength: number): void {
+    console.warn(`[daycare-app] invalid login link reason=${reason} payloadLength=${encodedLength}`);
 }
