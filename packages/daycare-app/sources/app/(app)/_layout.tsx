@@ -29,8 +29,8 @@ function DesktopLayout() {
                 style={[
                     styles.sidebarCard,
                     {
-                        marginTop: 12 + insets.top,
-                        marginBottom: 12 + insets.bottom,
+                        marginTop: 8 + insets.top,
+                        marginBottom: 8 + insets.bottom,
                         backgroundColor: theme.colors.surface,
                         boxShadow: `0px 1px 2px ${theme.colors.shadow}0D, 0px 1px 3px ${theme.colors.shadow}14`
                     }
@@ -42,8 +42,8 @@ function DesktopLayout() {
                 style={[
                     styles.contentCard,
                     {
-                        marginTop: 12 + insets.top,
-                        marginBottom: 12 + insets.bottom,
+                        marginTop: 8 + insets.top,
+                        marginBottom: 8 + insets.bottom,
                         backgroundColor: theme.colors.surface,
                         boxShadow: `0px 1px 2px ${theme.colors.shadow}0D, 0px 1px 3px ${theme.colors.shadow}14`
                     }
@@ -106,8 +106,8 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         flexBasis: 0,
         flexDirection: "row",
-        gap: 8,
-        paddingHorizontal: 12
+        gap: 6,
+        paddingHorizontal: 8
     },
     sidebarCard: {
         width: SIDEBAR_WIDTH,
