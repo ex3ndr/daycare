@@ -17,7 +17,9 @@ import { PeopleView } from "@/views/PeopleView";
 import { RoutinesView } from "@/views/RoutinesView";
 import { RoutineDetailPanel } from "@/views/routines/RoutineDetailPanel";
 import { SettingsView } from "@/views/SettingsView";
+import { SkillsView } from "@/views/SkillsView";
 import { TodosView } from "@/views/TodosView";
+import { ToolsView } from "@/views/ToolsView";
 
 const viewComponents: Record<AppMode, React.ComponentType> = {
     home: HomeView,
@@ -29,6 +31,8 @@ const viewComponents: Record<AppMode, React.ComponentType> = {
     routines: RoutinesView,
     costs: CostsView,
     documents: DocumentsView,
+    skills: SkillsView,
+    tools: ToolsView,
     settings: SettingsView
 };
 

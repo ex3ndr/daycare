@@ -1,5 +1,6 @@
 import { Octicons } from "@expo/vector-icons";
 import { createId } from "@paralleldrive/cuid2";
+import { Image } from "expo-image";
 import { usePathname, useRouter } from "expo-router";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -29,6 +30,8 @@ const segmentGroups: Segment[][] = [
     [
         { mode: "agents", icon: "device-desktop", label: "Agents" },
         { mode: "routines", icon: "clock", label: "Routines" },
+        { mode: "skills", icon: "zap", label: "Skills" },
+        { mode: "tools", icon: "tools", label: "Tools" },
         { mode: "costs", icon: "credit-card", label: "Costs" }
     ],
     [{ mode: "settings", icon: "gear", label: "Settings" }]
@@ -45,6 +48,8 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     routines: [],
     costs: [],
     documents: [],
+    skills: [],
+    tools: [],
     settings: []
 };
 
@@ -149,7 +154,15 @@ export const AppSidebar = React.memo<AppSidebarProps>(({ onNavigate }) => {
         <View style={[styles.sidebar, { backgroundColor: theme.colors.surface }]}>
             {/* Logo header */}
             <View style={styles.header}>
-                <Octicons name="hubot" size={20} color={theme.colors.onSurface} />
+                <Image
+                    source={
+                        theme.dark
+                            ? require("@/assets/images/logo-white.png")
+                            : require("@/assets/images/logo-black.png")
+                    }
+                    style={{ width: 20, height: 20 }}
+                    contentFit="contain"
+                />
                 <Text style={[styles.title, { color: theme.colors.onSurface }]}>Daycare</Text>
             </View>
 

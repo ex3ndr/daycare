@@ -20,7 +20,9 @@ import { InboxView } from "@/views/InboxView";
 import { PeopleView } from "@/views/PeopleView";
 import { RoutinesView } from "@/views/RoutinesView";
 import { SettingsView } from "@/views/SettingsView";
+import { SkillsView } from "@/views/SkillsView";
 import { TodosView } from "@/views/TodosView";
+import { ToolsView } from "@/views/ToolsView";
 
 const leftItems: Record<
     Exclude<AppMode, "documents" | "home" | "settings">,
@@ -56,7 +58,9 @@ const leftItems: Record<
     costs: [
         { id: "co1", title: "This Month", subtitle: "$142.50" },
         { id: "co2", title: "Last Month", subtitle: "$161.80" }
-    ]
+    ],
+    skills: [],
+    tools: []
 };
 
 const viewComponents: Record<AppMode, React.ComponentType> = {
@@ -69,6 +73,8 @@ const viewComponents: Record<AppMode, React.ComponentType> = {
     routines: RoutinesView,
     costs: CostsView,
     documents: DocumentsView,
+    skills: SkillsView,
+    tools: ToolsView,
     settings: SettingsView
 };
 

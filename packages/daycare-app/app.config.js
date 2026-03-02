@@ -17,9 +17,14 @@ export default {
         version: "0.0.0",
         runtimeVersion: "1",
         orientation: "default",
+        icon: "./sources/assets/images/icon.png",
         scheme: "daycare",
         userInterfaceStyle: "automatic",
         newArchEnabled: true,
+        notification: {
+            icon: "./sources/assets/images/icon-notification.png",
+            iosDisplayInForeground: true
+        },
         ios: {
             supportsTablet: true,
             bundleIdentifier: bundleId,
@@ -28,12 +33,18 @@ export default {
             }
         },
         android: {
+            adaptiveIcon: {
+                foregroundImage: "./sources/assets/images/icon-adaptive.png",
+                monochromeImage: "./sources/assets/images/icon-monochrome.png",
+                backgroundColor: "#19120d"
+            },
             edgeToEdgeEnabled: true,
             package: bundleId
         },
         web: {
             bundler: "metro",
-            output: "single"
+            output: "single",
+            favicon: "./sources/assets/images/favicon.png"
         },
         plugins: [
             [
@@ -54,8 +65,10 @@ export default {
                         }
                     },
                     android: {
+                        image: "./sources/assets/images/splash-android-light.png",
                         backgroundColor: "#fff8f5",
                         dark: {
+                            image: "./sources/assets/images/splash-android-dark.png",
                             backgroundColor: "#19120d"
                         }
                     }
