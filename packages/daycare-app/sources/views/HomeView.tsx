@@ -110,6 +110,7 @@ export function HomeView() {
                     <Octicons name="flame" size={14} color={theme.colors.primary} />
                     <Text style={[styles.streakValue, { color: theme.colors.onSurface }]}>{PLAYER.streak}</Text>
                 </View>
+                <Text style={styles.sillyFace}>{"( \u0361\u00B0 \u035C\u0296 \u0361\u00B0)"}</Text>
             </View>
 
             {/* Revenue card */}
@@ -436,6 +437,7 @@ const styles = StyleSheet.create({
         borderRadius: 16
     },
     streakValue: { fontSize: 15, fontWeight: "700" },
+    sillyFace: { fontSize: 22 },
 
     // Revenue
     revenueCard: { borderRadius: 16, padding: 24, marginBottom: 24 },
