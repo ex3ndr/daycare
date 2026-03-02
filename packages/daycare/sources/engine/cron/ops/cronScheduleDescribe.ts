@@ -80,7 +80,7 @@ function cronExpressionHumanize(parts: CronExpressionParts): string {
     }
 
     if (minute.startsWith("*/") && hour === "*" && day === "*" && month === "*" && weekday === "*") {
-        return `${sentenceCase(fieldDescribe(minute, "minute"))}.`;
+        return fieldDescribe(minute, "minute");
     }
 
     if (fieldIsSingleNumber(minute) && hour === "*" && day === "*" && month === "*" && weekday === "*") {
@@ -178,13 +178,6 @@ function listJoin(items: string[]): string {
         return `${items[0]} and ${items[1]}`;
     }
     return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
-}
-
-function sentenceCase(value: string): string {
-    if (!value) {
-        return value;
-    }
-    return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function cronDateFormat(date: Date, timezone?: string): string {

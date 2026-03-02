@@ -2,6 +2,7 @@
 
 ## Summary
 - Added `cronScheduleDescribe()` to convert a 5-field cron expression into readable text.
+- Added explicit step-pattern text mapping, e.g. `*/5 * * * *` -> `every 5 minutes`.
 - Added next-run projection fields:
   - `nextRunAt` (unix ms)
   - `nextRunText` (formatted timestamp + relative delta)

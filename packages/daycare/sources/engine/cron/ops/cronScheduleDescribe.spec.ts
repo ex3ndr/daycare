@@ -19,6 +19,13 @@ describe("cronScheduleDescribe", () => {
         expect(result.nextRunText).toContain("in 1 minute");
     });
 
+    it("describes step-minute schedules in lowercase format", () => {
+        const result = cronScheduleDescribe({ expression: "*/5 * * * *", timezone: "UTC", fromAt: 0 });
+
+        expect(result.description).toBe("every 5 minutes");
+        expect(result.nextRunAt).toBe(300_000);
+    });
+
     it("describes weekday schedules and computes next run in timezone", () => {
         const fromAt = Date.parse("2024-01-15T13:30:00.000Z"); // Monday, 08:30 America/New_York
         const result = cronScheduleDescribe({
