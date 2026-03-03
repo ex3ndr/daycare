@@ -18,7 +18,10 @@ type Segment = { mode: AppMode; icon: React.ComponentProps<typeof Octicons>["nam
 /** Sidebar items grouped with visual spacing between groups. */
 const segmentGroups: Segment[][] = [
     [{ mode: "home", icon: "home", label: "Home" }],
-    [{ mode: "todos", icon: "checklist", label: "Todos" }],
+    [
+        { mode: "todos", icon: "checklist", label: "Todos" },
+        { mode: "experiments", icon: "beaker", label: "Experiments" }
+    ],
     [
         { mode: "people", icon: "people", label: "People" },
         { mode: "documents", icon: "file", label: "Documents" }
@@ -45,6 +48,7 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     email: [],
     inbox: [],
     todos: [],
+    experiments: [],
     routines: [],
     costs: [],
     documents: [],

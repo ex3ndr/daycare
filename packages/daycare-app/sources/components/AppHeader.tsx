@@ -13,6 +13,7 @@ export type AppMode =
     | "email"
     | "inbox"
     | "todos"
+    | "experiments"
     | "routines"
     | "costs"
     | "documents"
@@ -27,6 +28,7 @@ export const appModes: AppMode[] = [
     "email",
     "inbox",
     "todos",
+    "experiments",
     "routines",
     "costs",
     "documents",
@@ -41,6 +43,7 @@ const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicon
     { mode: "email", icon: "mail", label: "Email" },
     { mode: "inbox", icon: "inbox", label: "Inbox" },
     { mode: "todos", icon: "checklist", label: "Todos" },
+    { mode: "experiments", icon: "beaker", label: "Experiments" },
     { mode: "routines", icon: "clock", label: "Routines" },
     { mode: "costs", icon: "credit-card", label: "Costs" },
     { mode: "documents", icon: "file", label: "Documents" },

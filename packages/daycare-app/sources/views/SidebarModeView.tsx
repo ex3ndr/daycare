@@ -11,6 +11,7 @@ import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 import { DocumentMetadataPanel } from "@/views/documents/DocumentMetadataPanel";
 import { DocumentsView } from "@/views/documents/DocumentsView";
 import { EmailView } from "@/views/EmailView";
+import { ExperimentsView } from "@/views/ExperimentsView";
 import { HomeView } from "@/views/HomeView";
 import { InboxView } from "@/views/InboxView";
 import { PeopleView } from "@/views/PeopleView";
@@ -28,6 +29,7 @@ const viewComponents: Record<AppMode, React.ComponentType> = {
     email: EmailView,
     inbox: InboxView,
     todos: TodosView,
+    experiments: ExperimentsView,
     routines: RoutinesView,
     costs: CostsView,
     documents: DocumentsView,
