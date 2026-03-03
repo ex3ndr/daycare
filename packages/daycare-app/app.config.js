@@ -21,10 +21,6 @@ export default {
         scheme: "daycare",
         userInterfaceStyle: "automatic",
         newArchEnabled: true,
-        notification: {
-            icon: "./sources/assets/images/icon-notification.png",
-            iosDisplayInForeground: true
-        },
         ios: {
             supportsTablet: true,
             bundleIdentifier: bundleId,
@@ -38,7 +34,6 @@ export default {
                 monochromeImage: "./sources/assets/images/icon-monochrome.png",
                 backgroundColor: "#19120d"
             },
-            edgeToEdgeEnabled: true,
             package: bundleId
         },
         web: {
