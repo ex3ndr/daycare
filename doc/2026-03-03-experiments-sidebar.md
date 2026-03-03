@@ -9,11 +9,10 @@
   - a series of SQL query snapshots
   - SQL action templates rendered with Handlebars
   - the UI spec itself
-- Replaced standard catalog usage with a custom experiments registry:
-  - `View` (layout)
-  - `Item` (card-like container)
-  - `ItemList` (stack list)
-  - `Text`, `TextInput`, `Button`
+- Replaced standard catalog usage with a custom experiments registry that wraps existing app components:
+  - `Item` -> `sources/components/Item.tsx`
+  - `ItemList` -> `sources/components/ItemList.tsx`
+  - plus local `View`, `Text`, `TextInput`, `Button` renderers for binding/events
 - Wired action handlers to run templated SQL and refresh only declared query snapshots.
 
 ## Architecture
@@ -40,14 +39,14 @@ flowchart TD
 ```
 
 ## Custom Catalog
-`ExperimentsView` now injects a custom renderer registry so the todo app is fully styled through app-owned components rather than the standard json-render catalog.
+`ExperimentsView` now injects a custom renderer registry so the todo app is styled through existing app components (`Item`, `ItemList`) rather than only standard json-render catalog widgets.
 
 ```mermaid
 flowchart LR
     A[experimentsTodoDefinition.spec] --> B[Custom Types]
     B --> C[View]
-    B --> D[Item]
-    B --> E[ItemList]
+    B --> D[Item -> App Item]
+    B --> E[ItemList -> App ItemList]
     B --> F[Text]
     B --> G[TextInput]
     B --> H[Button]

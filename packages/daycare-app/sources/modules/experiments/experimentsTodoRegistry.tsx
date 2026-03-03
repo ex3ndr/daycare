@@ -1,6 +1,8 @@
 import { type ComponentRegistry, type ComponentRenderProps, useStateStore } from "@json-render/react-native";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { StyleSheet } from "react-native-unistyles";
+import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { Item as AppItem } from "@/components/Item";
+import { ItemListStatic as AppItemList } from "@/components/ItemList";
 
 type ViewProps = {
     direction?: "row" | "column";
@@ -21,6 +23,7 @@ type ItemProps = {
     padding?: number;
     backgroundColor?: string;
     borderColor?: string;
+    onPress?: boolean;
 };
 
 type ItemListProps = {
@@ -75,28 +78,48 @@ function TodoView({ element, children }: ComponentRenderProps<ViewProps>) {
 }
 
 function TodoItem({ element, children }: ComponentRenderProps<ItemProps>) {
+    const { theme } = useUnistyles();
     const props = element.props as ItemProps;
-    return (
-        <View
-            style={[
-                styles.item,
-                {
-                    padding: props.padding ?? 12,
-                    backgroundColor: props.backgroundColor ?? "#ffffff",
-                    borderColor: props.borderColor ?? "#e2e8f0"
-                }
-            ]}
-        >
-            {props.title ? <Text style={styles.itemTitle}>{props.title}</Text> : null}
-            {props.subtitle ? <Text style={styles.itemSubtitle}>{props.subtitle}</Text> : null}
-            {children}
-        </View>
-    );
+    const hasHeader = Boolean((props.title && props.title.length > 0) || (props.subtitle && props.subtitle.length > 0));
+
+    const shellStyle = [
+        styles.itemShell,
+        {
+            backgroundColor: props.backgroundColor ?? theme.colors.surfaceContainer,
+            borderColor: props.borderColor ?? theme.colors.outlineVariant
+        }
+    ];
+
+    if (hasHeader) {
+        return (
+            <View style={shellStyle}>
+                <AppItem
+                    title={props.title ?? ""}
+                    subtitle={props.subtitle}
+                    showChevron={false}
+                    showDivider={false}
+                    style={{ minHeight: 0, paddingVertical: props.padding ?? 12 }}
+                    pressableStyle={styles.itemHeaderPressable}
+                />
+                {children ? <View style={styles.itemBody}>{children}</View> : null}
+            </View>
+        );
+    }
+
+    return <View style={[shellStyle, { padding: props.padding ?? 12 }]}>{children}</View>;
 }
 
 function TodoItemList({ element, children }: ComponentRenderProps<ItemListProps>) {
     const props = element.props as ItemListProps;
-    return <View style={{ gap: props.gap ?? 8 }}>{children}</View>;
+    return (
+        <AppItemList
+            insetGrouped={false}
+            style={styles.itemList}
+            containerStyle={{ paddingTop: 0, paddingBottom: 0, gap: props.gap ?? 8 }}
+        >
+            {children}
+        </AppItemList>
+    );
 }
 
 function TodoText({ element }: ComponentRenderProps<TextProps>) {
@@ -219,19 +242,22 @@ const styles = StyleSheet.create({
     viewBase: {
         width: "100%"
     },
-    item: {
+    itemList: {
+        flex: 0
+    },
+    itemShell: {
         borderWidth: 1,
         borderRadius: 12,
+        overflow: "hidden",
+        width: "100%"
+    },
+    itemHeaderPressable: {
+        backgroundColor: "transparent"
+    },
+    itemBody: {
+        paddingHorizontal: 12,
+        paddingBottom: 12,
         gap: 8
-    },
-    itemTitle: {
-        color: "#0f172a",
-        fontSize: 15,
-        fontWeight: "600"
-    },
-    itemSubtitle: {
-        color: "#475569",
-        fontSize: 13
     },
     textBase: {
         letterSpacing: 0.1
