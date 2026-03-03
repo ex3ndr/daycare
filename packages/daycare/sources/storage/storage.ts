@@ -15,6 +15,7 @@ import { DocumentsRepository } from "./documentsRepository.js";
 import { ExposeEndpointsRepository } from "./exposeEndpointsRepository.js";
 import { HistoryRepository } from "./historyRepository.js";
 import { InboxRepository } from "./inboxRepository.js";
+import { KeyValuesRepository } from "./keyValuesRepository.js";
 import { ObservationLogRepository } from "./observationLogRepository.js";
 import { ProcessesRepository } from "./processesRepository.js";
 import { SessionsRepository } from "./sessionsRepository.js";
@@ -52,6 +53,7 @@ export class Storage {
     readonly systemPrompts: SystemPromptsRepository;
     readonly swarmContacts: SwarmContactsRepository;
     readonly tokenStats: TokenStatsRepository;
+    readonly keyValues: KeyValuesRepository;
     readonly observationLog: ObservationLogRepository;
 
     readonly db: DaycareDb;
@@ -82,6 +84,7 @@ export class Storage {
         this.systemPrompts = new SystemPromptsRepository(db);
         this.swarmContacts = new SwarmContactsRepository(db);
         this.tokenStats = new TokenStatsRepository(db);
+        this.keyValues = new KeyValuesRepository(db);
         this.observationLog = new ObservationLogRepository(db);
     }
 

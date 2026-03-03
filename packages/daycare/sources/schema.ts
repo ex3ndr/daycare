@@ -526,6 +526,22 @@ export const tokenStatsHourlyTable = pgTable(
     ]
 );
 
+export const keyValuesTable = pgTable(
+    "key_values",
+    {
+        userId: text("user_id").notNull(),
+        key: text("key").notNull(),
+        value: jsonb("value"),
+        createdAt: bigint("created_at", { mode: "number" }).notNull(),
+        updatedAt: bigint("updated_at", { mode: "number" }).notNull()
+    },
+    (table) => [
+        primaryKey({ columns: [table.userId, table.key] }),
+        index("idx_key_values_user").on(table.userId),
+        index("idx_key_values_user_updated").on(table.userId, table.updatedAt)
+    ]
+);
+
 export const observationLogTable = pgTable(
     "observation_log",
     {
@@ -574,6 +590,7 @@ export const schema = {
     systemPromptsTable,
     swarmContactsTable,
     tokenStatsHourlyTable,
+    keyValuesTable,
     observationLogTable
 };
 

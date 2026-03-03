@@ -32,6 +32,7 @@ flowchart TD
     F --> K[/documents]
     F --> L[/prompts]
     F --> M[/costs]
+    F --> N[/kv]
 ```
 
 ## SSE Lifecycle
@@ -238,6 +239,15 @@ flowchart LR
     B --> C[tokenStats.findMany(ctx, options)]
     C --> D[/costs/token-stats rows]
 ```
+
+## Key-Value Routes
+- `GET /kv`
+- `GET /kv/:key`
+- `POST /kv/create`
+- `POST /kv/:key/update`
+- `POST /kv/:key/delete`
+
+Entries are always scoped to authenticated `ctx.userId`. Values are stored as untyped JSON.
 
 ## Public Webhook Route
 - `POST /v1/webhooks/:token`

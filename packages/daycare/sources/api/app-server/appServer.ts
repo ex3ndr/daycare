@@ -20,6 +20,7 @@ import type { Webhooks } from "../../engine/webhook/webhooks.js";
 import { getLogger } from "../../log.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
+import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import type { TokenStatsFetchOptions } from "../routes/costs/costsRoutes.js";
@@ -55,6 +56,7 @@ export type AppServerOptions = {
     taskCallbacks: RouteTaskCallbacks | null;
     tokenStatsFetch: (ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>;
     documents: DocumentsRepository | null;
+    keyValues: KeyValuesRepository | null;
     secrets: {
         list: (ctx: Context) => Promise<Secret[]>;
         add: (ctx: Context, secret: Secret) => Promise<void>;
@@ -85,6 +87,7 @@ export class AppServer {
     private readonly taskCallbacks: RouteTaskCallbacks | null;
     private readonly tokenStatsFetch: AppServerOptions["tokenStatsFetch"];
     private readonly documents: DocumentsRepository | null;
+    private readonly keyValues: KeyValuesRepository | null;
     private readonly secrets: AppServerOptions["secrets"];
     private readonly connectorTargetResolve: AppServerOptions["connectorTargetResolve"];
     private readonly logger = getLogger("api.app-server");
@@ -109,6 +112,7 @@ export class AppServer {
         this.taskCallbacks = options.taskCallbacks;
         this.tokenStatsFetch = options.tokenStatsFetch;
         this.documents = options.documents;
+        this.keyValues = options.keyValues;
         this.secrets = options.secrets;
         this.connectorTargetResolve = options.connectorTargetResolve;
     }
@@ -250,6 +254,7 @@ export class AppServer {
             taskCallbacks: this.taskCallbacks,
             tokenStatsFetch: this.tokenStatsFetch,
             documents: this.documents,
+            keyValues: this.keyValues,
             secrets: this.secrets
         });
         if (handled) {

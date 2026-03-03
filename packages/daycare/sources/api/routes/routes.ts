@@ -4,11 +4,13 @@ import type { EngineEventBus } from "../../engine/ipc/events.js";
 import type { Secret } from "../../engine/secrets/secretTypes.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
+import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import { agentsRouteHandle } from "./agents/agentsRoutes.js";
 import type { TokenStatsFetchOptions } from "./costs/costsRoutes.js";
 import { costsRouteHandle } from "./costs/costsRoutes.js";
 import { documentsRouteHandle } from "./documents/documentsRoutes.js";
+import { kvRouteHandle } from "./kv/kvRoutes.js";
 import { profileRouteHandle } from "./profile/profileRoutes.js";
 import { promptsRouteHandle } from "./prompts/promptsRoutes.js";
 import type { RouteAgentCallbacks, RouteTaskCallbacks } from "./routeTypes.js";
@@ -30,6 +32,7 @@ export type ApiRouteContext = {
     taskCallbacks: RouteTaskCallbacks | null;
     tokenStatsFetch: ((ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>) | null;
     documents: DocumentsRepository | null;
+    keyValues: KeyValuesRepository | null;
     secrets: {
         list: (ctx: Context) => Promise<Secret[]>;
         add: (ctx: Context, secret: Secret) => Promise<void>;
@@ -105,6 +108,14 @@ export async function apiRouteHandle(
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody,
             documents: context.documents
+        });
+    }
+    if (pathname.startsWith("/kv")) {
+        return kvRouteHandle(request, response, pathname, {
+            ctx: context.ctx,
+            sendJson: context.sendJson,
+            readJsonBody: context.readJsonBody,
+            keyValues: context.keyValues
         });
     }
 

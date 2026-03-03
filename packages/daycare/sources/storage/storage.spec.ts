@@ -47,6 +47,7 @@ describe("Storage", () => {
         expect(tables.some((entry) => entry.name === "users")).toBe(true);
         expect(tables.some((entry) => entry.name === "documents")).toBe(true);
         expect(tables.some((entry) => entry.name === "document_references")).toBe(true);
+        expect(tables.some((entry) => entry.name === "key_values")).toBe(true);
         storage.connection.close();
 
         await expect(storage.connection.prepare("SELECT 1").get()).rejects.toThrow();

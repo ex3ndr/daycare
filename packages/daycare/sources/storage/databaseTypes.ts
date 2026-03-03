@@ -604,6 +604,22 @@ export type TokenStatsHourlyDbRecord = {
     cost: number;
 };
 
+export type DatabaseKeyValueRow = {
+    user_id: string;
+    key: string;
+    value: unknown;
+    created_at: number;
+    updated_at: number;
+};
+
+export type KeyValueDbRecord = {
+    userId: string;
+    key: string;
+    value: unknown;
+    createdAt: number;
+    updatedAt: number;
+};
+
 export type ObservationLogDbRecord = {
     id: string;
     userId: string;

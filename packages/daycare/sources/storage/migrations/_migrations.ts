@@ -4,5 +4,9 @@ export const migrations: Migration[] = [
     {
         name: "20260302165030_bootstrap",
         fileName: "20260302165030_bootstrap.sql"
+    },
+    {
+        name: "20260303101000_user_key_values",
+        fileName: "20260303101000_user_key_values.sql"
     }
 ];

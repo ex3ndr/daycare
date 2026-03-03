@@ -192,6 +192,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         taskCallbacks: options.taskCallbacks ?? null,
         tokenStatsFetch: async () => [],
         documents: null,
+        keyValues: storage.keyValues,
         secrets,
         connectorTargetResolve: async (target) => {
             const segments = target.split("/").filter((segment) => segment.length > 0);
@@ -647,6 +648,106 @@ describe("AppServer authenticated routes", () => {
         const deleteResponse = await fetch(`http://127.0.0.1:${built.port}/secrets/openai-key/delete`, {
             method: "POST",
             headers: { authorization: `Bearer ${token}` }
+        });
+        expect(deleteResponse.status).toBe(200);
+        await expect(deleteResponse.json()).resolves.toEqual({
+            ok: true,
+            deleted: true
+        });
+    });
+
+    it("handles per-user key-value CRUD", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await appServerCreateForTests({ secret });
+        const tokenA = await jwtSign({ userId: "user-a" }, secret, 3600);
+        const tokenB = await jwtSign({ userId: "user-b" }, secret, 3600);
+
+        const createResponse = await fetch(`http://127.0.0.1:${built.port}/kv/create`, {
+            method: "POST",
+            headers: {
+                authorization: `Bearer ${tokenA}`,
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({
+                key: "profile",
+                value: { theme: "dark", count: 1 }
+            })
+        });
+        expect(createResponse.status).toBe(200);
+        const createPayload = await createResponse.json();
+        expect(createPayload).toEqual({
+            ok: true,
+            entry: {
+                key: "profile",
+                value: { theme: "dark", count: 1 },
+                createdAt: expect.any(Number),
+                updatedAt: expect.any(Number)
+            }
+        });
+
+        const readResponse = await fetch(`http://127.0.0.1:${built.port}/kv/profile`, {
+            headers: { authorization: `Bearer ${tokenA}` }
+        });
+        expect(readResponse.status).toBe(200);
+        await expect(readResponse.json()).resolves.toEqual({
+            ok: true,
+            entry: {
+                key: "profile",
+                value: { theme: "dark", count: 1 },
+                createdAt: expect.any(Number),
+                updatedAt: expect.any(Number)
+            }
+        });
+
+        const updateResponse = await fetch(`http://127.0.0.1:${built.port}/kv/profile/update`, {
+            method: "POST",
+            headers: {
+                authorization: `Bearer ${tokenA}`,
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({
+                value: { theme: "light", count: 2 }
+            })
+        });
+        expect(updateResponse.status).toBe(200);
+        await expect(updateResponse.json()).resolves.toEqual({
+            ok: true,
+            entry: {
+                key: "profile",
+                value: { theme: "light", count: 2 },
+                createdAt: expect.any(Number),
+                updatedAt: expect.any(Number)
+            }
+        });
+
+        const listResponse = await fetch(`http://127.0.0.1:${built.port}/kv`, {
+            headers: { authorization: `Bearer ${tokenA}` }
+        });
+        expect(listResponse.status).toBe(200);
+        await expect(listResponse.json()).resolves.toEqual({
+            ok: true,
+            entries: [
+                {
+                    key: "profile",
+                    value: { theme: "light", count: 2 },
+                    createdAt: expect.any(Number),
+                    updatedAt: expect.any(Number)
+                }
+            ]
+        });
+
+        const otherUserRead = await fetch(`http://127.0.0.1:${built.port}/kv/profile`, {
+            headers: { authorization: `Bearer ${tokenB}` }
+        });
+        expect(otherUserRead.status).toBe(404);
+        await expect(otherUserRead.json()).resolves.toEqual({
+            ok: false,
+            error: "Entry not found."
+        });
+
+        const deleteResponse = await fetch(`http://127.0.0.1:${built.port}/kv/profile/delete`, {
+            method: "POST",
+            headers: { authorization: `Bearer ${tokenA}` }
         });
         expect(deleteResponse.status).toBe(200);
         await expect(deleteResponse.json()).resolves.toEqual({
