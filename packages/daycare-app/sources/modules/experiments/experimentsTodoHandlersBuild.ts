@@ -70,8 +70,6 @@ export function experimentsTodoHandlersBuild(
             return;
         }
 
-        input.stateStore.set("/loading", true);
-
         try {
             const state = input.stateStore.getSnapshot();
             const resolvedParams = paramsResolve(state, params);
@@ -93,13 +91,11 @@ export function experimentsTodoHandlersBuild(
             await queriesRefresh(db, input.stateStore, definition.refreshQueries);
 
             input.stateStore.update({
-                "/loading": false,
                 "/ready": true,
                 "/error": null
             });
         } catch (error) {
             input.stateStore.update({
-                "/loading": false,
                 "/error": error instanceof Error ? error.message : "SQL action failed."
             });
         }

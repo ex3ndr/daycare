@@ -83,3 +83,15 @@ sequenceDiagram
     DB-->>Handler: rows
     Handler->>Store: pointer updates (/todos, /stats/*)
 ```
+
+## Loading Behavior
+`/loading` is now reserved for the first bootstrap only (`experimentsTodoInitialize`). Action handlers no longer toggle loading, so create/toggle/delete runs without showing the loading card.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Bootstrapping
+    Bootstrapping: /loading=true
+    Bootstrapping --> Ready: bootstrap + first query refresh
+    Ready: /loading=false
+    Ready --> Ready: todoCreate/todoToggle/todoDelete
+```
