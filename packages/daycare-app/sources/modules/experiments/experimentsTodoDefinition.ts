@@ -82,7 +82,7 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
                     done,
                     created_at AS "createdAt"
                 FROM experiments_todos
-                ORDER BY created_at DESC;
+                ORDER BY done ASC, created_at DESC;
             `
         },
         {

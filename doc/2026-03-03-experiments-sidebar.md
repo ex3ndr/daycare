@@ -16,6 +16,7 @@
 - Set the root experiments element to a scrollable `ItemList` so the full page scrolls.
 - Fixed experiments empty-page regression by using `flex: 1` for scrollable `ItemList` renderers.
 - Wired action handlers to run templated SQL and refresh only declared query snapshots.
+- Updated todo query ordering so completed tasks always move to the end of the list.
 
 ## Architecture
 ```mermaid
@@ -113,6 +114,20 @@ sequenceDiagram
     Handler->>DB: query refresh SQLs
     DB-->>Handler: rows
     Handler->>Store: pointer updates (/todos, /stats/*)
+```
+
+## Done Sorting
+Todo snapshot SQL now orders by completion state first, then creation time:
+- open tasks (`done = false`) render first
+- completed tasks (`done = true`) render at the end
+
+```mermaid
+flowchart LR
+    A[Query refresh] --> B[ORDER BY done ASC, created_at DESC]
+    B --> C[Open todos]
+    B --> D[Done todos]
+    C --> E[Rendered list top]
+    D --> F[Rendered list bottom]
 ```
 
 ## Loading Behavior
