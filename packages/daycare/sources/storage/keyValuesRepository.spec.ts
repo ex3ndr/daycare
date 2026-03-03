@@ -24,6 +24,9 @@ describe("KeyValuesRepository", () => {
             expect(created).toEqual({
                 userId: "user-a",
                 key: "settings",
+                version: 1,
+                validFrom: 10,
+                validTo: null,
                 value: { theme: "dark", flags: ["a", "b"] },
                 createdAt: 10,
                 updatedAt: 10
@@ -37,6 +40,9 @@ describe("KeyValuesRepository", () => {
             expect(updated).toEqual({
                 userId: "user-a",
                 key: "settings",
+                version: 2,
+                validFrom: 25,
+                validTo: null,
                 value: { theme: "light" },
                 createdAt: 10,
                 updatedAt: 25
@@ -49,6 +55,13 @@ describe("KeyValuesRepository", () => {
             const deleted = await repository.delete(userA, "settings");
             expect(deleted).toBe(true);
             expect(await repository.findByKey(userA, "settings")).toBeNull();
+
+            const rows = (await storage.connection
+                .prepare("SELECT version, valid_to FROM key_values WHERE user_id = ? AND key = ? ORDER BY version ASC")
+                .all("user-a", "settings")) as Array<{ version: number; valid_to: number | null }>;
+            expect(rows).toHaveLength(2);
+            expect(rows[0]?.valid_to).toBe(25);
+            expect(rows[1]?.valid_to).not.toBeNull();
         } finally {
             storage.connection.close();
         }

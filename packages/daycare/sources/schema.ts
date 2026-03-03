@@ -531,13 +531,18 @@ export const keyValuesTable = pgTable(
     {
         userId: text("user_id").notNull(),
         key: text("key").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
         value: jsonb("value"),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },
     (table) => [
-        primaryKey({ columns: [table.userId, table.key] }),
+        primaryKey({ columns: [table.userId, table.key, table.version] }),
+        uniqueIndex("idx_key_values_user_key_active").on(table.userId, table.key).where(sql`${table.validTo} IS NULL`),
         index("idx_key_values_user").on(table.userId),
+        index("idx_key_values_user_key_valid_to").on(table.userId, table.key, table.validTo),
         index("idx_key_values_user_updated").on(table.userId, table.updatedAt)
     ]
 );

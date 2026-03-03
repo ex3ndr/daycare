@@ -607,6 +607,9 @@ export type TokenStatsHourlyDbRecord = {
 export type DatabaseKeyValueRow = {
     user_id: string;
     key: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
     value: unknown;
     created_at: number;
     updated_at: number;
@@ -615,6 +618,9 @@ export type DatabaseKeyValueRow = {
 export type KeyValueDbRecord = {
     userId: string;
     key: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
     value: unknown;
     createdAt: number;
     updatedAt: number;
