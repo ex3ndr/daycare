@@ -118,6 +118,7 @@ function TodoItemList({ element, children }: ComponentRenderProps<ItemListProps>
         return (
             <View
                 style={{
+                    width: "100%",
                     gap: props.gap ?? 8,
                     padding: props.padding ?? 0,
                     backgroundColor: props.backgroundColor ?? undefined
@@ -263,7 +264,7 @@ export const experimentsTodoRegistry: ComponentRegistry = {
 const styles = StyleSheet.create({
     viewBase: {},
     itemList: {
-        flex: 0
+        flex: 1
     },
     itemShell: {
         borderWidth: 1,

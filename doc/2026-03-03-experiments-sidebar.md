@@ -14,6 +14,7 @@
   - `ItemList` -> `sources/components/ItemList.tsx`
   - plus local `View`, `Text`, `TextInput`, `Button` renderers for binding/events
 - Set the root experiments element to a scrollable `ItemList` so the full page scrolls.
+- Fixed experiments empty-page regression by using `flex: 1` for scrollable `ItemList` renderers.
 - Wired action handlers to run templated SQL and refresh only declared query snapshots.
 
 ## Architecture
@@ -53,6 +54,13 @@ flowchart LR
     B --> H[Button]
     I[experimentsTodoRegistry] --> J[Renderer]
     A --> J
+```
+
+```mermaid
+flowchart LR
+    A[Root ItemList scroll=true] --> B[ItemList renderer]
+    B --> C[flex:1]
+    C --> D[Scrollable visible page]
 ```
 
 ## PGlite Schema
