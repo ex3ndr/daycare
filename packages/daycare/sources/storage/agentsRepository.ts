@@ -496,6 +496,9 @@ function agentPathDefaultResolve(input: {
     if (input.kind === "subuser") {
         return `/${userId}/subuser/${id}`;
     }
+    if (input.kind === "app") {
+        return `/${userId}/app/${id}`;
+    }
     if (input.kind === "sub") {
         return `/${userId}/sub/${id}`;
     }
@@ -512,7 +515,7 @@ function agentPathDefaultResolve(input: {
 }
 
 function agentModelRoleFromKind(kind: AgentDbRecord["kind"]): AgentDbRecord["modelRole"] {
-    if (kind === "connector" || kind === "agent" || kind === "subuser" || kind === "swarm") {
+    if (kind === "connector" || kind === "agent" || kind === "app" || kind === "subuser" || kind === "swarm") {
         return "user";
     }
     if (kind === "sub") {

@@ -17,6 +17,14 @@ export function agentPathAgent(userId: string, name: string): AgentPath {
 }
 
 /**
+ * Builds an app agent path under a user.
+ * Expects: userId and id are non-empty path segments.
+ */
+export function agentPathApp(userId: string, id: string): AgentPath {
+    return agentPath(`/${segmentRequire(userId, "userId")}/app/${segmentRequire(id, "id")}`);
+}
+
+/**
  * Builds a cron agent path under a user.
  * Expects: userId and id are non-empty path segments.
  */

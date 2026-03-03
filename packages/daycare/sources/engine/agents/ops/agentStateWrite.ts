@@ -62,6 +62,9 @@ function agentLabelResolve(config: Pick<AgentConfig, "kind" | "name">): string {
     if (config.kind === "cron") {
         return config.name?.trim() || "cron task";
     }
+    if (config.kind === "app") {
+        return config.name?.trim() || "app";
+    }
     if (config.kind === "task") {
         return `task ${config.name?.trim() || "task"}`;
     }

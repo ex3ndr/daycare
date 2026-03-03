@@ -136,7 +136,7 @@ const messageContextSchema = z.object({
         .optional()
 });
 const agentCreationConfigSchema = z.object({
-    kind: z.enum(["connector", "agent", "swarm", "cron", "task", "subuser", "sub", "memory", "search"]),
+    kind: z.enum(["connector", "agent", "app", "swarm", "cron", "task", "subuser", "sub", "memory", "search"]),
     modelRole: z.enum(["user", "memory", "memorySearch", "subagent", "task"]).nullable().optional(),
     connectorName: z.string().nullable().optional(),
     parentAgentId: z.string().nullable().optional(),

@@ -22,6 +22,12 @@ export type AgentListItem = {
     userId?: string;
 };
 
+export type AgentCreateInput = {
+    systemPrompt: string;
+    name?: string | null;
+    description?: string | null;
+};
+
 export type TaskCreateInput = {
     title: string;
     code: string;
@@ -84,6 +90,14 @@ export type RouteTaskCallbacks = {
 export type RouteAgentCallbacks = {
     agentList: (ctx: Context) => Promise<AgentListItem[]>;
     agentHistoryLoad: (ctx: Context, agentId: string, limit?: number) => Promise<AgentHistoryRecord[]>;
+    agentHistoryLoadAfter: (
+        ctx: Context,
+        agentId: string,
+        after: number,
+        limit?: number
+    ) => Promise<AgentHistoryRecord[]>;
+    agentCreate: (ctx: Context, input: AgentCreateInput) => Promise<{ agentId: string; initializedAt: number }>;
+    agentKill: (ctx: Context, agentId: string) => Promise<boolean>;
     agentPost: (ctx: Context, target: AgentPostTarget, item: AgentInboxItem) => Promise<void>;
 };
 

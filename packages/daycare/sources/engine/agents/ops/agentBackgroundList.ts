@@ -50,5 +50,8 @@ function agentNameResolve(kind: AgentKind, name: string | null): string | null {
     if (kind === "connector") {
         return "user";
     }
+    if (kind === "app") {
+        return "app";
+    }
     return null;
 }

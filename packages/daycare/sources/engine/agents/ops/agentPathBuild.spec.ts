@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
     agentPathAgent,
+    agentPathApp,
     agentPathConnector,
     agentPathCron,
     agentPathMemory,
@@ -15,6 +16,7 @@ describe("agentPathBuild", () => {
     it("builds root paths", () => {
         expect(agentPathConnector("u1", "telegram")).toBe("/u1/telegram");
         expect(agentPathAgent("u1", "claude")).toBe("/u1/agent/claude");
+        expect(agentPathApp("u1", "mobile-1")).toBe("/u1/app/mobile-1");
         expect(agentPathCron("u1", "daily")).toBe("/u1/cron/daily");
         expect(agentPathTask("u1", "task1")).toBe("/u1/task/task1");
         expect(agentPathSubuser("u1", "sub1")).toBe("/u1/subuser/sub1");

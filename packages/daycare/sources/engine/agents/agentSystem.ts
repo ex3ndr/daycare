@@ -227,7 +227,7 @@ export class AgentSystem {
             }
             if (state.state === "sleeping") {
                 const kind = config.kind;
-                if (kind === "sub" || kind === "search") {
+                if (poisonPillKindIs(kind)) {
                     await this.schedulePoisonPill(agentId, {
                         kind,
                         deliverAt: state.updatedAt + AGENT_POISON_PILL_DELAY_MS
@@ -446,6 +446,49 @@ export class AgentSystem {
         const aborted = entry.agent.abortInference();
         logger.info({ agentId: entry.ctx.agentId, aborted }, "event: Abort inference requested");
         return aborted;
+    }
+
+    /**
+     * Marks an agent as dead and clears queued inbox work.
+     * Returns false when the agent does not exist in the caller's user scope.
+     */
+    async kill(ctx: Context, agentId: string): Promise<boolean> {
+        const normalizedAgentId = agentId.trim();
+        if (!normalizedAgentId) {
+            return false;
+        }
+
+        const targetContext = await this.contextForAgentId(normalizedAgentId);
+        if (!targetContext || targetContext.userId !== ctx.userId) {
+            return false;
+        }
+
+        const loaded = this.entries.get(normalizedAgentId);
+        if (loaded) {
+            await this.markEntryDead(loaded, "manual");
+            return true;
+        }
+
+        const persisted = await this.storage.agents.findById(normalizedAgentId);
+        if (!persisted || persisted.userId !== ctx.userId) {
+            return false;
+        }
+
+        const state = await agentStateRead(this.storage, targetContext);
+        if (!state) {
+            return false;
+        }
+
+        await this.cancelIdleSignal(normalizedAgentId);
+        await this.cancelPoisonPill(normalizedAgentId, { kind: persisted.kind });
+        if (state.state !== "dead") {
+            state.state = "dead";
+            state.updatedAt = Date.now();
+            await agentStateWrite(this.storage, targetContext, state);
+        }
+        await this.storage.inbox.deleteByAgentId(normalizedAgentId);
+        this.eventBus.emit("agent.dead", { agentId: normalizedAgentId, reason: "manual" });
+        return true;
     }
 
     markStopped(agentId: string, error?: unknown): void {
@@ -886,13 +929,13 @@ export class AgentSystem {
 
     private async schedulePoisonPill(
         agentId: string,
-        options?: { kind?: AgentConfig["kind"]; deliverAt?: number }
+        options?: { kind?: AgentConfig["kind"] | null; deliverAt?: number }
     ): Promise<void> {
         if (!this.delayedSignals) {
             return;
         }
         const kind = options?.kind ?? this.entries.get(agentId)?.config.kind ?? null;
-        if (kind !== "sub" && kind !== "search") {
+        if (!poisonPillKindIs(kind)) {
             return;
         }
         const context = await this.contextForAgentId(agentId);
@@ -914,12 +957,12 @@ export class AgentSystem {
         }
     }
 
-    private async cancelPoisonPill(agentId: string, options?: { kind?: AgentConfig["kind"] }): Promise<void> {
+    private async cancelPoisonPill(agentId: string, options?: { kind?: AgentConfig["kind"] | null }): Promise<void> {
         if (!this.delayedSignals) {
             return;
         }
         const kind = options?.kind ?? this.entries.get(agentId)?.config.kind ?? null;
-        if (kind !== "sub" && kind !== "search") {
+        if (!poisonPillKindIs(kind)) {
             return;
         }
         try {
@@ -955,7 +998,7 @@ export class AgentSystem {
         const entry = this.entries.get(agentId);
         if (entry) {
             const entryKind = entry.config.kind ?? "agent";
-            if (entryKind !== "sub" && entryKind !== "search") {
+            if (!poisonPillKindIs(entryKind)) {
                 return;
             }
             if (entry.agent.state.state === "dead") {
@@ -998,7 +1041,7 @@ export class AgentSystem {
             logger.warn({ agentId, error }, "error: Poison-pill read failed");
             return;
         }
-        if (!state || (kind !== "sub" && kind !== "search")) {
+        if (!state || !poisonPillKindIs(kind)) {
             return;
         }
         if (state.state === "dead") {
@@ -1016,7 +1059,7 @@ export class AgentSystem {
         this.eventBus.emit("agent.dead", { agentId, reason: "poison-pill" });
     }
 
-    private async markEntryDead(entry: AgentEntry, reason: "poison-pill"): Promise<void> {
+    private async markEntryDead(entry: AgentEntry, reason: "poison-pill" | "manual"): Promise<void> {
         entry.terminating = true;
         let pending = entry.inbox.listPending();
         let changed = false;
@@ -1232,7 +1275,7 @@ function configForCreation(
 }
 
 function modelRoleForKind(kind: NonNullable<AgentConfig["kind"]>): AgentConfig["modelRole"] {
-    if (kind === "connector" || kind === "agent" || kind === "subuser" || kind === "swarm") {
+    if (kind === "connector" || kind === "agent" || kind === "app" || kind === "subuser" || kind === "swarm") {
         return "user";
     }
     if (kind === "sub") {
@@ -1255,4 +1298,8 @@ function agentMatchesStrategy(config: AgentConfig, strategy: AgentFetchStrategy)
         return false;
     }
     return config.foreground || config.kind === "swarm";
+}
+
+function poisonPillKindIs(kind: AgentConfig["kind"] | null | undefined): boolean {
+    return kind === "sub" || kind === "search" || kind === "app";
 }

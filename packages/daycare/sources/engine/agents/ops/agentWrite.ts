@@ -92,6 +92,9 @@ function agentLabelResolve(config: AgentConfig): string {
     if (config.kind === "cron") {
         return config.name?.trim() || "cron task";
     }
+    if (config.kind === "app") {
+        return config.name?.trim() || "app";
+    }
     if (config.kind === "task") {
         return `task ${config.name?.trim() || "task"}`;
     }
@@ -108,7 +111,7 @@ function agentLabelResolve(config: AgentConfig): string {
 }
 
 function modelRoleForKind(kind: NonNullable<AgentConfig["kind"]>): AgentConfig["modelRole"] {
-    if (kind === "connector" || kind === "agent" || kind === "subuser" || kind === "swarm") {
+    if (kind === "connector" || kind === "agent" || kind === "app" || kind === "subuser" || kind === "swarm") {
         return "user";
     }
     if (kind === "sub") {

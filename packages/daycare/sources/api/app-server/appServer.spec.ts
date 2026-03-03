@@ -15,7 +15,7 @@ import type { Storage } from "../../storage/storage.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { JWT_SERVICE_WEBHOOK, jwtSign, jwtVerify } from "../../utils/jwt.js";
-import type { RouteTaskCallbacks } from "../routes/routeTypes.js";
+import type { RouteAgentCallbacks, RouteTaskCallbacks } from "../routes/routeTypes.js";
 import { APP_AUTH_SEED_KEY } from "./appJwtSecretResolve.js";
 import { AppServer } from "./appServer.js";
 
@@ -52,6 +52,7 @@ type AppServerCreateTestOptions = {
     };
     webhookTrigger?: (webhookId: string, data?: unknown) => Promise<void>;
     appServerEnabled?: boolean;
+    agentCallbacks?: RouteAgentCallbacks | null;
     tasksListActive?: (userId: string) => Promise<TaskActiveSummary[]>;
     taskCallbacks?: RouteTaskCallbacks;
 };
@@ -179,7 +180,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
                 })
         } as never,
         users: storage.users,
-        agentCallbacks: null,
+        agentCallbacks: options.agentCallbacks ?? null,
         eventBus: null,
         skills: null,
         tasksListActive: async (ctx) => {
@@ -443,6 +444,91 @@ describe("AppServer auth endpoints", () => {
 });
 
 describe("AppServer authenticated routes", () => {
+    it("supports app-agent create/send/read/delete lifecycle", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const history = new Map<string, Array<{ type: "user_message" | "assistant_message"; at: number }>>();
+        const callbacks: RouteAgentCallbacks = {
+            agentList: async () => [],
+            agentHistoryLoad: async (_ctx, agentId) =>
+                (history.get(agentId) ?? []).map((entry) =>
+                    entry.type === "user_message"
+                        ? { type: "user_message" as const, at: entry.at, text: "hello", files: [] }
+                        : { type: "assistant_message" as const, at: entry.at, content: [], tokens: null }
+                ),
+            agentHistoryLoadAfter: async (_ctx, agentId, after) =>
+                (history.get(agentId) ?? [])
+                    .filter((entry) => entry.at > after)
+                    .map((entry) =>
+                        entry.type === "user_message"
+                            ? { type: "user_message" as const, at: entry.at, text: "hello", files: [] }
+                            : { type: "assistant_message" as const, at: entry.at, content: [], tokens: null }
+                    ),
+            agentCreate: async () => ({ agentId: "app-agent-1", initializedAt: 1_700_000_000_000 }),
+            agentKill: async (_ctx, agentId) => agentId === "app-agent-1",
+            agentPost: async (_ctx, target, item) => {
+                if (!("agentId" in target)) {
+                    return;
+                }
+                const list = history.get(target.agentId) ?? [];
+                if (item.type === "message") {
+                    const now = Date.now();
+                    list.push({ type: "user_message", at: now });
+                    list.push({ type: "assistant_message", at: now + 1 });
+                }
+                history.set(target.agentId, list);
+            }
+        };
+        const built = await appServerCreateForTests({ secret, agentCallbacks: callbacks });
+        const token = await jwtSign({ userId: "user-1" }, secret, 3600);
+
+        const created = await fetch(`http://127.0.0.1:${built.port}/agents/create`, {
+            method: "POST",
+            headers: {
+                authorization: `Bearer ${token}`,
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({
+                systemPrompt: "You are started from app."
+            })
+        });
+        expect(created.status).toBe(200);
+        await expect(created.json()).resolves.toEqual({
+            ok: true,
+            agent: {
+                agentId: "app-agent-1",
+                initializedAt: 1_700_000_000_000
+            }
+        });
+
+        const sent = await fetch(`http://127.0.0.1:${built.port}/agents/app-agent-1/messages/create`, {
+            method: "POST",
+            headers: {
+                authorization: `Bearer ${token}`,
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({
+                text: "Hello app agent"
+            })
+        });
+        expect(sent.status).toBe(200);
+        await expect(sent.json()).resolves.toEqual({ ok: true });
+
+        const read = await fetch(`http://127.0.0.1:${built.port}/agents/app-agent-1/messages?after=0`, {
+            headers: { authorization: `Bearer ${token}` }
+        });
+        expect(read.status).toBe(200);
+        const readBody = (await read.json()) as { ok: boolean; history: Array<{ type: string; at: number }> };
+        expect(readBody.ok).toBe(true);
+        expect(readBody.history.map((entry) => entry.type)).toEqual(["user_message", "assistant_message"]);
+
+        const killed = await fetch(`http://127.0.0.1:${built.port}/agents/app-agent-1/delete`, {
+            method: "POST",
+            headers: { authorization: `Bearer ${token}` }
+        });
+        expect(killed.status).toBe(200);
+        await expect(killed.json()).resolves.toEqual({ ok: true, deleted: true });
+    });
+
     it("lists prompt files", async () => {
         const secret = "valid-secret-for-tests-1234567890";
         const built = await appServerCreateForTests({ secret });

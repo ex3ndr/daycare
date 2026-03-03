@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-
+import { createId } from "@paralleldrive/cuid2";
 import Docker from "dockerode";
 
 import type { AgentPath, Config, ConnectorMessage, ConnectorTarget, Context, MessageContext } from "@/types";
@@ -22,7 +22,7 @@ import { valueDeepEqual } from "../utils/valueDeepEqual.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForAgent, contextForUser } from "./agents/context.js";
 import { agentHistoryLoad } from "./agents/ops/agentHistoryLoad.js";
-import { agentPathConnector, agentPathTask } from "./agents/ops/agentPathBuild.js";
+import { agentPathApp, agentPathConnector, agentPathTask } from "./agents/ops/agentPathBuild.js";
 import { agentPath } from "./agents/ops/agentPathTypes.js";
 import { contextEstimateTokens } from "./agents/ops/contextEstimateTokens.js";
 import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
@@ -420,6 +420,49 @@ export class Engine {
                     }
                     return this.storage.history.findByAgentId(normalizedAgentId, limit);
                 },
+                agentHistoryLoadAfter: async (ctx, agentId, after, limit) => {
+                    const normalizedAgentId = agentId.trim();
+                    if (!normalizedAgentId) {
+                        return [];
+                    }
+                    const agent = await this.storage.agents.findById(normalizedAgentId);
+                    if (!agent || agent.userId !== ctx.userId) {
+                        return [];
+                    }
+                    const records = await this.storage.history.findByAgentId(normalizedAgentId);
+                    const filtered = records.filter((record) => record.at > after);
+                    return limit === undefined ? filtered : filtered.slice(0, limit);
+                },
+                agentCreate: async (ctx, input) => {
+                    const systemPrompt = input.systemPrompt.trim();
+                    if (!systemPrompt) {
+                        throw new Error("systemPrompt is required.");
+                    }
+
+                    const name = input.name?.trim() ? input.name.trim() : null;
+                    const description = input.description?.trim() ? input.description.trim() : null;
+                    const targetPath = agentPathApp(ctx.userId, createId());
+                    const agentId = await this.agentSystem.agentIdForTarget(
+                        ctx,
+                        { path: targetPath },
+                        {
+                            kind: "app",
+                            foreground: false,
+                            name,
+                            description,
+                            systemPrompt
+                        }
+                    );
+                    const created = await this.storage.agents.findById(agentId);
+                    if (!created || created.userId !== ctx.userId) {
+                        throw new Error("Failed to resolve created app agent.");
+                    }
+                    return {
+                        agentId: created.id,
+                        initializedAt: created.createdAt
+                    };
+                },
+                agentKill: (ctx, agentId) => this.agentSystem.kill(ctx, agentId),
                 agentPost: (ctx, target, item) => this.agentSystem.post(ctx, target, item)
             },
             eventBus: this.eventBus,

@@ -123,6 +123,30 @@ describe("AgentSystem", () => {
         }
     });
 
+    it("schedules poison-pill one hour after an app agent sleeps", async () => {
+        vi.useFakeTimers();
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
+        let delayedSignals: DelayedSignals | null = null;
+        try {
+            vi.setSystemTime(new Date("2025-01-01T00:00:00.000Z"));
+            const harness = await harnessCreate(dir);
+            delayedSignals = harness.delayedSignals;
+            await harness.agentSystem.load();
+            await harness.agentSystem.start();
+
+            const agentId = await appAgentCreate(harness.agentSystem);
+            const poison = delayedSignals.list().find((event) => event.type === `agent:${agentId}:poison-pill`);
+
+            expect(poison).toBeTruthy();
+            expect(poison?.repeatKey).toBe(POISON_PILL_REPEAT_KEY);
+            expect(poison?.deliverAt).toBe(Date.now() + POISON_PILL_DELAY_MS);
+        } finally {
+            delayedSignals?.stop();
+            vi.useRealTimers();
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("reuses task path as the persistent agent identity", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
         try {
@@ -796,6 +820,25 @@ describe("AgentSystem", () => {
             await rm(dir, { recursive: true, force: true });
         }
     });
+
+    it("kills app agents via kill()", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
+        try {
+            const harness = await harnessCreate(dir);
+            await harness.agentSystem.load();
+            await harness.agentSystem.start();
+
+            const agentId = await appAgentCreate(harness.agentSystem);
+            const agentCtx = await contextForAgentIdRequire(harness.agentSystem, agentId);
+            const deleted = await harness.agentSystem.kill(contextForUser({ userId: agentCtx.userId }), agentId);
+            expect(deleted).toBe(true);
+
+            const state = await agentStateRead(harness.storage, agentCtx);
+            expect(state?.state).toBe("dead");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 });
 
 async function harnessCreate(
@@ -896,6 +939,13 @@ async function subagentCreate(agentSystem: AgentSystem, eventBus: EngineEventBus
         throw new Error("Subagent create did not emit agent.created");
     }
     return createdAgentId;
+}
+
+async function appAgentCreate(agentSystem: AgentSystem): Promise<string> {
+    const ownerCtx = await agentSystem.ownerCtxEnsure();
+    const appPath = agentPath(`/${ownerCtx.userId}/app/${createId()}`);
+    await postAndAwait(agentSystem, ownerCtx, { path: appPath }, { type: "reset", message: "init app" });
+    return agentIdForTarget(agentSystem, ownerCtx, { path: appPath });
 }
 
 function inferenceResponse(text: string) {
@@ -1077,6 +1127,9 @@ function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
     }
     if (segments[1] === "cron") {
         return { kind: "cron", name: segments[2] ?? null };
+    }
+    if (segments[1] === "app") {
+        return { kind: "app", name: segments[2] ?? null };
     }
     if (segments[1] === "task") {
         return { kind: "task", name: segments[2] ?? null };

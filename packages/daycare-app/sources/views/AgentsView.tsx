@@ -42,6 +42,9 @@ function agentDisplayName(agent: AgentListItem): string {
         if (agent.kind === "agent" && segments.length >= 3) {
             return capitalize(segments[2]);
         }
+        if (agent.kind === "app" && segments.length >= 3) {
+            return `App ${capitalize(segments[2])}`;
+        }
         if (agent.kind === "cron") return "Cron Task";
         if (agent.kind === "task") return "Task";
         if (agent.kind === "memory") return "Memory Worker";
@@ -56,6 +59,7 @@ function agentDisplayName(agent: AgentListItem): string {
     }
 
     if (agent.kind === "connector") return "Connection";
+    if (agent.kind === "app") return "App Agent";
     if (agent.kind === "cron") return "Cron Task";
     if (agent.kind === "task") return "Task";
     if (agent.kind === "memory") return "Memory Worker";
@@ -86,6 +90,15 @@ const KIND_META: Record<string, KindMeta> = {
         darkIcon: "#DFC070",
         order: 0
     },
+    app: {
+        icon: "browser",
+        label: "App Agents",
+        lightBg: "#FAD8B8",
+        darkBg: "#4A2508",
+        lightIcon: "#874100",
+        darkIcon: "#F6C28B",
+        order: 1
+    },
     connector: {
         icon: "plug",
         label: "Connectors",
@@ -93,7 +106,7 @@ const KIND_META: Record<string, KindMeta> = {
         darkBg: "#0E2B48",
         lightIcon: "#2A4666",
         darkIcon: "#A8C4E0",
-        order: 1
+        order: 2
     },
     cron: {
         icon: "clock",
@@ -102,7 +115,7 @@ const KIND_META: Record<string, KindMeta> = {
         darkBg: "#1C3210",
         lightIcon: "#4A5F3A",
         darkIcon: "#AACA98",
-        order: 2
+        order: 3
     },
     task: {
         icon: "tasklist",
@@ -111,7 +124,7 @@ const KIND_META: Record<string, KindMeta> = {
         darkBg: "#690005",
         lightIcon: "#BA1A1A",
         darkIcon: "#FFB4AB",
-        order: 3
+        order: 4
     },
     memory: {
         icon: "database",
@@ -120,7 +133,7 @@ const KIND_META: Record<string, KindMeta> = {
         darkBg: "#2B2822",
         lightIcon: "#4B4639",
         darkIcon: "#D0C7B4",
-        order: 4
+        order: 5
     },
     search: {
         icon: "search",
@@ -129,7 +142,7 @@ const KIND_META: Record<string, KindMeta> = {
         darkBg: "#36332D",
         lightIcon: "#7D7668",
         darkIcon: "#D0C7B4",
-        order: 5
+        order: 6
     },
     sub: {
         icon: "git-branch",
@@ -138,7 +151,7 @@ const KIND_META: Record<string, KindMeta> = {
         darkBg: "#0E2B48",
         lightIcon: "#2A4666",
         darkIcon: "#A8C4E0",
-        order: 6
+        order: 7
     },
     subuser: {
         icon: "person",
@@ -147,7 +160,7 @@ const KIND_META: Record<string, KindMeta> = {
         darkBg: "#3C2D00",
         lightIcon: "#6B4F12",
         darkIcon: "#DFC070",
-        order: 7
+        order: 8
     },
     swarm: {
         icon: "iterations",
@@ -156,7 +169,7 @@ const KIND_META: Record<string, KindMeta> = {
         darkBg: "#1C3210",
         lightIcon: "#4A5F3A",
         darkIcon: "#AACA98",
-        order: 8
+        order: 9
     }
 };
 
