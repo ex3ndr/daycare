@@ -21,4 +21,19 @@ describe("experimentsSqlTemplateRender", () => {
         expect(sql).toContain("'O''Reilly'");
         expect(sql).toContain("TRUE");
     });
+
+    it("throws when value is non-scalar object", () => {
+        expect(() =>
+            experimentsSqlTemplateRender("SELECT * FROM t WHERE id = {{sql params.id}};", {
+                state: {},
+                params: {
+                    id: { nested: true }
+                },
+                runtime: {
+                    now: 1,
+                    generatedId: "id-1"
+                }
+            })
+        ).toThrow("SQL template value must be scalar.");
+    });
 });

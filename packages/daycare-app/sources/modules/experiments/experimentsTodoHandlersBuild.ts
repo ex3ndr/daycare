@@ -73,9 +73,10 @@ export function experimentsTodoHandlersBuild(
         try {
             const state = input.stateStore.getSnapshot();
             const resolvedParams = paramsResolve(state, params);
+            const actionParams = actionParamsNormalize(state, resolvedParams);
             const sql = experimentsSqlTemplateRender(definition.sql, {
                 state,
-                params: resolvedParams,
+                params: actionParams,
                 runtime: {
                     now: Date.now(),
                     generatedId: createId()
@@ -160,6 +161,28 @@ function paramsResolve(state: StateModel, params: Record<string, unknown>): Reco
         resolved[key] = paramValueResolve(state, value);
     }
     return resolved;
+}
+
+function actionParamsNormalize(state: StateModel, params: Record<string, unknown>): Record<string, unknown> {
+    const todoId = typeof params.todoId === "string" && params.todoId.length > 0 ? params.todoId : null;
+    if (todoId) {
+        return params;
+    }
+
+    const index = typeof params.index === "number" && Number.isInteger(params.index) ? params.index : null;
+    if (index === null || index < 0) {
+        return params;
+    }
+
+    const rowId = getByPath(state, `/todos/${index}/id`);
+    if (typeof rowId !== "string" || rowId.length === 0) {
+        return params;
+    }
+
+    return {
+        ...params,
+        todoId: rowId
+    };
 }
 
 function paramValueResolve(state: StateModel, value: unknown): unknown {

@@ -95,3 +95,19 @@ stateDiagram-v2
     Ready: /loading=false
     Ready --> Ready: todoCreate/todoToggle/todoDelete
 ```
+
+## Row Action Params
+Row buttons now pass `index` (`$index`) and handlers resolve `todoId` from `/todos/<index>/id` before SQL templating. This avoids silent no-op updates when non-scalar params are provided.
+
+```mermaid
+sequenceDiagram
+    participant UI as Row Button
+    participant Handler as runAction
+    participant Store as StateStore
+    participant SQL as SQL Template
+
+    UI->>Handler: params { index }
+    Handler->>Store: get /todos/{index}/id
+    Store-->>Handler: todoId
+    Handler->>SQL: render with scalar todoId
+```

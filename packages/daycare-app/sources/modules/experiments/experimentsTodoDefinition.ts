@@ -364,7 +364,7 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
                     press: {
                         action: "todoToggle",
                         params: {
-                            todoId: { $item: "id" }
+                            index: { $index: true }
                         }
                     }
                 }
@@ -380,7 +380,7 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
                     press: {
                         action: "todoDelete",
                         params: {
-                            todoId: { $item: "id" }
+                            index: { $index: true }
                         }
                     }
                 }

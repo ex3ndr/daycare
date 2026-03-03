@@ -26,6 +26,9 @@ handlebars.registerHelper("sql", (value: unknown) => {
     if (typeof value === "bigint") {
         return value.toString();
     }
+    if (typeof value === "object") {
+        throw new Error("SQL template value must be scalar.");
+    }
 
     const text = String(value).replace(/'/g, "''");
     return `'${text}'`;
