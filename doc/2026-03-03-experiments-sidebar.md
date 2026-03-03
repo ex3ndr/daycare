@@ -4,7 +4,12 @@
 - Added a new `experiments` section in the app sidebar and mode routing.
 - Introduced `ExperimentsView`, rendered via `@json-render/react-native`.
 - Backed todo persistence with PGlite (`idb://daycare-experiments-v1`) on web runtime.
-- Wired JSON actions (`todoCreate`, `todoToggle`, `todoDelete`) to PGlite mutations and state refresh.
+- Moved to a static JSON definition (`experimentsTodoDefinition`) that contains:
+  - initial renderer state
+  - a series of SQL query snapshots
+  - SQL action templates rendered with Handlebars
+  - the UI spec itself
+- Wired action handlers to run templated SQL and refresh only declared query snapshots.
 
 ## Architecture
 ```mermaid
@@ -12,15 +17,19 @@ flowchart TD
     A[AppSidebar: experiments mode] --> B[SidebarModeView]
     B --> C[ExperimentsView]
     C --> D[JSONUIProvider + Renderer]
-    D --> E[JSON Spec: experimentsTodoSpecBuild]
+    D --> E[JSON Spec: experimentsTodoDefinition.spec]
     D --> F[StateStore]
-    E --> G[Action Bindings]
-    G --> H[experimentsTodoHandlersBuild]
+    C --> G[experimentsTodoInitialize]
+    G --> H[bootstrapSql]
     H --> I[PGlite Adapter]
     I --> J[(experiments_todos table)]
-    I --> K[List rows]
-    K --> L[experimentsTodoStateBuild]
-    L --> F
+    G --> K[queriesRefresh]
+    K --> F
+    E --> L[Action Bindings]
+    L --> M[experimentsTodoHandlersBuild]
+    M --> N[Handlebars SQL render]
+    N --> I
+    M --> K
 ```
 
 ## PGlite Schema
@@ -50,4 +59,27 @@ sequenceDiagram
     DB->>CDN: fetch pglite.wasm
     DB->>PG: new PGlite(idb://..., { fsBundle, wasmModule })
     PG-->>DB: waitReady resolved
+```
+
+## SQL-Templated Actions
+Every UI action compiles a SQL template via Handlebars (`{{sql ...}}`) with context:
+- `state`: full renderer snapshot
+- `params`: resolved action params from JSON-render bindings
+- `runtime`: generated values (`generatedId`, `now`)
+
+```mermaid
+sequenceDiagram
+    participant UI as JSON Button Action
+    participant Handler as experimentsTodoHandlersBuild
+    participant HB as experimentsSqlTemplateRender
+    participant DB as PGlite
+    participant Store as StateStore
+
+    UI->>Handler: action + params
+    Handler->>HB: render SQL(state, params, runtime)
+    HB-->>Handler: SQL string
+    Handler->>DB: exec(sql)
+    Handler->>DB: query refresh SQLs
+    DB-->>Handler: rows
+    Handler->>Store: pointer updates (/todos, /stats/*)
 ```

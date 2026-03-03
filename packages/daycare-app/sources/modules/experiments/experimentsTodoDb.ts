@@ -1,11 +1,7 @@
-import type { ExperimentsTodo } from "./experimentsTodoTypes";
-
 export type ExperimentsTodoDb = {
     init: () => Promise<void>;
-    list: () => Promise<ExperimentsTodo[]>;
-    create: (title: string) => Promise<void>;
-    toggle: (id: string, done: boolean) => Promise<void>;
-    remove: (id: string) => Promise<void>;
+    query: <TRow extends Record<string, unknown>>(sql: string) => Promise<TRow[]>;
+    exec: (sql: string) => Promise<void>;
 };
 
 /**
@@ -19,9 +15,7 @@ export function experimentsTodoDbCreate(): ExperimentsTodoDb {
 
     return {
         init: unsupported,
-        list: unsupported,
-        create: unsupported,
-        toggle: unsupported,
-        remove: unsupported
+        query: unsupported,
+        exec: unsupported
     };
 }

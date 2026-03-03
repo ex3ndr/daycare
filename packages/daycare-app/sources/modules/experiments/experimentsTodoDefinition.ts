@@ -3,12 +3,134 @@ import type { Spec } from "@json-render/react-native";
 const ERROR_TEMPLATE = `\${/error}`;
 const STATS_TEMPLATE = `Total \${/stats/total} · Open \${/stats/open} · Done \${/stats/completed}`;
 
-/**
- * Builds the json-render spec for the experiments todo UI.
- * Expects: runtime state includes /loading, /ready, /error, /draft/title, /stats/* and /todos.
- */
-export function experimentsTodoSpecBuild(): Spec {
-    return {
+type ExperimentsSqlQueryMode = "rows" | "row";
+
+export type ExperimentsSqlQueryDefinition = {
+    id: string;
+    mode: ExperimentsSqlQueryMode;
+    statePath: string;
+    sql: string;
+};
+
+export type ExperimentsSqlActionDefinition = {
+    id: string;
+    sql: string;
+    refreshQueries: string[];
+};
+
+export type ExperimentsTodoDefinition = {
+    initialState: Record<string, unknown>;
+    spec: Spec;
+    bootstrapSql: string[];
+    queries: ExperimentsSqlQueryDefinition[];
+    actions: ExperimentsSqlActionDefinition[];
+};
+
+export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
+    initialState: {
+        loading: true,
+        ready: false,
+        error: null,
+        draft: {
+            title: ""
+        },
+        todos: [],
+        stats: {
+            total: 0,
+            completed: 0,
+            open: 0
+        }
+    },
+    bootstrapSql: [
+        `
+            CREATE TABLE IF NOT EXISTS experiments_todos (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                done BOOLEAN NOT NULL DEFAULT FALSE,
+                created_at BIGINT NOT NULL
+            );
+        `,
+        `
+            CREATE INDEX IF NOT EXISTS idx_experiments_todos_created_at
+            ON experiments_todos (created_at DESC);
+        `,
+        `
+            INSERT INTO experiments_todos (id, title, done, created_at)
+            SELECT 'seed-1', 'Wire json-render state to PGlite rows', FALSE, 1709251200001
+            WHERE NOT EXISTS (SELECT 1 FROM experiments_todos WHERE id = 'seed-1');
+        `,
+        `
+            INSERT INTO experiments_todos (id, title, done, created_at)
+            SELECT 'seed-2', 'Drive rendering through SQL query snapshots', FALSE, 1709251200002
+            WHERE NOT EXISTS (SELECT 1 FROM experiments_todos WHERE id = 'seed-2');
+        `,
+        `
+            INSERT INTO experiments_todos (id, title, done, created_at)
+            SELECT 'seed-3', 'Template every action with Handlebars from state', FALSE, 1709251200003
+            WHERE NOT EXISTS (SELECT 1 FROM experiments_todos WHERE id = 'seed-3');
+        `
+    ],
+    queries: [
+        {
+            id: "todos",
+            mode: "rows",
+            statePath: "/todos",
+            sql: `
+                SELECT
+                    id,
+                    title,
+                    done,
+                    created_at AS "createdAt"
+                FROM experiments_todos
+                ORDER BY created_at DESC;
+            `
+        },
+        {
+            id: "stats",
+            mode: "row",
+            statePath: "/stats",
+            sql: `
+                SELECT
+                    COUNT(*)::int AS total,
+                    COALESCE(SUM(CASE WHEN done THEN 1 ELSE 0 END), 0)::int AS completed,
+                    (COUNT(*) - COALESCE(SUM(CASE WHEN done THEN 1 ELSE 0 END), 0))::int AS open
+                FROM experiments_todos;
+            `
+        }
+    ],
+    actions: [
+        {
+            id: "todoCreate",
+            sql: `
+                INSERT INTO experiments_todos (id, title, done, created_at)
+                SELECT
+                    {{sql runtime.generatedId}},
+                    TRIM({{sql params.title}}),
+                    FALSE,
+                    {{sql runtime.now}}
+                WHERE LENGTH(TRIM({{sql params.title}})) > 0;
+            `,
+            refreshQueries: ["todos", "stats"]
+        },
+        {
+            id: "todoToggle",
+            sql: `
+                UPDATE experiments_todos
+                SET done = NOT done
+                WHERE id = {{sql params.todoId}};
+            `,
+            refreshQueries: ["todos", "stats"]
+        },
+        {
+            id: "todoDelete",
+            sql: `
+                DELETE FROM experiments_todos
+                WHERE id = {{sql params.todoId}};
+            `,
+            refreshQueries: ["todos", "stats"]
+        }
+    ],
+    spec: {
         root: "screen",
         elements: {
             screen: {
@@ -33,7 +155,7 @@ export function experimentsTodoSpecBuild(): Spec {
             headerText: {
                 type: "Paragraph",
                 props: {
-                    text: "UI is rendered from JSON. Actions mutate PGlite, then store state refreshes automatically.",
+                    text: "UI is static JSON. State is filled by SQL query snapshots and actions are SQL templates.",
                     color: "#1e293b"
                 }
             },
@@ -50,7 +172,7 @@ export function experimentsTodoSpecBuild(): Spec {
             loadingText: {
                 type: "Paragraph",
                 props: {
-                    text: "Syncing with PGlite...",
+                    text: "Running SQL sync...",
                     color: "#92400e"
                 }
             },
@@ -83,7 +205,7 @@ export function experimentsTodoSpecBuild(): Spec {
                 type: "Card",
                 props: {
                     title: "Create Todo",
-                    subtitle: "Input value is bound to /draft/title",
+                    subtitle: "Button action compiles SQL from bound state",
                     padding: 16,
                     elevated: false
                 },
@@ -150,7 +272,7 @@ export function experimentsTodoSpecBuild(): Spec {
             emptyText: {
                 type: "Paragraph",
                 props: {
-                    text: "No todos yet. Create one from the JSON-bound input.",
+                    text: "No todos yet. Create one from the bound input and it will round-trip through SQL.",
                     color: "#334155"
                 }
             },
@@ -242,7 +364,7 @@ export function experimentsTodoSpecBuild(): Spec {
                     press: {
                         action: "todoToggle",
                         params: {
-                            index: { $index: true }
+                            todoId: { $item: "id" }
                         }
                     }
                 }
@@ -258,11 +380,11 @@ export function experimentsTodoSpecBuild(): Spec {
                     press: {
                         action: "todoDelete",
                         params: {
-                            index: { $index: true }
+                            todoId: { $item: "id" }
                         }
                     }
                 }
             }
         }
-    };
-}
+    }
+};
