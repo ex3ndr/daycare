@@ -134,8 +134,9 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
         root: "screen",
         elements: {
             screen: {
-                type: "View",
+                type: "ItemList",
                 props: {
+                    scroll: true,
                     padding: 20,
                     gap: 12,
                     backgroundColor: "#f8fafc"

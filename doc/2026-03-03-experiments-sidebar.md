@@ -13,6 +13,7 @@
   - `Item` -> `sources/components/Item.tsx`
   - `ItemList` -> `sources/components/ItemList.tsx`
   - plus local `View`, `Text`, `TextInput`, `Button` renderers for binding/events
+- Set the root experiments element to a scrollable `ItemList` so the full page scrolls.
 - Wired action handlers to run templated SQL and refresh only declared query snapshots.
 
 ## Architecture

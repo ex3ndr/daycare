@@ -2,7 +2,7 @@ import { type ComponentRegistry, type ComponentRenderProps, useStateStore } from
 import { Pressable, Text, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item as AppItem } from "@/components/Item";
-import { ItemListStatic as AppItemList } from "@/components/ItemList";
+import { ItemList as AppItemList } from "@/components/ItemList";
 
 type ViewProps = {
     direction?: "row" | "column";
@@ -28,6 +28,9 @@ type ItemProps = {
 
 type ItemListProps = {
     gap?: number;
+    padding?: number;
+    backgroundColor?: string;
+    scroll?: boolean;
 };
 
 type TextProps = {
@@ -111,11 +114,30 @@ function TodoItem({ element, children }: ComponentRenderProps<ItemProps>) {
 
 function TodoItemList({ element, children }: ComponentRenderProps<ItemListProps>) {
     const props = element.props as ItemListProps;
+    if (!props.scroll) {
+        return (
+            <View
+                style={{
+                    gap: props.gap ?? 8,
+                    padding: props.padding ?? 0,
+                    backgroundColor: props.backgroundColor ?? undefined
+                }}
+            >
+                {children}
+            </View>
+        );
+    }
+
     return (
         <AppItemList
             insetGrouped={false}
-            style={styles.itemList}
-            containerStyle={{ paddingTop: 0, paddingBottom: 0, gap: props.gap ?? 8 }}
+            style={[styles.itemList, { backgroundColor: props.backgroundColor ?? undefined }]}
+            containerStyle={{
+                paddingTop: props.padding ?? 0,
+                paddingBottom: props.padding ?? 0,
+                paddingHorizontal: props.padding ?? 0,
+                gap: props.gap ?? 8
+            }}
         >
             {children}
         </AppItemList>
@@ -239,9 +261,7 @@ export const experimentsTodoRegistry: ComponentRegistry = {
 };
 
 const styles = StyleSheet.create({
-    viewBase: {
-        width: "100%"
-    },
+    viewBase: {},
     itemList: {
         flex: 0
     },
