@@ -1,4 +1,5 @@
 import type { AgentSkill } from "@/types";
+import { type SkillFileMetadata, skillsFilesList } from "./skillsFilesList.js";
 
 export type SkillsListInput = {
     skills: {
@@ -16,6 +17,7 @@ export type SkillsListResult = {
         permissions: string[];
         source: AgentSkill["source"];
         pluginId?: string;
+        files: SkillFileMetadata[];
     }>;
 };
 
@@ -25,16 +27,23 @@ export type SkillsListResult = {
  */
 export async function skillsList(input: SkillsListInput): Promise<SkillsListResult> {
     const listed = await input.skills.list();
-    return {
-        ok: true,
-        skills: listed.map((skill) => ({
+    const skills = await Promise.all(
+        listed.map(async (skill) => ({
             id: skill.id,
             name: skill.name,
             description: skill.description ?? null,
             sandbox: skill.sandbox === true,
             permissions: skill.permissions ?? [],
             source: skill.source,
-            ...(skill.pluginId ? { pluginId: skill.pluginId } : {})
+            ...(skill.pluginId ? { pluginId: skill.pluginId } : {}),
+            files: await skillsFilesList({
+                skillId: skill.id,
+                sourcePath: skill.sourcePath
+            })
         }))
+    );
+    return {
+        ok: true,
+        skills
     };
 }

@@ -249,6 +249,9 @@ export class AppServer {
                       list: () => skillsList(ctx)
                   }
                 : null,
+            tools: {
+                list: () => this.toolResolver.listTools()
+            },
             tasksListActive: this.tasksListActive,
             tasksListAll: this.tasksListAll,
             taskCallbacks: this.taskCallbacks,

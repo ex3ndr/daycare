@@ -1,4 +1,5 @@
 import type http from "node:http";
+import type { Tool } from "@mariozechner/pi-ai";
 import type { AgentSkill, Context, TaskActiveSummary, TaskListAllResult } from "@/types";
 import type { EngineEventBus } from "../../engine/ipc/events.js";
 import type { Secret } from "../../engine/secrets/secretTypes.js";
@@ -17,6 +18,7 @@ import type { RouteAgentCallbacks, RouteTaskCallbacks } from "./routeTypes.js";
 import { secretsRouteHandle } from "./secrets/secretsRoutes.js";
 import { skillsRouteHandle } from "./skills/skillsRoutes.js";
 import { tasksRouteHandle } from "./tasks/tasksRoutes.js";
+import { toolsRouteHandle } from "./tools/toolsRoutes.js";
 
 export type ApiRouteContext = {
     ctx: Context;
@@ -27,6 +29,7 @@ export type ApiRouteContext = {
     agentCallbacks: RouteAgentCallbacks | null;
     eventBus: EngineEventBus | null;
     skills: { list: () => Promise<AgentSkill[]> } | null;
+    tools: { list: () => Tool[] } | null;
     tasksListActive: ((ctx: Context) => Promise<TaskActiveSummary[]>) | null;
     tasksListAll: ((ctx: Context) => Promise<TaskListAllResult>) | null;
     taskCallbacks: RouteTaskCallbacks | null;
@@ -85,6 +88,12 @@ export async function apiRouteHandle(
         return skillsRouteHandle(request, response, pathname, {
             sendJson: context.sendJson,
             skills: context.skills
+        });
+    }
+    if (pathname.startsWith("/tools")) {
+        return toolsRouteHandle(request, response, pathname, {
+            sendJson: context.sendJson,
+            tools: context.tools
         });
     }
     if (pathname.startsWith("/secrets")) {

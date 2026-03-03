@@ -1,6 +1,7 @@
 import type http from "node:http";
 import type { AgentSkill } from "@/types";
 import { skillsContent } from "./skillsContent.js";
+import { skillsFileDownload } from "./skillsFileDownload.js";
 import { skillsList } from "./skillsList.js";
 
 export type SkillsRouteContext = {
@@ -38,6 +39,30 @@ export async function skillsRouteHandle(
         return true;
     }
 
+    const downloadMatch = pathname.match(/^\/skills\/(.+)\/download$/);
+    if (downloadMatch?.[1] && request.method === "GET") {
+        const url = new URL(request.url ?? pathname, "http://localhost");
+        const result = await skillsFileDownload({
+            skills: context.skills,
+            skillId: decodeURIComponent(downloadMatch[1]),
+            filePath: url.searchParams.get("path") ?? ""
+        });
+        if (!result.ok) {
+            context.sendJson(response, result.statusCode, { ok: false, error: result.error });
+            return true;
+        }
+
+        response.statusCode = 200;
+        response.setHeader("Content-Type", result.file.mimeType);
+        response.setHeader("Content-Length", String(result.content.length));
+        response.setHeader(
+            "Content-Disposition",
+            `attachment; filename="${contentDispositionFilename(result.file.filename)}"`
+        );
+        response.end(result.content);
+        return true;
+    }
+
     const contentMatch = pathname.match(/^\/skills\/(.+)\/content$/);
     if (contentMatch?.[1] && request.method === "GET") {
         const result = await skillsContent({
@@ -50,4 +75,8 @@ export async function skillsRouteHandle(
     }
 
     return false;
+}
+
+function contentDispositionFilename(filename: string): string {
+    return filename.replaceAll("\\", "_").replaceAll('"', "_").replaceAll("\r", "_").replaceAll("\n", "_");
 }
