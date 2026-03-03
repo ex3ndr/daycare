@@ -134,67 +134,71 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
         root: "screen",
         elements: {
             screen: {
-                type: "ScrollContainer",
+                type: "View",
                 props: {
                     padding: 20,
+                    gap: 12,
                     backgroundColor: "#f8fafc"
                 },
                 children: ["headerCard", "loadingCard", "errorCard", "mainColumn"]
             },
             headerCard: {
-                type: "Card",
+                type: "Item",
                 props: {
                     title: "Experiments",
-                    subtitle: "JSON-render + PGlite todo lab",
+                    subtitle: "Custom catalog + SQL-backed todo lab",
                     padding: 16,
-                    elevated: false,
-                    backgroundColor: "#e0ecff"
+                    backgroundColor: "#dbeafe",
+                    borderColor: "#93c5fd"
                 },
                 children: ["headerText"]
             },
             headerText: {
-                type: "Paragraph",
+                type: "Text",
                 props: {
                     text: "UI is static JSON. State is filled by SQL query snapshots and actions are SQL templates.",
-                    color: "#1e293b"
+                    color: "#1e3a8a",
+                    size: "sm"
                 }
             },
             loadingCard: {
-                type: "Card",
+                type: "Item",
                 visible: { $state: "/loading" },
                 props: {
                     padding: 12,
-                    elevated: false,
-                    backgroundColor: "#fef3c7"
+                    backgroundColor: "#fef3c7",
+                    borderColor: "#f59e0b"
                 },
                 children: ["loadingText"]
             },
             loadingText: {
-                type: "Paragraph",
+                type: "Text",
                 props: {
                     text: "Running SQL sync...",
-                    color: "#92400e"
+                    color: "#92400e",
+                    size: "sm"
                 }
             },
             errorCard: {
-                type: "Card",
+                type: "Item",
                 visible: { $state: "/error" },
                 props: {
                     padding: 12,
-                    elevated: false,
-                    backgroundColor: "#fee2e2"
+                    backgroundColor: "#fee2e2",
+                    borderColor: "#f87171"
                 },
                 children: ["errorText"]
             },
             errorText: {
-                type: "Paragraph",
+                type: "Text",
                 props: {
                     text: { $template: ERROR_TEMPLATE },
-                    color: "#991b1b"
+                    color: "#991b1b",
+                    size: "sm"
                 }
             },
             mainColumn: {
-                type: "Column",
+                type: "ItemList",
                 visible: { $state: "/ready" },
                 props: {
                     gap: 12
@@ -202,20 +206,23 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
                 children: ["composerCard", "statsCard", "emptyCard", "todosRepeat"]
             },
             composerCard: {
-                type: "Card",
+                type: "Item",
                 props: {
                     title: "Create Todo",
                     subtitle: "Button action compiles SQL from bound state",
                     padding: 16,
-                    elevated: false
+                    backgroundColor: "#ffffff",
+                    borderColor: "#dbe2ef"
                 },
                 children: ["composerRow"]
             },
             composerRow: {
-                type: "Row",
+                type: "View",
                 props: {
+                    direction: "row",
                     gap: 8,
-                    alignItems: "center"
+                    alignItems: "center",
+                    justifyContent: "space-between"
                 },
                 children: ["titleInput", "createButton"]
             },
@@ -232,7 +239,8 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
                 type: "Button",
                 props: {
                     label: "Add",
-                    variant: "primary"
+                    variant: "primary",
+                    size: "md"
                 },
                 on: {
                     press: {
@@ -244,40 +252,43 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
                 }
             },
             statsCard: {
-                type: "Card",
+                type: "Item",
                 props: {
                     padding: 12,
-                    elevated: false,
-                    backgroundColor: "#ecfccb"
+                    backgroundColor: "#ecfccb",
+                    borderColor: "#a3e635"
                 },
                 children: ["statsText"]
             },
             statsText: {
-                type: "Paragraph",
+                type: "Text",
                 props: {
                     text: { $template: STATS_TEMPLATE },
-                    color: "#365314"
+                    color: "#365314",
+                    size: "sm",
+                    weight: "medium"
                 }
             },
             emptyCard: {
-                type: "Card",
+                type: "Item",
                 visible: { $state: "/stats/total", eq: 0 },
                 props: {
                     padding: 12,
-                    elevated: false,
-                    backgroundColor: "#e2e8f0"
+                    backgroundColor: "#e2e8f0",
+                    borderColor: "#cbd5e1"
                 },
                 children: ["emptyText"]
             },
             emptyText: {
-                type: "Paragraph",
+                type: "Text",
                 props: {
                     text: "No todos yet. Create one from the bound input and it will round-trip through SQL.",
-                    color: "#334155"
+                    color: "#334155",
+                    size: "sm"
                 }
             },
             todosRepeat: {
-                type: "Column",
+                type: "ItemList",
                 visible: { $state: "/stats/total", gt: 0 },
                 props: {
                     gap: 8
@@ -289,21 +300,26 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
                 children: ["todoCard"]
             },
             todoCard: {
-                type: "Card",
+                type: "Item",
                 props: {
                     padding: 12,
-                    elevated: false,
                     backgroundColor: {
                         $cond: { $item: "done", eq: true },
                         $then: "#dcfce7",
                         $else: "#ffffff"
+                    },
+                    borderColor: {
+                        $cond: { $item: "done", eq: true },
+                        $then: "#86efac",
+                        $else: "#dbe2ef"
                     }
                 },
                 children: ["todoRow"]
             },
             todoRow: {
-                type: "Row",
+                type: "View",
                 props: {
+                    direction: "row",
                     justifyContent: "space-between",
                     alignItems: "center",
                     gap: 8
@@ -311,26 +327,29 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
                 children: ["todoLeftColumn", "todoActionsRow"]
             },
             todoLeftColumn: {
-                type: "Column",
+                type: "View",
                 props: {
+                    direction: "column",
                     flex: 1,
                     gap: 4
                 },
                 children: ["todoTitle", "todoStatus"]
             },
             todoTitle: {
-                type: "Paragraph",
+                type: "Text",
                 props: {
                     text: { $item: "title" },
                     color: {
                         $cond: { $item: "done", eq: true },
                         $then: "#166534",
                         $else: "#0f172a"
-                    }
+                    },
+                    weight: "medium",
+                    strike: { $item: "done" }
                 }
             },
             todoStatus: {
-                type: "Label",
+                type: "Text",
                 props: {
                     text: {
                         $cond: { $item: "done", eq: true },
@@ -342,8 +361,9 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
                 }
             },
             todoActionsRow: {
-                type: "Row",
+                type: "View",
                 props: {
+                    direction: "row",
                     gap: 8,
                     alignItems: "center"
                 },

@@ -9,6 +9,11 @@
   - a series of SQL query snapshots
   - SQL action templates rendered with Handlebars
   - the UI spec itself
+- Replaced standard catalog usage with a custom experiments registry:
+  - `View` (layout)
+  - `Item` (card-like container)
+  - `ItemList` (stack list)
+  - `Text`, `TextInput`, `Button`
 - Wired action handlers to run templated SQL and refresh only declared query snapshots.
 
 ## Architecture
@@ -30,6 +35,24 @@ flowchart TD
     M --> N[Handlebars SQL render]
     N --> I
     M --> K
+    C --> O[experimentsTodoRegistry]
+    O --> D
+```
+
+## Custom Catalog
+`ExperimentsView` now injects a custom renderer registry so the todo app is fully styled through app-owned components rather than the standard json-render catalog.
+
+```mermaid
+flowchart LR
+    A[experimentsTodoDefinition.spec] --> B[Custom Types]
+    B --> C[View]
+    B --> D[Item]
+    B --> E[ItemList]
+    B --> F[Text]
+    B --> G[TextInput]
+    B --> H[Button]
+    I[experimentsTodoRegistry] --> J[Renderer]
+    A --> J
 ```
 
 ## PGlite Schema

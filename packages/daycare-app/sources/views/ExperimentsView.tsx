@@ -8,6 +8,7 @@ import {
     experimentsTodoHandlersBuild,
     experimentsTodoInitialize
 } from "@/modules/experiments/experimentsTodoHandlersBuild";
+import { experimentsTodoRegistry } from "@/modules/experiments/experimentsTodoRegistry";
 
 /**
  * Experiments screen that renders a JSON-defined todo app.
@@ -41,8 +42,8 @@ export function ExperimentsView() {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-            <JSONUIProvider store={stateStore} handlers={handlers}>
-                <Renderer spec={experimentsTodoDefinition.spec} />
+            <JSONUIProvider store={stateStore} handlers={handlers} registry={experimentsTodoRegistry}>
+                <Renderer spec={experimentsTodoDefinition.spec} registry={experimentsTodoRegistry} />
             </JSONUIProvider>
         </View>
     );
