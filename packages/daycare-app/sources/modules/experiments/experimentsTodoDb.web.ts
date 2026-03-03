@@ -1,4 +1,4 @@
-import { PGlite } from "@electric-sql/pglite";
+import type { PGlite } from "@electric-sql/pglite";
 import { createId } from "@paralleldrive/cuid2";
 import type { ExperimentsTodoDb } from "./experimentsTodoDb";
 import type { ExperimentsTodo } from "./experimentsTodoTypes";
@@ -87,12 +87,27 @@ export function experimentsTodoDbCreate(): ExperimentsTodoDb {
 async function databaseGet(): Promise<PGlite> {
     if (!databasePromise) {
         databasePromise = (async () => {
-            const db = new PGlite(DATABASE_URL);
+            const PGliteCtor = pgliteResolveConstructor();
+            const db = new PGliteCtor(DATABASE_URL);
             await db.waitReady;
             return db;
         })();
     }
     return databasePromise;
+}
+
+function pgliteResolveConstructor(): new (dataDir?: string) => PGlite {
+    const moduleValue = require("@electric-sql/pglite") as {
+        PGlite?: new (dataDir?: string) => PGlite;
+        default?: {
+            PGlite?: new (dataDir?: string) => PGlite;
+        };
+    };
+    const ctor = moduleValue.PGlite ?? moduleValue.default?.PGlite;
+    if (!ctor) {
+        throw new Error("Failed to resolve PGlite constructor.");
+    }
+    return ctor;
 }
 
 function todoFromRow(row: TodoRow): ExperimentsTodo {
