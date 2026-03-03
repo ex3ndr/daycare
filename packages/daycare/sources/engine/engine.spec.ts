@@ -193,7 +193,7 @@ describe("Engine app costs wiring", () => {
 });
 
 describe("Engine timezone mismatch handling", () => {
-    it("auto-updates profile timezone and emits enrichment notices", async () => {
+    it("emits timezone update guidance enrichments when context timezone differs", async () => {
         vi.useFakeTimers();
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         try {
@@ -252,7 +252,7 @@ describe("Engine timezone mismatch handling", () => {
                 expect.arrayContaining([
                     {
                         key: "timezone_change_notice",
-                        value: "Timezone updated automatically from UTC to America/New_York."
+                        value: "Message context timezone changed from profile timezone UTC to America/New_York. Update profile timezone with user_profile_update."
                     },
                     {
                         key: "profile_name_notice",
@@ -262,7 +262,7 @@ describe("Engine timezone mismatch handling", () => {
             );
 
             const updatedUser = await engine.storage.users.findById(user.id);
-            expect(updatedUser?.timezone).toBe("America/New_York");
+            expect(updatedUser?.timezone).toBe("UTC");
 
             await engine.modules.connectors.unregisterAll("test");
             await engine.shutdown();

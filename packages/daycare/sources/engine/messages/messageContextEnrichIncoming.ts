@@ -4,12 +4,11 @@ import { timezoneIsValid } from "../../utils/timezoneIsValid.js";
 export type MessageContextEnrichIncomingOptions = {
     context: MessageContext;
     user: Pick<UserDbRecord, "timezone" | "firstName" | "lastName"> | null;
-    timezonePersist: (timezone: string) => Promise<void>;
 };
 
 /**
  * Enriches incoming message context with stable key/value metadata tags.
- * Expects: user belongs to the active message scope and timezonePersist updates profile timezone.
+ * Expects: user belongs to the active message scope.
  */
 export async function messageContextEnrichIncoming(
     options: MessageContextEnrichIncomingOptions
@@ -24,12 +23,24 @@ export async function messageContextEnrichIncoming(
     const incomingTimezoneRaw = context.timezone?.trim() ?? "";
     const incomingTimezone = incomingTimezoneRaw && timezoneIsValid(incomingTimezoneRaw) ? incomingTimezoneRaw : "";
 
-    if (user && incomingTimezone && incomingTimezone !== profileTimezoneRaw) {
-        await options.timezonePersist(incomingTimezone);
-        const previous = profileTimezoneRaw || "unset";
+    if (user && incomingTimezone && !profileTimezone) {
+        enrichmentsAppend(enrichments, {
+            key: "timezone_set_notice",
+            value: `Timezone ${incomingTimezone} is available in message context while profile timezone is unset. Set it with user_profile_update without asking the user again.`
+        });
+    }
+
+    if (user && incomingTimezone && profileTimezone && incomingTimezone !== profileTimezone) {
         enrichmentsAppend(enrichments, {
             key: "timezone_change_notice",
-            value: `Timezone updated automatically from ${previous} to ${incomingTimezone}.`
+            value: `Message context timezone changed from profile timezone ${profileTimezone} to ${incomingTimezone}. Update profile timezone with user_profile_update.`
+        });
+    }
+
+    if (user && !incomingTimezone && !profileTimezone) {
+        enrichmentsAppend(enrichments, {
+            key: "timezone_missing_notice",
+            value: "User timezone is not set. Ask the user for their timezone and set it via user_profile_update."
         });
     }
 

@@ -971,12 +971,7 @@ export class Engine {
         const user = await this.storage.users.findById(ctx.userId);
         return messageContextEnrichIncoming({
             context,
-            user,
-            timezonePersist: async (timezone) =>
-                this.storage.users.update(ctx.userId, {
-                    timezone,
-                    updatedAt: Date.now()
-                })
+            user
         });
     }
 
