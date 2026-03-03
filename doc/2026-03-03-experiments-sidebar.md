@@ -35,3 +35,19 @@ CREATE INDEX IF NOT EXISTS idx_experiments_todos_created_at
     ON experiments_todos (created_at DESC);
 ```
 
+## Web Runtime Note
+The web adapter now loads `pglite.data` and `pglite.wasm` explicitly from a pinned CDN URL and passes them to PGlite as `fsBundle` and `wasmModule`. This avoids Metro resolving assets relative to the dev bundle URL, which caused an FS bundle size mismatch at runtime.
+
+```mermaid
+sequenceDiagram
+    participant View as ExperimentsView
+    participant DB as experimentsTodoDb.web
+    participant CDN as jsdelivr
+    participant PG as PGlite
+
+    View->>DB: experimentsTodoDbCreate()
+    DB->>CDN: fetch pglite.data
+    DB->>CDN: fetch pglite.wasm
+    DB->>PG: new PGlite(idb://..., { fsBundle, wasmModule })
+    PG-->>DB: waitReady resolved
+```

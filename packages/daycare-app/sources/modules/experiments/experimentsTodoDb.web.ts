@@ -5,8 +5,11 @@ import type { ExperimentsTodo } from "./experimentsTodoTypes";
 
 const DATABASE_URL = "idb://daycare-experiments-v1";
 const TABLE_NAME = "experiments_todos";
+const PGLITE_CDN_BASE_URL = "https://cdn.jsdelivr.net/npm/@electric-sql/pglite@0.3.15/dist";
 
 let databasePromise: Promise<PGlite> | null = null;
+let fsBundlePromise: Promise<Blob> | null = null;
+let wasmModulePromise: Promise<WebAssembly.Module> | null = null;
 
 type TodoRow = {
     id: string;
@@ -88,7 +91,8 @@ async function databaseGet(): Promise<PGlite> {
     if (!databasePromise) {
         databasePromise = (async () => {
             const PGliteCtor = pgliteResolveConstructor();
-            const db = new PGliteCtor(DATABASE_URL);
+            const [fsBundle, wasmModule] = await Promise.all([pgliteFsBundleGet(), pgliteWasmModuleGet()]);
+            const db = new PGliteCtor(DATABASE_URL, { fsBundle, wasmModule });
             await db.waitReady;
             return db;
         })();
@@ -96,11 +100,11 @@ async function databaseGet(): Promise<PGlite> {
     return databasePromise;
 }
 
-function pgliteResolveConstructor(): new (dataDir?: string) => PGlite {
+function pgliteResolveConstructor(): PGliteConstructor {
     const moduleValue = require("@electric-sql/pglite") as {
-        PGlite?: new (dataDir?: string) => PGlite;
+        PGlite?: PGliteConstructor;
         default?: {
-            PGlite?: new (dataDir?: string) => PGlite;
+            PGlite?: PGliteConstructor;
         };
     };
     const ctor = moduleValue.PGlite ?? moduleValue.default?.PGlite;
@@ -117,4 +121,38 @@ function todoFromRow(row: TodoRow): ExperimentsTodo {
         done: row.done === true || row.done === "t" || row.done === "true" || row.done === 1,
         createdAt: typeof row.created_at === "number" ? row.created_at : Number(row.created_at)
     };
+}
+
+type PGliteConstructor = new (dataDir?: string, options?: PGliteRuntimeOptions) => PGlite;
+
+type PGliteRuntimeOptions = {
+    fsBundle?: Blob | File;
+    wasmModule?: WebAssembly.Module;
+};
+
+async function pgliteFsBundleGet(): Promise<Blob> {
+    if (!fsBundlePromise) {
+        fsBundlePromise = pgliteBlobFetch("pglite.data");
+    }
+    return fsBundlePromise;
+}
+
+async function pgliteWasmModuleGet(): Promise<WebAssembly.Module> {
+    if (!wasmModulePromise) {
+        wasmModulePromise = (async () => {
+            const wasmBlob = await pgliteBlobFetch("pglite.wasm");
+            const bytes = await wasmBlob.arrayBuffer();
+            return WebAssembly.compile(bytes);
+        })();
+    }
+    return wasmModulePromise;
+}
+
+async function pgliteBlobFetch(filename: "pglite.data" | "pglite.wasm"): Promise<Blob> {
+    const url = `${PGLITE_CDN_BASE_URL}/${filename}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch ${filename} (${response.status}).`);
+    }
+    return response.blob();
 }
