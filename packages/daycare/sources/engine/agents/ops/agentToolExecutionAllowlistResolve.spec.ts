@@ -12,7 +12,12 @@ describe("agentToolExecutionAllowlistResolve", () => {
     it("returns memory-only tools for memory-agents", () => {
         const allowlist = agentToolExecutionAllowlistResolve("memory");
 
-        expect(allowlist ? [...allowlist] : []).toEqual(["document_read", "document_write"]);
+        expect(allowlist ? [...allowlist] : []).toEqual([
+            "document_read",
+            "document_append",
+            "document_patch",
+            "document_write"
+        ]);
     });
 
     it("returns read+report tools for memory-search agents", () => {

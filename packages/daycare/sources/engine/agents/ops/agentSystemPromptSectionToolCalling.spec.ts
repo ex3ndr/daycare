@@ -9,6 +9,8 @@ type MockAgentSystem = NonNullable<AgentSystemPromptContext["agentSystem"]>;
 function buildMockTools(): Tool[] {
     return [
         { name: "document_read", description: "Read document", parameters: {} },
+        { name: "document_append", description: "Append to document", parameters: {} },
+        { name: "document_patch", description: "Patch document body", parameters: {} },
         { name: "document_write", description: "Write document", parameters: {} },
         { name: "send_agent_message", description: "Send message to agent", parameters: {} },
         { name: "cron_add", description: "Add cron task", parameters: {} },
@@ -55,6 +57,8 @@ describe("agentSystemPromptSectionToolCalling", () => {
         expect(section).toContain("send_agent_message");
         expect(section).not.toContain("cron_add");
         expect(section).not.toContain("send_user_message");
+        expect(section).not.toContain("document_append");
+        expect(section).not.toContain("document_patch");
         expect(section).not.toContain("document_write");
     });
 
@@ -77,6 +81,8 @@ describe("agentSystemPromptSectionToolCalling", () => {
         const section = await agentSystemPromptSectionToolCalling(context);
 
         expect(section).toContain("document_read");
+        expect(section).toContain("document_append");
+        expect(section).toContain("document_patch");
         expect(section).toContain("document_write");
         expect(section).not.toContain("cron_add");
         expect(section).not.toContain("send_agent_message");
