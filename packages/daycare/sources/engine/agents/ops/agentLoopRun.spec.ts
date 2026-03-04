@@ -328,6 +328,59 @@ describe("agentLoopRun", () => {
         expect(note?.text).toContain("Inference failure provider=openai model=gpt-test");
         expect(note?.text).toContain("rate limit");
     });
+
+    it("suppresses NO_MESSAGE text while preserving tool-side effects", async () => {
+        const connectorSend = vi.fn(async () => undefined);
+        const connector = connectorBuild(connectorSend);
+        const inferenceRouter = inferenceRouterBuild([
+            assistantToolCallMessageBuild("tool-1", "run_python", {
+                code: 'echo(text="queued")'
+            }),
+            assistantMessageBuild("NO_MESSAGE")
+        ]);
+        const deferredHandler = vi.fn(async () => undefined);
+        const toolResolver = toolResolverBuild(async (toolCall) => ({
+            toolMessage: {
+                role: "toolResult",
+                toolCallId: toolCall.id,
+                toolName: toolCall.name,
+                content: [{ type: "text", text: "ok" }],
+                isError: false,
+                timestamp: Date.now()
+            },
+            typedResult: { text: "ok" },
+            deferredPayload: { queued: true },
+            deferredHandler
+        }));
+        const result = await agentLoopRun(
+            optionsBuild({
+                connector,
+                inferenceRouter,
+                toolResolver
+            })
+        );
+
+        expect(result.responseText).toBeNull();
+        expect(deferredHandler).toHaveBeenCalledTimes(1);
+        expect(deferredHandler).toHaveBeenCalledWith({ queued: true }, expect.anything());
+        expect(connectorSend).not.toHaveBeenCalled();
+    });
+
+    it("suppresses NO_MESSAGE output when there are no tool calls", async () => {
+        const connectorSend = vi.fn(async () => undefined);
+        const connector = connectorBuild(connectorSend);
+        const inferenceRouter = inferenceRouterBuild([assistantMessageBuild("NO_MESSAGE")]);
+
+        const result = await agentLoopRun(
+            optionsBuild({
+                connector,
+                inferenceRouter
+            })
+        );
+
+        expect(result.responseText).toBeNull();
+        expect(connectorSend).not.toHaveBeenCalled();
+    });
 });
 
 function optionsBuild(params?: {
