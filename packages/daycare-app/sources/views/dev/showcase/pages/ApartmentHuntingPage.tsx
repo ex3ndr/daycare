@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "../components/ShowcasePage";
 
 // --- Types ---
 
@@ -554,91 +555,82 @@ export function ApartmentHuntingPage() {
     };
 
     return (
-        <View style={styles.root}>
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                {/* Search criteria summary */}
-                <CriteriaSummary criteria={SEARCH_CRITERIA} />
+        <ShowcasePage contentContainerStyle={styles.scrollContent}>
+            {/* Search criteria summary */}
+            <CriteriaSummary criteria={SEARCH_CRITERIA} />
 
-                {/* Stats bar */}
-                <StatsBar apartments={APARTMENTS} />
+            {/* Stats bar */}
+            <StatsBar apartments={APARTMENTS} />
 
-                {/* Sort options */}
-                <View style={styles.sortRow}>
-                    <Text style={styles.sortLabel}>Sort by</Text>
-                    <View style={styles.sortOptions}>
-                        {(["rent", "rating", "commute"] as const).map((option) => {
-                            const isActive = sortBy === option;
-                            const labels = { rent: "Rent", rating: "Rating", commute: "Commute" };
-                            const icons = {
-                                rent: "cash-outline",
-                                rating: "star-outline",
-                                commute: "car-outline"
-                            } as const;
-                            return (
-                                <Pressable
-                                    key={option}
-                                    onPress={() => setSortBy(option)}
+            {/* Sort options */}
+            <View style={styles.sortRow}>
+                <Text style={styles.sortLabel}>Sort by</Text>
+                <View style={styles.sortOptions}>
+                    {(["rent", "rating", "commute"] as const).map((option) => {
+                        const isActive = sortBy === option;
+                        const labels = { rent: "Rent", rating: "Rating", commute: "Commute" };
+                        const icons = {
+                            rent: "cash-outline",
+                            rating: "star-outline",
+                            commute: "car-outline"
+                        } as const;
+                        return (
+                            <Pressable
+                                key={option}
+                                onPress={() => setSortBy(option)}
+                                style={[
+                                    styles.sortPill,
+                                    {
+                                        backgroundColor: isActive ? theme.colors.primary : theme.colors.surfaceContainer
+                                    }
+                                ]}
+                            >
+                                <Ionicons
+                                    name={icons[option]}
+                                    size={13}
+                                    color={isActive ? "#ffffff" : theme.colors.onSurfaceVariant}
+                                />
+                                <Text
                                     style={[
-                                        styles.sortPill,
-                                        {
-                                            backgroundColor: isActive
-                                                ? theme.colors.primary
-                                                : theme.colors.surfaceContainer
-                                        }
+                                        styles.sortPillText,
+                                        { color: isActive ? "#ffffff" : theme.colors.onSurfaceVariant }
                                     ]}
                                 >
-                                    <Ionicons
-                                        name={icons[option]}
-                                        size={13}
-                                        color={isActive ? "#ffffff" : theme.colors.onSurfaceVariant}
-                                    />
-                                    <Text
-                                        style={[
-                                            styles.sortPillText,
-                                            { color: isActive ? "#ffffff" : theme.colors.onSurfaceVariant }
-                                        ]}
-                                    >
-                                        {labels[option]}
-                                    </Text>
-                                </Pressable>
-                            );
-                        })}
-                    </View>
+                                    {labels[option]}
+                                </Text>
+                            </Pressable>
+                        );
+                    })}
                 </View>
+            </View>
 
-                {/* Apartment listings */}
-                <View style={styles.listingsContainer}>
-                    {sorted.map((apartment) => (
-                        <ApartmentCard
-                            key={apartment.id}
-                            apartment={apartment}
-                            expanded={expandedId === apartment.id}
-                            favorited={favorites.has(apartment.id)}
-                            rating={ratings[apartment.id] ?? apartment.rating}
-                            onToggleExpand={() => toggleExpand(apartment.id)}
-                            onToggleFavorite={() => toggleFavorite(apartment.id)}
-                            onRate={(value) => handleRate(apartment.id, value)}
-                        />
-                    ))}
-                </View>
+            {/* Apartment listings */}
+            <View style={styles.listingsContainer}>
+                {sorted.map((apartment) => (
+                    <ApartmentCard
+                        key={apartment.id}
+                        apartment={apartment}
+                        expanded={expandedId === apartment.id}
+                        favorited={favorites.has(apartment.id)}
+                        rating={ratings[apartment.id] ?? apartment.rating}
+                        onToggleExpand={() => toggleExpand(apartment.id)}
+                        onToggleFavorite={() => toggleFavorite(apartment.id)}
+                        onRate={(value) => handleRate(apartment.id, value)}
+                    />
+                ))}
+            </View>
 
-                {/* Bottom spacer */}
-                <View style={{ height: 40 }} />
-            </ScrollView>
-        </View>
+            {/* Bottom spacer */}
+            <View style={{ height: 40 }} />
+        </ShowcasePage>
     );
 }
 
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    root: {
-        flex: 1
-    },
     scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center" as const,
+        paddingHorizontal: 0,
         paddingBottom: 24
     },
 

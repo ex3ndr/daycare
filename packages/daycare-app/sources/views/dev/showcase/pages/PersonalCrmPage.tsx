@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type ContactCategory = "All" | "Clients" | "Partners" | "Personal";
 type RelationshipStrength = "strong" | "warm" | "cold";
@@ -310,7 +311,7 @@ export function PersonalCrmPage() {
 
     return (
         <View style={styles.root}>
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <ShowcasePage contentContainerStyle={{ paddingHorizontal: 0, paddingBottom: 24 }}>
                 {/* Search bar + filter pills */}
                 <View style={styles.searchRow}>
                     <Ionicons name="search" size={18} color={theme.colors.onSurfaceVariant} style={styles.searchIcon} />
@@ -374,7 +375,7 @@ export function PersonalCrmPage() {
 
                 {/* Bottom spacer for FAB */}
                 <View style={{ height: 80 }} />
-            </ScrollView>
+            </ShowcasePage>
 
             {/* Floating Add Contact button */}
             <Pressable style={styles.fab}>
@@ -387,12 +388,6 @@ export function PersonalCrmPage() {
 const styles = StyleSheet.create((theme) => ({
     root: {
         flex: 1
-    },
-    scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center" as const,
-        paddingBottom: 24
     },
     searchRow: {
         flexDirection: "row" as const,

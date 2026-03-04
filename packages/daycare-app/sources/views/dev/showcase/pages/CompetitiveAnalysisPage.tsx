@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "../components/ShowcasePage";
 
 // --- Types ---
 
@@ -662,11 +663,7 @@ export function CompetitiveAnalysisPage() {
     const swot = SWOT_DATA[selected];
 
     return (
-        <ScrollView
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={s.root}
-            showsVerticalScrollIndicator={false}
-        >
+        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} contentContainerStyle={s.root}>
             {/* Page title */}
             <View style={s.pageHeader}>
                 <View style={[s.pageIconCircle, { backgroundColor: `${theme.colors.primary}18` }]}>
@@ -694,7 +691,7 @@ export function CompetitiveAnalysisPage() {
 
             {/* SWOT */}
             <SwotSection data={swot} />
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -702,11 +699,7 @@ export function CompetitiveAnalysisPage() {
 
 const s = StyleSheet.create((theme) => ({
     root: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
         padding: 16,
-        paddingBottom: 40,
         gap: 20
     },
 

@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -442,9 +443,9 @@ export function GymWorkoutPage() {
     const grouped = React.useMemo(() => groupByMuscle(exercises), [exercises]);
 
     return (
-        <ScrollView
+        <ShowcasePage
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={{ paddingBottom: 48 }}
         >
             {/* Workout header */}
             <WorkoutHeader completedCount={completedCount} totalCount={totalCount} duration={stats.estimatedDuration} />
@@ -469,21 +470,13 @@ export function GymWorkoutPage() {
 
             {/* Summary */}
             <SummarySection stats={stats} completedCount={completedCount} totalCount={totalCount} />
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
-        paddingHorizontal: 16,
-        paddingBottom: 48
-    },
-
     // Header card
     headerCard: {
         borderRadius: 20,

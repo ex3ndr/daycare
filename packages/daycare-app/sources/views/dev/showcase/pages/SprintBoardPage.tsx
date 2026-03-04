@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -444,9 +445,12 @@ export function SprintBoardPage() {
     const { theme } = useUnistyles();
 
     return (
-        <ScrollView
-            contentContainerStyle={[s.root, { backgroundColor: theme.colors.surfaceContainerHighest }]}
-            showsVerticalScrollIndicator={false}
+        <ShowcasePage
+            contentContainerStyle={{
+                paddingHorizontal: 0,
+                paddingBottom: 32,
+                backgroundColor: theme.colors.surfaceContainerHighest
+            }}
         >
             {/* Sprint header */}
             <View style={s.sprintHeader}>
@@ -518,20 +522,13 @@ export function SprintBoardPage() {
                     <KanbanColumn key={column.status} column={column} index={index} />
                 ))}
             </ScrollView>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
 // --- Styles ---
 
 const s = StyleSheet.create((theme) => ({
-    root: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
-        paddingBottom: 32
-    },
-
     // Sprint header
     sprintHeader: {
         padding: 16,

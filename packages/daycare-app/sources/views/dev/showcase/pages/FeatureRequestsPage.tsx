@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -998,10 +999,9 @@ export function FeatureRequestsPage() {
 
     return (
         <View style={pageStyles.root}>
-            <ScrollView
+            <ShowcasePage
                 style={{ flex: 1, backgroundColor: theme.colors.surface }}
-                contentContainerStyle={pageStyles.scrollContent}
-                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingTop: 16, gap: 16 }}
             >
                 {/* Page title + icon */}
                 <View style={pageStyles.titleRow}>
@@ -1047,7 +1047,7 @@ export function FeatureRequestsPage() {
                         </Text>
                     </View>
                 )}
-            </ScrollView>
+            </ShowcasePage>
 
             {/* Detail panel modal */}
             <DetailPanel
@@ -1066,14 +1066,6 @@ export function FeatureRequestsPage() {
 const pageStyles = StyleSheet.create((theme) => ({
     root: {
         flex: 1
-    },
-    scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
-        padding: 16,
-        gap: 16,
-        paddingBottom: 40
     },
     titleRow: {
         flexDirection: "row",

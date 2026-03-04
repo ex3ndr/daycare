@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "../components/ShowcasePage";
 
 // --- Types ---
 
@@ -881,10 +882,9 @@ export function SupportTicketsPage() {
     }, [activeFilter, tickets]);
 
     return (
-        <ScrollView
+        <ShowcasePage
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
             contentContainerStyle={pageStyles.scrollContent}
-            showsVerticalScrollIndicator={false}
         >
             {/* Metrics Row */}
             <View style={pageStyles.metricsRow}>
@@ -948,18 +948,14 @@ export function SupportTicketsPage() {
                           ))}
                       </View>
                   )}
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
 const pageStyles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
         padding: 16,
-        gap: 16,
-        paddingBottom: 40
+        gap: 16
     },
     metricsRow: {
         flexDirection: "row",

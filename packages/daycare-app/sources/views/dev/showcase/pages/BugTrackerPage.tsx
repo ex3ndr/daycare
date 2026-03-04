@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -604,9 +605,9 @@ export function BugTrackerPage() {
     }, [activeFilter]);
 
     return (
-        <ScrollView
+        <ShowcasePage
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={pageStyles.scrollContent}
+            contentContainerStyle={{ paddingTop: 16, gap: 16 }}
         >
             {/* Metrics Row */}
             <View style={pageStyles.metricsRow}>
@@ -641,19 +642,11 @@ export function BugTrackerPage() {
                           ))}
                       </View>
                   )}
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
 const pageStyles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
-        padding: 16,
-        gap: 16,
-        paddingBottom: 40
-    },
     metricsRow: {
         flexDirection: "row",
         gap: 8

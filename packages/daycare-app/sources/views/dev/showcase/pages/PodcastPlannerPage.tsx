@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "../components/ShowcasePage";
 
 // --- Types ---
 
@@ -655,16 +656,7 @@ export function PodcastPlannerPage() {
     const inProgressCount = EPISODES.filter((e) => e.status === "recording" || e.status === "editing").length;
 
     return (
-        <ScrollView
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={{
-                maxWidth: theme.layout.maxWidth,
-                width: "100%",
-                alignSelf: "center",
-                paddingHorizontal: 16,
-                paddingBottom: 40
-            }}
-        >
+        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }}>
             {/* Page Header */}
             <View style={styles.pageHeader}>
                 <View style={styles.pageHeaderRow}>
@@ -718,7 +710,7 @@ export function PodcastPlannerPage() {
                     </View>
                 </View>
             ))}
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 

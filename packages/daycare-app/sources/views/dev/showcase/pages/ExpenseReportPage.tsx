@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ScrollView, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Data types ---
 
@@ -202,15 +203,7 @@ export function ExpenseReportPage() {
     const { theme } = useUnistyles();
 
     return (
-        <ScrollView
-            contentContainerStyle={{
-                maxWidth: theme.layout.maxWidth,
-                width: "100%",
-                alignSelf: "center",
-                paddingHorizontal: 20,
-                paddingVertical: 24
-            }}
-        >
+        <ShowcasePage contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 24 }}>
             {/* 1. Report header */}
             <View style={pageStyles.header}>
                 <Text style={[pageStyles.monthTitle, { color: theme.colors.onSurface }]}>February 2026</Text>
@@ -267,7 +260,7 @@ export function ExpenseReportPage() {
                 <Text style={[pageStyles.footerLabel, { color: theme.colors.onSurfaceVariant }]}>Total</Text>
                 <Text style={[pageStyles.footerTotal, { color: theme.colors.onSurface }]}>{formatAmount(TOTAL)}</Text>
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 

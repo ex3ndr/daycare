@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -186,15 +187,7 @@ export function HabitTrackerPage() {
     const maxStreak = streakLeaders.length > 0 ? streakLeaders[0].streak : 1;
 
     return (
-        <ScrollView
-            contentContainerStyle={{
-                maxWidth: theme.layout.maxWidth,
-                width: "100%",
-                alignSelf: "center",
-                paddingHorizontal: 16,
-                paddingBottom: 40
-            }}
-        >
+        <ShowcasePage>
             {/* --- Top section: Progress ring + date --- */}
             <View style={styles.ringSection}>
                 <ProgressRing
@@ -344,7 +337,7 @@ export function HabitTrackerPage() {
                     </View>
                 </View>
             )}
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 

@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ScrollView, Text, TextInput, View } from "react-native";
+import { Text, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -299,7 +300,7 @@ export function MeetingNotesPage() {
     const { theme } = useUnistyles();
 
     return (
-        <ScrollView style={styles.root(theme.colors.surface)} contentContainerStyle={styles.contentContainer}>
+        <ShowcasePage style={styles.root(theme.colors.surface)} contentContainerStyle={{ paddingHorizontal: 0 }}>
             <SearchBar />
 
             {meetingGroups.map((group, groupIdx) => (
@@ -319,7 +320,7 @@ export function MeetingNotesPage() {
 
             {/* Bottom spacing */}
             <View style={styles.bottomSpacer} />
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -330,13 +331,6 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1,
         backgroundColor: bg
     }),
-    contentContainer: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center" as const,
-        paddingBottom: 40
-    },
-
     // Search
     searchContainer: {
         paddingHorizontal: 16,

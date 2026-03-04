@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -228,16 +229,7 @@ export function ReadingListPage() {
     const { theme } = useUnistyles();
 
     return (
-        <ScrollView
-            contentContainerStyle={{
-                maxWidth: theme.layout.maxWidth,
-                width: "100%",
-                alignSelf: "center",
-                paddingHorizontal: 16,
-                paddingVertical: 20,
-                gap: 28
-            }}
-        >
+        <ShowcasePage contentContainerStyle={{ paddingVertical: 20, paddingBottom: 20, gap: 28 }}>
             {/* Top metrics row */}
             <View style={s.metricsRow}>
                 <View style={s.metricCard(theme.colors.surfaceContainer, theme.colors.primary)}>
@@ -328,7 +320,7 @@ export function ReadingListPage() {
                     ))}
                 </View>
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 

@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "../components/ShowcasePage";
 
 // --- Types ---
 
@@ -605,7 +606,7 @@ export function HomeMaintenancePage() {
     }, [filteredTasks]);
 
     return (
-        <ScrollView
+        <ShowcasePage
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
             contentContainerStyle={styles.scrollContent}
         >
@@ -703,7 +704,7 @@ export function HomeMaintenancePage() {
                     </Text>
                 </View>
             )}
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -711,9 +712,6 @@ export function HomeMaintenancePage() {
 
 const styles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
         padding: 16,
         gap: 16,
         paddingBottom: 48

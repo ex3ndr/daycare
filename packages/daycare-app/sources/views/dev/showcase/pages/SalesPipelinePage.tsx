@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -616,9 +617,8 @@ export function SalesPipelinePage() {
     }, []);
 
     return (
-        <ScrollView
-            contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.surface }]}
-            showsVerticalScrollIndicator={false}
+        <ShowcasePage
+            contentContainerStyle={{ paddingHorizontal: 0, paddingBottom: 48, backgroundColor: theme.colors.surface }}
         >
             {/* Revenue Metrics Hero */}
             <View style={[styles.metricsHero, { backgroundColor: theme.colors.surfaceContainer }]}>
@@ -726,20 +726,13 @@ export function SalesPipelinePage() {
                     );
                 })}
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
-        paddingBottom: 48
-    },
-
     // Revenue metrics hero
     metricsHero: {
         marginHorizontal: 16,

@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "../components/ShowcasePage";
 
 // --- Types ---
 
@@ -554,7 +555,7 @@ export function InventoryManagementPage() {
     }, []);
 
     return (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ShowcasePage contentContainerStyle={styles.scrollContent}>
             {/* Reorder Alert Banner */}
             <ReorderBanner items={lowStockItems} onDismiss={handleDismissAlert} dismissedIds={dismissedAlerts} />
 
@@ -645,7 +646,7 @@ export function InventoryManagementPage() {
                     );
                 })}
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -653,10 +654,6 @@ export function InventoryManagementPage() {
 
 const styles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
-        paddingHorizontal: 16,
         paddingTop: 20,
         paddingBottom: 48
     },

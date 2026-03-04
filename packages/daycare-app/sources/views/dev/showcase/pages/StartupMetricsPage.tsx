@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "../components/ShowcasePage";
 
 // --- Types ---
 
@@ -553,10 +554,7 @@ export function StartupMetricsPage() {
     }, []);
 
     return (
-        <ScrollView
-            contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.surface }]}
-            showsVerticalScrollIndicator={false}
-        >
+        <ShowcasePage contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.surface }]}>
             {/* Hero summary */}
             <View style={styles.heroSection}>
                 <Text style={[styles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>TOTAL MRR</Text>
@@ -723,7 +721,7 @@ export function StartupMetricsPage() {
                     ))}
                 </View>
             )}
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -731,10 +729,6 @@ export function StartupMetricsPage() {
 
 const styles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
-        paddingHorizontal: 16,
         paddingBottom: 60
     },
 

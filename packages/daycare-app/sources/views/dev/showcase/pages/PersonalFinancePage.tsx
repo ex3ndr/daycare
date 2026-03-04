@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -495,16 +496,7 @@ export function PersonalFinancePage() {
     const overallBudgetPct = Math.min((totalSpent / totalBudget) * 100, 100);
 
     return (
-        <ScrollView
-            contentContainerStyle={{
-                maxWidth: theme.layout.maxWidth,
-                width: "100%",
-                alignSelf: "center",
-                paddingHorizontal: 16,
-                paddingVertical: 24,
-                paddingBottom: 60
-            }}
-        >
+        <ShowcasePage contentContainerStyle={{ paddingTop: 24, paddingBottom: 60 }}>
             {/* --- Hero: Net Worth --- */}
             <View style={pageStyles.hero}>
                 <Text style={[pageStyles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>Net Worth</Text>
@@ -675,7 +667,7 @@ export function PersonalFinancePage() {
                     ))}
                 </View>
             )}
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 

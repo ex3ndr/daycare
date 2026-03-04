@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -328,7 +329,7 @@ export function RecruitmentPipelinePage() {
     };
 
     return (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.surface }]}>
+        <ShowcasePage contentContainerStyle={{ paddingHorizontal: 0, backgroundColor: theme.colors.surface }}>
             {/* Job opening selector */}
             <View style={styles.jobSelectorRow}>
                 {jobOpenings.map((opening, idx) => {
@@ -413,19 +414,13 @@ export function RecruitmentPipelinePage() {
                     </View>
                 )}
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingBottom: 40,
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center"
-    },
     jobSelectorRow: {
         flexDirection: "row",
         gap: 10,

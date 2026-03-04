@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "../components/ShowcasePage";
 
 // --- Types ---
 
@@ -524,16 +525,7 @@ export function OkrTrackerPage() {
     const overallPercentage = totalKRs > 0 ? Math.round(totalProgress / totalKRs) : 0;
 
     return (
-        <ScrollView
-            contentContainerStyle={{
-                maxWidth: theme.layout.maxWidth,
-                width: "100%",
-                alignSelf: "center",
-                paddingHorizontal: 16,
-                paddingBottom: 48
-            }}
-            showsVerticalScrollIndicator={false}
-        >
+        <ShowcasePage contentContainerStyle={{ paddingBottom: 48 }}>
             {/* --- Quarter Selector --- */}
             <View style={styles.quarterSelectorContainer}>
                 <View style={[styles.quarterSelector, { backgroundColor: theme.colors.surfaceContainer }]}>
@@ -598,7 +590,7 @@ export function OkrTrackerPage() {
                     <ObjectiveSection key={obj.id} objective={obj} />
                 ))}
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 

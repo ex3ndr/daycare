@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "../components/ShowcasePage";
 
 // --- Types ---
 
@@ -571,10 +572,7 @@ export function JobApplicationsPage() {
     }, []);
 
     return (
-        <ScrollView
-            contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.surface }]}
-            showsVerticalScrollIndicator={false}
-        >
+        <ShowcasePage contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.surface }]}>
             {/* Header */}
             <View style={styles.headerContainer}>
                 <View style={styles.headerTitleRow}>
@@ -739,7 +737,7 @@ export function JobApplicationsPage() {
                     );
                 })}
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -747,9 +745,7 @@ export function JobApplicationsPage() {
 
 const styles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center" as const,
+        paddingHorizontal: 0,
         paddingBottom: 48
     },
 

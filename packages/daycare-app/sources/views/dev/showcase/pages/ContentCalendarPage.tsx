@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -445,15 +446,7 @@ export function ContentCalendarPage() {
     }));
 
     return (
-        <ScrollView
-            contentContainerStyle={{
-                maxWidth: theme.layout.maxWidth,
-                width: "100%",
-                alignSelf: "center",
-                padding: 16,
-                gap: 16
-            }}
-        >
+        <ShowcasePage contentContainerStyle={{ paddingTop: 16, paddingBottom: 16, gap: 16 }}>
             {/* Platform filter pills */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
                 <PlatformPill
@@ -506,7 +499,7 @@ export function ContentCalendarPage() {
 
             {/* Legend */}
             <Legend />
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 

@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "../components/ShowcasePage";
 
 // --- Types ---
 
@@ -653,16 +654,7 @@ export function EventPlanningPage() {
     const spentFraction = SPENT_BUDGET / TOTAL_BUDGET;
 
     return (
-        <ScrollView
-            contentContainerStyle={{
-                maxWidth: theme.layout.maxWidth,
-                width: "100%",
-                alignSelf: "center",
-                padding: 16,
-                gap: 20,
-                paddingBottom: 48
-            }}
-        >
+        <ShowcasePage contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: 48 }}>
             {/* Hero event card */}
             <View style={[heroStyles.card, { backgroundColor: theme.colors.primary }]}>
                 <View style={heroStyles.topRow}>
@@ -801,7 +793,7 @@ export function EventPlanningPage() {
                     </View>
                 </View>
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
