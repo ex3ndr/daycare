@@ -18,6 +18,7 @@ import type { ToolResolver } from "../../engine/modules/toolResolver.js";
 import type { Secret } from "../../engine/secrets/secretTypes.js";
 import type { Webhooks } from "../../engine/webhook/webhooks.js";
 import { getLogger } from "../../log.js";
+import type { PsqlService } from "../../services/psql/PsqlService.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
 import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
@@ -57,6 +58,7 @@ export type AppServerOptions = {
     tokenStatsFetch: (ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>;
     documents: DocumentsRepository | null;
     keyValues: KeyValuesRepository | null;
+    psql?: PsqlService | null;
     secrets: {
         list: (ctx: Context) => Promise<Secret[]>;
         add: (ctx: Context, secret: Secret) => Promise<void>;
@@ -88,6 +90,7 @@ export class AppServer {
     private readonly tokenStatsFetch: AppServerOptions["tokenStatsFetch"];
     private readonly documents: DocumentsRepository | null;
     private readonly keyValues: KeyValuesRepository | null;
+    private readonly psql: PsqlService | null;
     private readonly secrets: AppServerOptions["secrets"];
     private readonly connectorTargetResolve: AppServerOptions["connectorTargetResolve"];
     private readonly logger = getLogger("api.app-server");
@@ -113,6 +116,7 @@ export class AppServer {
         this.tokenStatsFetch = options.tokenStatsFetch;
         this.documents = options.documents;
         this.keyValues = options.keyValues;
+        this.psql = options.psql ?? null;
         this.secrets = options.secrets;
         this.connectorTargetResolve = options.connectorTargetResolve;
     }
@@ -258,6 +262,7 @@ export class AppServer {
             tokenStatsFetch: this.tokenStatsFetch,
             documents: this.documents,
             keyValues: this.keyValues,
+            psql: this.psql,
             secrets: this.secrets
         });
         if (handled) {

@@ -12,5 +12,9 @@ export const migrations: Migration[] = [
     {
         name: "20260303120000_model_role_rules",
         fileName: "20260303120000_model_role_rules.sql"
+    },
+    {
+        name: "20260304101500_psql_databases",
+        fileName: "20260304101500_psql_databases.sql"
     }
 ];

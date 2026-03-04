@@ -19,6 +19,7 @@ import { KeyValuesRepository } from "./keyValuesRepository.js";
 import { ModelRoleRulesRepository } from "./modelRoleRulesRepository.js";
 import { ObservationLogRepository } from "./observationLogRepository.js";
 import { ProcessesRepository } from "./processesRepository.js";
+import { PsqlDatabasesRepository } from "./psqlDatabasesRepository.js";
 import { SessionsRepository } from "./sessionsRepository.js";
 import { SignalEventsRepository } from "./signalEventsRepository.js";
 import { SignalSubscriptionsRepository } from "./signalSubscriptionsRepository.js";
@@ -56,6 +57,7 @@ export class Storage {
     readonly tokenStats: TokenStatsRepository;
     readonly keyValues: KeyValuesRepository;
     readonly modelRoleRules: ModelRoleRulesRepository;
+    readonly psqlDatabases: PsqlDatabasesRepository;
     readonly observationLog: ObservationLogRepository;
 
     readonly db: DaycareDb;
@@ -88,6 +90,7 @@ export class Storage {
         this.tokenStats = new TokenStatsRepository(db);
         this.keyValues = new KeyValuesRepository(db);
         this.modelRoleRules = new ModelRoleRulesRepository(db);
+        this.psqlDatabases = new PsqlDatabasesRepository(db);
         this.observationLog = new ObservationLogRepository(db);
     }
 

@@ -473,6 +473,17 @@ export class Agent {
                       userDownloadsDir: this.userHome.downloads
                   })
                 : [];
+        const extraSections = [...resolvedPrompts.systemPromptSections];
+        if (this.agentSystem.psqlService) {
+            try {
+                const psqlSection = (await this.agentSystem.psqlService.systemPromptSection(this.ctx)).trim();
+                if (psqlSection.length > 0) {
+                    extraSections.push(psqlSection);
+                }
+            } catch (error) {
+                logger.warn({ agentId: this.id, error }, "error: Failed to build psql system prompt section");
+            }
+        }
         const systemPromptContext: AgentSystemPromptContext = {
             provider: providerSettings?.id,
             model: providerSettings?.model,
@@ -483,7 +494,7 @@ export class Agent {
             agentSystem: this.agentSystem,
             userHome: this.userHome,
             pluginPrompts,
-            extraSections: resolvedPrompts.systemPromptSections
+            extraSections
         };
         const systemPrompt = await agentSystemPrompt(systemPromptContext);
 

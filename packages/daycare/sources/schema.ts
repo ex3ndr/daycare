@@ -547,6 +547,21 @@ export const keyValuesTable = pgTable(
     ]
 );
 
+export const psqlDatabasesTable = pgTable(
+    "psql_databases",
+    {
+        userId: text("user_id").notNull(),
+        id: text("id").notNull(),
+        name: text("name").notNull(),
+        createdAt: bigint("created_at", { mode: "number" }).notNull()
+    },
+    (table) => [
+        primaryKey({ columns: [table.userId, table.id] }),
+        index("idx_psql_databases_user_created").on(table.userId, table.createdAt),
+        index("idx_psql_databases_user_name").on(table.userId, table.name)
+    ]
+);
+
 export const observationLogTable = pgTable(
     "observation_log",
     {
@@ -617,6 +632,7 @@ export const schema = {
     tokenStatsHourlyTable,
     keyValuesTable,
     observationLogTable,
+    psqlDatabasesTable,
     modelRoleRulesTable
 };
 

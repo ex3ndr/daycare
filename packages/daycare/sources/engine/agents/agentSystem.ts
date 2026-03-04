@@ -15,6 +15,7 @@ import type {
 import type { AuthStore } from "../../auth/store.js";
 import { getLogger } from "../../log.js";
 import type { ModelRoles } from "../../providers/modelRoles.js";
+import type { PsqlService } from "../../services/psql/PsqlService.js";
 import type { AgentDbRecord } from "../../storage/databaseTypes.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageResolve } from "../../storage/storageResolve.js";
@@ -86,6 +87,7 @@ export type AgentSystemOptions = {
     pluginManager: PluginManager;
     inferenceRouter: InferenceRouter;
     authStore: AuthStore;
+    psqlService?: PsqlService;
     secrets?: Secrets;
     delayedSignals?: DelayedSignalsFacade;
     modelRoles?: ModelRoles;
@@ -103,6 +105,7 @@ export class AgentSystem {
     readonly pluginManager: PluginManager;
     readonly inferenceRouter: InferenceRouter;
     readonly authStore: AuthStore;
+    readonly psqlService: PsqlService | null;
     readonly secrets: Secrets;
     readonly modelRoles: ModelRoles | null;
     private readonly delayedSignals: DelayedSignalsFacade | null;
@@ -126,6 +129,7 @@ export class AgentSystem {
         this.pluginManager = options.pluginManager;
         this.inferenceRouter = options.inferenceRouter;
         this.authStore = options.authStore;
+        this.psqlService = options.psqlService ?? null;
         this.secrets =
             options.secrets ??
             new Secrets({

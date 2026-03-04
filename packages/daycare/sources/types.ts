@@ -165,6 +165,17 @@ export type {
     SandboxWriteArgs,
     SandboxWriteResult
 } from "./sandbox/sandboxTypes.js";
+// PSQL
+export type {
+    PsqlColumnDef,
+    PsqlDataAddOp,
+    PsqlDatabase,
+    PsqlDataDeleteOp,
+    PsqlDataOp,
+    PsqlDataUpdateOp,
+    PsqlRow,
+    PsqlSchemaDeclaration
+} from "./services/psql/psqlTypes.js";
 // Storage
 export type {
     DocumentDbRecord,
@@ -173,6 +184,7 @@ export type {
     ObservationLogDbRecord,
     ObservationLogFindOptions,
     ObservationLogRecentOptions,
+    PsqlDatabaseDbRecord,
     UserConnectorKeyDbRecord,
     UserDbRecord
 } from "./storage/databaseTypes.js";

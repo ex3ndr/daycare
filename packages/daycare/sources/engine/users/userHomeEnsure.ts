@@ -9,6 +9,7 @@ import type { UserHome } from "./userHome.js";
  */
 export async function userHomeEnsure(userHome: UserHome): Promise<void> {
     await Promise.all([
+        fs.mkdir(userHome.databases, { recursive: true }),
         fs.mkdir(userHome.skillsPersonal, { recursive: true }),
         fs.mkdir(userHome.skillsActive, { recursive: true }),
         fs.mkdir(userHome.desktop, { recursive: true }),

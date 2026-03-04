@@ -626,6 +626,13 @@ export type KeyValueDbRecord = {
     updatedAt: number;
 };
 
+export type PsqlDatabaseDbRecord = {
+    userId: string;
+    id: string;
+    name: string;
+    createdAt: number;
+};
+
 export type ObservationLogDbRecord = {
     id: string;
     userId: string;

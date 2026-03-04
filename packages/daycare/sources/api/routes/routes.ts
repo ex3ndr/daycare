@@ -3,6 +3,7 @@ import type { Tool } from "@mariozechner/pi-ai";
 import type { AgentSkill, Context, TaskActiveSummary, TaskListAllResult } from "@/types";
 import type { EngineEventBus } from "../../engine/ipc/events.js";
 import type { Secret } from "../../engine/secrets/secretTypes.js";
+import type { PsqlService } from "../../services/psql/PsqlService.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
 import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
@@ -10,6 +11,7 @@ import type { UsersRepository } from "../../storage/usersRepository.js";
 import { agentsRouteHandle } from "./agents/agentsRoutes.js";
 import type { TokenStatsFetchOptions } from "./costs/costsRoutes.js";
 import { costsRouteHandle } from "./costs/costsRoutes.js";
+import { databasesRouteHandle } from "./databases/databasesRoutes.js";
 import { documentsRouteHandle } from "./documents/documentsRoutes.js";
 import { kvRouteHandle } from "./kv/kvRoutes.js";
 import { profileRouteHandle } from "./profile/profileRoutes.js";
@@ -36,6 +38,7 @@ export type ApiRouteContext = {
     tokenStatsFetch: ((ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>) | null;
     documents: DocumentsRepository | null;
     keyValues: KeyValuesRepository | null;
+    psql: PsqlService | null;
     secrets: {
         list: (ctx: Context) => Promise<Secret[]>;
         add: (ctx: Context, secret: Secret) => Promise<void>;
@@ -125,6 +128,14 @@ export async function apiRouteHandle(
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody,
             keyValues: context.keyValues
+        });
+    }
+    if (pathname.startsWith("/databases")) {
+        return databasesRouteHandle(request, response, pathname, {
+            ctx: context.ctx,
+            sendJson: context.sendJson,
+            readJsonBody: context.readJsonBody,
+            psql: context.psql
         });
     }
 

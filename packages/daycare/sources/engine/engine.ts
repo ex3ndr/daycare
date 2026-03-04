@@ -12,6 +12,8 @@ import { getProviderDefinition } from "../providers/catalog.js";
 import { ProviderManager } from "../providers/manager.js";
 import { ModelRoles } from "../providers/modelRoles.js";
 import { dockerContainersStaleRemove } from "../sandbox/docker/dockerContainersStaleRemove.js";
+import { PsqlService } from "../services/psql/PsqlService.js";
+import { psqlToolsBuild } from "../services/psql/psqlTools.js";
 import { databaseClose } from "../storage/databaseClose.js";
 import { databaseMigrate } from "../storage/databaseMigrate.js";
 import { databaseOpen } from "../storage/databaseOpen.js";
@@ -132,6 +134,7 @@ export class Engine {
     readonly pluginManager: PluginManager;
     readonly providerManager: ProviderManager;
     readonly storage: Storage;
+    readonly psqlService: PsqlService;
     readonly agentSystem: AgentSystem;
     readonly crons: Crons;
     readonly webhooks: Webhooks;
@@ -167,6 +170,10 @@ export class Engine {
             logger.info("skip: Auto migrations disabled by engine.db.autoMigrate=false");
         }
         this.storage = Storage.fromDatabase(db);
+        this.psqlService = new PsqlService({
+            usersDir: this.config.current.usersDir,
+            databases: this.storage.psqlDatabases
+        });
         // memoryWorker is initialized after inferenceRouter — see below
         this.eventBus = options.eventBus;
         this.signals = new Signals({
@@ -356,7 +363,8 @@ export class Engine {
             authStore: this.authStore,
             secrets: this.secrets,
             delayedSignals: this.delayedSignals,
-            modelRoles: this.modelRoles
+            modelRoles: this.modelRoles,
+            psqlService: this.psqlService
         });
         this.friends = new Friends({
             storage: this.storage,
@@ -638,6 +646,7 @@ export class Engine {
             tokenStatsFetch: (ctx, options) => this.storage.tokenStats.findMany(ctx, options),
             documents: this.storage.documents,
             keyValues: this.storage.keyValues,
+            psql: this.psqlService,
             secrets: this.secrets,
             connectorTargetResolve: (path) => this.connectorTargetResolve(path)
         });
@@ -754,6 +763,9 @@ export class Engine {
         this.modules.tools.register("core", documentAppendToolBuild());
         this.modules.tools.register("core", documentPatchToolBuild());
         this.modules.tools.register("core", documentWriteToolBuild());
+        for (const tool of psqlToolsBuild(this.psqlService)) {
+            this.modules.tools.register("core", tool);
+        }
         logger.debug(
             "register: Core tools registered: tasks, topology, user_profile_update, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, swarms, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, document_read, document_append, document_patch, document_write"
         );

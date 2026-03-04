@@ -1,6 +1,0 @@
-{
-  "id": "database",
-  "name": "Database",
-  "description": "PGlite-backed database with markdown context.",
-  "entry": "./plugin.js"
-}
