@@ -2,12 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
+import { Card } from "@/components/Card";
 
 // --- Types ---
+import { Grid } from "@/components/Grid";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type TimeOfDay = "morning" | "afternoon" | "evening";
-
 type Habit = {
     id: string;
     name: string;
@@ -20,20 +21,103 @@ type Habit = {
 // --- Mock data ---
 
 const initialHabits: Habit[] = [
-    { id: "1", name: "Meditate", icon: "leaf-outline", completed: true, streak: 14, timeOfDay: "morning" },
-    { id: "2", name: "Run", icon: "fitness-outline", completed: true, streak: 7, timeOfDay: "morning" },
-    { id: "3", name: "Read", icon: "book-outline", completed: true, streak: 21, timeOfDay: "morning" },
-    { id: "4", name: "Eat Well", icon: "nutrition-outline", completed: true, streak: 5, timeOfDay: "morning" },
-    { id: "5", name: "Guitar", icon: "musical-notes-outline", completed: false, streak: 3, timeOfDay: "morning" },
-    { id: "6", name: "Walk", icon: "walk-outline", completed: true, streak: 12, timeOfDay: "afternoon" },
-    { id: "7", name: "Spanish", icon: "school-outline", completed: true, streak: 30, timeOfDay: "afternoon" },
-    { id: "8", name: "No Sugar", icon: "close-circle-outline", completed: false, streak: 0, timeOfDay: "afternoon" },
-    { id: "9", name: "Stretch", icon: "body-outline", completed: true, streak: 9, timeOfDay: "afternoon" },
-    { id: "10", name: "Journal", icon: "pencil-outline", completed: false, streak: 2, timeOfDay: "evening" },
-    { id: "11", name: "Read", icon: "moon-outline", completed: false, streak: 18, timeOfDay: "evening" },
-    { id: "12", name: "No Screens", icon: "phone-portrait-outline", completed: false, streak: 0, timeOfDay: "evening" }
+    {
+        id: "1",
+        name: "Meditate",
+        icon: "leaf-outline",
+        completed: true,
+        streak: 14,
+        timeOfDay: "morning"
+    },
+    {
+        id: "2",
+        name: "Run",
+        icon: "fitness-outline",
+        completed: true,
+        streak: 7,
+        timeOfDay: "morning"
+    },
+    {
+        id: "3",
+        name: "Read",
+        icon: "book-outline",
+        completed: true,
+        streak: 21,
+        timeOfDay: "morning"
+    },
+    {
+        id: "4",
+        name: "Eat Well",
+        icon: "nutrition-outline",
+        completed: true,
+        streak: 5,
+        timeOfDay: "morning"
+    },
+    {
+        id: "5",
+        name: "Guitar",
+        icon: "musical-notes-outline",
+        completed: false,
+        streak: 3,
+        timeOfDay: "morning"
+    },
+    {
+        id: "6",
+        name: "Walk",
+        icon: "walk-outline",
+        completed: true,
+        streak: 12,
+        timeOfDay: "afternoon"
+    },
+    {
+        id: "7",
+        name: "Spanish",
+        icon: "school-outline",
+        completed: true,
+        streak: 30,
+        timeOfDay: "afternoon"
+    },
+    {
+        id: "8",
+        name: "No Sugar",
+        icon: "close-circle-outline",
+        completed: false,
+        streak: 0,
+        timeOfDay: "afternoon"
+    },
+    {
+        id: "9",
+        name: "Stretch",
+        icon: "body-outline",
+        completed: true,
+        streak: 9,
+        timeOfDay: "afternoon"
+    },
+    {
+        id: "10",
+        name: "Journal",
+        icon: "pencil-outline",
+        completed: false,
+        streak: 2,
+        timeOfDay: "evening"
+    },
+    {
+        id: "11",
+        name: "Read",
+        icon: "moon-outline",
+        completed: false,
+        streak: 18,
+        timeOfDay: "evening"
+    },
+    {
+        id: "12",
+        name: "No Screens",
+        icon: "phone-portrait-outline",
+        completed: false,
+        streak: 0,
+        timeOfDay: "evening"
+    }
 ];
-
 const TIME_DOT_COLORS: Record<TimeOfDay, string> = {
     morning: "#F59E0B",
     afternoon: "#3B82F6",
@@ -63,14 +147,12 @@ function ProgressRing({
     const center = size / 2;
     const filledSegments = total > 0 ? Math.round((completed / total) * segmentCount) : 0;
     const segmentSize = strokeWidth * 0.8;
-
     const segments = [];
     for (let i = 0; i < segmentCount; i++) {
         const angle = (i / segmentCount) * 2 * Math.PI - Math.PI / 2;
         const x = center + radius * Math.cos(angle) - segmentSize / 2;
         const y = center + radius * Math.sin(angle) - segmentSize / 2;
         const isFilled = i < filledSegments;
-
         segments.push(
             <View
                 key={i}
@@ -86,9 +168,14 @@ function ProgressRing({
             />
         );
     }
-
     return (
-        <View style={{ width: size, height: size, alignSelf: "center" }}>
+        <View
+            style={{
+                width: size,
+                height: size,
+                alignSelf: "center"
+            }}
+        >
             {segments}
             <View
                 style={{
@@ -131,14 +218,45 @@ function StreakBar({
     textColor: string;
 }) {
     const pct = maxStreak > 0 ? (streak / maxStreak) * 100 : 0;
-
     return (
-        <View style={{ gap: 4 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ fontFamily: "IBMPlexSans-Medium", fontSize: 13, color: textColor }}>{name}</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+        <View
+            style={{
+                gap: 4
+            }}
+        >
+            <View
+                style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                }}
+            >
+                <Text
+                    style={{
+                        fontFamily: "IBMPlexSans-Medium",
+                        fontSize: 13,
+                        color: textColor
+                    }}
+                >
+                    {name}
+                </Text>
+                <View
+                    style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 3
+                    }}
+                >
                     <Ionicons name="flame" size={13} color={color} />
-                    <Text style={{ fontFamily: "IBMPlexSans-SemiBold", fontSize: 13, color }}>{streak}d</Text>
+                    <Text
+                        style={{
+                            fontFamily: "IBMPlexSans-SemiBold",
+                            fontSize: 13,
+                            color
+                        }}
+                    >
+                        {streak}d
+                    </Text>
                 </View>
             </View>
             <View
@@ -167,12 +285,19 @@ function StreakBar({
 export function HabitTrackerPage() {
     const { theme } = useUnistyles();
     const [habits, setHabits] = React.useState(initialHabits);
-
     const completedCount = habits.filter((h) => h.completed).length;
     const totalCount = habits.length;
-
     const toggleHabit = React.useCallback((id: string) => {
-        setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, completed: !h.completed } : h)));
+        setHabits((prev) =>
+            prev.map((h) =>
+                h.id === id
+                    ? {
+                          ...h,
+                          completed: !h.completed
+                      }
+                    : h
+            )
+        );
     }, []);
 
     // Top 3 habits by streak for the leaders section
@@ -185,7 +310,6 @@ export function HabitTrackerPage() {
         [habits]
     );
     const maxStreak = streakLeaders.length > 0 ? streakLeaders[0].streak : 1;
-
     return (
         <ShowcasePage>
             {/* --- Top section: Progress ring + date --- */}
@@ -198,8 +322,24 @@ export function HabitTrackerPage() {
                     color={theme.colors.primary}
                     trackColor={theme.colors.outlineVariant}
                 />
-                <Text style={[styles.dateLabel, { color: theme.colors.onSurface }]}>Tuesday, March 3</Text>
-                <Text style={[styles.dateSubLabel, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.dateLabel,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Tuesday, March 3
+                </Text>
+                <Text
+                    style={[
+                        styles.dateSubLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {completedCount === totalCount
                         ? "All habits completed!"
                         : `${totalCount - completedCount} remaining today`}
@@ -207,10 +347,9 @@ export function HabitTrackerPage() {
             </View>
 
             {/* --- Habit grid --- */}
-            <View style={styles.grid}>
+            <Grid style={styles.grid}>
                 {habits.map((habit) => {
                     const dotColor = TIME_DOT_COLORS[habit.timeOfDay];
-
                     return (
                         <Pressable
                             key={habit.id}
@@ -227,7 +366,14 @@ export function HabitTrackerPage() {
                             ]}
                         >
                             {/* Time-of-day dot in top-right */}
-                            <View style={[styles.timeDot, { backgroundColor: dotColor }]} />
+                            <View
+                                style={[
+                                    styles.timeDot,
+                                    {
+                                        backgroundColor: dotColor
+                                    }
+                                ]}
+                            />
 
                             {/* Checkmark overlay */}
                             {habit.completed && (
@@ -288,11 +434,11 @@ export function HabitTrackerPage() {
                         </Pressable>
                     );
                 })}
-            </View>
+            </Grid>
 
             {/* --- Streak Leaders --- */}
             {streakLeaders.length > 0 && (
-                <View
+                <Card
                     style={[
                         styles.leadersCard,
                         {
@@ -303,7 +449,16 @@ export function HabitTrackerPage() {
                 >
                     <View style={styles.leadersHeader}>
                         <Ionicons name="trophy" size={18} color={theme.colors.tertiary} />
-                        <Text style={[styles.leadersTitle, { color: theme.colors.onSurface }]}>Streak Leaders</Text>
+                        <Text
+                            style={[
+                                styles.leadersTitle,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            Streak Leaders
+                        </Text>
                     </View>
                     <View style={styles.leadersContent}>
                         {streakLeaders.map((habit, index) => (
@@ -328,14 +483,28 @@ export function HabitTrackerPage() {
                     <View style={styles.legend}>
                         {(["morning", "afternoon", "evening"] as TimeOfDay[]).map((tod) => (
                             <View key={tod} style={styles.legendItem}>
-                                <View style={[styles.legendDot, { backgroundColor: TIME_DOT_COLORS[tod] }]} />
-                                <Text style={[styles.legendText, { color: theme.colors.onSurfaceVariant }]}>
+                                <View
+                                    style={[
+                                        styles.legendDot,
+                                        {
+                                            backgroundColor: TIME_DOT_COLORS[tod]
+                                        }
+                                    ]}
+                                />
+                                <Text
+                                    style={[
+                                        styles.legendText,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     {tod.charAt(0).toUpperCase() + tod.slice(1)}
                                 </Text>
                             </View>
                         ))}
                     </View>
-                </View>
+                </Card>
             )}
         </ShowcasePage>
     );
@@ -343,7 +512,7 @@ export function HabitTrackerPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     ringSection: {
         alignItems: "center",
         paddingTop: 32,

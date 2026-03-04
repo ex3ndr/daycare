@@ -2,19 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type SortTab = "popular" | "recent" | "planned";
 type RequestStatus = "under_review" | "planned" | "in_progress" | "shipped";
 type Category = "UI/UX" | "Performance" | "Integrations" | "API" | "Mobile" | "Security";
-
 interface Voter {
     name: string;
     avatarColor: string;
 }
-
 interface FeatureRequest {
     id: string;
     title: string;
@@ -42,11 +40,26 @@ const REQUESTS: FeatureRequest[] = [
         category: "UI/UX",
         daysAgo: 3,
         voters: [
-            { name: "Sarah Mitchell", avatarColor: "#6366f1" },
-            { name: "James Rivera", avatarColor: "#0ea5e9" },
-            { name: "Priya Sharma", avatarColor: "#ec4899" },
-            { name: "Leo Chen", avatarColor: "#f59e0b" },
-            { name: "Anna Koch", avatarColor: "#22c55e" }
+            {
+                name: "Sarah Mitchell",
+                avatarColor: "#6366f1"
+            },
+            {
+                name: "James Rivera",
+                avatarColor: "#0ea5e9"
+            },
+            {
+                name: "Priya Sharma",
+                avatarColor: "#ec4899"
+            },
+            {
+                name: "Leo Chen",
+                avatarColor: "#f59e0b"
+            },
+            {
+                name: "Anna Koch",
+                avatarColor: "#22c55e"
+            }
         ],
         roadmapItem: "Q2 2026 - Mobile Polish"
     },
@@ -61,9 +74,18 @@ const REQUESTS: FeatureRequest[] = [
         category: "Integrations",
         daysAgo: 12,
         voters: [
-            { name: "Marcus Chen", avatarColor: "#8b5cf6" },
-            { name: "Elena Volkov", avatarColor: "#14b8a6" },
-            { name: "Derek Owens", avatarColor: "#f97316" }
+            {
+                name: "Marcus Chen",
+                avatarColor: "#8b5cf6"
+            },
+            {
+                name: "Elena Volkov",
+                avatarColor: "#14b8a6"
+            },
+            {
+                name: "Derek Owens",
+                avatarColor: "#f97316"
+            }
         ],
         roadmapItem: "Q3 2026 - Platform APIs"
     },
@@ -78,10 +100,22 @@ const REQUESTS: FeatureRequest[] = [
         category: "API",
         daysAgo: 1,
         voters: [
-            { name: "Diana Park", avatarColor: "#ec4899" },
-            { name: "Tom Walsh", avatarColor: "#6366f1" },
-            { name: "Yuki Tanaka", avatarColor: "#0ea5e9" },
-            { name: "Raj Patel", avatarColor: "#f59e0b" }
+            {
+                name: "Diana Park",
+                avatarColor: "#ec4899"
+            },
+            {
+                name: "Tom Walsh",
+                avatarColor: "#6366f1"
+            },
+            {
+                name: "Yuki Tanaka",
+                avatarColor: "#0ea5e9"
+            },
+            {
+                name: "Raj Patel",
+                avatarColor: "#f59e0b"
+            }
         ],
         roadmapItem: null
     },
@@ -96,8 +130,14 @@ const REQUESTS: FeatureRequest[] = [
         category: "UI/UX",
         daysAgo: 8,
         voters: [
-            { name: "Alex Novak", avatarColor: "#14b8a6" },
-            { name: "Mia Torres", avatarColor: "#f97316" }
+            {
+                name: "Alex Novak",
+                avatarColor: "#14b8a6"
+            },
+            {
+                name: "Mia Torres",
+                avatarColor: "#f97316"
+            }
         ],
         roadmapItem: "Q2 2026 - Collaboration"
     },
@@ -112,9 +152,18 @@ const REQUESTS: FeatureRequest[] = [
         category: "Mobile",
         daysAgo: 2,
         voters: [
-            { name: "Jordan Blake", avatarColor: "#8b5cf6" },
-            { name: "Chloe Martin", avatarColor: "#22c55e" },
-            { name: "Kevin Zhao", avatarColor: "#ef4444" }
+            {
+                name: "Jordan Blake",
+                avatarColor: "#8b5cf6"
+            },
+            {
+                name: "Chloe Martin",
+                avatarColor: "#22c55e"
+            },
+            {
+                name: "Kevin Zhao",
+                avatarColor: "#ef4444"
+            }
         ],
         roadmapItem: null
     },
@@ -129,12 +178,30 @@ const REQUESTS: FeatureRequest[] = [
         category: "Security",
         daysAgo: 45,
         voters: [
-            { name: "Emily Sato", avatarColor: "#6366f1" },
-            { name: "Nils Bergman", avatarColor: "#0ea5e9" },
-            { name: "Rosa Diaz", avatarColor: "#ec4899" },
-            { name: "Felix Reuter", avatarColor: "#f59e0b" },
-            { name: "Hana Kim", avatarColor: "#14b8a6" },
-            { name: "David Chen", avatarColor: "#f97316" }
+            {
+                name: "Emily Sato",
+                avatarColor: "#6366f1"
+            },
+            {
+                name: "Nils Bergman",
+                avatarColor: "#0ea5e9"
+            },
+            {
+                name: "Rosa Diaz",
+                avatarColor: "#ec4899"
+            },
+            {
+                name: "Felix Reuter",
+                avatarColor: "#f59e0b"
+            },
+            {
+                name: "Hana Kim",
+                avatarColor: "#14b8a6"
+            },
+            {
+                name: "David Chen",
+                avatarColor: "#f97316"
+            }
         ],
         roadmapItem: "Q1 2026 - Security"
     },
@@ -149,8 +216,14 @@ const REQUESTS: FeatureRequest[] = [
         category: "API",
         daysAgo: 5,
         voters: [
-            { name: "Ryan Kowalski", avatarColor: "#8b5cf6" },
-            { name: "Lena Fischer", avatarColor: "#22c55e" }
+            {
+                name: "Ryan Kowalski",
+                avatarColor: "#8b5cf6"
+            },
+            {
+                name: "Lena Fischer",
+                avatarColor: "#22c55e"
+            }
         ],
         roadmapItem: null
     },
@@ -165,9 +238,18 @@ const REQUESTS: FeatureRequest[] = [
         category: "Mobile",
         daysAgo: 6,
         voters: [
-            { name: "Nina Johansson", avatarColor: "#ec4899" },
-            { name: "Omar Hassan", avatarColor: "#6366f1" },
-            { name: "Tara Singh", avatarColor: "#f59e0b" }
+            {
+                name: "Nina Johansson",
+                avatarColor: "#ec4899"
+            },
+            {
+                name: "Omar Hassan",
+                avatarColor: "#6366f1"
+            },
+            {
+                name: "Tara Singh",
+                avatarColor: "#f59e0b"
+            }
         ],
         roadmapItem: "Q4 2026 - Mobile Offline"
     },
@@ -182,8 +264,14 @@ const REQUESTS: FeatureRequest[] = [
         category: "Performance",
         daysAgo: 10,
         voters: [
-            { name: "Carlos Vega", avatarColor: "#14b8a6" },
-            { name: "Jess Wu", avatarColor: "#f97316" }
+            {
+                name: "Carlos Vega",
+                avatarColor: "#14b8a6"
+            },
+            {
+                name: "Jess Wu",
+                avatarColor: "#f97316"
+            }
         ],
         roadmapItem: "Q2 2026 - Observability"
     },
@@ -198,20 +286,47 @@ const REQUESTS: FeatureRequest[] = [
         category: "UI/UX",
         daysAgo: 30,
         voters: [
-            { name: "Hugo Lindqvist", avatarColor: "#8b5cf6" },
-            { name: "Grace Halloway", avatarColor: "#22c55e" }
+            {
+                name: "Hugo Lindqvist",
+                avatarColor: "#8b5cf6"
+            },
+            {
+                name: "Grace Halloway",
+                avatarColor: "#22c55e"
+            }
         ],
         roadmapItem: "Q1 2026 - DX Improvements"
     }
 ];
-
-const STATUS_CONFIG: Record<RequestStatus, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
-    under_review: { label: "Under Review", color: "#d97706", icon: "eye-outline" },
-    planned: { label: "Planned", color: "#6366f1", icon: "calendar-outline" },
-    in_progress: { label: "In Progress", color: "#0ea5e9", icon: "code-slash-outline" },
-    shipped: { label: "Shipped", color: "#22c55e", icon: "checkmark-circle-outline" }
+const STATUS_CONFIG: Record<
+    RequestStatus,
+    {
+        label: string;
+        color: string;
+        icon: keyof typeof Ionicons.glyphMap;
+    }
+> = {
+    under_review: {
+        label: "Under Review",
+        color: "#d97706",
+        icon: "eye-outline"
+    },
+    planned: {
+        label: "Planned",
+        color: "#6366f1",
+        icon: "calendar-outline"
+    },
+    in_progress: {
+        label: "In Progress",
+        color: "#0ea5e9",
+        icon: "code-slash-outline"
+    },
+    shipped: {
+        label: "Shipped",
+        color: "#22c55e",
+        icon: "checkmark-circle-outline"
+    }
 };
-
 const CATEGORY_COLORS: Record<Category, string> = {
     "UI/UX": "#8b5cf6",
     Performance: "#f97316",
@@ -220,11 +335,22 @@ const CATEGORY_COLORS: Record<Category, string> = {
     Mobile: "#ec4899",
     Security: "#ef4444"
 };
-
-const SORT_TABS: { key: SortTab; label: string }[] = [
-    { key: "popular", label: "Popular" },
-    { key: "recent", label: "Recent" },
-    { key: "planned", label: "Planned" }
+const SORT_TABS: {
+    key: SortTab;
+    label: string;
+}[] = [
+    {
+        key: "popular",
+        label: "Popular"
+    },
+    {
+        key: "recent",
+        label: "Recent"
+    },
+    {
+        key: "planned",
+        label: "Planned"
+    }
 ];
 
 // --- Helpers ---
@@ -237,14 +363,12 @@ function getInitials(name: string): string {
         .toUpperCase()
         .slice(0, 2);
 }
-
 function formatVoteCount(count: number): string {
     if (count >= 1000) {
         return `${(count / 1000).toFixed(1)}k`;
     }
     return String(count);
 }
-
 function sortRequests(requests: FeatureRequest[], tab: SortTab): FeatureRequest[] {
     const sorted = [...requests];
     switch (tab) {
@@ -264,9 +388,15 @@ function sortRequests(requests: FeatureRequest[], tab: SortTab): FeatureRequest[
 
 function SegmentedControl({ active, onSelect }: { active: SortTab; onSelect: (tab: SortTab) => void }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[segStyles.container, { backgroundColor: theme.colors.surfaceContainerHighest }]}>
+        <View
+            style={[
+                segStyles.container,
+                {
+                    backgroundColor: theme.colors.surfaceContainerHighest
+                }
+            ]}
+        >
             {SORT_TABS.map(({ key, label }) => {
                 const isActive = key === active;
                 return (
@@ -297,8 +427,7 @@ function SegmentedControl({ active, onSelect }: { active: SortTab; onSelect: (ta
         </View>
     );
 }
-
-const segStyles = StyleSheet.create((theme) => ({
+const segStyles = StyleSheet.create((_theme) => ({
     container: {
         flexDirection: "row",
         borderRadius: 12,
@@ -325,27 +454,66 @@ function SummaryMetrics({ requests }: { requests: FeatureRequest[] }) {
     const totalVotes = requests.reduce((sum, r) => sum + r.votes, 0);
     const shipped = requests.filter((r) => r.status === "shipped").length;
     const inProgress = requests.filter((r) => r.status === "in_progress").length;
-
     const metrics = [
-        { value: String(requests.length), label: "Requests", color: theme.colors.primary },
-        { value: formatVoteCount(totalVotes), label: "Total Votes", color: "#8b5cf6" },
-        { value: String(inProgress), label: "In Progress", color: "#0ea5e9" },
-        { value: String(shipped), label: "Shipped", color: "#22c55e" }
+        {
+            value: String(requests.length),
+            label: "Requests",
+            color: theme.colors.primary
+        },
+        {
+            value: formatVoteCount(totalVotes),
+            label: "Total Votes",
+            color: "#8b5cf6"
+        },
+        {
+            value: String(inProgress),
+            label: "In Progress",
+            color: "#0ea5e9"
+        },
+        {
+            value: String(shipped),
+            label: "Shipped",
+            color: "#22c55e"
+        }
     ];
-
     return (
         <View style={metricStyles.row}>
             {metrics.map(({ value, label, color }) => (
-                <View key={label} style={[metricStyles.tile, { backgroundColor: theme.colors.surfaceContainer }]}>
-                    <Text style={[metricStyles.value, { color }]}>{value}</Text>
-                    <Text style={[metricStyles.label, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
+                <View
+                    key={label}
+                    style={[
+                        metricStyles.tile,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            metricStyles.value,
+                            {
+                                color
+                            }
+                        ]}
+                    >
+                        {value}
+                    </Text>
+                    <Text
+                        style={[
+                            metricStyles.label,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        {label}
+                    </Text>
                 </View>
             ))}
         </View>
     );
 }
-
-const metricStyles = StyleSheet.create((theme) => ({
+const metricStyles = StyleSheet.create((_theme) => ({
     row: {
         flexDirection: "row",
         gap: 8
@@ -373,7 +541,6 @@ const metricStyles = StyleSheet.create((theme) => ({
 
 function VoteButton({ votes, voted, onPress }: { votes: number; voted: boolean; onPress: () => void }) {
     const { theme } = useUnistyles();
-
     return (
         <Pressable
             onPress={onPress}
@@ -391,14 +558,20 @@ function VoteButton({ votes, voted, onPress }: { votes: number; voted: boolean; 
                 size={18}
                 color={voted ? theme.colors.primary : theme.colors.onSurfaceVariant}
             />
-            <Text style={[voteStyles.count, { color: voted ? theme.colors.primary : theme.colors.onSurface }]}>
+            <Text
+                style={[
+                    voteStyles.count,
+                    {
+                        color: voted ? theme.colors.primary : theme.colors.onSurface
+                    }
+                ]}
+            >
                 {formatVoteCount(votes)}
             </Text>
         </Pressable>
     );
 }
-
-const voteStyles = StyleSheet.create((theme) => ({
+const voteStyles = StyleSheet.create((_theme) => ({
     container: {
         alignItems: "center",
         justifyContent: "center",
@@ -419,16 +592,30 @@ const voteStyles = StyleSheet.create((theme) => ({
 
 function StatusChip({ status }: { status: RequestStatus }) {
     const config = STATUS_CONFIG[status];
-
     return (
-        <View style={[chipStyles.container, { backgroundColor: `${config.color}15` }]}>
+        <View
+            style={[
+                chipStyles.container,
+                {
+                    backgroundColor: `${config.color}15`
+                }
+            ]}
+        >
             <Ionicons name={config.icon} size={12} color={config.color} />
-            <Text style={[chipStyles.text, { color: config.color }]}>{config.label}</Text>
+            <Text
+                style={[
+                    chipStyles.text,
+                    {
+                        color: config.color
+                    }
+                ]}
+            >
+                {config.label}
+            </Text>
         </View>
     );
 }
-
-const chipStyles = StyleSheet.create((theme) => ({
+const chipStyles = StyleSheet.create((_theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "center",
@@ -448,16 +635,37 @@ const chipStyles = StyleSheet.create((theme) => ({
 
 function CategoryBadge({ category }: { category: Category }) {
     const color = CATEGORY_COLORS[category];
-
     return (
-        <View style={[badgeStyles.container, { borderColor: `${color}40` }]}>
-            <View style={[badgeStyles.dot, { backgroundColor: color }]} />
-            <Text style={[badgeStyles.text, { color }]}>{category}</Text>
+        <View
+            style={[
+                badgeStyles.container,
+                {
+                    borderColor: `${color}40`
+                }
+            ]}
+        >
+            <View
+                style={[
+                    badgeStyles.dot,
+                    {
+                        backgroundColor: color
+                    }
+                ]}
+            />
+            <Text
+                style={[
+                    badgeStyles.text,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {category}
+            </Text>
         </View>
     );
 }
-
-const badgeStyles = StyleSheet.create((theme) => ({
+const badgeStyles = StyleSheet.create((_theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "center",
@@ -493,21 +701,44 @@ function FeatureRequestCard({
     onPress: () => void;
 }) {
     const { theme } = useUnistyles();
-
     return (
-        <Pressable onPress={onPress} style={[cardStyles.container, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Pressable
+            onPress={onPress}
+            style={[
+                cardStyles.container,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             {/* Left: Vote button */}
             <VoteButton votes={request.votes} voted={voted} onPress={onVote} />
 
             {/* Right: Content */}
             <View style={cardStyles.content}>
                 {/* Title row */}
-                <Text style={[cardStyles.title, { color: theme.colors.onSurface }]} numberOfLines={2}>
+                <Text
+                    style={[
+                        cardStyles.title,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                    numberOfLines={2}
+                >
                     {request.title}
                 </Text>
 
                 {/* Description preview */}
-                <Text style={[cardStyles.desc, { color: theme.colors.onSurfaceVariant }]} numberOfLines={2}>
+                <Text
+                    style={[
+                        cardStyles.desc,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                    numberOfLines={2}
+                >
                     {request.description}
                 </Text>
 
@@ -520,16 +751,44 @@ function FeatureRequestCard({
                 {/* Footer: requester + time */}
                 <View style={cardStyles.footer}>
                     <View style={cardStyles.requesterRow}>
-                        <View style={[cardStyles.requesterAvatar, { backgroundColor: `${theme.colors.primary}20` }]}>
-                            <Text style={[cardStyles.requesterInitials, { color: theme.colors.primary }]}>
+                        <View
+                            style={[
+                                cardStyles.requesterAvatar,
+                                {
+                                    backgroundColor: `${theme.colors.primary}20`
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    cardStyles.requesterInitials,
+                                    {
+                                        color: theme.colors.primary
+                                    }
+                                ]}
+                            >
                                 {getInitials(request.requester)}
                             </Text>
                         </View>
-                        <Text style={[cardStyles.requesterName, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                cardStyles.requesterName,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {request.requester}
                         </Text>
                     </View>
-                    <Text style={[cardStyles.timeAgo, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            cardStyles.timeAgo,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {request.daysAgo === 0 ? "today" : request.daysAgo === 1 ? "1d ago" : `${request.daysAgo}d ago`}
                     </Text>
                 </View>
@@ -537,8 +796,7 @@ function FeatureRequestCard({
         </Pressable>
     );
 }
-
-const cardStyles = StyleSheet.create((theme) => ({
+const cardStyles = StyleSheet.create((_theme) => ({
     container: {
         flexDirection: "row",
         borderRadius: 14,
@@ -616,24 +874,42 @@ function DetailPanel({
     onClose: () => void;
 }) {
     const { theme } = useUnistyles();
-
     if (!request) return null;
-
     const statusConfig = STATUS_CONFIG[request.status];
-
     return (
         <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
             <View style={detailStyles.overlay}>
-                <View style={[detailStyles.panel, { backgroundColor: theme.colors.surface }]}>
+                <View
+                    style={[
+                        detailStyles.panel,
+                        {
+                            backgroundColor: theme.colors.surface
+                        }
+                    ]}
+                >
                     {/* Handle bar */}
                     <View style={detailStyles.handleRow}>
-                        <View style={[detailStyles.handle, { backgroundColor: theme.colors.outlineVariant }]} />
+                        <View
+                            style={[
+                                detailStyles.handle,
+                                {
+                                    backgroundColor: theme.colors.outlineVariant
+                                }
+                            ]}
+                        />
                     </View>
 
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={detailStyles.scrollContent}>
                         {/* Header */}
                         <View style={detailStyles.header}>
-                            <Text style={[detailStyles.idLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    detailStyles.idLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {request.id}
                             </Text>
                             <Pressable onPress={onClose} hitSlop={12}>
@@ -642,10 +918,26 @@ function DetailPanel({
                         </View>
 
                         {/* Title */}
-                        <Text style={[detailStyles.title, { color: theme.colors.onSurface }]}>{request.title}</Text>
+                        <Text
+                            style={[
+                                detailStyles.title,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            {request.title}
+                        </Text>
 
                         {/* Vote bar */}
-                        <View style={[detailStyles.voteBar, { backgroundColor: theme.colors.surfaceContainer }]}>
+                        <View
+                            style={[
+                                detailStyles.voteBar,
+                                {
+                                    backgroundColor: theme.colors.surfaceContainer
+                                }
+                            ]}
+                        >
                             <Pressable
                                 onPress={onVote}
                                 style={[
@@ -665,22 +957,45 @@ function DetailPanel({
                                 <Text
                                     style={[
                                         detailStyles.voteBtnText,
-                                        { color: voted ? "#ffffff" : theme.colors.onSurface }
+                                        {
+                                            color: voted ? "#ffffff" : theme.colors.onSurface
+                                        }
                                     ]}
                                 >
                                     {voted ? "Voted" : "Upvote"}
                                 </Text>
                             </Pressable>
-                            <Text style={[detailStyles.voteCount, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    detailStyles.voteCount,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {request.votes} votes
                             </Text>
                         </View>
 
                         {/* Status + Category */}
                         <View style={detailStyles.metaRow}>
-                            <View style={[detailStyles.statusPill, { backgroundColor: `${statusConfig.color}15` }]}>
+                            <View
+                                style={[
+                                    detailStyles.statusPill,
+                                    {
+                                        backgroundColor: `${statusConfig.color}15`
+                                    }
+                                ]}
+                            >
                                 <Ionicons name={statusConfig.icon} size={14} color={statusConfig.color} />
-                                <Text style={[detailStyles.statusText, { color: statusConfig.color }]}>
+                                <Text
+                                    style={[
+                                        detailStyles.statusText,
+                                        {
+                                            color: statusConfig.color
+                                        }
+                                    ]}
+                                >
                                     {statusConfig.label}
                                 </Text>
                             </View>
@@ -689,17 +1004,38 @@ function DetailPanel({
 
                         {/* Description */}
                         <View style={detailStyles.section}>
-                            <Text style={[detailStyles.sectionTitle, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    detailStyles.sectionTitle,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 Description
                             </Text>
-                            <Text style={[detailStyles.descriptionText, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    detailStyles.descriptionText,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {request.description}
                             </Text>
                         </View>
 
                         {/* Voters */}
                         <View style={detailStyles.section}>
-                            <Text style={[detailStyles.sectionTitle, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    detailStyles.sectionTitle,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 Voters ({request.voters.length})
                             </Text>
                             <View style={detailStyles.voterList}>
@@ -708,14 +1044,30 @@ function DetailPanel({
                                         <View
                                             style={[
                                                 detailStyles.voterAvatar,
-                                                { backgroundColor: `${voter.avatarColor}20` }
+                                                {
+                                                    backgroundColor: `${voter.avatarColor}20`
+                                                }
                                             ]}
                                         >
-                                            <Text style={[detailStyles.voterInitials, { color: voter.avatarColor }]}>
+                                            <Text
+                                                style={[
+                                                    detailStyles.voterInitials,
+                                                    {
+                                                        color: voter.avatarColor
+                                                    }
+                                                ]}
+                                            >
                                                 {getInitials(voter.name)}
                                             </Text>
                                         </View>
-                                        <Text style={[detailStyles.voterName, { color: theme.colors.onSurface }]}>
+                                        <Text
+                                            style={[
+                                                detailStyles.voterName,
+                                                {
+                                                    color: theme.colors.onSurface
+                                                }
+                                            ]}
+                                        >
                                             {voter.name}
                                         </Text>
                                     </View>
@@ -726,26 +1078,44 @@ function DetailPanel({
                         {/* Roadmap Link */}
                         {request.roadmapItem && (
                             <View style={detailStyles.section}>
-                                <Text style={[detailStyles.sectionTitle, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        detailStyles.sectionTitle,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     Roadmap
                                 </Text>
-                                <View
+                                <Card
                                     style={[
                                         detailStyles.roadmapCard,
-                                        { backgroundColor: theme.colors.surfaceContainer }
+                                        {
+                                            backgroundColor: theme.colors.surfaceContainer
+                                        }
                                     ]}
                                 >
                                     <Ionicons name="map-outline" size={18} color={theme.colors.primary} />
-                                    <Text style={[detailStyles.roadmapText, { color: theme.colors.onSurface }]}>
+                                    <Text
+                                        style={[
+                                            detailStyles.roadmapText,
+                                            {
+                                                color: theme.colors.onSurface
+                                            }
+                                        ]}
+                                    >
                                         {request.roadmapItem}
                                     </Text>
                                     <Ionicons
                                         name="open-outline"
                                         size={14}
                                         color={theme.colors.onSurfaceVariant}
-                                        style={{ marginLeft: "auto" }}
+                                        style={{
+                                            marginLeft: "auto"
+                                        }}
                                     />
-                                </View>
+                                </Card>
                             </View>
                         )}
                     </ScrollView>
@@ -754,8 +1124,7 @@ function DetailPanel({
         </Modal>
     );
 }
-
-const detailStyles = StyleSheet.create((theme) => ({
+const detailStyles = StyleSheet.create((_theme) => ({
     overlay: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.4)",
@@ -902,10 +1271,25 @@ function StatusDistributionBar() {
         status: s,
         count: REQUESTS.filter((r) => r.status === s).length
     }));
-
     return (
-        <View style={[distStyles.container, { backgroundColor: theme.colors.surfaceContainer }]}>
-            <Text style={[distStyles.title, { color: theme.colors.onSurface }]}>Status Overview</Text>
+        <View
+            style={[
+                distStyles.container,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    distStyles.title,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                Status Overview
+            </Text>
             <View style={distStyles.bar}>
                 {counts.map(({ status, count }) => {
                     const pct = (count / total) * 100;
@@ -925,8 +1309,22 @@ function StatusDistributionBar() {
             <View style={distStyles.legend}>
                 {counts.map(({ status, count }) => (
                     <View key={status} style={distStyles.legendItem}>
-                        <View style={[distStyles.legendDot, { backgroundColor: STATUS_CONFIG[status].color }]} />
-                        <Text style={[distStyles.legendText, { color: theme.colors.onSurfaceVariant }]}>
+                        <View
+                            style={[
+                                distStyles.legendDot,
+                                {
+                                    backgroundColor: STATUS_CONFIG[status].color
+                                }
+                            ]}
+                        />
+                        <Text
+                            style={[
+                                distStyles.legendText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {STATUS_CONFIG[status].label} ({count})
                         </Text>
                     </View>
@@ -935,8 +1333,7 @@ function StatusDistributionBar() {
         </View>
     );
 }
-
-const distStyles = StyleSheet.create((theme) => ({
+const distStyles = StyleSheet.create((_theme) => ({
     container: {
         borderRadius: 12,
         padding: 14,
@@ -982,7 +1379,6 @@ export function FeatureRequestsPage() {
     const [activeTab, setActiveTab] = React.useState<SortTab>("popular");
     const [votedIds, setVotedIds] = React.useState<Set<string>>(new Set());
     const [selectedRequest, setSelectedRequest] = React.useState<FeatureRequest | null>(null);
-
     const toggleVote = React.useCallback((id: string) => {
         setVotedIds((prev) => {
             const next = new Set(prev);
@@ -994,20 +1390,48 @@ export function FeatureRequestsPage() {
             return next;
         });
     }, []);
-
     const sortedRequests = React.useMemo(() => sortRequests(REQUESTS, activeTab), [activeTab]);
-
     return (
         <View style={pageStyles.root}>
-            <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} topInset={16} contentGap={16}>
+            <ShowcasePage
+                style={{
+                    flex: 1,
+                    backgroundColor: theme.colors.surface
+                }}
+                topInset={16}
+                contentGap={16}
+            >
                 {/* Page title + icon */}
                 <View style={pageStyles.titleRow}>
-                    <View style={[pageStyles.titleIcon, { backgroundColor: `${theme.colors.primary}15` }]}>
+                    <View
+                        style={[
+                            pageStyles.titleIcon,
+                            {
+                                backgroundColor: `${theme.colors.primary}15`
+                            }
+                        ]}
+                    >
                         <Ionicons name="bulb-outline" size={22} color={theme.colors.primary} />
                     </View>
                     <View style={pageStyles.titleTextCol}>
-                        <Text style={[pageStyles.title, { color: theme.colors.onSurface }]}>Feature Requests</Text>
-                        <Text style={[pageStyles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                pageStyles.title,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            Feature Requests
+                        </Text>
+                        <Text
+                            style={[
+                                pageStyles.subtitle,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Vote on what gets built next
                         </Text>
                     </View>
@@ -1039,7 +1463,14 @@ export function FeatureRequestsPage() {
                 {sortedRequests.length === 0 && (
                     <View style={pageStyles.emptyState}>
                         <Ionicons name="telescope-outline" size={44} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[pageStyles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                pageStyles.emptyText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             No planned items yet
                         </Text>
                     </View>
@@ -1059,8 +1490,7 @@ export function FeatureRequestsPage() {
         </View>
     );
 }
-
-const pageStyles = StyleSheet.create((theme) => ({
+const pageStyles = StyleSheet.create((_theme) => ({
     root: {
         flex: 1
     },

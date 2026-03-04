@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { Card } from "@/components/Card";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
@@ -192,7 +193,7 @@ function MetricTile({ value, label, color, pulse }: { value: string; label: stri
     const { theme } = useUnistyles();
 
     return (
-        <View style={[tileStyles.container, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Card style={[tileStyles.container, { backgroundColor: theme.colors.surfaceContainer }]}>
             <View style={tileStyles.valueRow}>
                 {pulse && (
                     <View style={tileStyles.pulseOuter(color)}>
@@ -202,11 +203,11 @@ function MetricTile({ value, label, color, pulse }: { value: string; label: stri
                 <Text style={tileStyles.value(color)}>{value}</Text>
             </View>
             <Text style={[tileStyles.label, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
-        </View>
+        </Card>
     );
 }
 
-const tileStyles = StyleSheet.create((theme) => ({
+const tileStyles = StyleSheet.create((_theme) => ({
     container: {
         flex: 1,
         borderRadius: 12,
@@ -253,7 +254,7 @@ function SeverityBar() {
     const counts = SEVERITY_ORDER.map((s) => ({ severity: s, count: countBySeverity(s) }));
 
     return (
-        <View style={[barStyles.container, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Card style={[barStyles.container, { backgroundColor: theme.colors.surfaceContainer }]}>
             <Text style={[barStyles.title, { color: theme.colors.onSurface }]}>Severity Distribution</Text>
             <View style={barStyles.bar}>
                 {counts.map(({ severity, count }) => {
@@ -272,11 +273,11 @@ function SeverityBar() {
                     </View>
                 ))}
             </View>
-        </View>
+        </Card>
     );
 }
 
-const barStyles = StyleSheet.create((theme) => ({
+const barStyles = StyleSheet.create((_theme) => ({
     container: {
         borderRadius: 12,
         padding: 16,
@@ -365,7 +366,7 @@ function FilterPills({ active, onSelect }: { active: FilterTab; onSelect: (tab: 
     );
 }
 
-const pillStyles = StyleSheet.create((theme) => ({
+const pillStyles = StyleSheet.create((_theme) => ({
     row: {
         flexDirection: "row",
         gap: 8,
@@ -402,7 +403,7 @@ function StatusBadge({ status }: { status: Status }) {
     );
 }
 
-const statusStyles = StyleSheet.create((theme) => ({
+const statusStyles = StyleSheet.create((_theme) => ({
     badge: (bg: string) => ({
         backgroundColor: bg,
         paddingHorizontal: 9,
@@ -463,7 +464,7 @@ function BugCard({ bug }: { bug: Bug }) {
     );
 }
 
-const cardStyles = StyleSheet.create((theme) => ({
+const cardStyles = StyleSheet.create((_theme) => ({
     outer: {
         borderRadius: 12,
         overflow: "hidden"
@@ -557,7 +558,7 @@ function SeverityGroupHeader({ severity }: { severity: Severity }) {
     );
 }
 
-const groupStyles = StyleSheet.create((theme) => ({
+const groupStyles = StyleSheet.create((_theme) => ({
     header: {
         flexDirection: "row",
         alignItems: "center",
@@ -643,7 +644,7 @@ export function BugTrackerPage() {
     );
 }
 
-const pageStyles = StyleSheet.create((theme) => ({
+const pageStyles = StyleSheet.create((_theme) => ({
     metricsRow: {
         flexDirection: "row",
         gap: 8

@@ -2,14 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type LicenseStatus = "verified" | "pending" | "expired";
-
 type CategoryKey = "demolition" | "framing" | "electrical" | "plumbing" | "finishing";
-
 interface Bid {
     id: string;
     contractorName: string;
@@ -24,7 +22,6 @@ interface Bid {
     phone: string;
     notes: string;
 }
-
 interface BidCategory {
     key: CategoryKey;
     label: string;
@@ -285,27 +282,31 @@ const mockCategories: BidCategory[] = [
 // --- Helpers ---
 
 function formatCurrency(amount: number): string {
-    return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return `$${amount.toLocaleString("en-US", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    })}`;
 }
-
 function licenseLabel(status: LicenseStatus): string {
     if (status === "verified") return "VERIFIED";
     if (status === "pending") return "PENDING";
     return "EXPIRED";
 }
-
-function licenseColor(status: LicenseStatus, theme: { colors: Record<string, string> }): string {
+function licenseColor(
+    status: LicenseStatus,
+    theme: {
+        colors: Record<string, string>;
+    }
+): string {
     if (status === "verified") return theme.colors.tertiary;
     if (status === "pending") return "#F59E0B";
     return theme.colors.error;
 }
-
 function licenseIcon(status: LicenseStatus): keyof typeof Ionicons.glyphMap {
     if (status === "verified") return "shield-checkmark";
     if (status === "pending") return "time-outline";
     return "alert-circle-outline";
 }
-
 function findLowestBid(bids: Bid[]): string | null {
     if (bids.length === 0) return null;
     let lowest = bids[0];
@@ -316,7 +317,6 @@ function findLowestBid(bids: Bid[]): string | null {
     }
     return lowest.id;
 }
-
 function renderStars(rating: number, filledColor: string, emptyColor: string) {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -344,37 +344,128 @@ function ProjectHeader({
     categoriesCount: number;
 }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[styles.projectHeader, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <View
+            style={[
+                styles.projectHeader,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             <View style={styles.projectTitleRow}>
                 <Ionicons name="construct-outline" size={22} color={theme.colors.primary} />
                 <View style={styles.projectTitleText}>
-                    <Text style={[styles.projectName, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            styles.projectName,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         45 Elm Street Renovation
                     </Text>
-                    <Text style={[styles.projectSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.projectSubtitle,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         Full gut renovation - 2,400 sq ft residential
                     </Text>
                 </View>
             </View>
 
-            <View style={[styles.projectMetrics, { borderTopColor: theme.colors.outlineVariant }]}>
+            <View
+                style={[
+                    styles.projectMetrics,
+                    {
+                        borderTopColor: theme.colors.outlineVariant
+                    }
+                ]}
+            >
                 <View style={styles.projectMetricItem}>
-                    <Text style={[styles.projectMetricLabel, { color: theme.colors.onSurfaceVariant }]}>BUDGET</Text>
-                    <Text style={[styles.projectMetricValue, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            styles.projectMetricLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        BUDGET
+                    </Text>
+                    <Text
+                        style={[
+                            styles.projectMetricValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         {formatCurrency(totalBudget)}
                     </Text>
                 </View>
-                <View style={[styles.projectMetricDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                <View
+                    style={[
+                        styles.projectMetricDivider,
+                        {
+                            backgroundColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                />
                 <View style={styles.projectMetricItem}>
-                    <Text style={[styles.projectMetricLabel, { color: theme.colors.onSurfaceVariant }]}>BIDS</Text>
-                    <Text style={[styles.projectMetricValue, { color: theme.colors.onSurface }]}>{totalBids}</Text>
+                    <Text
+                        style={[
+                            styles.projectMetricLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        BIDS
+                    </Text>
+                    <Text
+                        style={[
+                            styles.projectMetricValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {totalBids}
+                    </Text>
                 </View>
-                <View style={[styles.projectMetricDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                <View
+                    style={[
+                        styles.projectMetricDivider,
+                        {
+                            backgroundColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                />
                 <View style={styles.projectMetricItem}>
-                    <Text style={[styles.projectMetricLabel, { color: theme.colors.onSurfaceVariant }]}>TRADES</Text>
-                    <Text style={[styles.projectMetricValue, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            styles.projectMetricLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        TRADES
+                    </Text>
+                    <Text
+                        style={[
+                            styles.projectMetricValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         {categoriesCount}
                     </Text>
                 </View>
@@ -382,7 +473,6 @@ function ProjectHeader({
         </View>
     );
 }
-
 function ComparisonBar({
     amount,
     maxAmount,
@@ -411,7 +501,6 @@ function ComparisonBar({
         </View>
     );
 }
-
 function BidCard({
     bid,
     isLowest,
@@ -428,10 +517,16 @@ function BidCard({
     const { theme } = useUnistyles();
     const lColor = licenseColor(bid.licenseStatus, theme);
     const starColor = "#F59E0B";
-
     return (
-        <Pressable onPress={onToggle} style={({ pressed }) => [pressed && { opacity: 0.92 }]}>
-            <View
+        <Pressable
+            onPress={onToggle}
+            style={({ pressed }) => [
+                pressed && {
+                    opacity: 0.92
+                }
+            ]}
+        >
+            <Card
                 style={[
                     styles.bidCard,
                     {
@@ -444,24 +539,59 @@ function BidCard({
                 <View style={styles.bidTopRow}>
                     <View style={styles.bidNameCol}>
                         <View style={styles.bidNameRow}>
-                            <Text style={[styles.bidContractor, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                            <Text
+                                style={[
+                                    styles.bidContractor,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                                numberOfLines={1}
+                            >
                                 {bid.contractorName}
                             </Text>
                             {isLowest && (
-                                <View style={[styles.lowestChip, { backgroundColor: `${theme.colors.tertiary}18` }]}>
+                                <View
+                                    style={[
+                                        styles.lowestChip,
+                                        {
+                                            backgroundColor: `${theme.colors.tertiary}18`
+                                        }
+                                    ]}
+                                >
                                     <Ionicons name="trending-down" size={10} color={theme.colors.tertiary} />
-                                    <Text style={[styles.lowestChipText, { color: theme.colors.tertiary }]}>
+                                    <Text
+                                        style={[
+                                            styles.lowestChipText,
+                                            {
+                                                color: theme.colors.tertiary
+                                            }
+                                        ]}
+                                    >
                                         LOWEST
                                     </Text>
                                 </View>
                             )}
                         </View>
-                        <Text style={[styles.bidCompany, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                styles.bidCompany,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {bid.companyName}
                         </Text>
                     </View>
                     <Text
-                        style={[styles.bidAmount, { color: isLowest ? theme.colors.tertiary : theme.colors.onSurface }]}
+                        style={[
+                            styles.bidAmount,
+                            {
+                                color: isLowest ? theme.colors.tertiary : theme.colors.onSurface
+                            }
+                        ]}
                     >
                         {formatCurrency(bid.amount)}
                     </Text>
@@ -480,7 +610,14 @@ function BidCard({
                 <View style={styles.bidBottomRow}>
                     <View style={styles.bidMetaItem}>
                         <Ionicons name="calendar-outline" size={13} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[styles.bidMetaText, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.bidMetaText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {bid.timeline}
                         </Text>
                     </View>
@@ -489,9 +626,23 @@ function BidCard({
                         {renderStars(bid.rating, starColor, theme.colors.outlineVariant)}
                     </View>
 
-                    <View style={[styles.licenseChip, { backgroundColor: `${lColor}18` }]}>
+                    <View
+                        style={[
+                            styles.licenseChip,
+                            {
+                                backgroundColor: `${lColor}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name={licenseIcon(bid.licenseStatus)} size={11} color={lColor} />
-                        <Text style={[styles.licenseChipText, { color: lColor }]}>
+                        <Text
+                            style={[
+                                styles.licenseChipText,
+                                {
+                                    color: lColor
+                                }
+                            ]}
+                        >
                             {licenseLabel(bid.licenseStatus)}
                         </Text>
                     </View>
@@ -499,31 +650,84 @@ function BidCard({
 
                 {/* Expanded detail panel */}
                 {isExpanded && (
-                    <View style={[styles.expandedPanel, { borderTopColor: theme.colors.outlineVariant }]}>
+                    <View
+                        style={[
+                            styles.expandedPanel,
+                            {
+                                borderTopColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    >
                         <View style={styles.expandedRow}>
                             <Ionicons name="document-text-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                            <Text style={[styles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.expandedLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 License
                             </Text>
-                            <Text style={[styles.expandedValue, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    styles.expandedValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {bid.licenseNumber}
                             </Text>
                         </View>
 
                         <View style={styles.expandedRow}>
                             <Ionicons name="time-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                            <Text style={[styles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.expandedLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Available
                             </Text>
-                            <Text style={[styles.expandedValue, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    styles.expandedValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {bid.availableDate}
                             </Text>
                         </View>
 
                         <View style={styles.expandedRow}>
                             <Ionicons name="call-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                            <Text style={[styles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>Phone</Text>
-                            <Text style={[styles.expandedValue, { color: theme.colors.primary }]}>{bid.phone}</Text>
+                            <Text
+                                style={[
+                                    styles.expandedLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
+                                Phone
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.expandedValue,
+                                    {
+                                        color: theme.colors.primary
+                                    }
+                                ]}
+                            >
+                                {bid.phone}
+                            </Text>
                         </View>
 
                         {bid.notes ? (
@@ -537,18 +741,24 @@ function BidCard({
                                 ]}
                             >
                                 <Ionicons name="chatbubble-outline" size={13} color={theme.colors.primary} />
-                                <Text style={[styles.notesText, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.notesText,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     {bid.notes}
                                 </Text>
                             </View>
                         ) : null}
                     </View>
                 )}
-            </View>
+            </Card>
         </Pressable>
     );
 }
-
 function CategorySection({
     category,
     expandedBidId,
@@ -561,7 +771,6 @@ function CategorySection({
     selectedSort: SortOption;
 }) {
     const { theme } = useUnistyles();
-
     const sortedBids = React.useMemo(() => {
         const sorted = [...category.bids];
         if (selectedSort === "price-low") {
@@ -575,27 +784,66 @@ function CategorySection({
         }
         return sorted;
     }, [category.bids, selectedSort]);
-
     const lowestId = findLowestBid(category.bids);
     const maxAmount = Math.max(...category.bids.map((b) => b.amount));
     const categoryTotal = category.bids.reduce((sum, b) => sum + b.amount, 0);
     const avgAmount = category.bids.length > 0 ? Math.round(categoryTotal / category.bids.length) : 0;
-
     return (
         <View style={styles.categorySection}>
             {/* Category header */}
             <View style={styles.categoryHeader}>
-                <View style={[styles.categoryIconCircle, { backgroundColor: `${theme.colors.primary}14` }]}>
+                <View
+                    style={[
+                        styles.categoryIconCircle,
+                        {
+                            backgroundColor: `${theme.colors.primary}14`
+                        }
+                    ]}
+                >
                     <Ionicons name={category.icon} size={16} color={theme.colors.primary} />
                 </View>
-                <Text style={[styles.categoryTitle, { color: theme.colors.onSurface }]}>{category.label}</Text>
-                <View style={[styles.categoryCountBadge, { backgroundColor: `${theme.colors.primary}18` }]}>
-                    <Text style={[styles.categoryCountText, { color: theme.colors.primary }]}>
+                <Text
+                    style={[
+                        styles.categoryTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    {category.label}
+                </Text>
+                <View
+                    style={[
+                        styles.categoryCountBadge,
+                        {
+                            backgroundColor: `${theme.colors.primary}18`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.categoryCountText,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
                         {category.bids.length}
                     </Text>
                 </View>
-                <View style={{ flex: 1 }} />
-                <Text style={[styles.categoryAvg, { color: theme.colors.onSurfaceVariant }]}>
+                <View
+                    style={{
+                        flex: 1
+                    }}
+                />
+                <Text
+                    style={[
+                        styles.categoryAvg,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     avg {formatCurrency(avgAmount)}
                 </Text>
             </View>
@@ -620,12 +868,31 @@ function CategorySection({
 // --- Sort Options ---
 
 type SortOption = "price-low" | "price-high" | "rating" | "timeline";
-
-const SORT_OPTIONS: { key: SortOption; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-    { key: "price-low", label: "Price \u2191", icon: "trending-down" },
-    { key: "price-high", label: "Price \u2193", icon: "trending-up" },
-    { key: "rating", label: "Rating", icon: "star-outline" },
-    { key: "timeline", label: "Timeline", icon: "time-outline" }
+const SORT_OPTIONS: {
+    key: SortOption;
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+    {
+        key: "price-low",
+        label: "Price \u2191",
+        icon: "trending-down"
+    },
+    {
+        key: "price-high",
+        label: "Price \u2193",
+        icon: "trending-up"
+    },
+    {
+        key: "rating",
+        label: "Rating",
+        icon: "star-outline"
+    },
+    {
+        key: "timeline",
+        label: "Timeline",
+        icon: "time-outline"
+    }
 ];
 
 // --- Main Component ---
@@ -640,14 +907,11 @@ export function ContractorBidsPage() {
     const { theme } = useUnistyles();
     const [expandedBidId, setExpandedBidId] = React.useState<string | null>(null);
     const [sortOption, setSortOption] = React.useState<SortOption>("price-low");
-
     const totalBids = mockCategories.reduce((sum, cat) => sum + cat.bids.length, 0);
     const totalBudget = 125000;
-
     const handleToggleBid = React.useCallback((id: string) => {
         setExpandedBidId((prev) => (prev === id ? null : id));
     }, []);
-
     return (
         <ShowcasePage density="spacious">
             {/* Project header */}
@@ -682,7 +946,9 @@ export function ContractorBidsPage() {
                             <Text
                                 style={[
                                     styles.sortPillText,
-                                    { color: isActive ? "#FFFFFF" : theme.colors.onSurfaceVariant }
+                                    {
+                                        color: isActive ? "#FFFFFF" : theme.colors.onSurfaceVariant
+                                    }
                                 ]}
                             >
                                 {opt.label}
@@ -706,16 +972,55 @@ export function ContractorBidsPage() {
             </View>
 
             {/* Budget summary footer */}
-            <View style={[styles.summaryFooter, { backgroundColor: theme.colors.surfaceContainer }]}>
+            <View
+                style={[
+                    styles.summaryFooter,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
                 <View style={styles.summaryRow}>
-                    <Text style={[styles.summaryLabel, { color: theme.colors.onSurfaceVariant }]}>Total Budget</Text>
-                    <Text style={[styles.summaryValue, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            styles.summaryLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Total Budget
+                    </Text>
+                    <Text
+                        style={[
+                            styles.summaryValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         {formatCurrency(totalBudget)}
                     </Text>
                 </View>
                 <View style={styles.summaryRow}>
-                    <Text style={[styles.summaryLabel, { color: theme.colors.onSurfaceVariant }]}>Lowest Combined</Text>
-                    <Text style={[styles.summaryValue, { color: theme.colors.tertiary }]}>
+                    <Text
+                        style={[
+                            styles.summaryLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Lowest Combined
+                    </Text>
+                    <Text
+                        style={[
+                            styles.summaryValue,
+                            {
+                                color: theme.colors.tertiary
+                            }
+                        ]}
+                    >
                         {formatCurrency(
                             mockCategories.reduce((sum, cat) => {
                                 const lowest = Math.min(...cat.bids.map((b) => b.amount));
@@ -724,9 +1029,23 @@ export function ContractorBidsPage() {
                         )}
                     </Text>
                 </View>
-                <View style={[styles.summaryDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                <View
+                    style={[
+                        styles.summaryDivider,
+                        {
+                            backgroundColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                />
                 <View style={styles.summaryRow}>
-                    <Text style={[styles.summaryLabel, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.summaryLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         Remaining Budget
                     </Text>
                     <Text
@@ -761,7 +1080,7 @@ export function ContractorBidsPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Project header
     projectHeader: {
         borderRadius: 16,
@@ -815,7 +1134,6 @@ const styles = StyleSheet.create((theme) => ({
         width: 1,
         height: 32
     },
-
     // Sort pills
     sortPillsScroll: {
         paddingHorizontal: 16,
@@ -835,14 +1153,12 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
-
     // Categories container
     categoriesContainer: {
         paddingHorizontal: 16,
         gap: 20,
         marginTop: 12
     },
-
     // Category section
     categorySection: {
         gap: 8
@@ -879,12 +1195,10 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 12
     },
-
     // Bid list
     bidList: {
         gap: 8
     },
-
     // Bid card
     bidCard: {
         borderRadius: 12,
@@ -920,7 +1234,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 16,
         letterSpacing: -0.3
     },
-
     // Lowest bid chip
     lowestChip: {
         flexDirection: "row",
@@ -935,7 +1248,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 9,
         letterSpacing: 0.5
     },
-
     // Comparison bar
     comparisonBarTrack: {
         height: 4,
@@ -946,7 +1258,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 4,
         borderRadius: 2
     },
-
     // Bid bottom row
     bidBottomRow: {
         flexDirection: "row",
@@ -966,7 +1277,6 @@ const styles = StyleSheet.create((theme) => ({
         flexDirection: "row",
         gap: 1
     },
-
     // License chip
     licenseChip: {
         flexDirection: "row",
@@ -981,7 +1291,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 9,
         letterSpacing: 0.5
     },
-
     // Expanded panel
     expandedPanel: {
         borderTopWidth: 1,
@@ -1003,7 +1312,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 12,
         flex: 1
     },
-
     // Notes box
     notesBox: {
         flexDirection: "row",
@@ -1020,7 +1328,6 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1,
         lineHeight: 18
     },
-
     // Summary footer
     summaryFooter: {
         borderRadius: 16,

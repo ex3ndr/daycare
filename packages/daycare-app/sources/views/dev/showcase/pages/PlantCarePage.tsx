@@ -2,16 +2,15 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type Room = "Living Room" | "Bedroom" | "Kitchen" | "Office" | "Balcony";
 type Sunlight = "full sun" | "partial" | "shade";
 type Health = "thriving" | "ok" | "struggling";
 type WateringFrequency = "daily" | "every 2 days" | "weekly" | "biweekly";
 type RoomFilter = "all" | Room;
-
 type Plant = {
     id: string;
     name: string;
@@ -28,7 +27,6 @@ type Plant = {
 // --- Config ---
 
 const ROOMS: Room[] = ["Living Room", "Bedroom", "Kitchen", "Office", "Balcony"];
-
 const ROOM_ICONS: Record<Room, keyof typeof Ionicons.glyphMap> = {
     "Living Room": "tv-outline",
     Bedroom: "bed-outline",
@@ -36,7 +34,6 @@ const ROOM_ICONS: Record<Room, keyof typeof Ionicons.glyphMap> = {
     Office: "desktop-outline",
     Balcony: "sunny-outline"
 };
-
 const ROOM_COLORS: Record<Room, string> = {
     "Living Room": "#16a34a",
     Bedroom: "#8B5CF6",
@@ -44,25 +41,21 @@ const ROOM_COLORS: Record<Room, string> = {
     Office: "#3B82F6",
     Balcony: "#EC4899"
 };
-
 const HEALTH_COLORS: Record<Health, string> = {
     thriving: "#16a34a",
     ok: "#d97706",
     struggling: "#dc2626"
 };
-
 const HEALTH_LABELS: Record<Health, string> = {
     thriving: "Thriving",
     ok: "OK",
     struggling: "Struggling"
 };
-
 const SUNLIGHT_ICONS: Record<Sunlight, keyof typeof Ionicons.glyphMap> = {
     "full sun": "sunny",
     partial: "partly-sunny",
     shade: "cloud"
 };
-
 const SUNLIGHT_LABELS: Record<Sunlight, string> = {
     "full sun": "Full Sun",
     partial: "Partial",
@@ -239,37 +232,100 @@ const initialPlants: Plant[] = [
 
 function CareReminderBanner({ needsWaterCount }: { needsWaterCount: number }) {
     const { theme } = useUnistyles();
-
     if (needsWaterCount === 0) {
         return (
-            <View style={[styles.banner, { backgroundColor: `${HEALTH_COLORS.thriving}14` }]}>
-                <View style={[styles.bannerIconCircle, { backgroundColor: `${HEALTH_COLORS.thriving}20` }]}>
+            <View
+                style={[
+                    styles.banner,
+                    {
+                        backgroundColor: `${HEALTH_COLORS.thriving}14`
+                    }
+                ]}
+            >
+                <View
+                    style={[
+                        styles.bannerIconCircle,
+                        {
+                            backgroundColor: `${HEALTH_COLORS.thriving}20`
+                        }
+                    ]}
+                >
                     <Ionicons name="checkmark-circle" size={22} color={HEALTH_COLORS.thriving} />
                 </View>
                 <View style={styles.bannerTextCol}>
-                    <Text style={[styles.bannerTitle, { color: HEALTH_COLORS.thriving }]}>All plants watered!</Text>
-                    <Text style={[styles.bannerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.bannerTitle,
+                            {
+                                color: HEALTH_COLORS.thriving
+                            }
+                        ]}
+                    >
+                        All plants watered!
+                    </Text>
+                    <Text
+                        style={[
+                            styles.bannerSubtitle,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         Great job, no plants need water today.
                     </Text>
                 </View>
             </View>
         );
     }
-
     return (
-        <View style={[styles.banner, { backgroundColor: `${theme.colors.primary}12` }]}>
-            <View style={[styles.bannerIconCircle, { backgroundColor: `${theme.colors.primary}20` }]}>
+        <View
+            style={[
+                styles.banner,
+                {
+                    backgroundColor: `${theme.colors.primary}12`
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.bannerIconCircle,
+                    {
+                        backgroundColor: `${theme.colors.primary}20`
+                    }
+                ]}
+            >
                 <Ionicons name="water" size={22} color={theme.colors.primary} />
             </View>
             <View style={styles.bannerTextCol}>
-                <Text style={[styles.bannerTitle, { color: theme.colors.primary }]}>
+                <Text
+                    style={[
+                        styles.bannerTitle,
+                        {
+                            color: theme.colors.primary
+                        }
+                    ]}
+                >
                     {needsWaterCount} plant{needsWaterCount !== 1 ? "s" : ""} need water today
                 </Text>
-                <Text style={[styles.bannerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.bannerSubtitle,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     Tap the water icon on each plant to mark as watered.
                 </Text>
             </View>
-            <View style={[styles.bannerBadge, { backgroundColor: theme.colors.primary }]}>
+            <View
+                style={[
+                    styles.bannerBadge,
+                    {
+                        backgroundColor: theme.colors.primary
+                    }
+                ]}
+            >
                 <Ionicons name="water" size={10} color="#ffffff" />
                 <Text style={styles.bannerBadgeText}>{needsWaterCount}</Text>
             </View>
@@ -289,39 +345,141 @@ function SummaryCards({
     fertilizedCount: number;
 }) {
     const { theme } = useUnistyles();
-
     return (
         <View style={styles.summaryRow}>
-            <View style={[styles.summaryCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-                <View style={[styles.summaryIconCircle, { backgroundColor: `${HEALTH_COLORS.thriving}18` }]}>
+            <Card
+                style={[
+                    styles.summaryCard,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
+                <View
+                    style={[
+                        styles.summaryIconCircle,
+                        {
+                            backgroundColor: `${HEALTH_COLORS.thriving}18`
+                        }
+                    ]}
+                >
                     <Ionicons name="leaf" size={18} color={HEALTH_COLORS.thriving} />
                 </View>
-                <Text style={[styles.summaryValue, { color: HEALTH_COLORS.thriving }]}>{totalPlants}</Text>
-                <Text style={[styles.summaryLabel, { color: theme.colors.onSurfaceVariant }]}>Total Plants</Text>
-            </View>
+                <Text
+                    style={[
+                        styles.summaryValue,
+                        {
+                            color: HEALTH_COLORS.thriving
+                        }
+                    ]}
+                >
+                    {totalPlants}
+                </Text>
+                <Text
+                    style={[
+                        styles.summaryLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    Total Plants
+                </Text>
+            </Card>
 
-            <View style={[styles.summaryCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+            <Card
+                style={[
+                    styles.summaryCard,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
                 <View style={styles.summaryIconRow}>
-                    <View style={[styles.summaryIconCircle, { backgroundColor: `${theme.colors.primary}18` }]}>
+                    <View
+                        style={[
+                            styles.summaryIconCircle,
+                            {
+                                backgroundColor: `${theme.colors.primary}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name="water" size={18} color={theme.colors.primary} />
                     </View>
                     {needsWaterCount > 0 && (
-                        <View style={[styles.countBadge, { backgroundColor: theme.colors.error }]}>
+                        <View
+                            style={[
+                                styles.countBadge,
+                                {
+                                    backgroundColor: theme.colors.error
+                                }
+                            ]}
+                        >
                             <Text style={styles.countBadgeText}>{needsWaterCount}</Text>
                         </View>
                     )}
                 </View>
-                <Text style={[styles.summaryValue, { color: theme.colors.primary }]}>{needsWaterCount}</Text>
-                <Text style={[styles.summaryLabel, { color: theme.colors.onSurfaceVariant }]}>Need Water</Text>
-            </View>
+                <Text
+                    style={[
+                        styles.summaryValue,
+                        {
+                            color: theme.colors.primary
+                        }
+                    ]}
+                >
+                    {needsWaterCount}
+                </Text>
+                <Text
+                    style={[
+                        styles.summaryLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    Need Water
+                </Text>
+            </Card>
 
-            <View style={[styles.summaryCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-                <View style={[styles.summaryIconCircle, { backgroundColor: `${ROOM_COLORS.Bedroom}18` }]}>
+            <Card
+                style={[
+                    styles.summaryCard,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
+                <View
+                    style={[
+                        styles.summaryIconCircle,
+                        {
+                            backgroundColor: `${ROOM_COLORS.Bedroom}18`
+                        }
+                    ]}
+                >
                     <Ionicons name="sparkles" size={18} color={ROOM_COLORS.Bedroom} />
                 </View>
-                <Text style={[styles.summaryValue, { color: ROOM_COLORS.Bedroom }]}>{fertilizedCount}</Text>
-                <Text style={[styles.summaryLabel, { color: theme.colors.onSurfaceVariant }]}>Fertilized</Text>
-            </View>
+                <Text
+                    style={[
+                        styles.summaryValue,
+                        {
+                            color: ROOM_COLORS.Bedroom
+                        }
+                    ]}
+                >
+                    {fertilizedCount}
+                </Text>
+                <Text
+                    style={[
+                        styles.summaryLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    Fertilized
+                </Text>
+            </Card>
         </View>
     );
 }
@@ -330,11 +488,33 @@ function SummaryCards({
 
 function HealthBadge({ health }: { health: Health }) {
     const color = HEALTH_COLORS[health];
-
     return (
-        <View style={[styles.healthBadge, { backgroundColor: `${color}18` }]}>
-            <View style={[styles.healthDot, { backgroundColor: color }]} />
-            <Text style={[styles.healthBadgeText, { color }]}>{HEALTH_LABELS[health]}</Text>
+        <View
+            style={[
+                styles.healthBadge,
+                {
+                    backgroundColor: `${color}18`
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.healthDot,
+                    {
+                        backgroundColor: color
+                    }
+                ]}
+            />
+            <Text
+                style={[
+                    styles.healthBadgeText,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {HEALTH_LABELS[health]}
+            </Text>
         </View>
     );
 }
@@ -343,11 +523,26 @@ function HealthBadge({ health }: { health: Health }) {
 
 function SunlightChip({ sunlight }: { sunlight: Sunlight }) {
     const color = sunlight === "full sun" ? "#F59E0B" : sunlight === "partial" ? "#3B82F6" : "#6B7280";
-
     return (
-        <View style={[styles.chip, { backgroundColor: `${color}15` }]}>
+        <View
+            style={[
+                styles.chip,
+                {
+                    backgroundColor: `${color}15`
+                }
+            ]}
+        >
             <Ionicons name={SUNLIGHT_ICONS[sunlight]} size={12} color={color} />
-            <Text style={[styles.chipText, { color }]}>{SUNLIGHT_LABELS[sunlight]}</Text>
+            <Text
+                style={[
+                    styles.chipText,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {SUNLIGHT_LABELS[sunlight]}
+            </Text>
         </View>
     );
 }
@@ -356,11 +551,26 @@ function SunlightChip({ sunlight }: { sunlight: Sunlight }) {
 
 function WateringChip({ frequency }: { frequency: WateringFrequency }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[styles.chip, { backgroundColor: `${theme.colors.primary}12` }]}>
+        <View
+            style={[
+                styles.chip,
+                {
+                    backgroundColor: `${theme.colors.primary}12`
+                }
+            ]}
+        >
             <Ionicons name="water-outline" size={12} color={theme.colors.primary} />
-            <Text style={[styles.chipText, { color: theme.colors.primary }]}>{frequency}</Text>
+            <Text
+                style={[
+                    styles.chipText,
+                    {
+                        color: theme.colors.primary
+                    }
+                ]}
+            >
+                {frequency}
+            </Text>
         </View>
     );
 }
@@ -370,7 +580,6 @@ function WateringChip({ frequency }: { frequency: WateringFrequency }) {
 function PlantRow({ plant, onWater }: { plant: Plant; onWater: (id: string) => void }) {
     const { theme } = useUnistyles();
     const healthColor = HEALTH_COLORS[plant.health];
-
     return (
         <View
             style={[
@@ -382,16 +591,39 @@ function PlantRow({ plant, onWater }: { plant: Plant; onWater: (id: string) => v
             ]}
         >
             {/* Left health indicator bar */}
-            <View style={[styles.plantHealthBar, { backgroundColor: healthColor }]} />
+            <View
+                style={[
+                    styles.plantHealthBar,
+                    {
+                        backgroundColor: healthColor
+                    }
+                ]}
+            />
 
             <View style={styles.plantContent}>
                 {/* Top row: name + species + health badge */}
                 <View style={styles.plantTopRow}>
                     <View style={styles.plantNameCol}>
-                        <Text style={[styles.plantName, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                styles.plantName,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {plant.name}
                         </Text>
-                        <Text style={[styles.plantSpecies, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                styles.plantSpecies,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {plant.species}
                         </Text>
                     </View>
@@ -403,9 +635,25 @@ function PlantRow({ plant, onWater }: { plant: Plant; onWater: (id: string) => v
                     <WateringChip frequency={plant.wateringFrequency} />
                     <SunlightChip sunlight={plant.sunlight} />
                     {plant.recentlyFertilized && (
-                        <View style={[styles.chip, { backgroundColor: `${ROOM_COLORS.Bedroom}15` }]}>
+                        <View
+                            style={[
+                                styles.chip,
+                                {
+                                    backgroundColor: `${ROOM_COLORS.Bedroom}15`
+                                }
+                            ]}
+                        >
                             <Ionicons name="sparkles" size={12} color={ROOM_COLORS.Bedroom} />
-                            <Text style={[styles.chipText, { color: ROOM_COLORS.Bedroom }]}>Fertilized</Text>
+                            <Text
+                                style={[
+                                    styles.chipText,
+                                    {
+                                        color: ROOM_COLORS.Bedroom
+                                    }
+                                ]}
+                            >
+                                Fertilized
+                            </Text>
                         </View>
                     )}
                 </View>
@@ -414,7 +662,14 @@ function PlantRow({ plant, onWater }: { plant: Plant; onWater: (id: string) => v
                 <View style={styles.plantBottomRow}>
                     <View style={styles.lastWateredRow}>
                         <Ionicons name="calendar-outline" size={13} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[styles.lastWateredText, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.lastWateredText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Watered: {plant.lastWatered}
                         </Text>
                     </View>
@@ -436,9 +691,25 @@ function PlantRow({ plant, onWater }: { plant: Plant; onWater: (id: string) => v
                     )}
 
                     {!plant.needsWaterToday && (
-                        <View style={[styles.wateredBadge, { backgroundColor: `${HEALTH_COLORS.thriving}15` }]}>
+                        <View
+                            style={[
+                                styles.wateredBadge,
+                                {
+                                    backgroundColor: `${HEALTH_COLORS.thriving}15`
+                                }
+                            ]}
+                        >
                             <Ionicons name="checkmark-circle" size={14} color={HEALTH_COLORS.thriving} />
-                            <Text style={[styles.wateredBadgeText, { color: HEALTH_COLORS.thriving }]}>Watered</Text>
+                            <Text
+                                style={[
+                                    styles.wateredBadgeText,
+                                    {
+                                        color: HEALTH_COLORS.thriving
+                                    }
+                                ]}
+                            >
+                                Watered
+                            </Text>
                         </View>
                     )}
                 </View>
@@ -461,22 +732,67 @@ function RoomSectionHeader({
     const { theme } = useUnistyles();
     const roomColor = ROOM_COLORS[room];
     const icon = ROOM_ICONS[room];
-
     return (
-        <View style={[styles.roomHeader, { borderBottomColor: theme.colors.outlineVariant }]}>
-            <View style={[styles.roomIconCircle, { backgroundColor: `${roomColor}18` }]}>
+        <View
+            style={[
+                styles.roomHeader,
+                {
+                    borderBottomColor: theme.colors.outlineVariant
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.roomIconCircle,
+                    {
+                        backgroundColor: `${roomColor}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={20} color={roomColor} />
             </View>
             <View style={styles.roomHeaderTextCol}>
-                <Text style={[styles.roomTitle, { color: theme.colors.onSurface }]}>{room}</Text>
-                <Text style={[styles.roomSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.roomTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    {room}
+                </Text>
+                <Text
+                    style={[
+                        styles.roomSubtitle,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {plantCount} plant{plantCount !== 1 ? "s" : ""}
                 </Text>
             </View>
             {needsWaterCount > 0 && (
-                <View style={[styles.roomWaterBadge, { backgroundColor: `${theme.colors.primary}18` }]}>
+                <View
+                    style={[
+                        styles.roomWaterBadge,
+                        {
+                            backgroundColor: `${theme.colors.primary}18`
+                        }
+                    ]}
+                >
                     <Ionicons name="water" size={12} color={theme.colors.primary} />
-                    <Text style={[styles.roomWaterBadgeText, { color: theme.colors.primary }]}>{needsWaterCount}</Text>
+                    <Text
+                        style={[
+                            styles.roomWaterBadgeText,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
+                        {needsWaterCount}
+                    </Text>
                 </View>
             )}
         </View>
@@ -495,12 +811,19 @@ function RoomFilterPills({
     roomCounts: Record<RoomFilter, number>;
 }) {
     const { theme } = useUnistyles();
-
-    const filters: { key: RoomFilter; label: string }[] = [
-        { key: "all", label: "All Rooms" },
-        ...ROOMS.map((r) => ({ key: r as RoomFilter, label: r }))
+    const filters: {
+        key: RoomFilter;
+        label: string;
+    }[] = [
+        {
+            key: "all",
+            label: "All Rooms"
+        },
+        ...ROOMS.map((r) => ({
+            key: r as RoomFilter,
+            label: r
+        }))
     ];
-
     return (
         <ScrollView
             horizontal
@@ -510,7 +833,6 @@ function RoomFilterPills({
             {filters.map(({ key, label }) => {
                 const isActive = active === key;
                 const accentColor = key === "all" ? theme.colors.primary : ROOM_COLORS[key as Room];
-
                 return (
                     <Pressable
                         key={key}
@@ -526,7 +848,9 @@ function RoomFilterPills({
                         <Text
                             style={[
                                 styles.filterPillText,
-                                { color: isActive ? "#ffffff" : theme.colors.onSurfaceVariant }
+                                {
+                                    color: isActive ? "#ffffff" : theme.colors.onSurfaceVariant
+                                }
                             ]}
                         >
                             {label}
@@ -539,7 +863,14 @@ function RoomFilterPills({
                                 }
                             ]}
                         >
-                            <Text style={[styles.filterPillCountText, { color: isActive ? "#ffffff" : accentColor }]}>
+                            <Text
+                                style={[
+                                    styles.filterPillCountText,
+                                    {
+                                        color: isActive ? "#ffffff" : accentColor
+                                    }
+                                ]}
+                            >
                                 {roomCounts[key]}
                             </Text>
                         </View>
@@ -556,10 +887,17 @@ export function PlantCarePage() {
     const { theme } = useUnistyles();
     const [plants, setPlants] = React.useState(initialPlants);
     const [roomFilter, setRoomFilter] = React.useState<RoomFilter>("all");
-
     const waterPlant = React.useCallback((id: string) => {
         setPlants((prev) =>
-            prev.map((p) => (p.id === id ? { ...p, needsWaterToday: false, lastWatered: "Mar 3" } : p))
+            prev.map((p) =>
+                p.id === id
+                    ? {
+                          ...p,
+                          needsWaterToday: false,
+                          lastWatered: "Mar 3"
+                      }
+                    : p
+            )
         );
     }, []);
 
@@ -570,7 +908,9 @@ export function PlantCarePage() {
 
     // Room counts for filter pills
     const roomCounts = React.useMemo(() => {
-        const counts: Record<RoomFilter, number> = { all: plants.length } as Record<RoomFilter, number>;
+        const counts: Record<RoomFilter, number> = {
+            all: plants.length
+        } as Record<RoomFilter, number>;
         for (const room of ROOMS) {
             counts[room] = plants.filter((p) => p.room === room).length;
         }
@@ -582,19 +922,27 @@ export function PlantCarePage() {
 
     // Group by room
     const groupedByRoom = React.useMemo(() => {
-        const groups: { room: Room; plants: Plant[] }[] = [];
+        const groups: {
+            room: Room;
+            plants: Plant[];
+        }[] = [];
         for (const room of ROOMS) {
             const roomPlants = filteredPlants.filter((p) => p.room === room);
             if (roomPlants.length > 0) {
-                groups.push({ room, plants: roomPlants });
+                groups.push({
+                    room,
+                    plants: roomPlants
+                });
             }
         }
         return groups;
     }, [filteredPlants]);
-
     return (
         <ShowcasePage
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
             topInset={16}
             bottomInset={48}
             contentGap={16}
@@ -603,9 +951,27 @@ export function PlantCarePage() {
             <View style={styles.pageHeader}>
                 <View style={styles.pageTitleRow}>
                     <Ionicons name="leaf" size={24} color={HEALTH_COLORS.thriving} />
-                    <Text style={[styles.pageTitle, { color: theme.colors.onSurface }]}>Plant Care</Text>
+                    <Text
+                        style={[
+                            styles.pageTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Plant Care
+                    </Text>
                 </View>
-                <Text style={[styles.pageDate, { color: theme.colors.onSurfaceVariant }]}>March 3, 2026</Text>
+                <Text
+                    style={[
+                        styles.pageDate,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    March 3, 2026
+                </Text>
             </View>
 
             {/* Care reminder banner */}
@@ -624,7 +990,6 @@ export function PlantCarePage() {
             {/* Plant list grouped by room */}
             {groupedByRoom.map(({ room, plants: roomPlants }) => {
                 const roomNeedsWater = roomPlants.filter((p) => p.needsWaterToday).length;
-
                 return (
                     <View key={room} style={styles.roomSection}>
                         <RoomSectionHeader
@@ -645,7 +1010,14 @@ export function PlantCarePage() {
             {groupedByRoom.length === 0 && (
                 <View style={styles.emptyState}>
                     <Ionicons name="leaf-outline" size={48} color={theme.colors.onSurfaceVariant} />
-                    <Text style={[styles.emptyStateText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.emptyStateText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         No plants in this room
                     </Text>
                 </View>
@@ -656,7 +1028,7 @@ export function PlantCarePage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Page header
     pageHeader: {
         gap: 4,
@@ -677,7 +1049,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         marginLeft: 34
     },
-
     // Care reminder banner
     banner: {
         flexDirection: "row",
@@ -720,7 +1091,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 12,
         color: "#ffffff"
     },
-
     // Summary cards
     summaryRow: {
         flexDirection: "row",
@@ -768,7 +1138,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 14
     },
-
     // Room filter pills
     filterScrollContent: {
         gap: 8,
@@ -796,7 +1165,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 11
     },
-
     // Room section
     roomSection: {
         gap: 10
@@ -840,12 +1208,10 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 12
     },
-
     // Plant list
     plantList: {
         gap: 8
     },
-
     // Plant row
     plantRow: {
         flexDirection: "row",
@@ -903,7 +1269,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 14
     },
-
     // Chips
     chip: {
         flexDirection: "row",
@@ -918,7 +1283,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 10,
         lineHeight: 14
     },
-
     // Health badge
     healthBadge: {
         flexDirection: "row",
@@ -938,7 +1302,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 10,
         lineHeight: 14
     },
-
     // Water button
     waterButton: {
         flexDirection: "row",
@@ -953,7 +1316,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 12,
         color: "#ffffff"
     },
-
     // Watered badge
     wateredBadge: {
         flexDirection: "row",
@@ -967,7 +1329,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
-
     // Empty state
     emptyState: {
         alignItems: "center",

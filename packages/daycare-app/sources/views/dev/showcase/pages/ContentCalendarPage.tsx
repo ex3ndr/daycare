@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { Grid } from "@/components/Grid";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
@@ -334,7 +335,7 @@ function PlatformPill({
     );
 }
 
-const pillStyles = StyleSheet.create((theme) => ({
+const pillStyles = StyleSheet.create((_theme) => ({
     pill: {
         paddingHorizontal: 14,
         paddingVertical: 6,
@@ -383,7 +384,7 @@ function Legend() {
     );
 }
 
-const legendStyles = StyleSheet.create((theme) => ({
+const legendStyles = StyleSheet.create((_theme) => ({
     container: (bg: string) => ({
         backgroundColor: bg,
         borderRadius: 10,
@@ -484,7 +485,7 @@ export function ContentCalendarPage() {
             </View>
 
             {/* Calendar grid: 5 day columns */}
-            <View style={styles.calendarGrid(theme.colors.surfaceContainer)}>
+            <Grid style={styles.calendarGrid(theme.colors.surfaceContainer)}>
                 {filteredDays.map((day, idx) => (
                     <React.Fragment key={day.dayName}>
                         {idx > 0 && <View style={styles.columnDivider(theme.colors.outlineVariant)} />}
@@ -495,7 +496,7 @@ export function ContentCalendarPage() {
                         />
                     </React.Fragment>
                 ))}
-            </View>
+            </Grid>
 
             {/* Legend */}
             <Legend />
@@ -503,7 +504,7 @@ export function ContentCalendarPage() {
     );
 }
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     filterRow: {
         flexDirection: "row",
         gap: 8,

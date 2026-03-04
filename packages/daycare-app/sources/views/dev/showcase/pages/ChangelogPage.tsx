@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { Badge } from "@/components/Badge";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
@@ -218,7 +219,7 @@ function SegmentedControl({ active, onSelect }: { active: FilterTab; onSelect: (
     );
 }
 
-const segStyles = StyleSheet.create((theme) => ({
+const segStyles = StyleSheet.create((_theme) => ({
     container: {
         flexDirection: "row",
         borderRadius: 12,
@@ -243,27 +244,8 @@ const segStyles = StyleSheet.create((theme) => ({
 function ReleaseTypeChip({ releaseType }: { releaseType: ReleaseType }) {
     const color = RELEASE_TYPE_COLORS[releaseType];
 
-    return (
-        <View style={[chipStyles.container, { backgroundColor: `${color}18` }]}>
-            <Text style={[chipStyles.text, { color }]}>
-                {releaseType.charAt(0).toUpperCase() + releaseType.slice(1)}
-            </Text>
-        </View>
-    );
+    return <Badge color={color}>{releaseType.charAt(0).toUpperCase() + releaseType.slice(1)}</Badge>;
 }
-
-const chipStyles = StyleSheet.create((theme) => ({
-    container: {
-        paddingHorizontal: 10,
-        paddingVertical: 3,
-        borderRadius: 10
-    },
-    text: {
-        fontFamily: "IBMPlexSans-Medium",
-        fontSize: 11,
-        lineHeight: 16
-    }
-}));
 
 // --- Issue Badge ---
 
@@ -277,7 +259,7 @@ function IssueBadge({ issueNumber }: { issueNumber: number }) {
     );
 }
 
-const issueStyles = StyleSheet.create((theme) => ({
+const issueStyles = StyleSheet.create((_theme) => ({
     container: {
         paddingHorizontal: 8,
         paddingVertical: 2,
@@ -323,7 +305,7 @@ function ChangeRow({ change, isLast }: { change: Change; isLast: boolean }) {
     );
 }
 
-const changeStyles = StyleSheet.create((theme) => ({
+const changeStyles = StyleSheet.create((_theme) => ({
     wrapper: {
         flexDirection: "row",
         gap: 12,
@@ -435,7 +417,7 @@ function ReleaseSection({
     );
 }
 
-const sectionStyles = StyleSheet.create((theme) => ({
+const sectionStyles = StyleSheet.create((_theme) => ({
     container: {
         gap: 0
     },
@@ -529,7 +511,7 @@ function SummaryStats() {
     );
 }
 
-const statsStyles = StyleSheet.create((theme) => ({
+const statsStyles = StyleSheet.create((_theme) => ({
     row: {
         flexDirection: "row",
         gap: 8
@@ -623,7 +605,7 @@ export function ChangelogPage() {
     );
 }
 
-const pageStyles = StyleSheet.create((theme) => ({
+const pageStyles = StyleSheet.create((_theme) => ({
     titleRow: {
         flexDirection: "row",
         alignItems: "center",

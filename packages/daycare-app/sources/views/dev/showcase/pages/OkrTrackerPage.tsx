@@ -2,13 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type Quarter = "Q1 2026" | "Q2 2026" | "Q3 2026" | "Q4 2026";
 type Confidence = "on_track" | "at_risk" | "off_track";
-
 type KeyResult = {
     id: string;
     title: string;
@@ -18,7 +17,6 @@ type KeyResult = {
     confidence: Confidence;
     owner: string;
 };
-
 type Objective = {
     id: string;
     title: string;
@@ -29,7 +27,6 @@ type Objective = {
 // --- Mock data ---
 
 const QUARTERS: Quarter[] = ["Q1 2026", "Q2 2026", "Q3 2026", "Q4 2026"];
-
 const objectives: Objective[] = [
     {
         id: "o1",
@@ -168,13 +165,30 @@ const objectives: Objective[] = [
         ]
     }
 ];
-
-const CONFIDENCE_CONFIG: Record<Confidence, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
-    on_track: { label: "On Track", color: "#10B981", icon: "checkmark-circle" },
-    at_risk: { label: "At Risk", color: "#F59E0B", icon: "warning" },
-    off_track: { label: "Off Track", color: "#EF4444", icon: "close-circle" }
+const CONFIDENCE_CONFIG: Record<
+    Confidence,
+    {
+        label: string;
+        color: string;
+        icon: keyof typeof Ionicons.glyphMap;
+    }
+> = {
+    on_track: {
+        label: "On Track",
+        color: "#10B981",
+        icon: "checkmark-circle"
+    },
+    at_risk: {
+        label: "At Risk",
+        color: "#F59E0B",
+        icon: "warning"
+    },
+    off_track: {
+        label: "Off Track",
+        color: "#EF4444",
+        icon: "close-circle"
+    }
 };
-
 const AVATAR_COLORS = [
     "#6366F1",
     "#EC4899",
@@ -227,7 +241,6 @@ function ProgressRing({
         const x = center + radius * Math.cos(angle) - segmentSize / 2;
         const y = center + radius * Math.sin(angle) - segmentSize / 2;
         const isFilled = i < filledSegments;
-
         segments.push(
             <View
                 key={i}
@@ -243,8 +256,16 @@ function ProgressRing({
             />
         );
     }
-
-    return <View style={{ width: size, height: size }}>{segments}</View>;
+    return (
+        <View
+            style={{
+                width: size,
+                height: size
+            }}
+        >
+            {segments}
+        </View>
+    );
 }
 
 // --- Inline Progress Bar ---
@@ -349,7 +370,6 @@ function KeyResultRow({ kr, surfaceColor }: { kr: KeyResult; surfaceColor: strin
     // For inverted metrics (like churn % or latency) where lower is better
     const isInvertedMetric = kr.unit === "%" && kr.target < kr.current && kr.id === "kr3";
     const isLatencyMetric = kr.unit === "ms";
-
     let progress: number;
     if (isInvertedMetric || isLatencyMetric) {
         // For metrics where lower is better, calculate how close we are to the target
@@ -361,7 +381,6 @@ function KeyResultRow({ kr, surfaceColor }: { kr: KeyResult; surfaceColor: strin
     } else {
         progress = kr.target > 0 ? (kr.current / kr.target) * 100 : 0;
     }
-
     return (
         <View
             style={[
@@ -374,7 +393,15 @@ function KeyResultRow({ kr, surfaceColor }: { kr: KeyResult; surfaceColor: strin
         >
             <View style={styles.krTopRow}>
                 <View style={styles.krTitleArea}>
-                    <Text style={[styles.krTitle, { color: theme.colors.onSurface }]} numberOfLines={2}>
+                    <Text
+                        style={[
+                            styles.krTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                        numberOfLines={2}
+                    >
                         {kr.title}
                     </Text>
                 </View>
@@ -383,10 +410,47 @@ function KeyResultRow({ kr, surfaceColor }: { kr: KeyResult; surfaceColor: strin
 
             <View style={styles.krMetricsRow}>
                 <View style={styles.krValueContainer}>
-                    <Text style={[styles.krCurrentValue, { color: config.color }]}>{kr.current}</Text>
-                    <Text style={[styles.krSeparator, { color: theme.colors.onSurfaceVariant }]}>{" / "}</Text>
-                    <Text style={[styles.krTargetValue, { color: theme.colors.onSurfaceVariant }]}>{kr.target}</Text>
-                    <Text style={[styles.krUnit, { color: theme.colors.onSurfaceVariant }]}> {kr.unit}</Text>
+                    <Text
+                        style={[
+                            styles.krCurrentValue,
+                            {
+                                color: config.color
+                            }
+                        ]}
+                    >
+                        {kr.current}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.krSeparator,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        {" / "}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.krTargetValue,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        {kr.target}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.krUnit,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        {" "}
+                        {kr.unit}
+                    </Text>
                 </View>
                 <ConfidenceChip confidence={kr.confidence} />
             </View>
@@ -406,7 +470,6 @@ function KeyResultRow({ kr, surfaceColor }: { kr: KeyResult; surfaceColor: strin
 function ObjectiveSection({ objective }: { objective: Objective }) {
     const { theme } = useUnistyles();
     const [expanded, setExpanded] = React.useState(true);
-
     const totalProgress = objective.keyResults.reduce((sum, kr) => {
         const p = kr.target > 0 ? (kr.current / kr.target) * 100 : 0;
         return sum + Math.min(p, 100);
@@ -418,9 +481,8 @@ function ObjectiveSection({ objective }: { objective: Objective }) {
     const hasAtRisk = objective.keyResults.some((kr) => kr.confidence === "at_risk");
     const worstConfidence: Confidence = hasOffTrack ? "off_track" : hasAtRisk ? "at_risk" : "on_track";
     const worstColor = CONFIDENCE_CONFIG[worstConfidence].color;
-
     return (
-        <View
+        <Card
             style={[
                 styles.objectiveCard,
                 {
@@ -430,28 +492,76 @@ function ObjectiveSection({ objective }: { objective: Objective }) {
             ]}
         >
             {/* Colored accent strip at left */}
-            <View style={[styles.objectiveAccent, { backgroundColor: worstColor }]} />
+            <View
+                style={[
+                    styles.objectiveAccent,
+                    {
+                        backgroundColor: worstColor
+                    }
+                ]}
+            />
 
             <View style={styles.objectiveInner}>
                 {/* Objective header */}
                 <Pressable
                     onPress={() => setExpanded((prev) => !prev)}
-                    style={({ pressed }) => [styles.objectiveHeader, { opacity: pressed ? 0.7 : 1 }]}
+                    style={({ pressed }) => [
+                        styles.objectiveHeader,
+                        {
+                            opacity: pressed ? 0.7 : 1
+                        }
+                    ]}
                 >
-                    <View style={[styles.objectiveIconCircle, { backgroundColor: `${worstColor}18` }]}>
+                    <View
+                        style={[
+                            styles.objectiveIconCircle,
+                            {
+                                backgroundColor: `${worstColor}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name={objective.icon} size={20} color={worstColor} />
                     </View>
 
                     <View style={styles.objectiveTitleArea}>
-                        <Text style={[styles.objectiveTitle, { color: theme.colors.onSurface }]} numberOfLines={2}>
+                        <Text
+                            style={[
+                                styles.objectiveTitle,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                            numberOfLines={2}
+                        >
                             {objective.title}
                         </Text>
                         <View style={styles.objectiveMetaRow}>
-                            <Text style={[styles.objectiveKrCount, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.objectiveKrCount,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {objective.keyResults.length} key results
                             </Text>
-                            <View style={[styles.objectiveProgressPill, { backgroundColor: `${worstColor}18` }]}>
-                                <Text style={[styles.objectiveProgressText, { color: worstColor }]}>
+                            <View
+                                style={[
+                                    styles.objectiveProgressPill,
+                                    {
+                                        backgroundColor: `${worstColor}18`
+                                    }
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.objectiveProgressText,
+                                        {
+                                            color: worstColor
+                                        }
+                                    ]}
+                                >
                                     {avgProgress}%
                                 </Text>
                             </View>
@@ -479,7 +589,7 @@ function ObjectiveSection({ objective }: { objective: Objective }) {
                     </View>
                 )}
             </View>
-        </View>
+        </Card>
     );
 }
 
@@ -487,23 +597,50 @@ function ObjectiveSection({ objective }: { objective: Objective }) {
 
 function ConfidenceSummary({ allKeyResults }: { allKeyResults: KeyResult[] }) {
     const { theme } = useUnistyles();
-    const counts: Record<Confidence, number> = { on_track: 0, at_risk: 0, off_track: 0 };
+    const counts: Record<Confidence, number> = {
+        on_track: 0,
+        at_risk: 0,
+        off_track: 0
+    };
     for (const kr of allKeyResults) {
         counts[kr.confidence]++;
     }
-
     return (
         <View style={styles.confidenceSummaryRow}>
             {(["on_track", "at_risk", "off_track"] as Confidence[]).map((c) => {
                 const config = CONFIDENCE_CONFIG[c];
                 return (
-                    <View key={c} style={[styles.confidenceSummaryCard, { backgroundColor: `${config.color}12` }]}>
+                    <Card
+                        key={c}
+                        style={[
+                            styles.confidenceSummaryCard,
+                            {
+                                backgroundColor: `${config.color}12`
+                            }
+                        ]}
+                    >
                         <Ionicons name={config.icon} size={18} color={config.color} />
-                        <Text style={[styles.confidenceSummaryCount, { color: config.color }]}>{counts[c]}</Text>
-                        <Text style={[styles.confidenceSummaryLabel, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.confidenceSummaryCount,
+                                {
+                                    color: config.color
+                                }
+                            ]}
+                        >
+                            {counts[c]}
+                        </Text>
+                        <Text
+                            style={[
+                                styles.confidenceSummaryLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {config.label}
                         </Text>
-                    </View>
+                    </Card>
                 );
             })}
         </View>
@@ -515,7 +652,6 @@ function ConfidenceSummary({ allKeyResults }: { allKeyResults: KeyResult[] }) {
 export function OkrTrackerPage() {
     const { theme } = useUnistyles();
     const [selectedQuarter, setSelectedQuarter] = React.useState<Quarter>("Q1 2026");
-
     const allKeyResults = objectives.flatMap((o) => o.keyResults);
     const totalKRs = allKeyResults.length;
     const totalProgress = allKeyResults.reduce((sum, kr) => {
@@ -523,12 +659,18 @@ export function OkrTrackerPage() {
         return sum + Math.min(p, 100);
     }, 0);
     const overallPercentage = totalKRs > 0 ? Math.round(totalProgress / totalKRs) : 0;
-
     return (
         <ShowcasePage bottomInset={48}>
             {/* --- Quarter Selector --- */}
             <View style={styles.quarterSelectorContainer}>
-                <View style={[styles.quarterSelector, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <View
+                    style={[
+                        styles.quarterSelector,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     {QUARTERS.map((q) => {
                         const isSelected = q === selectedQuarter;
                         return (
@@ -569,14 +711,46 @@ export function OkrTrackerPage() {
                         trackColor={theme.colors.outlineVariant}
                     />
                     <View style={styles.ringCenterLabel}>
-                        <Text style={[styles.ringPercentage, { color: theme.colors.primary }]}>
+                        <Text
+                            style={[
+                                styles.ringPercentage,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
                             {overallPercentage}
                         </Text>
-                        <Text style={[styles.ringPercentSign, { color: theme.colors.primary }]}>%</Text>
+                        <Text
+                            style={[
+                                styles.ringPercentSign,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
+                            %
+                        </Text>
                     </View>
                 </View>
-                <Text style={[styles.overallLabel, { color: theme.colors.onSurface }]}>Overall OKR Completion</Text>
-                <Text style={[styles.overallSubLabel, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.overallLabel,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Overall OKR Completion
+                </Text>
+                <Text
+                    style={[
+                        styles.overallSubLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {objectives.length} objectives {"\u00B7"} {totalKRs} key results
                 </Text>
             </View>
@@ -596,7 +770,7 @@ export function OkrTrackerPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Quarter selector
     quarterSelectorContainer: {
         alignItems: "center",
@@ -618,7 +792,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
-
     // Overall progress section
     overallSection: {
         alignItems: "center",
@@ -661,7 +834,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
-
     // Confidence summary
     confidenceSummaryRow: {
         flexDirection: "row",
@@ -684,12 +856,10 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Objectives list
     objectivesList: {
         gap: 14
     },
-
     // Objective card
     objectiveCard: {
         borderRadius: 14,
@@ -747,7 +917,6 @@ const styles = StyleSheet.create((theme) => ({
     objectiveProgressBarArea: {
         paddingHorizontal: 0
     },
-
     // Key results
     krList: {
         gap: 8

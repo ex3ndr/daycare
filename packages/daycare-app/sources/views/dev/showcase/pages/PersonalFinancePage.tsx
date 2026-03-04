@@ -2,12 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
+import { Grid } from "@/components/Grid";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type TransactionType = "income" | "expense";
-
 type Transaction = {
     id: string;
     date: string;
@@ -18,7 +18,6 @@ type Transaction = {
     type: TransactionType;
     account: string;
 };
-
 type BudgetCategory = {
     id: string;
     name: string;
@@ -34,7 +33,6 @@ const NET_WORTH = 127450;
 const MONTHLY_INCOME = 8200;
 const MONTHLY_EXPENSES = 5340;
 const SAVINGS_RATE = 34.9;
-
 const CATEGORY_CHIP_COLORS: Record<string, string> = {
     Salary: "#10b981",
     Freelance: "#06b6d4",
@@ -49,14 +47,12 @@ const CATEGORY_CHIP_COLORS: Record<string, string> = {
     Investment: "#6366f1",
     Subscription: "#a855f7"
 };
-
 const ACCOUNT_COLORS: Record<string, string> = {
     Checking: "#3b82f6",
     Savings: "#10b981",
     Credit: "#ef4444",
     Brokerage: "#8b5cf6"
 };
-
 const transactions: Transaction[] = [
     {
         id: "1",
@@ -179,25 +175,89 @@ const transactions: Transaction[] = [
         account: "Credit"
     }
 ];
-
 const budgetCategories: BudgetCategory[] = [
-    { id: "1", name: "Rent", icon: "home-outline", spent: 1800, budget: 1800, color: "#f97316" },
-    { id: "2", name: "Groceries", icon: "cart-outline", spent: 420, budget: 500, color: "#f59e0b" },
-    { id: "3", name: "Dining", icon: "restaurant-outline", spent: 185, budget: 200, color: "#ef4444" },
-    { id: "4", name: "Transport", icon: "car-outline", spent: 95, budget: 150, color: "#3b82f6" },
-    { id: "5", name: "Shopping", icon: "bag-outline", spent: 310, budget: 250, color: "#8b5cf6" },
-    { id: "6", name: "Entertainment", icon: "film-outline", spent: 68, budget: 100, color: "#ec4899" },
-    { id: "7", name: "Utilities", icon: "flash-outline", spent: 142, budget: 160, color: "#64748b" },
-    { id: "8", name: "Health", icon: "heart-outline", spent: 30, budget: 80, color: "#14b8a6" },
-    { id: "9", name: "Subscriptions", icon: "apps-outline", spent: 45, budget: 50, color: "#a855f7" }
+    {
+        id: "1",
+        name: "Rent",
+        icon: "home-outline",
+        spent: 1800,
+        budget: 1800,
+        color: "#f97316"
+    },
+    {
+        id: "2",
+        name: "Groceries",
+        icon: "cart-outline",
+        spent: 420,
+        budget: 500,
+        color: "#f59e0b"
+    },
+    {
+        id: "3",
+        name: "Dining",
+        icon: "restaurant-outline",
+        spent: 185,
+        budget: 200,
+        color: "#ef4444"
+    },
+    {
+        id: "4",
+        name: "Transport",
+        icon: "car-outline",
+        spent: 95,
+        budget: 150,
+        color: "#3b82f6"
+    },
+    {
+        id: "5",
+        name: "Shopping",
+        icon: "bag-outline",
+        spent: 310,
+        budget: 250,
+        color: "#8b5cf6"
+    },
+    {
+        id: "6",
+        name: "Entertainment",
+        icon: "film-outline",
+        spent: 68,
+        budget: 100,
+        color: "#ec4899"
+    },
+    {
+        id: "7",
+        name: "Utilities",
+        icon: "flash-outline",
+        spent: 142,
+        budget: 160,
+        color: "#64748b"
+    },
+    {
+        id: "8",
+        name: "Health",
+        icon: "heart-outline",
+        spent: 30,
+        budget: 80,
+        color: "#14b8a6"
+    },
+    {
+        id: "9",
+        name: "Subscriptions",
+        icon: "apps-outline",
+        spent: 45,
+        budget: 50,
+        color: "#a855f7"
+    }
 ];
 
 // --- Helpers ---
 
 function formatCurrency(n: number): string {
-    return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `$${n.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    })}`;
 }
-
 function formatCompact(n: number): string {
     if (n >= 1000) {
         return `$${(n / 1000).toFixed(1)}k`;
@@ -206,14 +266,23 @@ function formatCompact(n: number): string {
 }
 
 // Group transactions by dateGroup
-function groupTransactions(txns: Transaction[]): { group: string; items: Transaction[] }[] {
-    const groups: { group: string; items: Transaction[] }[] = [];
+function groupTransactions(txns: Transaction[]): {
+    group: string;
+    items: Transaction[];
+}[] {
+    const groups: {
+        group: string;
+        items: Transaction[];
+    }[] = [];
     for (const txn of txns) {
         const existing = groups.find((g) => g.group === txn.dateGroup);
         if (existing) {
             existing.items.push(txn);
         } else {
-            groups.push({ group: txn.dateGroup, items: [txn] });
+            groups.push({
+                group: txn.dateGroup,
+                items: [txn]
+            });
         }
     }
     return groups;
@@ -237,20 +306,61 @@ function MetricCard({
     subtitle?: string;
 }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[metricStyles.card, { backgroundColor: theme.colors.surfaceContainer }]}>
-            <View style={[metricStyles.iconBadge, { backgroundColor: `${accentColor}18` }]}>
+        <Card
+            style={[
+                metricStyles.card,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
+            <View
+                style={[
+                    metricStyles.iconBadge,
+                    {
+                        backgroundColor: `${accentColor}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={20} color={iconColor} />
             </View>
-            <Text style={[metricStyles.title, { color: theme.colors.onSurfaceVariant }]}>{title}</Text>
-            <Text style={[metricStyles.value, { color: theme.colors.onSurface }]}>{value}</Text>
-            {subtitle && <Text style={[metricStyles.subtitle, { color: accentColor }]}>{subtitle}</Text>}
-        </View>
+            <Text
+                style={[
+                    metricStyles.title,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {title}
+            </Text>
+            <Text
+                style={[
+                    metricStyles.value,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            {subtitle && (
+                <Text
+                    style={[
+                        metricStyles.subtitle,
+                        {
+                            color: accentColor
+                        }
+                    ]}
+                >
+                    {subtitle}
+                </Text>
+            )}
+        </Card>
     );
 }
-
-const metricStyles = StyleSheet.create((theme) => ({
+const metricStyles = StyleSheet.create((_theme) => ({
     card: {
         flex: 1,
         minWidth: 140,
@@ -288,37 +398,101 @@ function TransactionRow({ txn }: { txn: Transaction }) {
     const chipColor = CATEGORY_CHIP_COLORS[txn.category] ?? theme.colors.onSurfaceVariant;
     const accountColor = ACCOUNT_COLORS[txn.account] ?? theme.colors.outline;
     const isIncome = txn.type === "income";
-
     return (
-        <View style={[txnStyles.row, { backgroundColor: theme.colors.surface }]}>
-            <View style={[txnStyles.iconWrap, { backgroundColor: `${chipColor}14` }]}>
+        <View
+            style={[
+                txnStyles.row,
+                {
+                    backgroundColor: theme.colors.surface
+                }
+            ]}
+        >
+            <View
+                style={[
+                    txnStyles.iconWrap,
+                    {
+                        backgroundColor: `${chipColor}14`
+                    }
+                ]}
+            >
                 <Ionicons name={isIncome ? "arrow-down-outline" : "arrow-up-outline"} size={18} color={chipColor} />
             </View>
             <View style={txnStyles.info}>
-                <Text style={[txnStyles.merchant, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                <Text
+                    style={[
+                        txnStyles.merchant,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                    numberOfLines={1}
+                >
                     {txn.merchant}
                 </Text>
                 <View style={txnStyles.tagRow}>
-                    <View style={[txnStyles.chip, { backgroundColor: `${chipColor}18` }]}>
-                        <Text style={[txnStyles.chipText, { color: chipColor }]}>{txn.category}</Text>
+                    <View
+                        style={[
+                            txnStyles.chip,
+                            {
+                                backgroundColor: `${chipColor}18`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                txnStyles.chipText,
+                                {
+                                    color: chipColor
+                                }
+                            ]}
+                        >
+                            {txn.category}
+                        </Text>
                     </View>
-                    <View style={[txnStyles.accountBadge, { borderColor: `${accountColor}40` }]}>
-                        <View style={[txnStyles.accountDot, { backgroundColor: accountColor }]} />
-                        <Text style={[txnStyles.accountText, { color: theme.colors.onSurfaceVariant }]}>
+                    <View
+                        style={[
+                            txnStyles.accountBadge,
+                            {
+                                borderColor: `${accountColor}40`
+                            }
+                        ]}
+                    >
+                        <View
+                            style={[
+                                txnStyles.accountDot,
+                                {
+                                    backgroundColor: accountColor
+                                }
+                            ]}
+                        />
+                        <Text
+                            style={[
+                                txnStyles.accountText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {txn.account}
                         </Text>
                     </View>
                 </View>
             </View>
-            <Text style={[txnStyles.amount, { color: isIncome ? "#10b981" : "#ef4444" }]}>
+            <Text
+                style={[
+                    txnStyles.amount,
+                    {
+                        color: isIncome ? "#10b981" : "#ef4444"
+                    }
+                ]}
+            >
                 {isIncome ? "+" : "-"}
                 {formatCurrency(txn.amount)}
             </Text>
         </View>
     );
 }
-
-const txnStyles = StyleSheet.create((theme) => ({
+const txnStyles = StyleSheet.create((_theme) => ({
     row: {
         flexDirection: "row",
         alignItems: "center",
@@ -386,27 +560,72 @@ function BudgetRow({ item }: { item: BudgetCategory }) {
     const pct = Math.min((item.spent / item.budget) * 100, 100);
     const isOver = item.spent > item.budget;
     const remaining = item.budget - item.spent;
-
     return (
         <View style={budgetStyles.row}>
             <View style={budgetStyles.top}>
                 <View style={budgetStyles.nameRow}>
-                    <View style={[budgetStyles.catIcon, { backgroundColor: `${item.color}18` }]}>
+                    <View
+                        style={[
+                            budgetStyles.catIcon,
+                            {
+                                backgroundColor: `${item.color}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name={item.icon} size={16} color={item.color} />
                     </View>
-                    <Text style={[budgetStyles.name, { color: theme.colors.onSurface }]}>{item.name}</Text>
+                    <Text
+                        style={[
+                            budgetStyles.name,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {item.name}
+                    </Text>
                 </View>
                 <View style={budgetStyles.amountRow}>
-                    <Text style={[budgetStyles.spent, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            budgetStyles.spent,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         {formatCompact(item.spent)}
                     </Text>
-                    <Text style={[budgetStyles.separator, { color: theme.colors.onSurfaceVariant }]}>/</Text>
-                    <Text style={[budgetStyles.budget, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            budgetStyles.separator,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        /
+                    </Text>
+                    <Text
+                        style={[
+                            budgetStyles.budget,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {formatCompact(item.budget)}
                     </Text>
                 </View>
             </View>
-            <View style={[budgetStyles.track, { backgroundColor: `${item.color}14` }]}>
+            <View
+                style={[
+                    budgetStyles.track,
+                    {
+                        backgroundColor: `${item.color}14`
+                    }
+                ]}
+            >
                 <View
                     style={[
                         budgetStyles.fill,
@@ -417,14 +636,20 @@ function BudgetRow({ item }: { item: BudgetCategory }) {
                     ]}
                 />
             </View>
-            <Text style={[budgetStyles.remaining, { color: isOver ? "#ef4444" : theme.colors.onSurfaceVariant }]}>
+            <Text
+                style={[
+                    budgetStyles.remaining,
+                    {
+                        color: isOver ? "#ef4444" : theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
                 {isOver ? `$${Math.abs(remaining).toFixed(0)} over budget` : `$${remaining.toFixed(0)} left`}
             </Text>
         </View>
     );
 }
-
-const budgetStyles = StyleSheet.create((theme) => ({
+const budgetStyles = StyleSheet.create((_theme) => ({
     row: {
         gap: 6,
         paddingVertical: 10
@@ -488,31 +713,60 @@ export function PersonalFinancePage() {
     const { theme } = useUnistyles();
     const [transactionsExpanded, setTransactionsExpanded] = React.useState(true);
     const [budgetExpanded, setBudgetExpanded] = React.useState(true);
-
     const grouped = React.useMemo(() => groupTransactions(transactions), []);
-
     const totalBudget = budgetCategories.reduce((s, b) => s + b.budget, 0);
     const totalSpent = budgetCategories.reduce((s, b) => s + b.spent, 0);
     const overallBudgetPct = Math.min((totalSpent / totalBudget) * 100, 100);
-
     return (
         <ShowcasePage topInset={24} bottomInset={60}>
             {/* --- Hero: Net Worth --- */}
             <View style={pageStyles.hero}>
-                <Text style={[pageStyles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>Net Worth</Text>
-                <Text style={[pageStyles.heroValue, { color: theme.colors.onSurface }]}>
+                <Text
+                    style={[
+                        pageStyles.heroLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    Net Worth
+                </Text>
+                <Text
+                    style={[
+                        pageStyles.heroValue,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
                     ${NET_WORTH.toLocaleString("en-US")}
                 </Text>
                 <View style={pageStyles.heroBadgeRow}>
-                    <View style={[pageStyles.heroBadge, { backgroundColor: "#10b98118" }]}>
+                    <View
+                        style={[
+                            pageStyles.heroBadge,
+                            {
+                                backgroundColor: "#10b98118"
+                            }
+                        ]}
+                    >
                         <Ionicons name="trending-up" size={14} color="#10b981" />
-                        <Text style={[pageStyles.heroBadgeText, { color: "#10b981" }]}>+2.4% this month</Text>
+                        <Text
+                            style={[
+                                pageStyles.heroBadgeText,
+                                {
+                                    color: "#10b981"
+                                }
+                            ]}
+                        >
+                            +2.4% this month
+                        </Text>
                     </View>
                 </View>
             </View>
 
             {/* --- Metric Cards Grid --- */}
-            <View style={pageStyles.metricsGrid}>
+            <Grid style={pageStyles.metricsGrid}>
                 <MetricCard
                     title="Net Worth"
                     value={formatCompact(NET_WORTH)}
@@ -545,43 +799,112 @@ export function PersonalFinancePage() {
                     accentColor="#3b82f6"
                     subtitle="Above goal"
                 />
-            </View>
+            </Grid>
 
             {/* --- Cashflow Mini Bar --- */}
-            <View style={[pageStyles.cashflowCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-                <Text style={[pageStyles.cashflowTitle, { color: theme.colors.onSurface }]}>Monthly Cashflow</Text>
+            <Card
+                style={[
+                    pageStyles.cashflowCard,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        pageStyles.cashflowTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Monthly Cashflow
+                </Text>
                 <View style={pageStyles.cashflowBarWrap}>
                     <View style={pageStyles.cashflowBarRow}>
-                        <View style={[pageStyles.cashflowBar, { flex: MONTHLY_INCOME, backgroundColor: "#10b981" }]} />
+                        <View
+                            style={[
+                                pageStyles.cashflowBar,
+                                {
+                                    flex: MONTHLY_INCOME,
+                                    backgroundColor: "#10b981"
+                                }
+                            ]}
+                        />
                     </View>
                     <View style={pageStyles.cashflowBarRow}>
                         <View
-                            style={[pageStyles.cashflowBar, { flex: MONTHLY_EXPENSES, backgroundColor: "#ef4444" }]}
+                            style={[
+                                pageStyles.cashflowBar,
+                                {
+                                    flex: MONTHLY_EXPENSES,
+                                    backgroundColor: "#ef4444"
+                                }
+                            ]}
                         />
-                        <View style={{ flex: MONTHLY_INCOME - MONTHLY_EXPENSES }} />
+                        <View
+                            style={{
+                                flex: MONTHLY_INCOME - MONTHLY_EXPENSES
+                            }}
+                        />
                     </View>
                 </View>
                 <View style={pageStyles.cashflowLegend}>
                     <View style={pageStyles.cashflowLegendItem}>
-                        <View style={[pageStyles.cashflowDot, { backgroundColor: "#10b981" }]} />
-                        <Text style={[pageStyles.cashflowLegendText, { color: theme.colors.onSurfaceVariant }]}>
+                        <View
+                            style={[
+                                pageStyles.cashflowDot,
+                                {
+                                    backgroundColor: "#10b981"
+                                }
+                            ]}
+                        />
+                        <Text
+                            style={[
+                                pageStyles.cashflowLegendText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Income {formatCurrency(MONTHLY_INCOME)}
                         </Text>
                     </View>
                     <View style={pageStyles.cashflowLegendItem}>
-                        <View style={[pageStyles.cashflowDot, { backgroundColor: "#ef4444" }]} />
-                        <Text style={[pageStyles.cashflowLegendText, { color: theme.colors.onSurfaceVariant }]}>
+                        <View
+                            style={[
+                                pageStyles.cashflowDot,
+                                {
+                                    backgroundColor: "#ef4444"
+                                }
+                            ]}
+                        />
+                        <Text
+                            style={[
+                                pageStyles.cashflowLegendText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Expenses {formatCurrency(MONTHLY_EXPENSES)}
                         </Text>
                     </View>
                 </View>
-            </View>
+            </Card>
 
             {/* --- Recent Transactions --- */}
             <Pressable onPress={() => setTransactionsExpanded((prev) => !prev)} style={pageStyles.sectionHeader}>
                 <View style={pageStyles.sectionTitleRow}>
                     <Ionicons name="receipt-outline" size={18} color={theme.colors.primary} />
-                    <Text style={[pageStyles.sectionTitle, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            pageStyles.sectionTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         Recent Transactions
                     </Text>
                 </View>
@@ -593,18 +916,44 @@ export function PersonalFinancePage() {
             </Pressable>
 
             {transactionsExpanded && (
-                <View style={[pageStyles.sectionCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <Card
+                    style={[
+                        pageStyles.sectionCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     {grouped.map((group, groupIdx) => (
                         <React.Fragment key={group.group}>
                             {groupIdx > 0 && (
-                                <View style={[pageStyles.groupDivider, { borderColor: theme.colors.outlineVariant }]} />
+                                <View
+                                    style={[
+                                        pageStyles.groupDivider,
+                                        {
+                                            borderColor: theme.colors.outlineVariant
+                                        }
+                                    ]}
+                                />
                             )}
                             <View style={pageStyles.dateGroupHeader}>
-                                <Text style={[pageStyles.dateGroupText, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        pageStyles.dateGroupText,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     {group.group}
                                 </Text>
                                 <View
-                                    style={[pageStyles.dateGroupLine, { backgroundColor: theme.colors.outlineVariant }]}
+                                    style={[
+                                        pageStyles.dateGroupLine,
+                                        {
+                                            backgroundColor: theme.colors.outlineVariant
+                                        }
+                                    ]}
                                 />
                             </View>
                             {group.items.map((txn) => (
@@ -612,17 +961,31 @@ export function PersonalFinancePage() {
                             ))}
                         </React.Fragment>
                     ))}
-                </View>
+                </Card>
             )}
 
             {/* --- Budget Categories --- */}
             <Pressable
                 onPress={() => setBudgetExpanded((prev) => !prev)}
-                style={[pageStyles.sectionHeader, { marginTop: 24 }]}
+                style={[
+                    pageStyles.sectionHeader,
+                    {
+                        marginTop: 24
+                    }
+                ]}
             >
                 <View style={pageStyles.sectionTitleRow}>
                     <Ionicons name="pie-chart-outline" size={18} color={theme.colors.primary} />
-                    <Text style={[pageStyles.sectionTitle, { color: theme.colors.onSurface }]}>Budget</Text>
+                    <Text
+                        style={[
+                            pageStyles.sectionTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Budget
+                    </Text>
                 </View>
                 <Ionicons
                     name={budgetExpanded ? "chevron-up" : "chevron-down"}
@@ -632,21 +995,54 @@ export function PersonalFinancePage() {
             </Pressable>
 
             {budgetExpanded && (
-                <View style={[pageStyles.sectionCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <Card
+                    style={[
+                        pageStyles.sectionCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     {/* Overall summary bar */}
                     <View style={pageStyles.budgetSummary}>
                         <View style={pageStyles.budgetSummaryTop}>
-                            <Text style={[pageStyles.budgetSummaryLabel, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    pageStyles.budgetSummaryLabel,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 Overall
                             </Text>
-                            <Text style={[pageStyles.budgetSummaryAmount, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    pageStyles.budgetSummaryAmount,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {formatCurrency(totalSpent)}{" "}
-                                <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13 }}>
+                                <Text
+                                    style={{
+                                        color: theme.colors.onSurfaceVariant,
+                                        fontSize: 13
+                                    }}
+                                >
                                     / {formatCurrency(totalBudget)}
                                 </Text>
                             </Text>
                         </View>
-                        <View style={[pageStyles.budgetSummaryTrack, { backgroundColor: theme.colors.outlineVariant }]}>
+                        <View
+                            style={[
+                                pageStyles.budgetSummaryTrack,
+                                {
+                                    backgroundColor: theme.colors.outlineVariant
+                                }
+                            ]}
+                        >
                             <View
                                 style={[
                                     pageStyles.budgetSummaryFill,
@@ -659,13 +1055,20 @@ export function PersonalFinancePage() {
                         </View>
                     </View>
 
-                    <View style={[pageStyles.budgetDivider, { borderColor: theme.colors.outlineVariant }]} />
+                    <View
+                        style={[
+                            pageStyles.budgetDivider,
+                            {
+                                borderColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    />
 
                     {/* Individual categories */}
                     {budgetCategories.map((cat) => (
                         <BudgetRow key={cat.id} item={cat} />
                     ))}
-                </View>
+                </Card>
             )}
         </ShowcasePage>
     );
@@ -673,7 +1076,7 @@ export function PersonalFinancePage() {
 
 // --- Page Styles ---
 
-const pageStyles = StyleSheet.create((theme) => ({
+const pageStyles = StyleSheet.create((_theme) => ({
     // Hero
     hero: {
         alignItems: "center",
@@ -706,7 +1109,6 @@ const pageStyles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
-
     // Metrics grid
     metricsGrid: {
         flexDirection: "row",
@@ -714,7 +1116,6 @@ const pageStyles = StyleSheet.create((theme) => ({
         gap: 12,
         marginBottom: 20
     },
-
     // Cashflow
     cashflowCard: {
         borderRadius: 16,
@@ -757,7 +1158,6 @@ const pageStyles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
-
     // Section headers
     sectionHeader: {
         flexDirection: "row",
@@ -779,7 +1179,6 @@ const pageStyles = StyleSheet.create((theme) => ({
         overflow: "hidden",
         paddingVertical: 4
     },
-
     // Date group headers
     dateGroupHeader: {
         flexDirection: "row",
@@ -804,7 +1203,6 @@ const pageStyles = StyleSheet.create((theme) => ({
         marginHorizontal: 14,
         marginVertical: 4
     },
-
     // Budget summary
     budgetSummary: {
         paddingHorizontal: 14,

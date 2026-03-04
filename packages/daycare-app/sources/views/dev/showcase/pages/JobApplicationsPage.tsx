@@ -2,13 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type ApplicationStatus = "Wishlist" | "Applied" | "Phone Screen" | "Interview" | "Offer" | "Rejected";
 type LocationType = "remote" | "hybrid" | "onsite";
-
 interface Application {
     id: string;
     company: string;
@@ -28,7 +27,6 @@ interface Application {
 // --- Mock Data ---
 
 const ALL_STATUSES: ApplicationStatus[] = ["Wishlist", "Applied", "Phone Screen", "Interview", "Offer", "Rejected"];
-
 const MOCK_APPLICATIONS: Application[] = [
     {
         id: "a1",
@@ -247,32 +245,76 @@ const MOCK_APPLICATIONS: Application[] = [
 function formatSalary(amount: number): string {
     return `$${Math.round(amount / 1000)}k`;
 }
-
 function salaryRange(app: Application): string {
     return `${formatSalary(app.salaryMin)}-${formatSalary(app.salaryMax)}`;
 }
-
 const STATUS_CONFIG: Record<
     ApplicationStatus,
-    { icon: keyof typeof Ionicons.glyphMap; color: string; bgAlpha: string }
+    {
+        icon: keyof typeof Ionicons.glyphMap;
+        color: string;
+        bgAlpha: string;
+    }
 > = {
-    Wishlist: { icon: "star-outline", color: "#8B5CF6", bgAlpha: "#8B5CF618" },
-    Applied: { icon: "paper-plane-outline", color: "#3B82F6", bgAlpha: "#3B82F618" },
-    "Phone Screen": { icon: "call-outline", color: "#F59E0B", bgAlpha: "#F59E0B18" },
-    Interview: { icon: "people-outline", color: "#EC4899", bgAlpha: "#EC489918" },
-    Offer: { icon: "trophy-outline", color: "#10B981", bgAlpha: "#10B98118" },
-    Rejected: { icon: "close-circle-outline", color: "#EF4444", bgAlpha: "#EF444418" }
+    Wishlist: {
+        icon: "star-outline",
+        color: "#8B5CF6",
+        bgAlpha: "#8B5CF618"
+    },
+    Applied: {
+        icon: "paper-plane-outline",
+        color: "#3B82F6",
+        bgAlpha: "#3B82F618"
+    },
+    "Phone Screen": {
+        icon: "call-outline",
+        color: "#F59E0B",
+        bgAlpha: "#F59E0B18"
+    },
+    Interview: {
+        icon: "people-outline",
+        color: "#EC4899",
+        bgAlpha: "#EC489918"
+    },
+    Offer: {
+        icon: "trophy-outline",
+        color: "#10B981",
+        bgAlpha: "#10B98118"
+    },
+    Rejected: {
+        icon: "close-circle-outline",
+        color: "#EF4444",
+        bgAlpha: "#EF444418"
+    }
 };
-
 const LOCATION_CONFIG: Record<
     LocationType,
-    { label: string; color: string; bg: string; icon: keyof typeof Ionicons.glyphMap }
+    {
+        label: string;
+        color: string;
+        bg: string;
+        icon: keyof typeof Ionicons.glyphMap;
+    }
 > = {
-    remote: { label: "Remote", color: "#10B981", bg: "#10B98118", icon: "globe-outline" },
-    hybrid: { label: "Hybrid", color: "#F59E0B", bg: "#F59E0B18", icon: "business-outline" },
-    onsite: { label: "Onsite", color: "#3B82F6", bg: "#3B82F618", icon: "location-outline" }
+    remote: {
+        label: "Remote",
+        color: "#10B981",
+        bg: "#10B98118",
+        icon: "globe-outline"
+    },
+    hybrid: {
+        label: "Hybrid",
+        color: "#F59E0B",
+        bg: "#F59E0B18",
+        icon: "business-outline"
+    },
+    onsite: {
+        label: "Onsite",
+        color: "#3B82F6",
+        bg: "#3B82F618",
+        icon: "location-outline"
+    }
 };
-
 function initialsFrom(name: string): string {
     const parts = name.split(" ");
     if (parts.length >= 2) {
@@ -298,7 +340,6 @@ function StatusPipeline({
     surfaceColor: string;
 }) {
     const totalApps = MOCK_APPLICATIONS.length;
-
     return (
         <View style={styles.pipelineContainer}>
             {ALL_STATUSES.map((status) => {
@@ -306,7 +347,6 @@ function StatusPipeline({
                 const config = STATUS_CONFIG[status];
                 const isActive = activeFilter === status;
                 const barWidth = totalApps > 0 ? Math.max((count / totalApps) * 100, 12) : 12;
-
                 return (
                     <Pressable
                         key={status}
@@ -323,18 +363,42 @@ function StatusPipeline({
                         <View style={styles.pipelineStageHeader}>
                             <Ionicons name={config.icon} size={14} color={config.color} />
                             <Text
-                                style={[styles.pipelineStageLabel, { color: isActive ? config.color : textColor }]}
+                                style={[
+                                    styles.pipelineStageLabel,
+                                    {
+                                        color: isActive ? config.color : textColor
+                                    }
+                                ]}
                                 numberOfLines={1}
                             >
                                 {status}
                             </Text>
                         </View>
-                        <Text style={[styles.pipelineStageCount, { color: config.color }]}>{count}</Text>
-                        <View style={[styles.pipelineBar, { backgroundColor: `${config.color}20` }]}>
+                        <Text
+                            style={[
+                                styles.pipelineStageCount,
+                                {
+                                    color: config.color
+                                }
+                            ]}
+                        >
+                            {count}
+                        </Text>
+                        <View
+                            style={[
+                                styles.pipelineBar,
+                                {
+                                    backgroundColor: `${config.color}20`
+                                }
+                            ]}
+                        >
                             <View
                                 style={[
                                     styles.pipelineBarFill,
-                                    { backgroundColor: config.color, width: `${barWidth}%` }
+                                    {
+                                        backgroundColor: config.color,
+                                        width: `${barWidth}%`
+                                    }
                                 ]}
                             />
                         </View>
@@ -364,13 +428,46 @@ function MetricCard({
     borderColor: string;
 }) {
     return (
-        <View style={[styles.metricCard, { backgroundColor: bgColor, borderColor }]}>
-            <View style={[styles.metricIconContainer, { backgroundColor: `${iconColor}14` }]}>
+        <Card
+            style={[
+                styles.metricCard,
+                {
+                    backgroundColor: bgColor,
+                    borderColor
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.metricIconContainer,
+                    {
+                        backgroundColor: `${iconColor}14`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={18} color={iconColor} />
             </View>
-            <Text style={[styles.metricValue, { color: valueColor }]}>{value}</Text>
-            <Text style={[styles.metricLabel, { color: `${valueColor}99` }]}>{label}</Text>
-        </View>
+            <Text
+                style={[
+                    styles.metricValue,
+                    {
+                        color: valueColor
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            <Text
+                style={[
+                    styles.metricLabel,
+                    {
+                        color: `${valueColor}99`
+                    }
+                ]}
+            >
+                {label}
+            </Text>
+        </Card>
     );
 }
 
@@ -378,9 +475,25 @@ function MetricCard({
 function LocationChip({ location }: { location: LocationType }) {
     const config = LOCATION_CONFIG[location];
     return (
-        <View style={[styles.locationChip, { backgroundColor: config.bg }]}>
+        <View
+            style={[
+                styles.locationChip,
+                {
+                    backgroundColor: config.bg
+                }
+            ]}
+        >
             <Ionicons name={config.icon} size={11} color={config.color} />
-            <Text style={[styles.locationChipText, { color: config.color }]}>{config.label}</Text>
+            <Text
+                style={[
+                    styles.locationChipText,
+                    {
+                        color: config.color
+                    }
+                ]}
+            >
+                {config.label}
+            </Text>
         </View>
     );
 }
@@ -389,9 +502,25 @@ function LocationChip({ location }: { location: LocationType }) {
 function ReferralBadge({ name }: { name: string }) {
     const color = "#8B5CF6";
     return (
-        <View style={[styles.referralBadge, { backgroundColor: `${color}14` }]}>
+        <View
+            style={[
+                styles.referralBadge,
+                {
+                    backgroundColor: `${color}14`
+                }
+            ]}
+        >
             <Ionicons name="person-add-outline" size={11} color={color} />
-            <Text style={[styles.referralBadgeText, { color }]}>{name}</Text>
+            <Text
+                style={[
+                    styles.referralBadgeText,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {name}
+            </Text>
         </View>
     );
 }
@@ -418,10 +547,16 @@ function ApplicationCard({
 }) {
     const statusConfig = STATUS_CONFIG[app.status];
     const companyInitials = initialsFrom(app.company);
-
     return (
-        <Pressable onPress={onToggle} style={({ pressed }) => [pressed && { opacity: 0.93 }]}>
-            <View
+        <Pressable
+            onPress={onToggle}
+            style={({ pressed }) => [
+                pressed && {
+                    opacity: 0.93
+                }
+            ]}
+        >
+            <Card
                 style={[
                     styles.appCard,
                     {
@@ -431,47 +566,129 @@ function ApplicationCard({
                 ]}
             >
                 {/* Left accent stripe */}
-                <View style={[styles.appCardStripe, { backgroundColor: statusConfig.color }]} />
+                <View
+                    style={[
+                        styles.appCardStripe,
+                        {
+                            backgroundColor: statusConfig.color
+                        }
+                    ]}
+                />
 
                 <View style={styles.appCardContent}>
                     {/* Top row: company avatar + name + salary */}
                     <View style={styles.appTopRow}>
-                        <View style={[styles.companyAvatar, { backgroundColor: `${statusConfig.color}18` }]}>
-                            <Text style={[styles.companyAvatarText, { color: statusConfig.color }]}>
+                        <View
+                            style={[
+                                styles.companyAvatar,
+                                {
+                                    backgroundColor: `${statusConfig.color}18`
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.companyAvatarText,
+                                    {
+                                        color: statusConfig.color
+                                    }
+                                ]}
+                            >
                                 {companyInitials}
                             </Text>
                         </View>
                         <View style={styles.appCompanyCol}>
-                            <Text style={[styles.appCompanyName, { color: textColor }]} numberOfLines={1}>
+                            <Text
+                                style={[
+                                    styles.appCompanyName,
+                                    {
+                                        color: textColor
+                                    }
+                                ]}
+                                numberOfLines={1}
+                            >
                                 {app.company}
                             </Text>
-                            <Text style={[styles.appRoleTitle, { color: subtextColor }]} numberOfLines={1}>
+                            <Text
+                                style={[
+                                    styles.appRoleTitle,
+                                    {
+                                        color: subtextColor
+                                    }
+                                ]}
+                                numberOfLines={1}
+                            >
                                 {app.role}
                             </Text>
                         </View>
-                        <Text style={[styles.appSalary, { color: textColor }]}>{salaryRange(app)}</Text>
+                        <Text
+                            style={[
+                                styles.appSalary,
+                                {
+                                    color: textColor
+                                }
+                            ]}
+                        >
+                            {salaryRange(app)}
+                        </Text>
                     </View>
 
                     {/* Bottom row: date + location chip + referral */}
                     <View style={styles.appBottomRow}>
                         <View style={styles.appDateContainer}>
                             <Ionicons name="calendar-outline" size={12} color={subtextColor} />
-                            <Text style={[styles.appDate, { color: subtextColor }]}>{app.dateApplied}</Text>
+                            <Text
+                                style={[
+                                    styles.appDate,
+                                    {
+                                        color: subtextColor
+                                    }
+                                ]}
+                            >
+                                {app.dateApplied}
+                            </Text>
                         </View>
                         <LocationChip location={app.location} />
                         {app.referralContact ? <ReferralBadge name={app.referralContact} /> : null}
-                        <View style={{ flex: 1 }} />
+                        <View
+                            style={{
+                                flex: 1
+                            }}
+                        />
                         <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={16} color={subtextColor} />
                     </View>
 
                     {/* Expanded details */}
                     {isExpanded && (
-                        <View style={[styles.appExpanded, { borderTopColor: borderColor }]}>
+                        <View
+                            style={[
+                                styles.appExpanded,
+                                {
+                                    borderTopColor: borderColor
+                                }
+                            ]}
+                        >
                             {app.interviewDate ? (
                                 <View style={styles.appExpandedRow}>
                                     <Ionicons name="calendar" size={14} color="#EC4899" />
-                                    <Text style={[styles.appExpandedLabel, { color: subtextColor }]}>Next Step</Text>
-                                    <Text style={[styles.appExpandedValue, { color: textColor }]}>
+                                    <Text
+                                        style={[
+                                            styles.appExpandedLabel,
+                                            {
+                                                color: subtextColor
+                                            }
+                                        ]}
+                                    >
+                                        Next Step
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.appExpandedValue,
+                                            {
+                                                color: textColor
+                                            }
+                                        ]}
+                                    >
                                         {app.interviewDate}
                                     </Text>
                                 </View>
@@ -479,28 +696,80 @@ function ApplicationCard({
                             {app.recruiterName ? (
                                 <View style={styles.appExpandedRow}>
                                     <Ionicons name="person-outline" size={14} color={subtextColor} />
-                                    <Text style={[styles.appExpandedLabel, { color: subtextColor }]}>Recruiter</Text>
-                                    <Text style={[styles.appExpandedValue, { color: textColor }]}>
+                                    <Text
+                                        style={[
+                                            styles.appExpandedLabel,
+                                            {
+                                                color: subtextColor
+                                            }
+                                        ]}
+                                    >
+                                        Recruiter
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.appExpandedValue,
+                                            {
+                                                color: textColor
+                                            }
+                                        ]}
+                                    >
                                         {app.recruiterName}
                                     </Text>
                                 </View>
                             ) : null}
                             <View style={styles.appExpandedRow}>
                                 <Ionicons name="link-outline" size={14} color={subtextColor} />
-                                <Text style={[styles.appExpandedLabel, { color: subtextColor }]}>Website</Text>
-                                <Text style={[styles.appExpandedValue, { color: primaryColor }]}>{app.companyUrl}</Text>
+                                <Text
+                                    style={[
+                                        styles.appExpandedLabel,
+                                        {
+                                            color: subtextColor
+                                        }
+                                    ]}
+                                >
+                                    Website
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.appExpandedValue,
+                                        {
+                                            color: primaryColor
+                                        }
+                                    ]}
+                                >
+                                    {app.companyUrl}
+                                </Text>
                             </View>
                             {app.notes ? (
                                 <View style={styles.appExpandedRow}>
                                     <Ionicons name="document-text-outline" size={14} color={subtextColor} />
-                                    <Text style={[styles.appExpandedLabel, { color: subtextColor }]}>Notes</Text>
-                                    <Text style={[styles.appExpandedValue, { color: textColor }]}>{app.notes}</Text>
+                                    <Text
+                                        style={[
+                                            styles.appExpandedLabel,
+                                            {
+                                                color: subtextColor
+                                            }
+                                        ]}
+                                    >
+                                        Notes
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.appExpandedValue,
+                                            {
+                                                color: textColor
+                                            }
+                                        ]}
+                                    >
+                                        {app.notes}
+                                    </Text>
                                 </View>
                             ) : null}
                         </View>
                     )}
                 </View>
-            </View>
+            </Card>
         </Pressable>
     );
 }
@@ -516,18 +785,60 @@ function StatusGroupHeader({
     textColor: string;
 }) {
     const config = STATUS_CONFIG[status];
-
     return (
         <View style={styles.statusGroupHeader}>
-            <View style={[styles.statusGroupIcon, { backgroundColor: config.bgAlpha }]}>
+            <View
+                style={[
+                    styles.statusGroupIcon,
+                    {
+                        backgroundColor: config.bgAlpha
+                    }
+                ]}
+            >
                 <Ionicons name={config.icon} size={16} color={config.color} />
             </View>
-            <Text style={[styles.statusGroupLabel, { color: textColor }]}>{status}</Text>
-            <View style={[styles.statusGroupBadge, { backgroundColor: config.bgAlpha }]}>
-                <Text style={[styles.statusGroupBadgeText, { color: config.color }]}>{count}</Text>
+            <Text
+                style={[
+                    styles.statusGroupLabel,
+                    {
+                        color: textColor
+                    }
+                ]}
+            >
+                {status}
+            </Text>
+            <View
+                style={[
+                    styles.statusGroupBadge,
+                    {
+                        backgroundColor: config.bgAlpha
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.statusGroupBadgeText,
+                        {
+                            color: config.color
+                        }
+                    ]}
+                >
+                    {count}
+                </Text>
             </View>
-            <View style={{ flex: 1 }} />
-            <View style={[styles.statusGroupLine, { backgroundColor: `${config.color}30` }]} />
+            <View
+                style={{
+                    flex: 1
+                }}
+            />
+            <View
+                style={[
+                    styles.statusGroupLine,
+                    {
+                        backgroundColor: `${config.color}30`
+                    }
+                ]}
+            />
         </View>
     );
 }
@@ -566,20 +877,34 @@ export function JobApplicationsPage() {
 
     // Filter statuses to display
     const statusesToShow = statusFilter ? [statusFilter] : ALL_STATUSES;
-
     const handleToggleApp = React.useCallback((appId: string) => {
         setExpandedAppId((prev) => (prev === appId ? null : appId));
     }, []);
-
     return (
         <ShowcasePage edgeToEdge bottomInset={48} contentBackgroundColor={theme.colors.surface}>
             {/* Header */}
             <View style={styles.headerContainer}>
                 <View style={styles.headerTitleRow}>
                     <Ionicons name="briefcase" size={24} color={theme.colors.primary} />
-                    <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>Job Search</Text>
+                    <Text
+                        style={[
+                            styles.headerTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Job Search
+                    </Text>
                 </View>
-                <Text style={[styles.headerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.headerSubtitle,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     Track your applications and interview pipeline
                 </Text>
             </View>
@@ -626,7 +951,16 @@ export function JobApplicationsPage() {
 
             {/* Pipeline Visualization */}
             <View style={styles.sectionContainer}>
-                <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Pipeline</Text>
+                <Text
+                    style={[
+                        styles.sectionTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Pipeline
+                </Text>
                 <StatusPipeline
                     appsByStatus={appsByStatus}
                     activeFilter={statusFilter}
@@ -651,7 +985,9 @@ export function JobApplicationsPage() {
                     <Text
                         style={[
                             styles.filterPillText,
-                            { color: statusFilter === null ? "#FFFFFF" : theme.colors.onSurfaceVariant }
+                            {
+                                color: statusFilter === null ? "#FFFFFF" : theme.colors.onSurfaceVariant
+                            }
                         ]}
                     >
                         All ({totalApps})
@@ -676,7 +1012,9 @@ export function JobApplicationsPage() {
                             <Text
                                 style={[
                                     styles.filterPillText,
-                                    { color: isActive ? "#FFFFFF" : theme.colors.onSurfaceVariant }
+                                    {
+                                        color: isActive ? "#FFFFFF" : theme.colors.onSurfaceVariant
+                                    }
                                 ]}
                             >
                                 {status}
@@ -690,7 +1028,12 @@ export function JobApplicationsPage() {
                                 ]}
                             >
                                 <Text
-                                    style={[styles.filterPillBadgeText, { color: isActive ? "#FFFFFF" : config.color }]}
+                                    style={[
+                                        styles.filterPillBadgeText,
+                                        {
+                                            color: isActive ? "#FFFFFF" : config.color
+                                        }
+                                    ]}
                                 >
                                     {count}
                                 </Text>
@@ -705,14 +1048,20 @@ export function JobApplicationsPage() {
                 {statusesToShow.map((status) => {
                     const apps = appsByStatus.get(status) ?? [];
                     if (apps.length === 0 && statusFilter === null) return null;
-
                     return (
                         <View key={status} style={styles.statusGroup}>
                             <StatusGroupHeader status={status} count={apps.length} textColor={theme.colors.onSurface} />
                             {apps.length === 0 ? (
                                 <View style={styles.emptyGroup}>
                                     <Ionicons name="file-tray-outline" size={24} color={theme.colors.outlineVariant} />
-                                    <Text style={[styles.emptyGroupText, { color: theme.colors.onSurfaceVariant }]}>
+                                    <Text
+                                        style={[
+                                            styles.emptyGroupText,
+                                            {
+                                                color: theme.colors.onSurfaceVariant
+                                            }
+                                        ]}
+                                    >
                                         No applications in this stage
                                     </Text>
                                 </View>
@@ -743,7 +1092,7 @@ export function JobApplicationsPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Header
     headerContainer: {
         paddingHorizontal: 16,
@@ -766,7 +1115,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 14,
         marginLeft: 34
     },
-
     // Metrics row
     metricsRow: {
         flexDirection: "row" as const,
@@ -801,7 +1149,6 @@ const styles = StyleSheet.create((theme) => ({
         letterSpacing: 0.5,
         textTransform: "uppercase" as const
     },
-
     // Pipeline visualization
     sectionContainer: {
         paddingHorizontal: 16,
@@ -849,7 +1196,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 4,
         borderRadius: 2
     },
-
     // Filter pills
     filterScroll: {
         paddingHorizontal: 16,
@@ -879,7 +1225,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 10
     },
-
     // Applications container
     applicationsContainer: {
         paddingHorizontal: 16,
@@ -888,7 +1233,6 @@ const styles = StyleSheet.create((theme) => ({
     statusGroup: {
         gap: 8
     },
-
     // Status group header
     statusGroupHeader: {
         flexDirection: "row" as const,
@@ -924,7 +1268,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 1,
         marginLeft: 4
     },
-
     // Application card
     appsList: {
         gap: 8
@@ -943,7 +1286,6 @@ const styles = StyleSheet.create((theme) => ({
         padding: 14,
         gap: 10
     },
-
     // Card top row
     appTopRow: {
         flexDirection: "row" as const,
@@ -978,7 +1320,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 12,
         letterSpacing: -0.3
     },
-
     // Card bottom row
     appBottomRow: {
         flexDirection: "row" as const,
@@ -995,7 +1336,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Location chip
     locationChip: {
         flexDirection: "row" as const,
@@ -1009,7 +1349,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 10
     },
-
     // Referral badge
     referralBadge: {
         flexDirection: "row" as const,
@@ -1023,7 +1362,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 10
     },
-
     // Expanded details
     appExpanded: {
         borderTopWidth: 1,
@@ -1046,7 +1384,6 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1,
         lineHeight: 18
     },
-
     // Empty group
     emptyGroup: {
         paddingVertical: 24,

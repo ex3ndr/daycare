@@ -2,9 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Switch, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type Pet = {
     id: string;
@@ -16,7 +16,6 @@ type Pet = {
     icon: keyof typeof Ionicons.glyphMap;
     color: string;
 };
-
 type Appointment = {
     id: string;
     petId: string;
@@ -26,7 +25,6 @@ type Appointment = {
     time: string;
     reminderEnabled: boolean;
 };
-
 type HealthRecord = {
     id: string;
     petId: string;
@@ -35,7 +33,6 @@ type HealthRecord = {
     description: string;
     vetName: string;
 };
-
 type DailyCareItem = {
     id: string;
     petId: string;
@@ -52,19 +49,16 @@ const APPOINTMENT_ICONS: Record<Appointment["type"], keyof typeof Ionicons.glyph
     grooming: "cut-outline",
     medication: "medical-outline"
 };
-
 const APPOINTMENT_COLORS: Record<Appointment["type"], string> = {
     vet: "#3B82F6",
     grooming: "#EC4899",
     medication: "#F59E0B"
 };
-
 const CARE_ICONS: Record<DailyCareItem["category"], keyof typeof Ionicons.glyphMap> = {
     feeding: "restaurant-outline",
     walk: "walk-outline",
     medication: "medical-outline"
 };
-
 const CARE_COLORS: Record<DailyCareItem["category"], string> = {
     feeding: "#16a34a",
     walk: "#3B82F6",
@@ -105,7 +99,6 @@ const PETS: Pet[] = [
         color: "#3B82F6"
     }
 ];
-
 const initialAppointments: Appointment[] = [
     {
         id: "a1",
@@ -171,7 +164,6 @@ const initialAppointments: Appointment[] = [
         reminderEnabled: true
     }
 ];
-
 const HEALTH_RECORDS: HealthRecord[] = [
     {
         id: "h1",
@@ -246,22 +238,119 @@ const HEALTH_RECORDS: HealthRecord[] = [
         vetName: "Dr. James Park"
     }
 ];
-
 const initialDailyCare: DailyCareItem[] = [
-    { id: "d1", petId: "p1", category: "feeding", title: "Breakfast", time: "7:00 AM", completed: true },
-    { id: "d2", petId: "p1", category: "walk", title: "Morning walk", time: "7:30 AM", completed: true },
-    { id: "d3", petId: "p1", category: "medication", title: "Joint supplement", time: "8:00 AM", completed: true },
-    { id: "d4", petId: "p1", category: "feeding", title: "Lunch snack", time: "12:00 PM", completed: false },
-    { id: "d5", petId: "p1", category: "walk", title: "Afternoon walk", time: "3:00 PM", completed: false },
-    { id: "d6", petId: "p1", category: "feeding", title: "Dinner", time: "6:00 PM", completed: false },
-    { id: "d7", petId: "p1", category: "walk", title: "Evening walk", time: "8:00 PM", completed: false },
-    { id: "d8", petId: "p2", category: "feeding", title: "Morning meal", time: "7:00 AM", completed: true },
-    { id: "d9", petId: "p2", category: "medication", title: "Hairball remedy", time: "7:30 AM", completed: false },
-    { id: "d10", petId: "p2", category: "feeding", title: "Evening meal", time: "6:00 PM", completed: false },
-    { id: "d11", petId: "p3", category: "feeding", title: "Breakfast", time: "7:30 AM", completed: true },
-    { id: "d12", petId: "p3", category: "walk", title: "Short morning walk", time: "8:00 AM", completed: true },
-    { id: "d13", petId: "p3", category: "feeding", title: "Dinner", time: "5:30 PM", completed: false },
-    { id: "d14", petId: "p3", category: "walk", title: "Evening stroll", time: "7:00 PM", completed: false }
+    {
+        id: "d1",
+        petId: "p1",
+        category: "feeding",
+        title: "Breakfast",
+        time: "7:00 AM",
+        completed: true
+    },
+    {
+        id: "d2",
+        petId: "p1",
+        category: "walk",
+        title: "Morning walk",
+        time: "7:30 AM",
+        completed: true
+    },
+    {
+        id: "d3",
+        petId: "p1",
+        category: "medication",
+        title: "Joint supplement",
+        time: "8:00 AM",
+        completed: true
+    },
+    {
+        id: "d4",
+        petId: "p1",
+        category: "feeding",
+        title: "Lunch snack",
+        time: "12:00 PM",
+        completed: false
+    },
+    {
+        id: "d5",
+        petId: "p1",
+        category: "walk",
+        title: "Afternoon walk",
+        time: "3:00 PM",
+        completed: false
+    },
+    {
+        id: "d6",
+        petId: "p1",
+        category: "feeding",
+        title: "Dinner",
+        time: "6:00 PM",
+        completed: false
+    },
+    {
+        id: "d7",
+        petId: "p1",
+        category: "walk",
+        title: "Evening walk",
+        time: "8:00 PM",
+        completed: false
+    },
+    {
+        id: "d8",
+        petId: "p2",
+        category: "feeding",
+        title: "Morning meal",
+        time: "7:00 AM",
+        completed: true
+    },
+    {
+        id: "d9",
+        petId: "p2",
+        category: "medication",
+        title: "Hairball remedy",
+        time: "7:30 AM",
+        completed: false
+    },
+    {
+        id: "d10",
+        petId: "p2",
+        category: "feeding",
+        title: "Evening meal",
+        time: "6:00 PM",
+        completed: false
+    },
+    {
+        id: "d11",
+        petId: "p3",
+        category: "feeding",
+        title: "Breakfast",
+        time: "7:30 AM",
+        completed: true
+    },
+    {
+        id: "d12",
+        petId: "p3",
+        category: "walk",
+        title: "Short morning walk",
+        time: "8:00 AM",
+        completed: true
+    },
+    {
+        id: "d13",
+        petId: "p3",
+        category: "feeding",
+        title: "Dinner",
+        time: "5:30 PM",
+        completed: false
+    },
+    {
+        id: "d14",
+        petId: "p3",
+        category: "walk",
+        title: "Evening stroll",
+        time: "7:00 PM",
+        completed: false
+    }
 ];
 
 // --- Pet Selector Tabs ---
@@ -276,12 +365,10 @@ function PetSelectorTabs({
     onSelect: (id: string) => void;
 }) {
     const { theme } = useUnistyles();
-
     return (
         <View style={styles.segmentedControl}>
             {pets.map((pet) => {
                 const isActive = pet.id === selectedId;
-
                 return (
                     <Pressable
                         key={pet.id}
@@ -298,7 +385,9 @@ function PetSelectorTabs({
                         <Text
                             style={[
                                 styles.segmentLabel,
-                                { color: isActive ? "#ffffff" : theme.colors.onSurfaceVariant }
+                                {
+                                    color: isActive ? "#ffffff" : theme.colors.onSurfaceVariant
+                                }
                             ]}
                             numberOfLines={1}
                         >
@@ -316,44 +405,137 @@ function PetSelectorTabs({
 function PetHeroCard({ pet }: { pet: Pet }) {
     const { theme } = useUnistyles();
     const initials = pet.name.slice(0, 2).toUpperCase();
-
     return (
-        <View style={[styles.heroCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Card
+            style={[
+                styles.heroCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             {/* Large avatar with initials */}
-            <View style={[styles.heroAvatar, { backgroundColor: `${pet.color}20` }]}>
-                <Text style={[styles.heroInitials, { color: pet.color }]}>{initials}</Text>
-                <View style={[styles.heroAvatarBadge, { backgroundColor: pet.color }]}>
+            <View
+                style={[
+                    styles.heroAvatar,
+                    {
+                        backgroundColor: `${pet.color}20`
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.heroInitials,
+                        {
+                            color: pet.color
+                        }
+                    ]}
+                >
+                    {initials}
+                </Text>
+                <View
+                    style={[
+                        styles.heroAvatarBadge,
+                        {
+                            backgroundColor: pet.color
+                        }
+                    ]}
+                >
                     <Ionicons name="paw" size={12} color="#ffffff" />
                 </View>
             </View>
 
             {/* Pet info */}
             <View style={styles.heroInfoCol}>
-                <Text style={[styles.heroName, { color: theme.colors.onSurface }]}>{pet.name}</Text>
-                <Text style={[styles.heroBreed, { color: theme.colors.onSurfaceVariant }]}>{pet.breed}</Text>
+                <Text
+                    style={[
+                        styles.heroName,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    {pet.name}
+                </Text>
+                <Text
+                    style={[
+                        styles.heroBreed,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    {pet.breed}
+                </Text>
 
                 <View style={styles.heroDetailsRow}>
-                    <View style={[styles.heroDetailChip, { backgroundColor: `${pet.color}14` }]}>
+                    <View
+                        style={[
+                            styles.heroDetailChip,
+                            {
+                                backgroundColor: `${pet.color}14`
+                            }
+                        ]}
+                    >
                         <Ionicons name="calendar-outline" size={12} color={pet.color} />
-                        <Text style={[styles.heroDetailText, { color: pet.color }]}>{pet.age}</Text>
+                        <Text
+                            style={[
+                                styles.heroDetailText,
+                                {
+                                    color: pet.color
+                                }
+                            ]}
+                        >
+                            {pet.age}
+                        </Text>
                     </View>
-                    <View style={[styles.heroDetailChip, { backgroundColor: `${pet.color}14` }]}>
+                    <View
+                        style={[
+                            styles.heroDetailChip,
+                            {
+                                backgroundColor: `${pet.color}14`
+                            }
+                        ]}
+                    >
                         <Ionicons name="scale-outline" size={12} color={pet.color} />
-                        <Text style={[styles.heroDetailText, { color: pet.color }]}>{pet.weight}</Text>
+                        <Text
+                            style={[
+                                styles.heroDetailText,
+                                {
+                                    color: pet.color
+                                }
+                            ]}
+                        >
+                            {pet.weight}
+                        </Text>
                     </View>
-                    <View style={[styles.heroDetailChip, { backgroundColor: `${pet.color}14` }]}>
+                    <View
+                        style={[
+                            styles.heroDetailChip,
+                            {
+                                backgroundColor: `${pet.color}14`
+                            }
+                        ]}
+                    >
                         <Ionicons
                             name={pet.species === "dog" ? "paw-outline" : "paw-outline"}
                             size={12}
                             color={pet.color}
                         />
-                        <Text style={[styles.heroDetailText, { color: pet.color }]}>
+                        <Text
+                            style={[
+                                styles.heroDetailText,
+                                {
+                                    color: pet.color
+                                }
+                            ]}
+                        >
                             {pet.species === "dog" ? "Dog" : "Cat"}
                         </Text>
                     </View>
                 </View>
             </View>
-        </View>
+        </Card>
     );
 }
 
@@ -369,24 +551,70 @@ function AppointmentRow({
     const { theme } = useUnistyles();
     const typeColor = APPOINTMENT_COLORS[appointment.type];
     const typeIcon = APPOINTMENT_ICONS[appointment.type];
-
     return (
-        <View style={[styles.appointmentRow, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <View
+            style={[
+                styles.appointmentRow,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             {/* Calendar-style date badge */}
-            <View style={[styles.dateBadge, { backgroundColor: `${typeColor}14` }]}>
-                <Text style={[styles.dateBadgeMonth, { color: typeColor }]}>{appointment.date.split(" ")[0]}</Text>
-                <Text style={[styles.dateBadgeDay, { color: typeColor }]}>{appointment.date.split(" ")[1]}</Text>
+            <View
+                style={[
+                    styles.dateBadge,
+                    {
+                        backgroundColor: `${typeColor}14`
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.dateBadgeMonth,
+                        {
+                            color: typeColor
+                        }
+                    ]}
+                >
+                    {appointment.date.split(" ")[0]}
+                </Text>
+                <Text
+                    style={[
+                        styles.dateBadgeDay,
+                        {
+                            color: typeColor
+                        }
+                    ]}
+                >
+                    {appointment.date.split(" ")[1]}
+                </Text>
             </View>
 
             {/* Info column */}
             <View style={styles.appointmentInfoCol}>
                 <View style={styles.appointmentTitleRow}>
                     <Ionicons name={typeIcon} size={14} color={typeColor} />
-                    <Text style={[styles.appointmentTitle, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                    <Text
+                        style={[
+                            styles.appointmentTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                        numberOfLines={1}
+                    >
                         {appointment.title}
                     </Text>
                 </View>
-                <Text style={[styles.appointmentTime, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.appointmentTime,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {appointment.time}
                 </Text>
             </View>
@@ -401,7 +629,10 @@ function AppointmentRow({
                 <Switch
                     value={appointment.reminderEnabled}
                     onValueChange={() => onToggleReminder(appointment.id)}
-                    trackColor={{ false: theme.colors.outlineVariant, true: `${typeColor}60` }}
+                    trackColor={{
+                        false: theme.colors.outlineVariant,
+                        true: `${typeColor}60`
+                    }}
                     thumbColor={appointment.reminderEnabled ? typeColor : theme.colors.surfaceContainerHighest}
                     style={styles.reminderSwitch}
                 />
@@ -416,39 +647,95 @@ function HealthTimelineEntry({ record, isLast }: { record: HealthRecord; isLast:
     const { theme } = useUnistyles();
     const isVaccination = record.type === "vaccination";
     const dotColor = isVaccination ? "#16a34a" : "#3B82F6";
-
     return (
         <View style={styles.timelineEntry}>
             {/* Timeline dot and line */}
             <View style={styles.timelineDotCol}>
-                <View style={[styles.timelineDot, { backgroundColor: dotColor }]}>
+                <View
+                    style={[
+                        styles.timelineDot,
+                        {
+                            backgroundColor: dotColor
+                        }
+                    ]}
+                >
                     <Ionicons name={isVaccination ? "shield-checkmark" : "medkit"} size={10} color="#ffffff" />
                 </View>
-                {!isLast && <View style={[styles.timelineLine, { backgroundColor: theme.colors.outlineVariant }]} />}
+                {!isLast && (
+                    <View
+                        style={[
+                            styles.timelineLine,
+                            {
+                                backgroundColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    />
+                )}
             </View>
 
             {/* Content */}
             <View
                 style={[
                     styles.timelineContent,
-                    { borderBottomColor: isLast ? "transparent" : theme.colors.outlineVariant }
+                    {
+                        borderBottomColor: isLast ? "transparent" : theme.colors.outlineVariant
+                    }
                 ]}
             >
                 <View style={styles.timelineHeader}>
-                    <Text style={[styles.timelineDate, { color: theme.colors.onSurfaceVariant }]}>{record.date}</Text>
+                    <Text
+                        style={[
+                            styles.timelineDate,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        {record.date}
+                    </Text>
                     {isVaccination && (
-                        <View style={[styles.vaccinationBadge, { backgroundColor: `${dotColor}14` }]}>
+                        <View
+                            style={[
+                                styles.vaccinationBadge,
+                                {
+                                    backgroundColor: `${dotColor}14`
+                                }
+                            ]}
+                        >
                             <Ionicons name="shield-checkmark-outline" size={10} color={dotColor} />
-                            <Text style={[styles.vaccinationBadgeText, { color: dotColor }]}>Vaccine</Text>
+                            <Text
+                                style={[
+                                    styles.vaccinationBadgeText,
+                                    {
+                                        color: dotColor
+                                    }
+                                ]}
+                            >
+                                Vaccine
+                            </Text>
                         </View>
                     )}
                 </View>
-                <Text style={[styles.timelineDescription, { color: theme.colors.onSurface }]}>
+                <Text
+                    style={[
+                        styles.timelineDescription,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
                     {record.description}
                 </Text>
                 <View style={styles.timelineVetRow}>
                     <Ionicons name="person-outline" size={12} color={theme.colors.onSurfaceVariant} />
-                    <Text style={[styles.timelineVetName, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.timelineVetName,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {record.vetName}
                     </Text>
                 </View>
@@ -463,7 +750,6 @@ function DailyCareRow({ item, onToggle }: { item: DailyCareItem; onToggle: (id: 
     const { theme } = useUnistyles();
     const categoryColor = CARE_COLORS[item.category];
     const categoryIcon = CARE_ICONS[item.category];
-
     return (
         <Pressable
             onPress={() => onToggle(item.id)}
@@ -480,7 +766,9 @@ function DailyCareRow({ item, onToggle }: { item: DailyCareItem; onToggle: (id: 
                 <Text
                     style={[
                         styles.careTime,
-                        { color: item.completed ? theme.colors.onSurfaceVariant : theme.colors.onSurface }
+                        {
+                            color: item.completed ? theme.colors.onSurfaceVariant : theme.colors.onSurface
+                        }
                     ]}
                 >
                     {item.time}
@@ -501,7 +789,14 @@ function DailyCareRow({ item, onToggle }: { item: DailyCareItem; onToggle: (id: 
             </View>
 
             {/* Category icon + title */}
-            <View style={[styles.careIconCircle, { backgroundColor: `${categoryColor}14` }]}>
+            <View
+                style={[
+                    styles.careIconCircle,
+                    {
+                        backgroundColor: `${categoryColor}14`
+                    }
+                ]}
+            >
                 <Ionicons name={categoryIcon} size={14} color={categoryColor} />
             </View>
             <Text
@@ -534,16 +829,47 @@ function SectionHeader({
     count?: number;
 }) {
     const { theme } = useUnistyles();
-
     return (
         <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIconCircle, { backgroundColor: `${color}18` }]}>
+            <View
+                style={[
+                    styles.sectionIconCircle,
+                    {
+                        backgroundColor: `${color}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={18} color={color} />
             </View>
-            <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>{title}</Text>
+            <Text
+                style={[
+                    styles.sectionTitle,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {title}
+            </Text>
             {count !== undefined && (
-                <View style={[styles.sectionCountBadge, { backgroundColor: `${color}14` }]}>
-                    <Text style={[styles.sectionCountText, { color }]}>{count}</Text>
+                <View
+                    style={[
+                        styles.sectionCountBadge,
+                        {
+                            backgroundColor: `${color}14`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.sectionCountText,
+                            {
+                                color
+                            }
+                        ]}
+                    >
+                        {count}
+                    </Text>
                 </View>
             )}
         </View>
@@ -557,28 +883,44 @@ export function PetCarePage() {
     const [selectedPetId, setSelectedPetId] = React.useState(PETS[0].id);
     const [appointments, setAppointments] = React.useState(initialAppointments);
     const [dailyCare, setDailyCare] = React.useState(initialDailyCare);
-
     const selectedPet = PETS.find((p) => p.id === selectedPetId)!;
 
     // Filter data by selected pet
     const petAppointments = appointments.filter((a) => a.petId === selectedPetId);
     const petHealthRecords = HEALTH_RECORDS.filter((r) => r.petId === selectedPetId);
     const petDailyCare = dailyCare.filter((d) => d.petId === selectedPetId);
-
     const completedCareCount = petDailyCare.filter((d) => d.completed).length;
     const totalCareCount = petDailyCare.length;
-
     const toggleReminder = React.useCallback((id: string) => {
-        setAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, reminderEnabled: !a.reminderEnabled } : a)));
+        setAppointments((prev) =>
+            prev.map((a) =>
+                a.id === id
+                    ? {
+                          ...a,
+                          reminderEnabled: !a.reminderEnabled
+                      }
+                    : a
+            )
+        );
     }, []);
-
     const toggleCareItem = React.useCallback((id: string) => {
-        setDailyCare((prev) => prev.map((d) => (d.id === id ? { ...d, completed: !d.completed } : d)));
+        setDailyCare((prev) =>
+            prev.map((d) =>
+                d.id === id
+                    ? {
+                          ...d,
+                          completed: !d.completed
+                      }
+                    : d
+            )
+        );
     }, []);
-
     return (
         <ShowcasePage
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
             topInset={16}
             bottomInset={48}
             contentGap={16}
@@ -587,9 +929,27 @@ export function PetCarePage() {
             <View style={styles.pageHeader}>
                 <View style={styles.pageTitleRow}>
                     <Ionicons name="paw" size={24} color={theme.colors.primary} />
-                    <Text style={[styles.pageTitle, { color: theme.colors.onSurface }]}>Pet Care</Text>
+                    <Text
+                        style={[
+                            styles.pageTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Pet Care
+                    </Text>
                 </View>
-                <Text style={[styles.pageDate, { color: theme.colors.onSurfaceVariant }]}>March 3, 2026</Text>
+                <Text
+                    style={[
+                        styles.pageDate,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    March 3, 2026
+                </Text>
             </View>
 
             {/* Pet selector */}
@@ -599,15 +959,43 @@ export function PetCarePage() {
             <PetHeroCard pet={selectedPet} />
 
             {/* Daily care progress */}
-            <View style={[styles.progressBanner, { backgroundColor: `${selectedPet.color}10` }]}>
-                <View style={[styles.progressIconCircle, { backgroundColor: `${selectedPet.color}20` }]}>
+            <View
+                style={[
+                    styles.progressBanner,
+                    {
+                        backgroundColor: `${selectedPet.color}10`
+                    }
+                ]}
+            >
+                <View
+                    style={[
+                        styles.progressIconCircle,
+                        {
+                            backgroundColor: `${selectedPet.color}20`
+                        }
+                    ]}
+                >
                     <Ionicons name="checkbox-outline" size={18} color={selectedPet.color} />
                 </View>
                 <View style={styles.progressTextCol}>
-                    <Text style={[styles.progressTitle, { color: selectedPet.color }]}>
+                    <Text
+                        style={[
+                            styles.progressTitle,
+                            {
+                                color: selectedPet.color
+                            }
+                        ]}
+                    >
                         {completedCareCount}/{totalCareCount} tasks done today
                     </Text>
-                    <View style={[styles.progressTrack, { backgroundColor: `${selectedPet.color}20` }]}>
+                    <View
+                        style={[
+                            styles.progressTrack,
+                            {
+                                backgroundColor: `${selectedPet.color}20`
+                            }
+                        ]}
+                    >
                         <View
                             style={[
                                 styles.progressFill,
@@ -640,7 +1028,14 @@ export function PetCarePage() {
                     {petAppointments.length === 0 && (
                         <View style={styles.emptyState}>
                             <Ionicons name="calendar-outline" size={32} color={theme.colors.onSurfaceVariant} />
-                            <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.emptyText,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 No upcoming appointments
                             </Text>
                         </View>
@@ -667,7 +1062,14 @@ export function PetCarePage() {
                     {petHealthRecords.length === 0 && (
                         <View style={styles.emptyState}>
                             <Ionicons name="heart-outline" size={32} color={theme.colors.onSurfaceVariant} />
-                            <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.emptyText,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 No health records
                             </Text>
                         </View>
@@ -690,7 +1092,14 @@ export function PetCarePage() {
                     {petDailyCare.length === 0 && (
                         <View style={styles.emptyState}>
                             <Ionicons name="list-outline" size={32} color={theme.colors.onSurfaceVariant} />
-                            <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.emptyText,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 No daily care tasks
                             </Text>
                         </View>
@@ -703,7 +1112,7 @@ export function PetCarePage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Page header
     pageHeader: {
         gap: 4,
@@ -724,7 +1133,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         marginLeft: 34
     },
-
     // Segmented control
     segmentedControl: {
         flexDirection: "row",
@@ -744,7 +1152,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 14
     },
-
     // Hero card
     heroCard: {
         flexDirection: "row",
@@ -809,7 +1216,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
-
     // Progress banner
     progressBanner: {
         flexDirection: "row",
@@ -842,7 +1248,6 @@ const styles = StyleSheet.create((theme) => ({
         height: "100%",
         borderRadius: 3
     },
-
     // Section
     section: {
         gap: 10
@@ -876,7 +1281,6 @@ const styles = StyleSheet.create((theme) => ({
     sectionContent: {
         gap: 8
     },
-
     // Appointment row
     appointmentRow: {
         flexDirection: "row",
@@ -926,9 +1330,15 @@ const styles = StyleSheet.create((theme) => ({
         gap: 2
     },
     reminderSwitch: {
-        transform: [{ scaleX: 0.7 }, { scaleY: 0.7 }]
+        transform: [
+            {
+                scaleX: 0.7
+            },
+            {
+                scaleY: 0.7
+            }
+        ]
     },
-
     // Timeline
     timelineContainer: {
         paddingLeft: 4
@@ -996,7 +1406,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
-
     // Daily care row
     careRow: {
         flexDirection: "row",
@@ -1032,7 +1441,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 14,
         flex: 1
     },
-
     // Empty state
     emptyState: {
         alignItems: "center",

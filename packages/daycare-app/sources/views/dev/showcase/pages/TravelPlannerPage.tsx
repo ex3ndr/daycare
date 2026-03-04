@@ -2,13 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type Category = "flight" | "hotel" | "restaurant" | "activity" | "transport";
 type ConfirmationStatus = "confirmed" | "pending" | "cancelled";
-
 type ItineraryItem = {
     id: string;
     day: number;
@@ -20,7 +19,6 @@ type ItineraryItem = {
     bookingRef: string;
     notes?: string;
 };
-
 type PackingItem = {
     id: string;
     name: string;
@@ -30,18 +28,59 @@ type PackingItem = {
 
 // --- Constants ---
 
-const CATEGORY_CONFIG: Record<Category, { color: string; icon: keyof typeof Ionicons.glyphMap; label: string }> = {
-    flight: { color: "#3B82F6", icon: "airplane-outline", label: "Flight" },
-    hotel: { color: "#8B5CF6", icon: "bed-outline", label: "Hotel" },
-    restaurant: { color: "#F59E0B", icon: "restaurant-outline", label: "Restaurant" },
-    activity: { color: "#10B981", icon: "compass-outline", label: "Activity" },
-    transport: { color: "#EF4444", icon: "car-outline", label: "Transport" }
+const CATEGORY_CONFIG: Record<
+    Category,
+    {
+        color: string;
+        icon: keyof typeof Ionicons.glyphMap;
+        label: string;
+    }
+> = {
+    flight: {
+        color: "#3B82F6",
+        icon: "airplane-outline",
+        label: "Flight"
+    },
+    hotel: {
+        color: "#8B5CF6",
+        icon: "bed-outline",
+        label: "Hotel"
+    },
+    restaurant: {
+        color: "#F59E0B",
+        icon: "restaurant-outline",
+        label: "Restaurant"
+    },
+    activity: {
+        color: "#10B981",
+        icon: "compass-outline",
+        label: "Activity"
+    },
+    transport: {
+        color: "#EF4444",
+        icon: "car-outline",
+        label: "Transport"
+    }
 };
-
-const STATUS_CONFIG: Record<ConfirmationStatus, { color: string; icon: keyof typeof Ionicons.glyphMap }> = {
-    confirmed: { color: "#10B981", icon: "checkmark-circle" },
-    pending: { color: "#F59E0B", icon: "time" },
-    cancelled: { color: "#EF4444", icon: "close-circle" }
+const STATUS_CONFIG: Record<
+    ConfirmationStatus,
+    {
+        color: string;
+        icon: keyof typeof Ionicons.glyphMap;
+    }
+> = {
+    confirmed: {
+        color: "#10B981",
+        icon: "checkmark-circle"
+    },
+    pending: {
+        color: "#F59E0B",
+        icon: "time"
+    },
+    cancelled: {
+        color: "#EF4444",
+        icon: "close-circle"
+    }
 };
 
 // --- Mock data ---
@@ -51,7 +90,6 @@ const START_DATE = "Mar 15, 2026";
 const END_DATE = "Mar 22, 2026";
 const DAYS_UNTIL = 12;
 const TOTAL_DAYS = 7;
-
 const itineraryItems: ItineraryItem[] = [
     // Day 1
     {
@@ -182,22 +220,91 @@ const itineraryItems: ItineraryItem[] = [
         notes: "Cancelled - rebooking in progress."
     }
 ];
-
 const initialPackingItems: PackingItem[] = [
-    { id: "p1", name: "Passport & Visa docs", category: "Essentials", packed: true },
-    { id: "p2", name: "Travel insurance printout", category: "Essentials", packed: true },
-    { id: "p3", name: "JR Pass voucher", category: "Essentials", packed: false },
-    { id: "p4", name: "Yen cash (50,000)", category: "Essentials", packed: false },
-    { id: "p5", name: "Universal adapter", category: "Electronics", packed: true },
-    { id: "p6", name: "Portable charger", category: "Electronics", packed: false },
-    { id: "p7", name: "Camera + lenses", category: "Electronics", packed: false },
-    { id: "p8", name: "Noise-cancelling headphones", category: "Electronics", packed: true },
-    { id: "p9", name: "Rain jacket", category: "Clothing", packed: false },
-    { id: "p10", name: "Comfortable walking shoes", category: "Clothing", packed: true },
-    { id: "p11", name: "Light layers (5 sets)", category: "Clothing", packed: false },
-    { id: "p12", name: "Sunscreen SPF50", category: "Toiletries", packed: false },
-    { id: "p13", name: "Medications", category: "Toiletries", packed: true },
-    { id: "p14", name: "Pocket Wi-Fi reservation", category: "Tech", packed: false }
+    {
+        id: "p1",
+        name: "Passport & Visa docs",
+        category: "Essentials",
+        packed: true
+    },
+    {
+        id: "p2",
+        name: "Travel insurance printout",
+        category: "Essentials",
+        packed: true
+    },
+    {
+        id: "p3",
+        name: "JR Pass voucher",
+        category: "Essentials",
+        packed: false
+    },
+    {
+        id: "p4",
+        name: "Yen cash (50,000)",
+        category: "Essentials",
+        packed: false
+    },
+    {
+        id: "p5",
+        name: "Universal adapter",
+        category: "Electronics",
+        packed: true
+    },
+    {
+        id: "p6",
+        name: "Portable charger",
+        category: "Electronics",
+        packed: false
+    },
+    {
+        id: "p7",
+        name: "Camera + lenses",
+        category: "Electronics",
+        packed: false
+    },
+    {
+        id: "p8",
+        name: "Noise-cancelling headphones",
+        category: "Electronics",
+        packed: true
+    },
+    {
+        id: "p9",
+        name: "Rain jacket",
+        category: "Clothing",
+        packed: false
+    },
+    {
+        id: "p10",
+        name: "Comfortable walking shoes",
+        category: "Clothing",
+        packed: true
+    },
+    {
+        id: "p11",
+        name: "Light layers (5 sets)",
+        category: "Clothing",
+        packed: false
+    },
+    {
+        id: "p12",
+        name: "Sunscreen SPF50",
+        category: "Toiletries",
+        packed: false
+    },
+    {
+        id: "p13",
+        name: "Medications",
+        category: "Toiletries",
+        packed: true
+    },
+    {
+        id: "p14",
+        name: "Pocket Wi-Fi reservation",
+        category: "Tech",
+        packed: false
+    }
 ];
 
 // --- Helper ---
@@ -211,7 +318,6 @@ function groupByDay(items: ItineraryItem[]): Map<number, ItineraryItem[]> {
     }
     return map;
 }
-
 function groupPackingByCategory(items: PackingItem[]): Map<string, PackingItem[]> {
     const map = new Map<string, PackingItem[]>();
     for (const item of items) {
@@ -227,14 +333,29 @@ function groupPackingByCategory(items: PackingItem[]): Map<string, PackingItem[]
 function CategoryChip({ category }: { category: Category }) {
     const config = CATEGORY_CONFIG[category];
     return (
-        <View style={[chipStyles.container, { backgroundColor: `${config.color}18` }]}>
+        <View
+            style={[
+                chipStyles.container,
+                {
+                    backgroundColor: `${config.color}18`
+                }
+            ]}
+        >
             <Ionicons name={config.icon} size={12} color={config.color} />
-            <Text style={[chipStyles.label, { color: config.color }]}>{config.label}</Text>
+            <Text
+                style={[
+                    chipStyles.label,
+                    {
+                        color: config.color
+                    }
+                ]}
+            >
+                {config.label}
+            </Text>
         </View>
     );
 }
-
-const chipStyles = StyleSheet.create((theme) => ({
+const chipStyles = StyleSheet.create((_theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "center",
@@ -254,16 +375,29 @@ const chipStyles = StyleSheet.create((theme) => ({
 function StatusBadge({ status }: { status: ConfirmationStatus }) {
     const config = STATUS_CONFIG[status];
     return (
-        <View style={[badgeStyles.container, { backgroundColor: `${config.color}14` }]}>
+        <View
+            style={[
+                badgeStyles.container,
+                {
+                    backgroundColor: `${config.color}14`
+                }
+            ]}
+        >
             <Ionicons name={config.icon} size={13} color={config.color} />
-            <Text style={[badgeStyles.label, { color: config.color }]}>
+            <Text
+                style={[
+                    badgeStyles.label,
+                    {
+                        color: config.color
+                    }
+                ]}
+            >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
             </Text>
         </View>
     );
 }
-
-const badgeStyles = StyleSheet.create((theme) => ({
+const badgeStyles = StyleSheet.create((_theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "center",
@@ -291,7 +425,6 @@ function ItineraryCard({
 }) {
     const { theme } = useUnistyles();
     const catConfig = CATEGORY_CONFIG[item.category];
-
     return (
         <Pressable
             onPress={onToggle}
@@ -305,19 +438,50 @@ function ItineraryCard({
             ]}
         >
             {/* Left accent bar */}
-            <View style={[itinStyles.accentBar, { backgroundColor: catConfig.color }]} />
+            <View
+                style={[
+                    itinStyles.accentBar,
+                    {
+                        backgroundColor: catConfig.color
+                    }
+                ]}
+            />
 
             <View style={itinStyles.cardBody}>
                 {/* Time column */}
                 <View style={itinStyles.timeCol}>
-                    <Text style={[itinStyles.time, { color: theme.colors.primary }]}>{item.time}</Text>
-                    <View style={[itinStyles.timeDot, { backgroundColor: catConfig.color }]} />
+                    <Text
+                        style={[
+                            itinStyles.time,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
+                        {item.time}
+                    </Text>
+                    <View
+                        style={[
+                            itinStyles.timeDot,
+                            {
+                                backgroundColor: catConfig.color
+                            }
+                        ]}
+                    />
                 </View>
 
                 {/* Content column */}
                 <View style={itinStyles.contentCol}>
                     <View style={itinStyles.titleRow}>
-                        <Text style={[itinStyles.name, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                itinStyles.name,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {item.name}
                         </Text>
                         <Ionicons
@@ -329,7 +493,15 @@ function ItineraryCard({
 
                     <View style={itinStyles.locationRow}>
                         <Ionicons name="location-outline" size={13} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[itinStyles.location, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                itinStyles.location,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {item.location}
                         </Text>
                     </View>
@@ -341,17 +513,38 @@ function ItineraryCard({
 
                     {/* Expanded details */}
                     {isExpanded && (
-                        <View style={[itinStyles.expandedSection, { borderColor: theme.colors.outlineVariant }]}>
+                        <View
+                            style={[
+                                itinStyles.expandedSection,
+                                {
+                                    borderColor: theme.colors.outlineVariant
+                                }
+                            ]}
+                        >
                             <View style={itinStyles.refRow}>
                                 <Ionicons
                                     name="document-text-outline"
                                     size={13}
                                     color={theme.colors.onSurfaceVariant}
                                 />
-                                <Text style={[itinStyles.refLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        itinStyles.refLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Booking Ref:
                                 </Text>
-                                <Text style={[itinStyles.refValue, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        itinStyles.refValue,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {item.bookingRef}
                                 </Text>
                             </View>
@@ -362,7 +555,14 @@ function ItineraryCard({
                                         size={13}
                                         color={theme.colors.onSurfaceVariant}
                                     />
-                                    <Text style={[itinStyles.notesText, { color: theme.colors.onSurfaceVariant }]}>
+                                    <Text
+                                        style={[
+                                            itinStyles.notesText,
+                                            {
+                                                color: theme.colors.onSurfaceVariant
+                                            }
+                                        ]}
+                                    >
                                         {item.notes}
                                     </Text>
                                 </View>
@@ -374,8 +574,7 @@ function ItineraryCard({
         </Pressable>
     );
 }
-
-const itinStyles = StyleSheet.create((theme) => ({
+const itinStyles = StyleSheet.create((_theme) => ({
     card: {
         borderRadius: 12,
         borderWidth: 1,
@@ -475,24 +674,61 @@ function DayDivider({ day, itemCount }: { day: number; itemCount: number }) {
     const { theme } = useUnistyles();
     const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const dayLabel = dayLabels[(day - 1) % 7];
-
     return (
         <View style={dividerStyles.container}>
-            <View style={[dividerStyles.circle, { backgroundColor: theme.colors.primary }]}>
-                <Text style={[dividerStyles.dayNum, { color: theme.colors.onPrimary }]}>{day}</Text>
+            <View
+                style={[
+                    dividerStyles.circle,
+                    {
+                        backgroundColor: theme.colors.primary
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        dividerStyles.dayNum,
+                        {
+                            color: theme.colors.onPrimary
+                        }
+                    ]}
+                >
+                    {day}
+                </Text>
             </View>
             <View style={dividerStyles.textCol}>
-                <Text style={[dividerStyles.dayTitle, { color: theme.colors.onSurface }]}>Day {day}</Text>
-                <Text style={[dividerStyles.dayMeta, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        dividerStyles.dayTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Day {day}
+                </Text>
+                <Text
+                    style={[
+                        dividerStyles.dayMeta,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {dayLabel} - {itemCount} {itemCount === 1 ? "item" : "items"}
                 </Text>
             </View>
-            <View style={[dividerStyles.line, { backgroundColor: theme.colors.outlineVariant }]} />
+            <View
+                style={[
+                    dividerStyles.line,
+                    {
+                        backgroundColor: theme.colors.outlineVariant
+                    }
+                ]}
+            />
         </View>
     );
 }
-
-const dividerStyles = StyleSheet.create((theme) => ({
+const dividerStyles = StyleSheet.create((_theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "center",
@@ -532,9 +768,16 @@ const dividerStyles = StyleSheet.create((theme) => ({
 
 function PackingCheckbox({ item, onToggle }: { item: PackingItem; onToggle: () => void }) {
     const { theme } = useUnistyles();
-
     return (
-        <Pressable onPress={onToggle} style={({ pressed }) => [packStyles.row, { opacity: pressed ? 0.7 : 1 }]}>
+        <Pressable
+            onPress={onToggle}
+            style={({ pressed }) => [
+                packStyles.row,
+                {
+                    opacity: pressed ? 0.7 : 1
+                }
+            ]}
+        >
             <View
                 style={[
                     packStyles.checkbox,
@@ -560,8 +803,7 @@ function PackingCheckbox({ item, onToggle }: { item: PackingItem; onToggle: () =
         </Pressable>
     );
 }
-
-const packStyles = StyleSheet.create((theme) => ({
+const packStyles = StyleSheet.create((_theme) => ({
     row: {
         flexDirection: "row",
         alignItems: "center",
@@ -589,7 +831,6 @@ export function TravelPlannerPage() {
     const { theme } = useUnistyles();
     const [expandedItems, setExpandedItems] = React.useState<Set<string>>(new Set());
     const [packingItems, setPackingItems] = React.useState(initialPackingItems);
-
     const toggleExpand = React.useCallback((id: string) => {
         setExpandedItems((prev) => {
             const next = new Set(prev);
@@ -601,11 +842,18 @@ export function TravelPlannerPage() {
             return next;
         });
     }, []);
-
     const togglePacked = React.useCallback((id: string) => {
-        setPackingItems((prev) => prev.map((p) => (p.id === id ? { ...p, packed: !p.packed } : p)));
+        setPackingItems((prev) =>
+            prev.map((p) =>
+                p.id === id
+                    ? {
+                          ...p,
+                          packed: !p.packed
+                      }
+                    : p
+            )
+        );
     }, []);
-
     const dayGroups = React.useMemo(() => groupByDay(itineraryItems), []);
     const packingGroups = React.useMemo(() => groupPackingByCategory(packingItems), [packingItems]);
     const packedCount = packingItems.filter((p) => p.packed).length;
@@ -614,55 +862,178 @@ export function TravelPlannerPage() {
     // Count statuses
     const confirmedCount = itineraryItems.filter((i) => i.status === "confirmed").length;
     const pendingCount = itineraryItems.filter((i) => i.status === "pending").length;
-
     return (
         <ShowcasePage bottomInset={48}>
             {/* --- Hero Header Card --- */}
-            <View style={[styles.heroCard, { backgroundColor: theme.colors.primary }]}>
+            <Card
+                style={[
+                    styles.heroCard,
+                    {
+                        backgroundColor: theme.colors.primary
+                    }
+                ]}
+            >
                 {/* Decorative travel icon */}
                 <View style={styles.heroIconRow}>
                     <Ionicons name="airplane" size={28} color={theme.colors.onPrimary} />
                 </View>
 
-                <Text style={[styles.heroDestination, { color: theme.colors.onPrimary }]}>{DESTINATION}</Text>
+                <Text
+                    style={[
+                        styles.heroDestination,
+                        {
+                            color: theme.colors.onPrimary
+                        }
+                    ]}
+                >
+                    {DESTINATION}
+                </Text>
 
                 <View style={styles.heroDatesRow}>
                     <Ionicons name="calendar-outline" size={14} color={`${theme.colors.onPrimary}CC`} />
-                    <Text style={[styles.heroDates, { color: `${theme.colors.onPrimary}CC` }]}>
+                    <Text
+                        style={[
+                            styles.heroDates,
+                            {
+                                color: `${theme.colors.onPrimary}CC`
+                            }
+                        ]}
+                    >
                         {START_DATE} - {END_DATE}
                     </Text>
                 </View>
 
                 {/* Countdown & stats row */}
                 <View style={styles.heroStatsRow}>
-                    <View style={[styles.heroStatBox, { backgroundColor: `${theme.colors.onPrimary}20` }]}>
-                        <Text style={[styles.heroStatNumber, { color: theme.colors.onPrimary }]}>{DAYS_UNTIL}</Text>
-                        <Text style={[styles.heroStatLabel, { color: `${theme.colors.onPrimary}BB` }]}>Days Away</Text>
+                    <View
+                        style={[
+                            styles.heroStatBox,
+                            {
+                                backgroundColor: `${theme.colors.onPrimary}20`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.heroStatNumber,
+                                {
+                                    color: theme.colors.onPrimary
+                                }
+                            ]}
+                        >
+                            {DAYS_UNTIL}
+                        </Text>
+                        <Text
+                            style={[
+                                styles.heroStatLabel,
+                                {
+                                    color: `${theme.colors.onPrimary}BB`
+                                }
+                            ]}
+                        >
+                            Days Away
+                        </Text>
                     </View>
-                    <View style={[styles.heroStatBox, { backgroundColor: `${theme.colors.onPrimary}20` }]}>
-                        <Text style={[styles.heroStatNumber, { color: theme.colors.onPrimary }]}>{TOTAL_DAYS}</Text>
-                        <Text style={[styles.heroStatLabel, { color: `${theme.colors.onPrimary}BB` }]}>Nights</Text>
+                    <View
+                        style={[
+                            styles.heroStatBox,
+                            {
+                                backgroundColor: `${theme.colors.onPrimary}20`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.heroStatNumber,
+                                {
+                                    color: theme.colors.onPrimary
+                                }
+                            ]}
+                        >
+                            {TOTAL_DAYS}
+                        </Text>
+                        <Text
+                            style={[
+                                styles.heroStatLabel,
+                                {
+                                    color: `${theme.colors.onPrimary}BB`
+                                }
+                            ]}
+                        >
+                            Nights
+                        </Text>
                     </View>
-                    <View style={[styles.heroStatBox, { backgroundColor: `${theme.colors.onPrimary}20` }]}>
-                        <Text style={[styles.heroStatNumber, { color: theme.colors.onPrimary }]}>
+                    <View
+                        style={[
+                            styles.heroStatBox,
+                            {
+                                backgroundColor: `${theme.colors.onPrimary}20`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.heroStatNumber,
+                                {
+                                    color: theme.colors.onPrimary
+                                }
+                            ]}
+                        >
                             {itineraryItems.length}
                         </Text>
-                        <Text style={[styles.heroStatLabel, { color: `${theme.colors.onPrimary}BB` }]}>Activities</Text>
+                        <Text
+                            style={[
+                                styles.heroStatLabel,
+                                {
+                                    color: `${theme.colors.onPrimary}BB`
+                                }
+                            ]}
+                        >
+                            Activities
+                        </Text>
                     </View>
                 </View>
-            </View>
+            </Card>
 
             {/* --- Quick Status Summary --- */}
             <View style={styles.statusSummaryRow}>
-                <View style={[styles.statusPill, { backgroundColor: `${STATUS_CONFIG.confirmed.color}14` }]}>
+                <View
+                    style={[
+                        styles.statusPill,
+                        {
+                            backgroundColor: `${STATUS_CONFIG.confirmed.color}14`
+                        }
+                    ]}
+                >
                     <Ionicons name="checkmark-circle" size={15} color={STATUS_CONFIG.confirmed.color} />
-                    <Text style={[styles.statusPillText, { color: STATUS_CONFIG.confirmed.color }]}>
+                    <Text
+                        style={[
+                            styles.statusPillText,
+                            {
+                                color: STATUS_CONFIG.confirmed.color
+                            }
+                        ]}
+                    >
                         {confirmedCount} Confirmed
                     </Text>
                 </View>
-                <View style={[styles.statusPill, { backgroundColor: `${STATUS_CONFIG.pending.color}14` }]}>
+                <View
+                    style={[
+                        styles.statusPill,
+                        {
+                            backgroundColor: `${STATUS_CONFIG.pending.color}14`
+                        }
+                    ]}
+                >
                     <Ionicons name="time" size={15} color={STATUS_CONFIG.pending.color} />
-                    <Text style={[styles.statusPillText, { color: STATUS_CONFIG.pending.color }]}>
+                    <Text
+                        style={[
+                            styles.statusPillText,
+                            {
+                                color: STATUS_CONFIG.pending.color
+                            }
+                        ]}
+                    >
                         {pendingCount} Pending
                     </Text>
                 </View>
@@ -671,7 +1042,16 @@ export function TravelPlannerPage() {
             {/* --- Itinerary Section --- */}
             <View style={styles.sectionHeader}>
                 <Ionicons name="map-outline" size={18} color={theme.colors.primary} />
-                <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Itinerary</Text>
+                <Text
+                    style={[
+                        styles.sectionTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Itinerary
+                </Text>
             </View>
 
             {Array.from(dayGroups.entries()).map(([day, items]) => (
@@ -689,19 +1069,49 @@ export function TravelPlannerPage() {
             ))}
 
             {/* --- Packing Checklist Section --- */}
-            <View style={[styles.packingSection, { borderColor: theme.colors.outlineVariant }]}>
+            <View
+                style={[
+                    styles.packingSection,
+                    {
+                        borderColor: theme.colors.outlineVariant
+                    }
+                ]}
+            >
                 <View style={styles.sectionHeader}>
                     <Ionicons name="briefcase-outline" size={18} color={theme.colors.primary} />
-                    <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Packing List</Text>
+                    <Text
+                        style={[
+                            styles.sectionTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Packing List
+                    </Text>
                     <View style={styles.packingProgress}>
-                        <Text style={[styles.packingProgressText, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.packingProgressText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {packedCount}/{totalPacking}
                         </Text>
                     </View>
                 </View>
 
                 {/* Progress bar */}
-                <View style={[styles.progressTrack, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <View
+                    style={[
+                        styles.progressTrack,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <View
                         style={[
                             styles.progressFill,
@@ -716,10 +1126,17 @@ export function TravelPlannerPage() {
                 {/* Packing groups */}
                 {Array.from(packingGroups.entries()).map(([category, items]) => (
                     <View key={category} style={styles.packingGroup}>
-                        <Text style={[styles.packingGroupTitle, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.packingGroupTitle,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {category}
                         </Text>
-                        <View
+                        <Card
                             style={[
                                 styles.packingGroupCard,
                                 {
@@ -730,7 +1147,7 @@ export function TravelPlannerPage() {
                             {items.map((item) => (
                                 <PackingCheckbox key={item.id} item={item} onToggle={() => togglePacked(item.id)} />
                             ))}
-                        </View>
+                        </Card>
                     </View>
                 ))}
             </View>
@@ -740,7 +1157,7 @@ export function TravelPlannerPage() {
 
 // --- Page Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Hero card
     heroCard: {
         borderRadius: 20,
@@ -789,7 +1206,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Status summary
     statusSummaryRow: {
         flexDirection: "row",
@@ -810,7 +1226,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
-
     // Section headers
     sectionHeader: {
         flexDirection: "row",
@@ -824,7 +1239,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 18,
         flex: 1
     },
-
     // Packing section
     packingSection: {
         marginTop: 28,

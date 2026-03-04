@@ -2,14 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type Priority = "urgent" | "high" | "normal" | "low";
 type Channel = "email" | "chat" | "phone";
 type SlaStatus = "within" | "approaching" | "breached";
-
 type Ticket = {
     id: string;
     ticketNumber: string;
@@ -210,35 +209,29 @@ const TICKETS: Ticket[] = [
         preview: "When the browser is narrow, the helper tooltip covers the dropdown menu completely."
     }
 ];
-
 const PRIORITY_ORDER: Priority[] = ["urgent", "high", "normal", "low"];
-
 const PRIORITY_COLORS: Record<Priority, string> = {
     urgent: "#dc2626",
     high: "#ea580c",
     normal: "#2563eb",
     low: "#6b7280"
 };
-
 const PRIORITY_ICONS: Record<Priority, keyof typeof Ionicons.glyphMap> = {
     urgent: "flash-outline",
     high: "arrow-up-circle-outline",
     normal: "remove-circle-outline",
     low: "arrow-down-circle-outline"
 };
-
 const CHANNEL_ICONS: Record<Channel, keyof typeof Ionicons.glyphMap> = {
     email: "mail-outline",
     chat: "chatbubble-outline",
     phone: "call-outline"
 };
-
 const CHANNEL_LABELS: Record<Channel, string> = {
     email: "Email",
     chat: "Chat",
     phone: "Phone"
 };
-
 const SLA_LABELS: Record<SlaStatus, string> = {
     within: "Within SLA",
     approaching: "Approaching",
@@ -252,7 +245,6 @@ function formatAge(mins: number): string {
     if (mins < 1440) return `${Math.floor(mins / 60)}h`;
     return `${Math.floor(mins / 1440)}d`;
 }
-
 function getInitials(name: string): string {
     return name
         .split(" ")
@@ -276,19 +268,49 @@ function MetricCard({
     accentColor: string;
 }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[metricStyles.card, { backgroundColor: theme.colors.surfaceContainer }]}>
-            <View style={[metricStyles.iconWrap, { backgroundColor: `${accentColor}18` }]}>
+        <Card
+            style={[
+                metricStyles.card,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
+            <View
+                style={[
+                    metricStyles.iconWrap,
+                    {
+                        backgroundColor: `${accentColor}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={18} color={accentColor} />
             </View>
-            <Text style={[metricStyles.value, { color: theme.colors.onSurface }]}>{value}</Text>
-            <Text style={[metricStyles.label, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
-        </View>
+            <Text
+                style={[
+                    metricStyles.value,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            <Text
+                style={[
+                    metricStyles.label,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {label}
+            </Text>
+        </Card>
     );
 }
-
-const metricStyles = StyleSheet.create((theme) => ({
+const metricStyles = StyleSheet.create((_theme) => ({
     card: {
         flex: 1,
         borderRadius: 12,
@@ -320,23 +342,58 @@ const metricStyles = StyleSheet.create((theme) => ({
 
 function SlaBadge({ status }: { status: SlaStatus }) {
     const { theme } = useUnistyles();
-
-    const colorMap: Record<SlaStatus, { bg: string; fg: string }> = {
-        within: { bg: "#16a34a20", fg: "#16a34a" },
-        approaching: { bg: "#d9770620", fg: "#d97706" },
-        breached: { bg: `${theme.colors.error}20`, fg: theme.colors.error }
+    const colorMap: Record<
+        SlaStatus,
+        {
+            bg: string;
+            fg: string;
+        }
+    > = {
+        within: {
+            bg: "#16a34a20",
+            fg: "#16a34a"
+        },
+        approaching: {
+            bg: "#d9770620",
+            fg: "#d97706"
+        },
+        breached: {
+            bg: `${theme.colors.error}20`,
+            fg: theme.colors.error
+        }
     };
     const c = colorMap[status];
-
     return (
-        <View style={[slaStyles.badge, { backgroundColor: c.bg }]}>
-            <View style={[slaStyles.dot, { backgroundColor: c.fg }]} />
-            <Text style={[slaStyles.text, { color: c.fg }]}>{SLA_LABELS[status]}</Text>
+        <View
+            style={[
+                slaStyles.badge,
+                {
+                    backgroundColor: c.bg
+                }
+            ]}
+        >
+            <View
+                style={[
+                    slaStyles.dot,
+                    {
+                        backgroundColor: c.fg
+                    }
+                ]}
+            />
+            <Text
+                style={[
+                    slaStyles.text,
+                    {
+                        color: c.fg
+                    }
+                ]}
+            >
+                {SLA_LABELS[status]}
+            </Text>
         </View>
     );
 }
-
-const slaStyles = StyleSheet.create((theme) => ({
+const slaStyles = StyleSheet.create((_theme) => ({
     badge: {
         flexDirection: "row",
         alignItems: "center",
@@ -362,18 +419,30 @@ const slaStyles = StyleSheet.create((theme) => ({
 
 function ChannelChip({ channel }: { channel: Channel }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[channelStyles.chip, { backgroundColor: theme.colors.surfaceContainerHighest }]}>
+        <View
+            style={[
+                channelStyles.chip,
+                {
+                    backgroundColor: theme.colors.surfaceContainerHighest
+                }
+            ]}
+        >
             <Ionicons name={CHANNEL_ICONS[channel]} size={12} color={theme.colors.onSurfaceVariant} />
-            <Text style={[channelStyles.text, { color: theme.colors.onSurfaceVariant }]}>
+            <Text
+                style={[
+                    channelStyles.text,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
                 {CHANNEL_LABELS[channel]}
             </Text>
         </View>
     );
 }
-
-const channelStyles = StyleSheet.create((theme) => ({
+const channelStyles = StyleSheet.create((_theme) => ({
     chip: {
         flexDirection: "row",
         alignItems: "center",
@@ -396,22 +465,59 @@ function PriorityGroupHeader({ priority, count }: { priority: Priority; count: n
     const color = PRIORITY_COLORS[priority];
     const icon = PRIORITY_ICONS[priority];
     const label = priority.charAt(0).toUpperCase() + priority.slice(1);
-
     return (
         <View style={groupStyles.header}>
-            <View style={[groupStyles.iconWrap, { backgroundColor: `${color}18` }]}>
+            <View
+                style={[
+                    groupStyles.iconWrap,
+                    {
+                        backgroundColor: `${color}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={16} color={color} />
             </View>
-            <Text style={[groupStyles.label, { color: theme.colors.onSurface }]}>{label}</Text>
-            <View style={[groupStyles.countBadge, { backgroundColor: `${color}22` }]}>
-                <Text style={[groupStyles.countText, { color }]}>{count}</Text>
+            <Text
+                style={[
+                    groupStyles.label,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {label}
+            </Text>
+            <View
+                style={[
+                    groupStyles.countBadge,
+                    {
+                        backgroundColor: `${color}22`
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        groupStyles.countText,
+                        {
+                            color
+                        }
+                    ]}
+                >
+                    {count}
+                </Text>
             </View>
-            <View style={[groupStyles.line, { backgroundColor: `${color}30` }]} />
+            <View
+                style={[
+                    groupStyles.line,
+                    {
+                        backgroundColor: `${color}30`
+                    }
+                ]}
+            />
         </View>
     );
 }
-
-const groupStyles = StyleSheet.create((theme) => ({
+const groupStyles = StyleSheet.create((_theme) => ({
     header: {
         flexDirection: "row",
         alignItems: "center",
@@ -465,27 +571,51 @@ function TicketRow({
     priorityColor: string;
 }) {
     const { theme } = useUnistyles();
-
     return (
         <Pressable
             onPress={onPress}
             style={({ pressed }) => [
                 rowStyles.container,
-                { backgroundColor: theme.colors.surfaceContainer },
-                pressed && { opacity: 0.85 }
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                },
+                pressed && {
+                    opacity: 0.85
+                }
             ]}
         >
             {/* Left priority accent */}
-            <View style={[rowStyles.accentBar, { backgroundColor: priorityColor }]} />
+            <View
+                style={[
+                    rowStyles.accentBar,
+                    {
+                        backgroundColor: priorityColor
+                    }
+                ]}
+            />
 
             <View style={rowStyles.content}>
                 {/* Top row: unread dot, ticket number, SLA badge */}
                 <View style={rowStyles.topRow}>
                     <View style={rowStyles.topLeft}>
                         {ticket.unread && (
-                            <View style={[rowStyles.unreadDot, { backgroundColor: theme.colors.primary }]} />
+                            <View
+                                style={[
+                                    rowStyles.unreadDot,
+                                    {
+                                        backgroundColor: theme.colors.primary
+                                    }
+                                ]}
+                            />
                         )}
-                        <Text style={[rowStyles.ticketNumber, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                rowStyles.ticketNumber,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {ticket.ticketNumber}
                         </Text>
                         <ChannelChip channel={ticket.channel} />
@@ -497,7 +627,9 @@ function TicketRow({
                 <Text
                     style={[
                         rowStyles.subject,
-                        { color: theme.colors.onSurface },
+                        {
+                            color: theme.colors.onSurface
+                        },
                         ticket.unread && rowStyles.subjectUnread
                     ]}
                     numberOfLines={isExpanded ? undefined : 1}
@@ -508,13 +640,32 @@ function TicketRow({
                 {/* Bottom row: customer, age */}
                 <View style={rowStyles.bottomRow}>
                     <View style={rowStyles.customerRow}>
-                        <View style={[rowStyles.avatar, { backgroundColor: `${priorityColor}20` }]}>
-                            <Text style={[rowStyles.avatarText, { color: priorityColor }]}>
+                        <View
+                            style={[
+                                rowStyles.avatar,
+                                {
+                                    backgroundColor: `${priorityColor}20`
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    rowStyles.avatarText,
+                                    {
+                                        color: priorityColor
+                                    }
+                                ]}
+                            >
                                 {getInitials(ticket.customer)}
                             </Text>
                         </View>
                         <Text
-                            style={[rowStyles.customerName, { color: theme.colors.onSurfaceVariant }]}
+                            style={[
+                                rowStyles.customerName,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
                             numberOfLines={1}
                         >
                             {ticket.customer}
@@ -522,7 +673,14 @@ function TicketRow({
                     </View>
                     <View style={rowStyles.ageWrap}>
                         <Ionicons name="time-outline" size={12} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[rowStyles.ageText, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                rowStyles.ageText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {formatAge(ticket.ageMins)}
                         </Text>
                     </View>
@@ -530,14 +688,35 @@ function TicketRow({
 
                 {/* Expanded detail */}
                 {isExpanded && (
-                    <View style={[rowStyles.expandedArea, { borderTopColor: theme.colors.outlineVariant }]}>
-                        <Text style={[rowStyles.previewText, { color: theme.colors.onSurfaceVariant }]}>
+                    <View
+                        style={[
+                            rowStyles.expandedArea,
+                            {
+                                borderTopColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                rowStyles.previewText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {ticket.preview}
                         </Text>
                         <View style={rowStyles.expandedMeta}>
                             <View style={rowStyles.assigneeRow}>
                                 <Ionicons name="person-outline" size={13} color={theme.colors.onSurfaceVariant} />
-                                <Text style={[rowStyles.assigneeText, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        rowStyles.assigneeText,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     {ticket.assignee}
                                 </Text>
                             </View>
@@ -549,8 +728,12 @@ function TicketRow({
                                     }}
                                     style={({ pressed }) => [
                                         rowStyles.markReadBtn,
-                                        { backgroundColor: theme.colors.primary },
-                                        pressed && { opacity: 0.8 }
+                                        {
+                                            backgroundColor: theme.colors.primary
+                                        },
+                                        pressed && {
+                                            opacity: 0.8
+                                        }
                                     ]}
                                 >
                                     <Ionicons name="checkmark-outline" size={13} color="#ffffff" />
@@ -564,8 +747,7 @@ function TicketRow({
         </Pressable>
     );
 }
-
-const rowStyles = StyleSheet.create((theme) => ({
+const rowStyles = StyleSheet.create((_theme) => ({
     container: {
         borderRadius: 12,
         overflow: "hidden",
@@ -693,15 +875,22 @@ const rowStyles = StyleSheet.create((theme) => ({
 
 function FilterPills({ active, onSelect }: { active: Priority | "all"; onSelect: (tab: Priority | "all") => void }) {
     const { theme } = useUnistyles();
-    const tabs: { key: Priority | "all"; label: string; count: number }[] = [
-        { key: "all", label: "All", count: TICKETS.length },
+    const tabs: {
+        key: Priority | "all";
+        label: string;
+        count: number;
+    }[] = [
+        {
+            key: "all",
+            label: "All",
+            count: TICKETS.length
+        },
         ...PRIORITY_ORDER.map((p) => ({
             key: p as Priority | "all",
             label: p.charAt(0).toUpperCase() + p.slice(1),
             count: TICKETS.filter((t) => t.priority === p).length
         }))
     ];
-
     return (
         <View style={filterStyles.row}>
             {tabs.map(({ key, label, count }) => {
@@ -723,7 +912,9 @@ function FilterPills({ active, onSelect }: { active: Priority | "all"; onSelect:
                         <Text
                             style={[
                                 filterStyles.pillText,
-                                { color: isActive ? "#ffffff" : theme.colors.onSurfaceVariant }
+                                {
+                                    color: isActive ? "#ffffff" : theme.colors.onSurfaceVariant
+                                }
                             ]}
                         >
                             {label}
@@ -736,7 +927,14 @@ function FilterPills({ active, onSelect }: { active: Priority | "all"; onSelect:
                                 }
                             ]}
                         >
-                            <Text style={[filterStyles.pillCountText, { color: isActive ? "#ffffff" : accentColor }]}>
+                            <Text
+                                style={[
+                                    filterStyles.pillCountText,
+                                    {
+                                        color: isActive ? "#ffffff" : accentColor
+                                    }
+                                ]}
+                            >
                                 {count}
                             </Text>
                         </View>
@@ -746,8 +944,7 @@ function FilterPills({ active, onSelect }: { active: Priority | "all"; onSelect:
         </View>
     );
 }
-
-const filterStyles = StyleSheet.create((theme) => ({
+const filterStyles = StyleSheet.create((_theme) => ({
     row: {
         flexDirection: "row",
         gap: 6,
@@ -785,36 +982,98 @@ const filterStyles = StyleSheet.create((theme) => ({
 
 function SummaryBar({ tickets }: { tickets: Ticket[] }) {
     const { theme } = useUnistyles();
-
     const unreadCount = tickets.filter((t) => t.unread).length;
     const breachedCount = tickets.filter((t) => t.sla === "breached").length;
     const approachingCount = tickets.filter((t) => t.sla === "approaching").length;
-
     return (
-        <View style={[summaryStyles.container, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <View
+            style={[
+                summaryStyles.container,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             <View style={summaryStyles.item}>
-                <View style={[summaryStyles.dot, { backgroundColor: theme.colors.primary }]} />
-                <Text style={[summaryStyles.text, { color: theme.colors.onSurfaceVariant }]}>{unreadCount} unread</Text>
+                <View
+                    style={[
+                        summaryStyles.dot,
+                        {
+                            backgroundColor: theme.colors.primary
+                        }
+                    ]}
+                />
+                <Text
+                    style={[
+                        summaryStyles.text,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    {unreadCount} unread
+                </Text>
             </View>
-            <View style={[summaryStyles.divider, { backgroundColor: theme.colors.outlineVariant }]} />
+            <View
+                style={[
+                    summaryStyles.divider,
+                    {
+                        backgroundColor: theme.colors.outlineVariant
+                    }
+                ]}
+            />
             <View style={summaryStyles.item}>
-                <View style={[summaryStyles.dot, { backgroundColor: theme.colors.error }]} />
-                <Text style={[summaryStyles.text, { color: theme.colors.onSurfaceVariant }]}>
+                <View
+                    style={[
+                        summaryStyles.dot,
+                        {
+                            backgroundColor: theme.colors.error
+                        }
+                    ]}
+                />
+                <Text
+                    style={[
+                        summaryStyles.text,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {breachedCount} breached
                 </Text>
             </View>
-            <View style={[summaryStyles.divider, { backgroundColor: theme.colors.outlineVariant }]} />
+            <View
+                style={[
+                    summaryStyles.divider,
+                    {
+                        backgroundColor: theme.colors.outlineVariant
+                    }
+                ]}
+            />
             <View style={summaryStyles.item}>
-                <View style={[summaryStyles.dot, { backgroundColor: "#d97706" }]} />
-                <Text style={[summaryStyles.text, { color: theme.colors.onSurfaceVariant }]}>
+                <View
+                    style={[
+                        summaryStyles.dot,
+                        {
+                            backgroundColor: "#d97706"
+                        }
+                    ]}
+                />
+                <Text
+                    style={[
+                        summaryStyles.text,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {approachingCount} approaching
                 </Text>
             </View>
         </View>
     );
 }
-
-const summaryStyles = StyleSheet.create((theme) => ({
+const summaryStyles = StyleSheet.create((_theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "center",
@@ -852,18 +1111,23 @@ export function SupportTicketsPage() {
     const [tickets, setTickets] = React.useState<Ticket[]>(TICKETS);
     const [activeFilter, setActiveFilter] = React.useState<Priority | "all">("all");
     const [expandedId, setExpandedId] = React.useState<string | null>(null);
-
     const openCount = tickets.length;
     const avgResponseMins = Math.round(tickets.reduce((sum, t) => sum + t.ageMins, 0) / tickets.length);
     const closedToday = 18;
     const csat = "4.6";
-
     const filteredTickets = activeFilter === "all" ? tickets : tickets.filter((t) => t.priority === activeFilter);
-
     const handleMarkRead = React.useCallback((id: string) => {
-        setTickets((prev) => prev.map((t) => (t.id === id ? { ...t, unread: false } : t)));
+        setTickets((prev) =>
+            prev.map((t) =>
+                t.id === id
+                    ? {
+                          ...t,
+                          unread: false
+                      }
+                    : t
+            )
+        );
     }, []);
-
     const handleToggleExpand = React.useCallback((id: string) => {
         setExpandedId((prev) => (prev === id ? null : id));
     }, []);
@@ -871,19 +1135,27 @@ export function SupportTicketsPage() {
     // Group by priority for "all" view
     const grouped = React.useMemo(() => {
         if (activeFilter !== "all") return null;
-        const groups: { priority: Priority; tickets: Ticket[] }[] = [];
+        const groups: {
+            priority: Priority;
+            tickets: Ticket[];
+        }[] = [];
         for (const priority of PRIORITY_ORDER) {
             const group = tickets.filter((t) => t.priority === priority);
             if (group.length > 0) {
-                groups.push({ priority, tickets: group });
+                groups.push({
+                    priority,
+                    tickets: group
+                });
             }
         }
         return groups;
     }, [activeFilter, tickets]);
-
     return (
         <ShowcasePage
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
             topInset={16}
             bottomInset={16}
             contentGap={16}
@@ -953,8 +1225,7 @@ export function SupportTicketsPage() {
         </ShowcasePage>
     );
 }
-
-const pageStyles = StyleSheet.create((theme) => ({
+const pageStyles = StyleSheet.create((_theme) => ({
     metricsRow: {
         flexDirection: "row",
         gap: 8

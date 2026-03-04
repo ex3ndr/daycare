@@ -2,13 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { Grid } from "@/components/Grid";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type VehicleStatus = "active" | "maintenance" | "idle";
 type VehicleType = "Sedans" | "Vans" | "Trucks";
-
 interface Vehicle {
     id: string;
     make: string;
@@ -191,7 +191,6 @@ const mockVehicles: Vehicle[] = [
 function formatMileage(miles: number): string {
     return miles.toLocaleString("en-US");
 }
-
 function initialsFrom(name: string): string {
     if (name === "Unassigned") return "?";
     const parts = name.split(" ");
@@ -200,9 +199,7 @@ function initialsFrom(name: string): string {
     }
     return name.slice(0, 2).toUpperCase();
 }
-
 const avatarHues = ["#6366F1", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6", "#EF4444", "#14B8A6"];
-
 function colorForName(name: string): string {
     if (name === "Unassigned") return "#9CA3AF";
     let hash = 0;
@@ -211,7 +208,6 @@ function colorForName(name: string): string {
     }
     return avatarHues[Math.abs(hash) % avatarHues.length];
 }
-
 function statusColor(status: VehicleStatus): string {
     switch (status) {
         case "active":
@@ -222,7 +218,6 @@ function statusColor(status: VehicleStatus): string {
             return "#9CA3AF";
     }
 }
-
 function statusLabel(status: VehicleStatus): string {
     switch (status) {
         case "active":
@@ -233,7 +228,6 @@ function statusLabel(status: VehicleStatus): string {
             return "Idle";
     }
 }
-
 function statusIcon(status: VehicleStatus): keyof typeof Ionicons.glyphMap {
     switch (status) {
         case "active":
@@ -244,7 +238,6 @@ function statusIcon(status: VehicleStatus): keyof typeof Ionicons.glyphMap {
             return "pause-circle-outline";
     }
 }
-
 function typeIcon(type: VehicleType): keyof typeof Ionicons.glyphMap {
     switch (type) {
         case "Sedans":
@@ -270,35 +263,90 @@ function OverdueBanner({
 }) {
     const { theme } = useUnistyles();
     const visible = vehicles.filter((v) => !dismissedIds.has(v.id));
-
     if (visible.length === 0) return null;
-
     return (
-        <View style={[styles.bannerContainer, { backgroundColor: `${theme.colors.error}10` }]}>
+        <View
+            style={[
+                styles.bannerContainer,
+                {
+                    backgroundColor: `${theme.colors.error}10`
+                }
+            ]}
+        >
             <View style={styles.bannerHeader}>
-                <View style={[styles.bannerIconCircle, { backgroundColor: `${theme.colors.error}20` }]}>
+                <View
+                    style={[
+                        styles.bannerIconCircle,
+                        {
+                            backgroundColor: `${theme.colors.error}20`
+                        }
+                    ]}
+                >
                     <Ionicons name="warning-outline" size={20} color={theme.colors.error} />
                 </View>
                 <View style={styles.bannerHeaderText}>
-                    <Text style={[styles.bannerTitle, { color: theme.colors.error }]}>Service Overdue</Text>
-                    <Text style={[styles.bannerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.bannerTitle,
+                            {
+                                color: theme.colors.error
+                            }
+                        ]}
+                    >
+                        Service Overdue
+                    </Text>
+                    <Text
+                        style={[
+                            styles.bannerSubtitle,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {visible.length} vehicle{visible.length !== 1 ? "s" : ""} past service date
                     </Text>
                 </View>
             </View>
             <View style={styles.bannerItemsList}>
                 {visible.map((vehicle) => (
-                    <View key={vehicle.id} style={[styles.bannerItem, { borderColor: `${theme.colors.error}30` }]}>
+                    <View
+                        key={vehicle.id}
+                        style={[
+                            styles.bannerItem,
+                            {
+                                borderColor: `${theme.colors.error}30`
+                            }
+                        ]}
+                    >
                         <View style={styles.bannerItemInfo}>
-                            <View style={[styles.bannerDot, { backgroundColor: theme.colors.error }]} />
+                            <View
+                                style={[
+                                    styles.bannerDot,
+                                    {
+                                        backgroundColor: theme.colors.error
+                                    }
+                                ]}
+                            />
                             <View style={styles.bannerItemTextCol}>
                                 <Text
-                                    style={[styles.bannerItemName, { color: theme.colors.onSurface }]}
+                                    style={[
+                                        styles.bannerItemName,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
                                     numberOfLines={1}
                                 >
                                     {vehicle.id} -- {vehicle.make} {vehicle.model}
                                 </Text>
-                                <Text style={[styles.bannerItemDetail, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.bannerItemDetail,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Due: {vehicle.nextServiceDate} -- {vehicle.driver}
                                 </Text>
                             </View>
@@ -306,7 +354,11 @@ function OverdueBanner({
                         <Pressable
                             onPress={() => onDismiss(vehicle.id)}
                             hitSlop={8}
-                            style={({ pressed }) => [pressed && { opacity: 0.6 }]}
+                            style={({ pressed }) => [
+                                pressed && {
+                                    opacity: 0.6
+                                }
+                            ]}
                         >
                             <Ionicons name="close-circle" size={20} color={`${theme.colors.error}80`} />
                         </Pressable>
@@ -333,13 +385,45 @@ function MetricCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <View style={[styles.metricCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-            <View style={[styles.metricIconCircle, { backgroundColor: accentBg }]}>
+        <Card
+            style={[
+                styles.metricCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.metricIconCircle,
+                    {
+                        backgroundColor: accentBg
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={18} color={iconColor} />
             </View>
-            <Text style={[styles.metricValue, { color: theme.colors.onSurface }]}>{value}</Text>
-            <Text style={[styles.metricLabel, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
-        </View>
+            <Text
+                style={[
+                    styles.metricValue,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            <Text
+                style={[
+                    styles.metricLabel,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {label}
+            </Text>
+        </Card>
     );
 }
 
@@ -354,14 +438,32 @@ function StatusFilterPills({
     counts: Record<VehicleStatus | "all", number>;
 }) {
     const { theme } = useUnistyles();
-
-    const filters: { key: VehicleStatus | null; label: string; count: number }[] = [
-        { key: null, label: "All", count: counts.all },
-        { key: "active", label: "Active", count: counts.active },
-        { key: "maintenance", label: "Maintenance", count: counts.maintenance },
-        { key: "idle", label: "Idle", count: counts.idle }
+    const filters: {
+        key: VehicleStatus | null;
+        label: string;
+        count: number;
+    }[] = [
+        {
+            key: null,
+            label: "All",
+            count: counts.all
+        },
+        {
+            key: "active",
+            label: "Active",
+            count: counts.active
+        },
+        {
+            key: "maintenance",
+            label: "Maintenance",
+            count: counts.maintenance
+        },
+        {
+            key: "idle",
+            label: "Idle",
+            count: counts.idle
+        }
     ];
-
     return (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsScroll}>
             {filters.map((f) => {
@@ -373,11 +475,18 @@ function StatusFilterPills({
                         onPress={() => onSelect(f.key)}
                         style={[
                             styles.pill,
-                            { backgroundColor: isActive ? pillColor : theme.colors.surfaceContainerHighest }
+                            {
+                                backgroundColor: isActive ? pillColor : theme.colors.surfaceContainerHighest
+                            }
                         ]}
                     >
                         <Text
-                            style={[styles.pillText, { color: isActive ? "#FFFFFF" : theme.colors.onSurfaceVariant }]}
+                            style={[
+                                styles.pillText,
+                                {
+                                    color: isActive ? "#FFFFFF" : theme.colors.onSurfaceVariant
+                                }
+                            ]}
                         >
                             {f.label}
                         </Text>
@@ -389,7 +498,14 @@ function StatusFilterPills({
                                 }
                             ]}
                         >
-                            <Text style={[styles.pillBadgeText, { color: isActive ? "#FFFFFF" : pillColor }]}>
+                            <Text
+                                style={[
+                                    styles.pillBadgeText,
+                                    {
+                                        color: isActive ? "#FFFFFF" : pillColor
+                                    }
+                                ]}
+                            >
                                 {f.count}
                             </Text>
                         </View>
@@ -404,15 +520,46 @@ function StatusFilterPills({
 function TypeSectionHeader({ type, count }: { type: VehicleType; count: number }) {
     const { theme } = useUnistyles();
     const icon = typeIcon(type);
-
     return (
         <View style={styles.typeSectionHeader}>
-            <View style={[styles.typeIconCircle, { backgroundColor: `${theme.colors.primary}18` }]}>
+            <View
+                style={[
+                    styles.typeIconCircle,
+                    {
+                        backgroundColor: `${theme.colors.primary}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={16} color={theme.colors.primary} />
             </View>
-            <Text style={[styles.typeSectionName, { color: theme.colors.onSurface }]}>{type}</Text>
-            <View style={[styles.typeCountBadge, { backgroundColor: `${theme.colors.primary}18` }]}>
-                <Text style={[styles.typeCountText, { color: theme.colors.primary }]}>{count}</Text>
+            <Text
+                style={[
+                    styles.typeSectionName,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {type}
+            </Text>
+            <View
+                style={[
+                    styles.typeCountBadge,
+                    {
+                        backgroundColor: `${theme.colors.primary}18`
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.typeCountText,
+                        {
+                            color: theme.colors.primary
+                        }
+                    ]}
+                >
+                    {count}
+                </Text>
             </View>
         </View>
     );
@@ -433,10 +580,16 @@ function VehicleCard({
     const sIcon = statusIcon(vehicle.status);
     const driverColor = colorForName(vehicle.driver);
     const driverInitials = initialsFrom(vehicle.driver);
-
     return (
-        <Pressable onPress={onToggle} style={({ pressed }) => [pressed && { opacity: 0.92 }]}>
-            <View
+        <Pressable
+            onPress={onToggle}
+            style={({ pressed }) => [
+                pressed && {
+                    opacity: 0.92
+                }
+            ]}
+        >
+            <Card
                 style={[
                     styles.vehicleCard,
                     {
@@ -446,20 +599,57 @@ function VehicleCard({
                 ]}
             >
                 {/* Status-colored left border */}
-                <View style={[styles.vehicleStripe, { backgroundColor: sColor }]} />
+                <View
+                    style={[
+                        styles.vehicleStripe,
+                        {
+                            backgroundColor: sColor
+                        }
+                    ]}
+                />
 
                 <View style={styles.vehicleCardContent}>
                     {/* Top row: ID + driver avatar + status badge */}
                     <View style={styles.vehicleTopRow}>
                         <View style={styles.vehicleIdCol}>
-                            <Text style={[styles.vehicleId, { color: theme.colors.onSurface }]}>{vehicle.id}</Text>
-                            <Text style={[styles.vehicleMakeModel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.vehicleId,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
+                                {vehicle.id}
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.vehicleMakeModel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {vehicle.make} {vehicle.model}
                             </Text>
                         </View>
-                        <View style={[styles.statusBadge, { backgroundColor: `${sColor}18` }]}>
+                        <View
+                            style={[
+                                styles.statusBadge,
+                                {
+                                    backgroundColor: `${sColor}18`
+                                }
+                            ]}
+                        >
                             <Ionicons name={sIcon} size={12} color={sColor} />
-                            <Text style={[styles.statusBadgeText, { color: sColor }]}>
+                            <Text
+                                style={[
+                                    styles.statusBadgeText,
+                                    {
+                                        color: sColor
+                                    }
+                                ]}
+                            >
                                 {statusLabel(vehicle.status)}
                             </Text>
                         </View>
@@ -468,8 +658,24 @@ function VehicleCard({
                     {/* Middle row: driver + mileage + service date */}
                     <View style={styles.vehicleMiddleRow}>
                         <View style={styles.driverSection}>
-                            <View style={[styles.driverAvatar, { backgroundColor: `${driverColor}20` }]}>
-                                <Text style={[styles.driverAvatarText, { color: driverColor }]}>{driverInitials}</Text>
+                            <View
+                                style={[
+                                    styles.driverAvatar,
+                                    {
+                                        backgroundColor: `${driverColor}20`
+                                    }
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.driverAvatarText,
+                                        {
+                                            color: driverColor
+                                        }
+                                    ]}
+                                >
+                                    {driverInitials}
+                                </Text>
                             </View>
                             <Text
                                 style={[
@@ -486,7 +692,14 @@ function VehicleCard({
                                 {vehicle.driver}
                             </Text>
                         </View>
-                        <Text style={[styles.mileageText, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.mileageText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {formatMileage(vehicle.mileage)} mi
                         </Text>
                     </View>
@@ -512,8 +725,24 @@ function VehicleCard({
                                 Service: {vehicle.nextServiceDate}
                             </Text>
                             {vehicle.serviceOverdue && (
-                                <View style={[styles.overduePill, { backgroundColor: `${theme.colors.error}18` }]}>
-                                    <Text style={[styles.overdueText, { color: theme.colors.error }]}>OVERDUE</Text>
+                                <View
+                                    style={[
+                                        styles.overduePill,
+                                        {
+                                            backgroundColor: `${theme.colors.error}18`
+                                        }
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.overdueText,
+                                            {
+                                                color: theme.colors.error
+                                            }
+                                        ]}
+                                    >
+                                        OVERDUE
+                                    </Text>
                                 </View>
                             )}
                         </View>
@@ -526,43 +755,104 @@ function VehicleCard({
 
                     {/* Expanded details */}
                     {isExpanded && (
-                        <View style={[styles.expandedSection, { borderTopColor: theme.colors.outlineVariant }]}>
+                        <View
+                            style={[
+                                styles.expandedSection,
+                                {
+                                    borderTopColor: theme.colors.outlineVariant
+                                }
+                            ]}
+                        >
                             <View style={styles.expandedRow}>
                                 <Ionicons name="card-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                                <Text style={[styles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Plate
                                 </Text>
-                                <Text style={[styles.expandedValue, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedValue,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {vehicle.licensePlate}
                                 </Text>
                             </View>
                             <View style={styles.expandedRow}>
                                 <Ionicons name="speedometer-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                                <Text style={[styles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Mileage
                                 </Text>
-                                <Text style={[styles.expandedValueMono, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedValueMono,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {formatMileage(vehicle.mileage)} mi
                                 </Text>
                             </View>
                             <View style={styles.expandedRow}>
                                 <Ionicons name="location-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                                <Text style={[styles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Location
                                 </Text>
-                                <Text style={[styles.expandedValue, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedValue,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {vehicle.lastLocation}
                                 </Text>
                             </View>
                             {/* Fuel level bar */}
                             <View style={styles.expandedRow}>
                                 <Ionicons name="water-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                                <Text style={[styles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Fuel
                                 </Text>
                                 <View style={styles.fuelBarContainer}>
                                     <View
-                                        style={[styles.fuelBarTrack, { backgroundColor: theme.colors.outlineVariant }]}
+                                        style={[
+                                            styles.fuelBarTrack,
+                                            {
+                                                backgroundColor: theme.colors.outlineVariant
+                                            }
+                                        ]}
                                     >
                                         <View
                                             style={[
@@ -579,7 +869,14 @@ function VehicleCard({
                                             ]}
                                         />
                                     </View>
-                                    <Text style={[styles.fuelPct, { color: theme.colors.onSurfaceVariant }]}>
+                                    <Text
+                                        style={[
+                                            styles.fuelPct,
+                                            {
+                                                color: theme.colors.onSurfaceVariant
+                                            }
+                                        ]}
+                                    >
                                         {vehicle.fuelLevel}%
                                     </Text>
                                 </View>
@@ -587,7 +884,7 @@ function VehicleCard({
                         </View>
                     )}
                 </View>
-            </View>
+            </Card>
         </Pressable>
     );
 }
@@ -626,11 +923,9 @@ export function FleetManagementPage() {
         }
         return map;
     }, [filteredVehicles]);
-
     const handleToggleVehicle = React.useCallback((vehicleId: string) => {
         setExpandedVehicleId((prev) => (prev === vehicleId ? null : vehicleId));
     }, []);
-
     const handleDismissOverdue = React.useCallback((vehicleId: string) => {
         setDismissedOverdue((prev) => {
             const next = new Set(prev);
@@ -638,14 +933,12 @@ export function FleetManagementPage() {
             return next;
         });
     }, []);
-
     const counts: Record<VehicleStatus | "all", number> = {
         all: totalVehicles,
         active: activeCount,
         maintenance: maintenanceCount,
         idle: idleCount
     };
-
     return (
         <ShowcasePage density="spacious" horizontalInset={16} topInset={20}>
             {/* Overdue Service Banner */}
@@ -656,7 +949,7 @@ export function FleetManagementPage() {
             />
 
             {/* Fleet Metrics */}
-            <View style={styles.metricsGrid}>
+            <Grid style={styles.metricsGrid}>
                 <View style={styles.metricsRow}>
                     <MetricCard
                         icon="car-outline"
@@ -689,12 +982,35 @@ export function FleetManagementPage() {
                         accentBg="#9CA3AF18"
                     />
                 </View>
-            </View>
+            </Grid>
 
             {/* Fleet Overview Summary Bar */}
-            <View style={[styles.overviewBar, { backgroundColor: theme.colors.surfaceContainer }]}>
-                <Text style={[styles.overviewBarTitle, { color: theme.colors.onSurface }]}>Fleet Utilization</Text>
-                <View style={[styles.utilizationTrack, { backgroundColor: theme.colors.outlineVariant }]}>
+            <View
+                style={[
+                    styles.overviewBar,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.overviewBarTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Fleet Utilization
+                </Text>
+                <View
+                    style={[
+                        styles.utilizationTrack,
+                        {
+                            backgroundColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                >
                     {activeCount > 0 && (
                         <View
                             style={[
@@ -731,20 +1047,62 @@ export function FleetManagementPage() {
                 </View>
                 <View style={styles.utilizationLegend}>
                     <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: "#10B981" }]} />
-                        <Text style={[styles.legendText, { color: theme.colors.onSurfaceVariant }]}>
+                        <View
+                            style={[
+                                styles.legendDot,
+                                {
+                                    backgroundColor: "#10B981"
+                                }
+                            ]}
+                        />
+                        <Text
+                            style={[
+                                styles.legendText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Active {Math.round((activeCount / totalVehicles) * 100)}%
                         </Text>
                     </View>
                     <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: "#F59E0B" }]} />
-                        <Text style={[styles.legendText, { color: theme.colors.onSurfaceVariant }]}>
+                        <View
+                            style={[
+                                styles.legendDot,
+                                {
+                                    backgroundColor: "#F59E0B"
+                                }
+                            ]}
+                        />
+                        <Text
+                            style={[
+                                styles.legendText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Maint. {Math.round((maintenanceCount / totalVehicles) * 100)}%
                         </Text>
                     </View>
                     <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: "#9CA3AF" }]} />
-                        <Text style={[styles.legendText, { color: theme.colors.onSurfaceVariant }]}>
+                        <View
+                            style={[
+                                styles.legendDot,
+                                {
+                                    backgroundColor: "#9CA3AF"
+                                }
+                            ]}
+                        />
+                        <Text
+                            style={[
+                                styles.legendText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Idle {Math.round((idleCount / totalVehicles) * 100)}%
                         </Text>
                     </View>
@@ -764,7 +1122,14 @@ export function FleetManagementPage() {
                             <TypeSectionHeader type={type} count={vehicles.length} />
                             {vehicles.length === 0 ? (
                                 <View style={styles.emptyGroup}>
-                                    <Text style={[styles.emptyGroupText, { color: theme.colors.onSurfaceVariant }]}>
+                                    <Text
+                                        style={[
+                                            styles.emptyGroupText,
+                                            {
+                                                color: theme.colors.onSurfaceVariant
+                                            }
+                                        ]}
+                                    >
                                         No vehicles match filter
                                     </Text>
                                 </View>
@@ -790,7 +1155,7 @@ export function FleetManagementPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Overdue banner
     bannerContainer: {
         borderRadius: 14,
@@ -858,7 +1223,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 11
     },
-
     // Metrics grid
     metricsGrid: {
         gap: 10,
@@ -892,7 +1256,6 @@ const styles = StyleSheet.create((theme) => ({
         letterSpacing: 0.3,
         textTransform: "uppercase"
     },
-
     // Fleet overview bar
     overviewBar: {
         borderRadius: 14,
@@ -932,7 +1295,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Filter pills
     pillsScroll: {
         gap: 8,
@@ -961,7 +1323,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 10
     },
-
     // Vehicle groups
     vehicleGroupsContainer: {
         gap: 20
@@ -969,7 +1330,6 @@ const styles = StyleSheet.create((theme) => ({
     typeGroup: {
         gap: 8
     },
-
     // Type section header
     typeSectionHeader: {
         flexDirection: "row",
@@ -999,12 +1359,10 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 11
     },
-
     // Vehicle list
     vehiclesList: {
         gap: 8
     },
-
     // Vehicle card
     vehicleCard: {
         borderRadius: 12,
@@ -1020,7 +1378,6 @@ const styles = StyleSheet.create((theme) => ({
         padding: 14,
         gap: 10
     },
-
     // Vehicle top row
     vehicleTopRow: {
         flexDirection: "row",
@@ -1040,7 +1397,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
-
     // Status badge
     statusBadge: {
         flexDirection: "row",
@@ -1054,7 +1410,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 11
     },
-
     // Vehicle middle row
     vehicleMiddleRow: {
         flexDirection: "row",
@@ -1087,7 +1442,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 12
     },
-
     // Vehicle bottom row
     vehicleBottomRow: {
         flexDirection: "row",
@@ -1113,7 +1467,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 9,
         letterSpacing: 0.5
     },
-
     // Expanded details
     expandedSection: {
         borderTopWidth: 1,
@@ -1142,7 +1495,6 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1,
         lineHeight: 18
     },
-
     // Fuel bar
     fuelBarContainer: {
         flex: 1,
@@ -1166,7 +1518,6 @@ const styles = StyleSheet.create((theme) => ({
         width: 32,
         textAlign: "right"
     },
-
     // Empty state
     emptyGroup: {
         paddingVertical: 20,

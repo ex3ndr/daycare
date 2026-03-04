@@ -2,20 +2,20 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
+import { Card } from "@/components/Card";
 
 // --- Types ---
+import { Grid } from "@/components/Grid";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type Platform = "twitter" | "linkedin" | "instagram";
 type Performance = "viral" | "above average" | "average" | "below average";
-
 type PlatformInfo = {
     name: string;
     icon: keyof typeof Ionicons.glyphMap;
     color: string;
     followers: number;
 };
-
 type Post = {
     id: string;
     platform: Platform;
@@ -25,7 +25,6 @@ type Post = {
     engagement: number;
     performance: Performance;
 };
-
 type ScheduledPost = {
     id: string;
     platform: Platform;
@@ -37,20 +36,50 @@ type ScheduledPost = {
 // --- Constants ---
 
 const PLATFORMS: Record<Platform, PlatformInfo> = {
-    twitter: { name: "Twitter", icon: "logo-twitter", color: "#1DA1F2", followers: 24800 },
-    linkedin: { name: "LinkedIn", icon: "logo-linkedin", color: "#0A66C2", followers: 12350 },
-    instagram: { name: "Instagram", icon: "logo-instagram", color: "#E1306C", followers: 31200 }
+    twitter: {
+        name: "Twitter",
+        icon: "logo-twitter",
+        color: "#1DA1F2",
+        followers: 24800
+    },
+    linkedin: {
+        name: "LinkedIn",
+        icon: "logo-linkedin",
+        color: "#0A66C2",
+        followers: 12350
+    },
+    instagram: {
+        name: "Instagram",
+        icon: "logo-instagram",
+        color: "#E1306C",
+        followers: 31200
+    }
 };
-
 const ALL_PLATFORMS: Platform[] = ["twitter", "linkedin", "instagram"];
-
-const PERFORMANCE_COLORS: Record<Performance, { bg: string; text: string }> = {
-    viral: { bg: "#DCFCE7", text: "#16A34A" },
-    "above average": { bg: "#DBEAFE", text: "#2563EB" },
-    average: { bg: "#FEF3C7", text: "#D97706" },
-    "below average": { bg: "#FEE2E2", text: "#DC2626" }
+const PERFORMANCE_COLORS: Record<
+    Performance,
+    {
+        bg: string;
+        text: string;
+    }
+> = {
+    viral: {
+        bg: "#DCFCE7",
+        text: "#16A34A"
+    },
+    "above average": {
+        bg: "#DBEAFE",
+        text: "#2563EB"
+    },
+    average: {
+        bg: "#FEF3C7",
+        text: "#D97706"
+    },
+    "below average": {
+        bg: "#FEE2E2",
+        text: "#DC2626"
+    }
 };
-
 const PERFORMANCE_LABELS: Record<Performance, string> = {
     viral: "Viral",
     "above average": "Above Avg",
@@ -152,7 +181,6 @@ const RECENT_POSTS: Post[] = [
         performance: "below average"
     }
 ];
-
 const SCHEDULED_POSTS: ScheduledPost[] = [
     {
         id: "s1",
@@ -198,25 +226,25 @@ function formatNumber(n: number): string {
     if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
     return n.toString();
 }
-
 function totalFollowers(): number {
     return ALL_PLATFORMS.reduce((sum, p) => sum + PLATFORMS[p].followers, 0);
 }
-
 function topPlatformByEngagement(): Platform {
-    const totals: Record<Platform, number> = { twitter: 0, linkedin: 0, instagram: 0 };
+    const totals: Record<Platform, number> = {
+        twitter: 0,
+        linkedin: 0,
+        instagram: 0
+    };
     for (const post of RECENT_POSTS) {
         totals[post.platform] += post.engagement;
     }
     return ALL_PLATFORMS.reduce((best, p) => (totals[p] > totals[best] ? p : best), ALL_PLATFORMS[0]);
 }
-
 function overallEngagementRate(): number {
     const totalImpressions = RECENT_POSTS.reduce((s, p) => s + p.impressions, 0);
     const totalEngagement = RECENT_POSTS.reduce((s, p) => s + p.engagement, 0);
     return totalImpressions > 0 ? (totalEngagement / totalImpressions) * 100 : 0;
 }
-
 function postsThisWeek(): number {
     // Posts from Mar 1-3 (this week range)
     return RECENT_POSTS.filter((p) => {
@@ -242,7 +270,6 @@ function MetricsRow({
     const engRate = overallEngagementRate();
     const weekPosts = postsThisWeek();
     const topPlat = topPlatformByEngagement();
-
     const metrics = [
         {
             label: "Total Followers",
@@ -270,37 +297,101 @@ function MetricsRow({
             color: PLATFORMS[topPlat].color
         }
     ];
-
     return (
-        <View style={styles.metricsGrid}>
+        <Grid style={styles.metricsGrid}>
             {metrics.map((m) => (
-                <View key={m.label} style={[styles.metricCard, { backgroundColor: surfaceColor, borderColor }]}>
+                <Card
+                    key={m.label}
+                    style={[
+                        styles.metricCard,
+                        {
+                            backgroundColor: surfaceColor,
+                            borderColor
+                        }
+                    ]}
+                >
                     <View style={styles.metricCardHeader}>
-                        <View style={[styles.metricIconBadge, { backgroundColor: `${m.color}18` }]}>
+                        <View
+                            style={[
+                                styles.metricIconBadge,
+                                {
+                                    backgroundColor: `${m.color}18`
+                                }
+                            ]}
+                        >
                             <Ionicons name={m.icon} size={18} color={m.color} />
                         </View>
                     </View>
-                    <Text style={[styles.metricValue, { color: textColor }]}>{m.value}</Text>
-                    <Text style={[styles.metricLabel, { color: subtextColor }]}>{m.label}</Text>
+                    <Text
+                        style={[
+                            styles.metricValue,
+                            {
+                                color: textColor
+                            }
+                        ]}
+                    >
+                        {m.value}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.metricLabel,
+                            {
+                                color: subtextColor
+                            }
+                        ]}
+                    >
+                        {m.label}
+                    </Text>
                     {m.trend && (
-                        <View style={[styles.trendBadge, { backgroundColor: "#10B98118" }]}>
+                        <View
+                            style={[
+                                styles.trendBadge,
+                                {
+                                    backgroundColor: "#10B98118"
+                                }
+                            ]}
+                        >
                             <Ionicons name="arrow-up" size={10} color="#10B981" />
-                            <Text style={[styles.trendText, { color: "#10B981" }]}>{m.trend}</Text>
+                            <Text
+                                style={[
+                                    styles.trendText,
+                                    {
+                                        color: "#10B981"
+                                    }
+                                ]}
+                            >
+                                {m.trend}
+                            </Text>
                         </View>
                     )}
-                </View>
+                </Card>
             ))}
-        </View>
+        </Grid>
     );
 }
 
 /** Follower breakdown mini-bar showing proportions per platform */
 function FollowerBreakdownBar({ subtextColor, borderColor }: { subtextColor: string; borderColor: string }) {
     const total = totalFollowers();
-
     return (
-        <View style={[styles.breakdownContainer, { borderColor }]}>
-            <Text style={[styles.breakdownTitle, { color: subtextColor }]}>FOLLOWER BREAKDOWN</Text>
+        <View
+            style={[
+                styles.breakdownContainer,
+                {
+                    borderColor
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    styles.breakdownTitle,
+                    {
+                        color: subtextColor
+                    }
+                ]}
+            >
+                FOLLOWER BREAKDOWN
+            </Text>
             <View style={styles.breakdownBar}>
                 {ALL_PLATFORMS.map((p) => {
                     const pct = (PLATFORMS[p].followers / total) * 100;
@@ -321,8 +412,22 @@ function FollowerBreakdownBar({ subtextColor, borderColor }: { subtextColor: str
             <View style={styles.breakdownLegend}>
                 {ALL_PLATFORMS.map((p) => (
                     <View key={p} style={styles.breakdownLegendItem}>
-                        <View style={[styles.breakdownDot, { backgroundColor: PLATFORMS[p].color }]} />
-                        <Text style={[styles.breakdownLegendText, { color: subtextColor }]}>
+                        <View
+                            style={[
+                                styles.breakdownDot,
+                                {
+                                    backgroundColor: PLATFORMS[p].color
+                                }
+                            ]}
+                        />
+                        <Text
+                            style={[
+                                styles.breakdownLegendText,
+                                {
+                                    color: subtextColor
+                                }
+                            ]}
+                        >
                             {PLATFORMS[p].name} {formatNumber(PLATFORMS[p].followers)}
                         </Text>
                     </View>
@@ -349,23 +454,69 @@ function PlatformSectionHeader({
     subtextColor: string;
 }) {
     const info = PLATFORMS[platform];
-
     return (
-        <Pressable onPress={onToggle} style={[styles.platformHeader, { borderLeftColor: info.color }]}>
+        <Pressable
+            onPress={onToggle}
+            style={[
+                styles.platformHeader,
+                {
+                    borderLeftColor: info.color
+                }
+            ]}
+        >
             <View style={styles.platformHeaderLeft}>
-                <View style={[styles.platformIconBadge, { backgroundColor: `${info.color}18` }]}>
+                <View
+                    style={[
+                        styles.platformIconBadge,
+                        {
+                            backgroundColor: `${info.color}18`
+                        }
+                    ]}
+                >
                     <Ionicons name={info.icon} size={20} color={info.color} />
                 </View>
                 <View>
-                    <Text style={[styles.platformName, { color: textColor }]}>{info.name}</Text>
-                    <Text style={[styles.platformFollowers, { color: subtextColor }]}>
+                    <Text
+                        style={[
+                            styles.platformName,
+                            {
+                                color: textColor
+                            }
+                        ]}
+                    >
+                        {info.name}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.platformFollowers,
+                            {
+                                color: subtextColor
+                            }
+                        ]}
+                    >
                         {formatNumber(info.followers)} followers
                     </Text>
                 </View>
             </View>
             <View style={styles.platformHeaderRight}>
-                <View style={[styles.postCountBadge, { backgroundColor: `${info.color}18` }]}>
-                    <Text style={[styles.postCountText, { color: info.color }]}>{postCount}</Text>
+                <View
+                    style={[
+                        styles.postCountBadge,
+                        {
+                            backgroundColor: `${info.color}18`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.postCountText,
+                            {
+                                color: info.color
+                            }
+                        ]}
+                    >
+                        {postCount}
+                    </Text>
                 </View>
                 <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color={subtextColor} />
             </View>
@@ -390,32 +541,83 @@ function PostRow({
     borderColor: string;
 }) {
     const perfStyle = PERFORMANCE_COLORS[post.performance];
-
     return (
         <Pressable onPress={onToggle}>
-            <View style={[styles.postRow, { borderBottomColor: borderColor }]}>
+            <View
+                style={[
+                    styles.postRow,
+                    {
+                        borderBottomColor: borderColor
+                    }
+                ]}
+            >
                 <View style={styles.postMain}>
-                    <Text style={[styles.postPreview, { color: textColor }]} numberOfLines={isExpanded ? undefined : 2}>
+                    <Text
+                        style={[
+                            styles.postPreview,
+                            {
+                                color: textColor
+                            }
+                        ]}
+                        numberOfLines={isExpanded ? undefined : 2}
+                    >
                         {post.preview}
                     </Text>
                     <View style={styles.postMetaRow}>
-                        <Text style={[styles.postDate, { color: subtextColor }]}>{post.publishDate}</Text>
+                        <Text
+                            style={[
+                                styles.postDate,
+                                {
+                                    color: subtextColor
+                                }
+                            ]}
+                        >
+                            {post.publishDate}
+                        </Text>
                         <View style={styles.postMetrics}>
                             <View style={styles.postMetricItem}>
                                 <Ionicons name="eye-outline" size={12} color={subtextColor} />
-                                <Text style={[styles.postMetricValue, { color: textColor }]}>
+                                <Text
+                                    style={[
+                                        styles.postMetricValue,
+                                        {
+                                            color: textColor
+                                        }
+                                    ]}
+                                >
                                     {formatNumber(post.impressions)}
                                 </Text>
                             </View>
                             <View style={styles.postMetricItem}>
                                 <Ionicons name="heart-outline" size={12} color={subtextColor} />
-                                <Text style={[styles.postMetricValue, { color: textColor }]}>
+                                <Text
+                                    style={[
+                                        styles.postMetricValue,
+                                        {
+                                            color: textColor
+                                        }
+                                    ]}
+                                >
                                     {formatNumber(post.engagement)}
                                 </Text>
                             </View>
                         </View>
-                        <View style={[styles.performanceChip, { backgroundColor: perfStyle.bg }]}>
-                            <Text style={[styles.performanceChipText, { color: perfStyle.text }]}>
+                        <View
+                            style={[
+                                styles.performanceChip,
+                                {
+                                    backgroundColor: perfStyle.bg
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.performanceChipText,
+                                    {
+                                        color: perfStyle.text
+                                    }
+                                ]}
+                            >
                                 {PERFORMANCE_LABELS[post.performance]}
                             </Text>
                         </View>
@@ -423,27 +625,82 @@ function PostRow({
                 </View>
             </View>
             {isExpanded && (
-                <View style={[styles.postDetailRow, { borderBottomColor: borderColor }]}>
-                    <View style={styles.postDetailGrid}>
+                <View
+                    style={[
+                        styles.postDetailRow,
+                        {
+                            borderBottomColor: borderColor
+                        }
+                    ]}
+                >
+                    <Grid style={styles.postDetailGrid}>
                         <View style={styles.postDetailItem}>
-                            <Text style={[styles.postDetailLabel, { color: subtextColor }]}>Impressions</Text>
-                            <Text style={[styles.postDetailValue, { color: textColor }]}>
+                            <Text
+                                style={[
+                                    styles.postDetailLabel,
+                                    {
+                                        color: subtextColor
+                                    }
+                                ]}
+                            >
+                                Impressions
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.postDetailValue,
+                                    {
+                                        color: textColor
+                                    }
+                                ]}
+                            >
                                 {post.impressions.toLocaleString()}
                             </Text>
                         </View>
                         <View style={styles.postDetailItem}>
-                            <Text style={[styles.postDetailLabel, { color: subtextColor }]}>Engagement</Text>
-                            <Text style={[styles.postDetailValue, { color: textColor }]}>
+                            <Text
+                                style={[
+                                    styles.postDetailLabel,
+                                    {
+                                        color: subtextColor
+                                    }
+                                ]}
+                            >
+                                Engagement
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.postDetailValue,
+                                    {
+                                        color: textColor
+                                    }
+                                ]}
+                            >
                                 {post.engagement.toLocaleString()}
                             </Text>
                         </View>
                         <View style={styles.postDetailItem}>
-                            <Text style={[styles.postDetailLabel, { color: subtextColor }]}>Eng. Rate</Text>
-                            <Text style={[styles.postDetailValue, { color: textColor }]}>
+                            <Text
+                                style={[
+                                    styles.postDetailLabel,
+                                    {
+                                        color: subtextColor
+                                    }
+                                ]}
+                            >
+                                Eng. Rate
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.postDetailValue,
+                                    {
+                                        color: textColor
+                                    }
+                                ]}
+                            >
                                 {((post.engagement / post.impressions) * 100).toFixed(2)}%
                             </Text>
                         </View>
-                    </View>
+                    </Grid>
                 </View>
             )}
         </Pressable>
@@ -463,24 +720,72 @@ function ScheduledRow({
     borderColor: string;
 }) {
     const info = PLATFORMS[post.platform];
-
     return (
-        <View style={[styles.scheduledRow, { borderBottomColor: borderColor }]}>
+        <View
+            style={[
+                styles.scheduledRow,
+                {
+                    borderBottomColor: borderColor
+                }
+            ]}
+        >
             <View style={styles.scheduledDateCol}>
-                <View style={[styles.scheduledDateBadge, { backgroundColor: `${info.color}18` }]}>
+                <View
+                    style={[
+                        styles.scheduledDateBadge,
+                        {
+                            backgroundColor: `${info.color}18`
+                        }
+                    ]}
+                >
                     <Ionicons name="calendar-outline" size={14} color={info.color} />
                 </View>
                 <View>
-                    <Text style={[styles.scheduledDate, { color: textColor }]}>{post.scheduledDate}</Text>
-                    <Text style={[styles.scheduledTime, { color: subtextColor }]}>{post.scheduledTime}</Text>
+                    <Text
+                        style={[
+                            styles.scheduledDate,
+                            {
+                                color: textColor
+                            }
+                        ]}
+                    >
+                        {post.scheduledDate}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.scheduledTime,
+                            {
+                                color: subtextColor
+                            }
+                        ]}
+                    >
+                        {post.scheduledTime}
+                    </Text>
                 </View>
             </View>
             <View style={styles.scheduledContent}>
                 <View style={styles.scheduledPlatformRow}>
                     <Ionicons name={info.icon} size={14} color={info.color} />
-                    <Text style={[styles.scheduledPlatformName, { color: info.color }]}>{info.name}</Text>
+                    <Text
+                        style={[
+                            styles.scheduledPlatformName,
+                            {
+                                color: info.color
+                            }
+                        ]}
+                    >
+                        {info.name}
+                    </Text>
                 </View>
-                <Text style={[styles.scheduledPreview, { color: textColor }]} numberOfLines={2}>
+                <Text
+                    style={[
+                        styles.scheduledPreview,
+                        {
+                            color: textColor
+                        }
+                    ]}
+                    numberOfLines={2}
+                >
                     {post.preview}
                 </Text>
             </View>
@@ -512,10 +817,35 @@ function SectionHeader({
         <Pressable onPress={onToggle} style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
                 <Ionicons name={icon} size={18} color={iconColor} />
-                <Text style={[styles.sectionTitle, { color: textColor }]}>{title}</Text>
+                <Text
+                    style={[
+                        styles.sectionTitle,
+                        {
+                            color: textColor
+                        }
+                    ]}
+                >
+                    {title}
+                </Text>
                 {count !== undefined && (
-                    <View style={[styles.sectionCount, { backgroundColor: `${iconColor}18` }]}>
-                        <Text style={[styles.sectionCountText, { color: iconColor }]}>{count}</Text>
+                    <View
+                        style={[
+                            styles.sectionCount,
+                            {
+                                backgroundColor: `${iconColor}18`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.sectionCountText,
+                                {
+                                    color: iconColor
+                                }
+                            ]}
+                        >
+                            {count}
+                        </Text>
                     </View>
                 )}
             </View>
@@ -542,8 +872,25 @@ function FilterPill({
     inactiveText: string;
 }) {
     return (
-        <Pressable onPress={onPress} style={[styles.filterPill, { backgroundColor: active ? color : inactiveBg }]}>
-            <Text style={[styles.filterPillText, { color: active ? "#FFFFFF" : inactiveText }]}>{label}</Text>
+        <Pressable
+            onPress={onPress}
+            style={[
+                styles.filterPill,
+                {
+                    backgroundColor: active ? color : inactiveBg
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    styles.filterPillText,
+                    {
+                        color: active ? "#FFFFFF" : inactiveText
+                    }
+                ]}
+            >
+                {label}
+            </Text>
         </Pressable>
     );
 }
@@ -564,11 +911,12 @@ export function SocialMediaPage() {
     });
     const [expandedPostId, setExpandedPostId] = React.useState<string | null>(null);
     const [scheduledExpanded, setScheduledExpanded] = React.useState(true);
-
     const togglePlatform = React.useCallback((p: Platform) => {
-        setExpandedPlatforms((prev) => ({ ...prev, [p]: !prev[p] }));
+        setExpandedPlatforms((prev) => ({
+            ...prev,
+            [p]: !prev[p]
+        }));
     }, []);
-
     const togglePost = React.useCallback((id: string) => {
         setExpandedPostId((prev) => (prev === id ? null : id));
     }, []);
@@ -578,24 +926,48 @@ export function SocialMediaPage() {
 
     // Group posts by platform
     const postsByPlatform = React.useMemo(() => {
-        const grouped: Record<Platform, Post[]> = { twitter: [], linkedin: [], instagram: [] };
+        const grouped: Record<Platform, Post[]> = {
+            twitter: [],
+            linkedin: [],
+            instagram: []
+        };
         for (const post of RECENT_POSTS) {
             grouped[post.platform].push(post);
         }
         return grouped;
     }, []);
-
     return (
         <ShowcasePage bottomInset={60} contentBackgroundColor={theme.colors.surface}>
             {/* Hero: total followers */}
             <View style={styles.heroSection}>
-                <Text style={[styles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.heroLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     SOCIAL MEDIA PERFORMANCE
                 </Text>
-                <Text style={[styles.heroValue, { color: theme.colors.onSurface }]}>
+                <Text
+                    style={[
+                        styles.heroValue,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
                     {formatNumber(totalFollowers())}
                 </Text>
-                <Text style={[styles.heroSub, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.heroSub,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     Total followers across all platforms
                 </Text>
             </View>
@@ -641,7 +1013,6 @@ export function SocialMediaPage() {
             {visiblePlatforms.map((platform) => {
                 const posts = postsByPlatform[platform];
                 const isExpanded = expandedPlatforms[platform];
-
                 return (
                     <View key={platform}>
                         <PlatformSectionHeader
@@ -653,7 +1024,14 @@ export function SocialMediaPage() {
                             subtextColor={theme.colors.onSurfaceVariant}
                         />
                         {isExpanded && (
-                            <View style={[styles.sectionCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                            <Card
+                                style={[
+                                    styles.sectionCard,
+                                    {
+                                        backgroundColor: theme.colors.surfaceContainer
+                                    }
+                                ]}
+                            >
                                 {posts.map((post) => (
                                     <PostRow
                                         key={post.id}
@@ -665,7 +1043,7 @@ export function SocialMediaPage() {
                                         borderColor={theme.colors.outlineVariant}
                                     />
                                 ))}
-                            </View>
+                            </Card>
                         )}
                     </View>
                 );
@@ -683,7 +1061,14 @@ export function SocialMediaPage() {
                 count={SCHEDULED_POSTS.length}
             />
             {scheduledExpanded && (
-                <View style={[styles.sectionCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <Card
+                    style={[
+                        styles.sectionCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     {SCHEDULED_POSTS.map((post) => (
                         <ScheduledRow
                             key={post.id}
@@ -693,7 +1078,7 @@ export function SocialMediaPage() {
                             borderColor={theme.colors.outlineVariant}
                         />
                     ))}
-                </View>
+                </Card>
             )}
         </ShowcasePage>
     );
@@ -701,7 +1086,7 @@ export function SocialMediaPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Hero
     heroSection: {
         alignItems: "center",
@@ -725,7 +1110,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
-
     // Follower breakdown bar
     breakdownContainer: {
         marginBottom: 16,
@@ -764,7 +1148,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Metrics grid
     metricsGrid: {
         flexDirection: "row",
@@ -815,7 +1198,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 10
     },
-
     // Filter pills
     filterRow: {
         flexDirection: "row",
@@ -832,7 +1214,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
-
     // Platform section header
     platformHeader: {
         flexDirection: "row",
@@ -879,7 +1260,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 12
     },
-
     // Section header (for Scheduled)
     sectionHeader: {
         flexDirection: "row",
@@ -912,7 +1292,6 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 16,
         overflow: "hidden"
     },
-
     // Post row
     postRow: {
         paddingHorizontal: 14,
@@ -960,7 +1339,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
-
     // Post detail (expanded)
     postDetailRow: {
         paddingHorizontal: 14,
@@ -986,7 +1364,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 14
     },
-
     // Scheduled posts
     scheduledRow: {
         flexDirection: "row",

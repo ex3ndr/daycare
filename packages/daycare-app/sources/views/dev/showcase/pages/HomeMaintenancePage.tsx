@@ -2,15 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type TaskStatus = "upcoming" | "due" | "overdue";
 type Frequency = "monthly" | "quarterly" | "annual";
 type Area = "Kitchen" | "Bathroom" | "Exterior" | "HVAC" | "Plumbing" | "Electrical";
 type StatusFilter = "all" | TaskStatus;
-
 type MaintenanceTask = {
     id: string;
     name: string;
@@ -33,21 +32,17 @@ const AREA_ICONS: Record<Area, keyof typeof Ionicons.glyphMap> = {
     Plumbing: "construct-outline",
     Electrical: "flash-outline"
 };
-
 const AREA_ORDER: Area[] = ["Kitchen", "Bathroom", "Exterior", "HVAC", "Plumbing", "Electrical"];
-
 const STATUS_COLORS: Record<TaskStatus, string> = {
     upcoming: "#16a34a",
     due: "#d97706",
     overdue: "#dc2626"
 };
-
 const STATUS_LABELS: Record<TaskStatus, string> = {
     upcoming: "Upcoming",
     due: "Due Soon",
     overdue: "Overdue"
 };
-
 const FREQUENCY_LABELS: Record<Frequency, string> = {
     monthly: "Monthly",
     quarterly: "Quarterly",
@@ -288,23 +283,61 @@ function MetricCard({
     badgeColor?: string;
 }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[styles.metricCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Card
+            style={[
+                styles.metricCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             <View style={styles.metricIconRow}>
-                <View style={[styles.metricIconCircle, { backgroundColor: `${iconColor}18` }]}>
+                <View
+                    style={[
+                        styles.metricIconCircle,
+                        {
+                            backgroundColor: `${iconColor}18`
+                        }
+                    ]}
+                >
                     <Ionicons name={icon} size={20} color={iconColor} />
                 </View>
                 {badgeCount !== undefined && badgeCount > 0 && (
-                    <View style={[styles.warningBadge, { backgroundColor: badgeColor || theme.colors.error }]}>
+                    <View
+                        style={[
+                            styles.warningBadge,
+                            {
+                                backgroundColor: badgeColor || theme.colors.error
+                            }
+                        ]}
+                    >
                         <Ionicons name="alert" size={10} color="#ffffff" />
                         <Text style={styles.warningBadgeText}>{badgeCount}</Text>
                     </View>
                 )}
             </View>
-            <Text style={[styles.metricValue, { color: iconColor }]}>{value}</Text>
-            <Text style={[styles.metricLabel, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
-        </View>
+            <Text
+                style={[
+                    styles.metricValue,
+                    {
+                        color: iconColor
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            <Text
+                style={[
+                    styles.metricLabel,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {label}
+            </Text>
+        </Card>
     );
 }
 
@@ -312,10 +345,24 @@ function MetricCard({
 
 function ProgressBar({ completed, total, color }: { completed: number; total: number; color: string }) {
     const pct = total > 0 ? (completed / total) * 100 : 0;
-
     return (
-        <View style={[styles.progressTrack, { backgroundColor: `${color}20` }]}>
-            <View style={[styles.progressFill, { width: `${pct}%` as unknown as number, backgroundColor: color }]} />
+        <View
+            style={[
+                styles.progressTrack,
+                {
+                    backgroundColor: `${color}20`
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.progressFill,
+                    {
+                        width: `${pct}%` as unknown as number,
+                        backgroundColor: color
+                    }
+                ]}
+            />
         </View>
     );
 }
@@ -330,10 +377,25 @@ function FrequencyChip({ frequency }: { frequency: Frequency }) {
         annual: "#8B5CF6"
     };
     const color = chipColors[frequency];
-
     return (
-        <View style={[styles.frequencyChip, { backgroundColor: `${color}15` }]}>
-            <Text style={[styles.frequencyChipText, { color }]}>{FREQUENCY_LABELS[frequency]}</Text>
+        <View
+            style={[
+                styles.frequencyChip,
+                {
+                    backgroundColor: `${color}15`
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    styles.frequencyChipText,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {FREQUENCY_LABELS[frequency]}
+            </Text>
         </View>
     );
 }
@@ -342,11 +404,33 @@ function FrequencyChip({ frequency }: { frequency: Frequency }) {
 
 function StatusBadge({ status }: { status: TaskStatus }) {
     const color = STATUS_COLORS[status];
-
     return (
-        <View style={[styles.statusBadge, { backgroundColor: `${color}18` }]}>
-            <View style={[styles.statusDot, { backgroundColor: color }]} />
-            <Text style={[styles.statusBadgeText, { color }]}>{STATUS_LABELS[status]}</Text>
+        <View
+            style={[
+                styles.statusBadge,
+                {
+                    backgroundColor: `${color}18`
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.statusDot,
+                    {
+                        backgroundColor: color
+                    }
+                ]}
+            />
+            <Text
+                style={[
+                    styles.statusBadgeText,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {STATUS_LABELS[status]}
+            </Text>
         </View>
     );
 }
@@ -356,7 +440,6 @@ function StatusBadge({ status }: { status: TaskStatus }) {
 function TaskRow({ task, onToggle }: { task: MaintenanceTask; onToggle: (id: string) => void }) {
     const { theme } = useUnistyles();
     const statusColor = STATUS_COLORS[task.status];
-
     return (
         <Pressable
             onPress={() => onToggle(task.id)}
@@ -371,7 +454,12 @@ function TaskRow({ task, onToggle }: { task: MaintenanceTask; onToggle: (id: str
         >
             {/* Left status indicator bar */}
             <View
-                style={[styles.taskStatusBar, { backgroundColor: task.completed ? theme.colors.primary : statusColor }]}
+                style={[
+                    styles.taskStatusBar,
+                    {
+                        backgroundColor: task.completed ? theme.colors.primary : statusColor
+                    }
+                ]}
             />
 
             <View style={styles.taskContent}>
@@ -409,17 +497,40 @@ function TaskRow({ task, onToggle }: { task: MaintenanceTask; onToggle: (id: str
                     <View style={styles.taskDates}>
                         <View style={styles.dateItem}>
                             <Ionicons name="checkmark-done-outline" size={12} color={theme.colors.onSurfaceVariant} />
-                            <Text style={[styles.dateText, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.dateText,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {task.lastCompleted}
                             </Text>
                         </View>
                         <View style={styles.dateItem}>
                             <Ionicons name="calendar-outline" size={12} color={statusColor} />
-                            <Text style={[styles.dateText, { color: statusColor }]}>{task.nextDue}</Text>
+                            <Text
+                                style={[
+                                    styles.dateText,
+                                    {
+                                        color: statusColor
+                                    }
+                                ]}
+                            >
+                                {task.nextDue}
+                            </Text>
                         </View>
                     </View>
 
-                    <Text style={[styles.costText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.costText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {formatCost(task.estimatedCost)}
                     </Text>
 
@@ -445,20 +556,58 @@ function AreaSectionHeader({
 }) {
     const { theme } = useUnistyles();
     const icon = AREA_ICONS[area];
-
     return (
-        <View style={[styles.areaHeader, { borderBottomColor: theme.colors.outlineVariant }]}>
-            <View style={[styles.areaIconCircle, { backgroundColor: `${theme.colors.primary}14` }]}>
+        <View
+            style={[
+                styles.areaHeader,
+                {
+                    borderBottomColor: theme.colors.outlineVariant
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.areaIconCircle,
+                    {
+                        backgroundColor: `${theme.colors.primary}14`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={20} color={theme.colors.primary} />
             </View>
             <View style={styles.areaHeaderTextCol}>
-                <Text style={[styles.areaTitle, { color: theme.colors.onSurface }]}>{area}</Text>
-                <Text style={[styles.areaSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.areaTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    {area}
+                </Text>
+                <Text
+                    style={[
+                        styles.areaSubtitle,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {completedCount}/{taskCount} done
                 </Text>
             </View>
             <View style={styles.areaHeaderRight}>
-                <Text style={[styles.areaCost, { color: theme.colors.onSurfaceVariant }]}>~${totalCost}</Text>
+                <Text
+                    style={[
+                        styles.areaCost,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    ~${totalCost}
+                </Text>
                 <ProgressBar completed={completedCount} total={taskCount} color={theme.colors.primary} />
             </View>
         </View>
@@ -477,20 +626,32 @@ function FilterPills({
     counts: Record<StatusFilter, number>;
 }) {
     const { theme } = useUnistyles();
-
-    const filters: { key: StatusFilter; label: string }[] = [
-        { key: "all", label: "All" },
-        { key: "overdue", label: "Overdue" },
-        { key: "due", label: "Due Soon" },
-        { key: "upcoming", label: "Upcoming" }
+    const filters: {
+        key: StatusFilter;
+        label: string;
+    }[] = [
+        {
+            key: "all",
+            label: "All"
+        },
+        {
+            key: "overdue",
+            label: "Overdue"
+        },
+        {
+            key: "due",
+            label: "Due Soon"
+        },
+        {
+            key: "upcoming",
+            label: "Upcoming"
+        }
     ];
-
     return (
         <View style={styles.filterRow}>
             {filters.map(({ key, label }) => {
                 const isActive = active === key;
                 const accentColor = key === "all" ? theme.colors.primary : STATUS_COLORS[key as TaskStatus];
-
                 return (
                     <Pressable
                         key={key}
@@ -506,7 +667,9 @@ function FilterPills({
                         <Text
                             style={[
                                 styles.filterPillText,
-                                { color: isActive ? "#ffffff" : theme.colors.onSurfaceVariant }
+                                {
+                                    color: isActive ? "#ffffff" : theme.colors.onSurfaceVariant
+                                }
                             ]}
                         >
                             {label}
@@ -519,7 +682,14 @@ function FilterPills({
                                 }
                             ]}
                         >
-                            <Text style={[styles.filterPillCountText, { color: isActive ? "#ffffff" : accentColor }]}>
+                            <Text
+                                style={[
+                                    styles.filterPillCountText,
+                                    {
+                                        color: isActive ? "#ffffff" : accentColor
+                                    }
+                                ]}
+                            >
                                 {counts[key]}
                             </Text>
                         </View>
@@ -538,27 +708,110 @@ function CostSummaryBar({ tasks }: { tasks: MaintenanceTask[] }) {
     const totalCost = activeTasks.reduce((sum, t) => sum + t.estimatedCost, 0);
     const overdueCost = activeTasks.filter((t) => t.status === "overdue").reduce((sum, t) => sum + t.estimatedCost, 0);
     const dueCost = activeTasks.filter((t) => t.status === "due").reduce((sum, t) => sum + t.estimatedCost, 0);
-
     return (
-        <View style={[styles.costBar, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <View
+            style={[
+                styles.costBar,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             <View style={styles.costBarHeader}>
                 <Ionicons name="wallet-outline" size={16} color={theme.colors.onSurface} />
-                <Text style={[styles.costBarTitle, { color: theme.colors.onSurface }]}>Estimated Costs</Text>
+                <Text
+                    style={[
+                        styles.costBarTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Estimated Costs
+                </Text>
             </View>
             <View style={styles.costBarRow}>
                 <View style={styles.costBarItem}>
-                    <Text style={[styles.costBarAmount, { color: theme.colors.onSurface }]}>${totalCost}</Text>
-                    <Text style={[styles.costBarLabel, { color: theme.colors.onSurfaceVariant }]}>Total</Text>
+                    <Text
+                        style={[
+                            styles.costBarAmount,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        ${totalCost}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.costBarLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Total
+                    </Text>
                 </View>
-                <View style={[styles.costBarDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                <View
+                    style={[
+                        styles.costBarDivider,
+                        {
+                            backgroundColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                />
                 <View style={styles.costBarItem}>
-                    <Text style={[styles.costBarAmount, { color: STATUS_COLORS.overdue }]}>${overdueCost}</Text>
-                    <Text style={[styles.costBarLabel, { color: theme.colors.onSurfaceVariant }]}>Overdue</Text>
+                    <Text
+                        style={[
+                            styles.costBarAmount,
+                            {
+                                color: STATUS_COLORS.overdue
+                            }
+                        ]}
+                    >
+                        ${overdueCost}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.costBarLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Overdue
+                    </Text>
                 </View>
-                <View style={[styles.costBarDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                <View
+                    style={[
+                        styles.costBarDivider,
+                        {
+                            backgroundColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                />
                 <View style={styles.costBarItem}>
-                    <Text style={[styles.costBarAmount, { color: STATUS_COLORS.due }]}>${dueCost}</Text>
-                    <Text style={[styles.costBarLabel, { color: theme.colors.onSurfaceVariant }]}>Due Soon</Text>
+                    <Text
+                        style={[
+                            styles.costBarAmount,
+                            {
+                                color: STATUS_COLORS.due
+                            }
+                        ]}
+                    >
+                        ${dueCost}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.costBarLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Due Soon
+                    </Text>
                 </View>
             </View>
         </View>
@@ -571,9 +824,17 @@ export function HomeMaintenancePage() {
     const { theme } = useUnistyles();
     const [tasks, setTasks] = React.useState(initialTasks);
     const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
-
     const toggleTask = React.useCallback((id: string) => {
-        setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
+        setTasks((prev) =>
+            prev.map((t) =>
+                t.id === id
+                    ? {
+                          ...t,
+                          completed: !t.completed
+                      }
+                    : t
+            )
+        );
     }, []);
 
     // Compute counts
@@ -582,7 +843,6 @@ export function HomeMaintenancePage() {
     const dueCount = activeTasks.filter((t) => t.status === "due").length;
     const overdueCount = activeTasks.filter((t) => t.status === "overdue").length;
     const completedCount = tasks.filter((t) => t.completed).length;
-
     const filterCounts: Record<StatusFilter, number> = {
         all: tasks.length,
         overdue: tasks.filter((t) => t.status === "overdue").length,
@@ -595,19 +855,27 @@ export function HomeMaintenancePage() {
 
     // Group filtered tasks by area
     const groupedByArea = React.useMemo(() => {
-        const groups: { area: Area; tasks: MaintenanceTask[] }[] = [];
+        const groups: {
+            area: Area;
+            tasks: MaintenanceTask[];
+        }[] = [];
         for (const area of AREA_ORDER) {
             const areaTasks = filteredTasks.filter((t) => t.area === area);
             if (areaTasks.length > 0) {
-                groups.push({ area, tasks: areaTasks });
+                groups.push({
+                    area,
+                    tasks: areaTasks
+                });
             }
         }
         return groups;
     }, [filteredTasks]);
-
     return (
         <ShowcasePage
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
             topInset={16}
             bottomInset={48}
             contentGap={16}
@@ -616,9 +884,27 @@ export function HomeMaintenancePage() {
             <View style={styles.pageHeader}>
                 <View style={styles.pageTitleRow}>
                     <Ionicons name="home" size={24} color={theme.colors.primary} />
-                    <Text style={[styles.pageTitle, { color: theme.colors.onSurface }]}>Home Maintenance</Text>
+                    <Text
+                        style={[
+                            styles.pageTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Home Maintenance
+                    </Text>
                 </View>
-                <Text style={[styles.pageDate, { color: theme.colors.onSurfaceVariant }]}>March 3, 2026</Text>
+                <Text
+                    style={[
+                        styles.pageDate,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    March 3, 2026
+                </Text>
             </View>
 
             {/* Metrics row */}
@@ -652,17 +938,45 @@ export function HomeMaintenancePage() {
             </View>
 
             {/* Overall progress */}
-            <View style={[styles.overallProgress, { backgroundColor: theme.colors.surfaceContainer }]}>
+            <View
+                style={[
+                    styles.overallProgress,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
                 <View style={styles.overallProgressHeader}>
-                    <Text style={[styles.overallProgressTitle, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            styles.overallProgressTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         Overall Progress
                     </Text>
-                    <Text style={[styles.overallProgressPct, { color: theme.colors.primary }]}>
+                    <Text
+                        style={[
+                            styles.overallProgressPct,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
                         {tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0}%
                     </Text>
                 </View>
                 <ProgressBar completed={completedCount} total={tasks.length} color={theme.colors.primary} />
-                <Text style={[styles.overallProgressSub, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.overallProgressSub,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {completedCount} of {tasks.length} maintenance tasks completed
                 </Text>
             </View>
@@ -679,7 +993,6 @@ export function HomeMaintenancePage() {
                 const areaTotalCost = areaTasks
                     .filter((t) => !t.completed)
                     .reduce((sum, t) => sum + t.estimatedCost, 0);
-
                 return (
                     <View key={area} style={styles.areaSection}>
                         <AreaSectionHeader
@@ -701,7 +1014,14 @@ export function HomeMaintenancePage() {
             {groupedByArea.length === 0 && (
                 <View style={styles.emptyState}>
                     <Ionicons name="checkmark-done-circle-outline" size={48} color={theme.colors.onSurfaceVariant} />
-                    <Text style={[styles.emptyStateText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.emptyStateText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         No tasks match this filter
                     </Text>
                 </View>
@@ -712,7 +1032,7 @@ export function HomeMaintenancePage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Page header
     pageHeader: {
         gap: 4,
@@ -733,7 +1053,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         marginLeft: 34
     },
-
     // Metrics
     metricsRow: {
         flexDirection: "row",
@@ -780,7 +1099,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 14
     },
-
     // Overall progress
     overallProgress: {
         borderRadius: 14,
@@ -804,7 +1122,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
-
     // Progress bar
     progressTrack: {
         height: 8,
@@ -815,7 +1132,6 @@ const styles = StyleSheet.create((theme) => ({
         height: "100%",
         borderRadius: 4
     },
-
     // Cost summary bar
     costBar: {
         borderRadius: 14,
@@ -853,7 +1169,6 @@ const styles = StyleSheet.create((theme) => ({
         width: 1,
         height: 32
     },
-
     // Filter pills
     filterRow: {
         flexDirection: "row",
@@ -882,7 +1197,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 11
     },
-
     // Frequency chip
     frequencyChip: {
         paddingHorizontal: 8,
@@ -894,7 +1208,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 10,
         lineHeight: 14
     },
-
     // Status badge
     statusBadge: {
         flexDirection: "row",
@@ -914,7 +1227,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 10,
         lineHeight: 14
     },
-
     // Area section
     areaSection: {
         gap: 10
@@ -955,12 +1267,10 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 12
     },
-
     // Task list
     taskList: {
         gap: 8
     },
-
     // Task row
     taskRow: {
         flexDirection: "row",
@@ -1022,7 +1332,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 11,
         marginLeft: "auto"
     },
-
     // Empty state
     emptyState: {
         alignItems: "center",

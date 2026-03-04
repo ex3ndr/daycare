@@ -2,33 +2,29 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type CaseStatus = "active" | "discovery" | "trial" | "settled" | "closed";
 type CaseType = "Litigation" | "Corporate" | "Real Estate" | "Family" | "IP";
-
 type TimelineEvent = {
     id: string;
     date: string;
     label: string;
     type: "filing" | "hearing" | "deadline" | "note";
 };
-
 type CaseDocument = {
     id: string;
     name: string;
     fileType: "pdf" | "docx" | "xlsx" | "img";
     date: string;
 };
-
 type BillingEntry = {
     description: string;
     hours: number;
     rate: number;
 };
-
 type LegalCase = {
     id: string;
     caseNumber: string;
@@ -46,29 +42,68 @@ type LegalCase = {
 
 // --- Config ---
 
-const STATUS_CONFIG: Record<CaseStatus, { label: string; color: string }> = {
-    active: { label: "Active", color: "#3B82F6" },
-    discovery: { label: "Discovery", color: "#8B5CF6" },
-    trial: { label: "Trial", color: "#EF4444" },
-    settled: { label: "Settled", color: "#10B981" },
-    closed: { label: "Closed", color: "#9CA3AF" }
+const STATUS_CONFIG: Record<
+    CaseStatus,
+    {
+        label: string;
+        color: string;
+    }
+> = {
+    active: {
+        label: "Active",
+        color: "#3B82F6"
+    },
+    discovery: {
+        label: "Discovery",
+        color: "#8B5CF6"
+    },
+    trial: {
+        label: "Trial",
+        color: "#EF4444"
+    },
+    settled: {
+        label: "Settled",
+        color: "#10B981"
+    },
+    closed: {
+        label: "Closed",
+        color: "#9CA3AF"
+    }
 };
-
-const CASE_TYPE_CONFIG: Record<CaseType, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
-    Litigation: { icon: "hammer-outline", color: "#EF4444" },
-    Corporate: { icon: "business-outline", color: "#3B82F6" },
-    "Real Estate": { icon: "home-outline", color: "#F59E0B" },
-    Family: { icon: "people-outline", color: "#EC4899" },
-    IP: { icon: "bulb-outline", color: "#8B5CF6" }
+const CASE_TYPE_CONFIG: Record<
+    CaseType,
+    {
+        icon: keyof typeof Ionicons.glyphMap;
+        color: string;
+    }
+> = {
+    Litigation: {
+        icon: "hammer-outline",
+        color: "#EF4444"
+    },
+    Corporate: {
+        icon: "business-outline",
+        color: "#3B82F6"
+    },
+    "Real Estate": {
+        icon: "home-outline",
+        color: "#F59E0B"
+    },
+    Family: {
+        icon: "people-outline",
+        color: "#EC4899"
+    },
+    IP: {
+        icon: "bulb-outline",
+        color: "#8B5CF6"
+    }
 };
-
 const FILE_TYPE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
     pdf: "document-text-outline",
     docx: "document-outline",
     xlsx: "grid-outline",
     img: "image-outline"
 };
-
 const TIMELINE_TYPE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
     filing: "document-attach-outline",
     hearing: "megaphone-outline",
@@ -90,22 +125,78 @@ const CASES: LegalCase[] = [
         deadlineUrgency: "urgent",
         totalBilled: 48750,
         timeline: [
-            { id: "t1", date: "Mar 5", label: "Discovery deadline - produce documents", type: "deadline" },
-            { id: "t2", date: "Feb 28", label: "Deposition of CTO completed", type: "note" },
-            { id: "t3", date: "Feb 14", label: "Motion to compel filed", type: "filing" },
-            { id: "t4", date: "Jan 20", label: "Initial case management conference", type: "hearing" }
+            {
+                id: "t1",
+                date: "Mar 5",
+                label: "Discovery deadline - produce documents",
+                type: "deadline"
+            },
+            {
+                id: "t2",
+                date: "Feb 28",
+                label: "Deposition of CTO completed",
+                type: "note"
+            },
+            {
+                id: "t3",
+                date: "Feb 14",
+                label: "Motion to compel filed",
+                type: "filing"
+            },
+            {
+                id: "t4",
+                date: "Jan 20",
+                label: "Initial case management conference",
+                type: "hearing"
+            }
         ],
         documents: [
-            { id: "d1", name: "Motion to Compel.pdf", fileType: "pdf", date: "Feb 14" },
-            { id: "d2", name: "Deposition Transcript - CTO.docx", fileType: "docx", date: "Feb 28" },
-            { id: "d3", name: "Exhibit A - Patent Claims.pdf", fileType: "pdf", date: "Jan 15" },
-            { id: "d4", name: "Billing Summary Q1.xlsx", fileType: "xlsx", date: "Mar 1" }
+            {
+                id: "d1",
+                name: "Motion to Compel.pdf",
+                fileType: "pdf",
+                date: "Feb 14"
+            },
+            {
+                id: "d2",
+                name: "Deposition Transcript - CTO.docx",
+                fileType: "docx",
+                date: "Feb 28"
+            },
+            {
+                id: "d3",
+                name: "Exhibit A - Patent Claims.pdf",
+                fileType: "pdf",
+                date: "Jan 15"
+            },
+            {
+                id: "d4",
+                name: "Billing Summary Q1.xlsx",
+                fileType: "xlsx",
+                date: "Mar 1"
+            }
         ],
         billing: [
-            { description: "Legal research & analysis", hours: 45, rate: 350 },
-            { description: "Deposition preparation", hours: 32, rate: 350 },
-            { description: "Document review", hours: 60, rate: 275 },
-            { description: "Court appearances", hours: 8, rate: 400 }
+            {
+                description: "Legal research & analysis",
+                hours: 45,
+                rate: 350
+            },
+            {
+                description: "Deposition preparation",
+                hours: 32,
+                rate: 350
+            },
+            {
+                description: "Document review",
+                hours: 60,
+                rate: 275
+            },
+            {
+                description: "Court appearances",
+                hours: 8,
+                rate: 400
+            }
         ]
     },
     {
@@ -119,16 +210,44 @@ const CASES: LegalCase[] = [
         deadlineUrgency: "soon",
         totalBilled: 22400,
         timeline: [
-            { id: "t1", date: "Mar 12", label: "Answer due", type: "deadline" },
-            { id: "t2", date: "Feb 20", label: "Complaint filed", type: "filing" }
+            {
+                id: "t1",
+                date: "Mar 12",
+                label: "Answer due",
+                type: "deadline"
+            },
+            {
+                id: "t2",
+                date: "Feb 20",
+                label: "Complaint filed",
+                type: "filing"
+            }
         ],
         documents: [
-            { id: "d1", name: "Complaint.pdf", fileType: "pdf", date: "Feb 20" },
-            { id: "d2", name: "Contract Agreement.pdf", fileType: "pdf", date: "Feb 15" }
+            {
+                id: "d1",
+                name: "Complaint.pdf",
+                fileType: "pdf",
+                date: "Feb 20"
+            },
+            {
+                id: "d2",
+                name: "Contract Agreement.pdf",
+                fileType: "pdf",
+                date: "Feb 15"
+            }
         ],
         billing: [
-            { description: "Complaint drafting", hours: 28, rate: 350 },
-            { description: "Client consultations", hours: 12, rate: 300 }
+            {
+                description: "Complaint drafting",
+                hours: 28,
+                rate: 350
+            },
+            {
+                description: "Client consultations",
+                hours: 12,
+                rate: 300
+            }
         ]
     },
     {
@@ -142,19 +261,61 @@ const CASES: LegalCase[] = [
         deadlineUrgency: "overdue",
         totalBilled: 67200,
         timeline: [
-            { id: "t1", date: "Mar 3", label: "Trial day 3 - cross-examination", type: "hearing" },
-            { id: "t2", date: "Mar 2", label: "Trial day 2 - plaintiff witnesses", type: "hearing" },
-            { id: "t3", date: "Mar 1", label: "Trial commenced", type: "hearing" }
+            {
+                id: "t1",
+                date: "Mar 3",
+                label: "Trial day 3 - cross-examination",
+                type: "hearing"
+            },
+            {
+                id: "t2",
+                date: "Mar 2",
+                label: "Trial day 2 - plaintiff witnesses",
+                type: "hearing"
+            },
+            {
+                id: "t3",
+                date: "Mar 1",
+                label: "Trial commenced",
+                type: "hearing"
+            }
         ],
         documents: [
-            { id: "d1", name: "Trial Brief.pdf", fileType: "pdf", date: "Feb 25" },
-            { id: "d2", name: "Witness List.docx", fileType: "docx", date: "Feb 20" },
-            { id: "d3", name: "Exhibit Binder.pdf", fileType: "pdf", date: "Feb 26" }
+            {
+                id: "d1",
+                name: "Trial Brief.pdf",
+                fileType: "pdf",
+                date: "Feb 25"
+            },
+            {
+                id: "d2",
+                name: "Witness List.docx",
+                fileType: "docx",
+                date: "Feb 20"
+            },
+            {
+                id: "d3",
+                name: "Exhibit Binder.pdf",
+                fileType: "pdf",
+                date: "Feb 26"
+            }
         ],
         billing: [
-            { description: "Trial preparation", hours: 80, rate: 375 },
-            { description: "Expert witness coordination", hours: 24, rate: 350 },
-            { description: "Court appearances", hours: 36, rate: 400 }
+            {
+                description: "Trial preparation",
+                hours: 80,
+                rate: 375
+            },
+            {
+                description: "Expert witness coordination",
+                hours: 24,
+                rate: 350
+            },
+            {
+                description: "Court appearances",
+                hours: 36,
+                rate: 400
+            }
         ]
     },
     {
@@ -168,18 +329,56 @@ const CASES: LegalCase[] = [
         deadlineUrgency: "soon",
         totalBilled: 35600,
         timeline: [
-            { id: "t1", date: "Mar 15", label: "Board resolution deadline", type: "deadline" },
-            { id: "t2", date: "Mar 1", label: "Term sheet finalized", type: "note" },
-            { id: "t3", date: "Feb 18", label: "Due diligence review completed", type: "note" }
+            {
+                id: "t1",
+                date: "Mar 15",
+                label: "Board resolution deadline",
+                type: "deadline"
+            },
+            {
+                id: "t2",
+                date: "Mar 1",
+                label: "Term sheet finalized",
+                type: "note"
+            },
+            {
+                id: "t3",
+                date: "Feb 18",
+                label: "Due diligence review completed",
+                type: "note"
+            }
         ],
         documents: [
-            { id: "d1", name: "Term Sheet - Final.pdf", fileType: "pdf", date: "Mar 1" },
-            { id: "d2", name: "Due Diligence Report.pdf", fileType: "pdf", date: "Feb 18" },
-            { id: "d3", name: "Articles of Amendment.docx", fileType: "docx", date: "Feb 25" }
+            {
+                id: "d1",
+                name: "Term Sheet - Final.pdf",
+                fileType: "pdf",
+                date: "Mar 1"
+            },
+            {
+                id: "d2",
+                name: "Due Diligence Report.pdf",
+                fileType: "pdf",
+                date: "Feb 18"
+            },
+            {
+                id: "d3",
+                name: "Articles of Amendment.docx",
+                fileType: "docx",
+                date: "Feb 25"
+            }
         ],
         billing: [
-            { description: "Due diligence review", hours: 40, rate: 350 },
-            { description: "Document drafting", hours: 52, rate: 325 }
+            {
+                description: "Due diligence review",
+                hours: 40,
+                rate: 350
+            },
+            {
+                description: "Document drafting",
+                hours: 52,
+                rate: 325
+            }
         ]
     },
     {
@@ -193,16 +392,44 @@ const CASES: LegalCase[] = [
         deadlineUrgency: "normal",
         totalBilled: 89300,
         timeline: [
-            { id: "t1", date: "Mar 20", label: "Regulatory filing deadline", type: "deadline" },
-            { id: "t2", date: "Feb 28", label: "Shareholder agreement drafted", type: "filing" }
+            {
+                id: "t1",
+                date: "Mar 20",
+                label: "Regulatory filing deadline",
+                type: "deadline"
+            },
+            {
+                id: "t2",
+                date: "Feb 28",
+                label: "Shareholder agreement drafted",
+                type: "filing"
+            }
         ],
         documents: [
-            { id: "d1", name: "Merger Agreement Draft.pdf", fileType: "pdf", date: "Feb 28" },
-            { id: "d2", name: "Regulatory Filing Checklist.xlsx", fileType: "xlsx", date: "Feb 20" }
+            {
+                id: "d1",
+                name: "Merger Agreement Draft.pdf",
+                fileType: "pdf",
+                date: "Feb 28"
+            },
+            {
+                id: "d2",
+                name: "Regulatory Filing Checklist.xlsx",
+                fileType: "xlsx",
+                date: "Feb 20"
+            }
         ],
         billing: [
-            { description: "Merger negotiation support", hours: 96, rate: 375 },
-            { description: "Regulatory compliance review", hours: 64, rate: 350 }
+            {
+                description: "Merger negotiation support",
+                hours: 96,
+                rate: 375
+            },
+            {
+                description: "Regulatory compliance review",
+                hours: 64,
+                rate: 350
+            }
         ]
     },
     {
@@ -216,17 +443,50 @@ const CASES: LegalCase[] = [
         deadlineUrgency: "soon",
         totalBilled: 18200,
         timeline: [
-            { id: "t1", date: "Mar 10", label: "Lease execution deadline", type: "deadline" },
-            { id: "t2", date: "Feb 22", label: "Title search completed", type: "note" }
+            {
+                id: "t1",
+                date: "Mar 10",
+                label: "Lease execution deadline",
+                type: "deadline"
+            },
+            {
+                id: "t2",
+                date: "Feb 22",
+                label: "Title search completed",
+                type: "note"
+            }
         ],
         documents: [
-            { id: "d1", name: "Commercial Lease Agreement.pdf", fileType: "pdf", date: "Feb 25" },
-            { id: "d2", name: "Title Report.pdf", fileType: "pdf", date: "Feb 22" },
-            { id: "d3", name: "Property Survey.img", fileType: "img", date: "Feb 10" }
+            {
+                id: "d1",
+                name: "Commercial Lease Agreement.pdf",
+                fileType: "pdf",
+                date: "Feb 25"
+            },
+            {
+                id: "d2",
+                name: "Title Report.pdf",
+                fileType: "pdf",
+                date: "Feb 22"
+            },
+            {
+                id: "d3",
+                name: "Property Survey.img",
+                fileType: "img",
+                date: "Feb 10"
+            }
         ],
         billing: [
-            { description: "Lease negotiation", hours: 24, rate: 325 },
-            { description: "Title review", hours: 16, rate: 300 }
+            {
+                description: "Lease negotiation",
+                hours: 24,
+                rate: 325
+            },
+            {
+                description: "Title review",
+                hours: 16,
+                rate: 300
+            }
         ]
     },
     {
@@ -240,16 +500,44 @@ const CASES: LegalCase[] = [
         deadlineUrgency: "normal",
         totalBilled: 14500,
         timeline: [
-            { id: "t1", date: "Feb 15", label: "Variance approved by zoning board", type: "hearing" },
-            { id: "t2", date: "Jan 30", label: "Zoning hearing", type: "hearing" }
+            {
+                id: "t1",
+                date: "Feb 15",
+                label: "Variance approved by zoning board",
+                type: "hearing"
+            },
+            {
+                id: "t2",
+                date: "Jan 30",
+                label: "Zoning hearing",
+                type: "hearing"
+            }
         ],
         documents: [
-            { id: "d1", name: "Zoning Variance Application.pdf", fileType: "pdf", date: "Jan 15" },
-            { id: "d2", name: "Approval Letter.pdf", fileType: "pdf", date: "Feb 15" }
+            {
+                id: "d1",
+                name: "Zoning Variance Application.pdf",
+                fileType: "pdf",
+                date: "Jan 15"
+            },
+            {
+                id: "d2",
+                name: "Approval Letter.pdf",
+                fileType: "pdf",
+                date: "Feb 15"
+            }
         ],
         billing: [
-            { description: "Zoning application preparation", hours: 20, rate: 325 },
-            { description: "Hearing representation", hours: 12, rate: 350 }
+            {
+                description: "Zoning application preparation",
+                hours: 20,
+                rate: 325
+            },
+            {
+                description: "Hearing representation",
+                hours: 12,
+                rate: 350
+            }
         ]
     },
     {
@@ -263,18 +551,55 @@ const CASES: LegalCase[] = [
         deadlineUrgency: "urgent",
         totalBilled: 31800,
         timeline: [
-            { id: "t1", date: "Mar 8", label: "Mediation session", type: "hearing" },
-            { id: "t2", date: "Feb 25", label: "Financial disclosure filed", type: "filing" },
-            { id: "t3", date: "Feb 10", label: "Temporary custody order issued", type: "hearing" }
+            {
+                id: "t1",
+                date: "Mar 8",
+                label: "Mediation session",
+                type: "hearing"
+            },
+            {
+                id: "t2",
+                date: "Feb 25",
+                label: "Financial disclosure filed",
+                type: "filing"
+            },
+            {
+                id: "t3",
+                date: "Feb 10",
+                label: "Temporary custody order issued",
+                type: "hearing"
+            }
         ],
         documents: [
-            { id: "d1", name: "Financial Disclosure.pdf", fileType: "pdf", date: "Feb 25" },
-            { id: "d2", name: "Custody Proposal.docx", fileType: "docx", date: "Feb 20" }
+            {
+                id: "d1",
+                name: "Financial Disclosure.pdf",
+                fileType: "pdf",
+                date: "Feb 25"
+            },
+            {
+                id: "d2",
+                name: "Custody Proposal.docx",
+                fileType: "docx",
+                date: "Feb 20"
+            }
         ],
         billing: [
-            { description: "Court appearances", hours: 18, rate: 350 },
-            { description: "Mediation preparation", hours: 24, rate: 325 },
-            { description: "Document preparation", hours: 36, rate: 275 }
+            {
+                description: "Court appearances",
+                hours: 18,
+                rate: 350
+            },
+            {
+                description: "Mediation preparation",
+                hours: 24,
+                rate: 325
+            },
+            {
+                description: "Document preparation",
+                hours: 36,
+                rate: 275
+            }
         ]
     },
     {
@@ -288,16 +613,44 @@ const CASES: LegalCase[] = [
         deadlineUrgency: "normal",
         totalBilled: 12600,
         timeline: [
-            { id: "t1", date: "Apr 2", label: "Immigration filing deadline", type: "deadline" },
-            { id: "t2", date: "Feb 28", label: "Home study report received", type: "note" }
+            {
+                id: "t1",
+                date: "Apr 2",
+                label: "Immigration filing deadline",
+                type: "deadline"
+            },
+            {
+                id: "t2",
+                date: "Feb 28",
+                label: "Home study report received",
+                type: "note"
+            }
         ],
         documents: [
-            { id: "d1", name: "Adoption Petition.pdf", fileType: "pdf", date: "Feb 10" },
-            { id: "d2", name: "Home Study Report.pdf", fileType: "pdf", date: "Feb 28" }
+            {
+                id: "d1",
+                name: "Adoption Petition.pdf",
+                fileType: "pdf",
+                date: "Feb 10"
+            },
+            {
+                id: "d2",
+                name: "Home Study Report.pdf",
+                fileType: "pdf",
+                date: "Feb 28"
+            }
         ],
         billing: [
-            { description: "Petition drafting", hours: 16, rate: 325 },
-            { description: "Immigration coordination", hours: 20, rate: 300 }
+            {
+                description: "Petition drafting",
+                hours: 16,
+                rate: 325
+            },
+            {
+                description: "Immigration coordination",
+                hours: 20,
+                rate: 300
+            }
         ]
     },
     {
@@ -311,17 +664,50 @@ const CASES: LegalCase[] = [
         deadlineUrgency: "soon",
         totalBilled: 27400,
         timeline: [
-            { id: "t1", date: "Mar 18", label: "USPTO response deadline", type: "deadline" },
-            { id: "t2", date: "Feb 20", label: "Office action received", type: "filing" }
+            {
+                id: "t1",
+                date: "Mar 18",
+                label: "USPTO response deadline",
+                type: "deadline"
+            },
+            {
+                id: "t2",
+                date: "Feb 20",
+                label: "Office action received",
+                type: "filing"
+            }
         ],
         documents: [
-            { id: "d1", name: "Patent Application.pdf", fileType: "pdf", date: "Dec 15" },
-            { id: "d2", name: "Office Action Response Draft.docx", fileType: "docx", date: "Mar 1" },
-            { id: "d3", name: "Prior Art Analysis.xlsx", fileType: "xlsx", date: "Feb 25" }
+            {
+                id: "d1",
+                name: "Patent Application.pdf",
+                fileType: "pdf",
+                date: "Dec 15"
+            },
+            {
+                id: "d2",
+                name: "Office Action Response Draft.docx",
+                fileType: "docx",
+                date: "Mar 1"
+            },
+            {
+                id: "d3",
+                name: "Prior Art Analysis.xlsx",
+                fileType: "xlsx",
+                date: "Feb 25"
+            }
         ],
         billing: [
-            { description: "Patent prosecution", hours: 36, rate: 375 },
-            { description: "Prior art research", hours: 28, rate: 300 }
+            {
+                description: "Patent prosecution",
+                hours: 36,
+                rate: 375
+            },
+            {
+                description: "Prior art research",
+                hours: 28,
+                rate: 300
+            }
         ]
     },
     {
@@ -335,29 +721,63 @@ const CASES: LegalCase[] = [
         deadlineUrgency: "normal",
         totalBilled: 19800,
         timeline: [
-            { id: "t1", date: "Feb 5", label: "Opposition sustained - mark denied", type: "hearing" },
-            { id: "t2", date: "Jan 18", label: "TTAB hearing", type: "hearing" }
+            {
+                id: "t1",
+                date: "Feb 5",
+                label: "Opposition sustained - mark denied",
+                type: "hearing"
+            },
+            {
+                id: "t2",
+                date: "Jan 18",
+                label: "TTAB hearing",
+                type: "hearing"
+            }
         ],
         documents: [
-            { id: "d1", name: "Opposition Filing.pdf", fileType: "pdf", date: "Nov 10" },
-            { id: "d2", name: "TTAB Decision.pdf", fileType: "pdf", date: "Feb 5" }
+            {
+                id: "d1",
+                name: "Opposition Filing.pdf",
+                fileType: "pdf",
+                date: "Nov 10"
+            },
+            {
+                id: "d2",
+                name: "TTAB Decision.pdf",
+                fileType: "pdf",
+                date: "Feb 5"
+            }
         ],
         billing: [
-            { description: "Opposition proceeding", hours: 32, rate: 350 },
-            { description: "Trademark research", hours: 20, rate: 275 }
+            {
+                description: "Opposition proceeding",
+                hours: 32,
+                rate: 350
+            },
+            {
+                description: "Trademark research",
+                hours: 20,
+                rate: 275
+            }
         ]
     }
 ];
-
 const CASE_TYPES: CaseType[] = ["Litigation", "Corporate", "Real Estate", "Family", "IP"];
 
 // --- Helpers ---
 
 function formatCurrency(amount: number): string {
-    return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return `$${amount.toLocaleString("en-US", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    })}`;
 }
-
-function urgencyColor(urgency: string, theme: { colors: Record<string, string> }): string {
+function urgencyColor(
+    urgency: string,
+    theme: {
+        colors: Record<string, string>;
+    }
+): string {
     if (urgency === "overdue") return theme.colors.error;
     if (urgency === "urgent") return "#F59E0B";
     if (urgency === "soon") return theme.colors.primary;
@@ -378,15 +798,46 @@ function MetricCard({
     tintColor: string;
 }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[s.metricCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-            <View style={[s.metricIconCircle, { backgroundColor: `${tintColor}18` }]}>
+        <Card
+            style={[
+                s.metricCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
+            <View
+                style={[
+                    s.metricIconCircle,
+                    {
+                        backgroundColor: `${tintColor}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={18} color={tintColor} />
             </View>
-            <Text style={[s.metricValue, { color: theme.colors.onSurface }]}>{value}</Text>
-            <Text style={[s.metricLabel, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
-        </View>
+            <Text
+                style={[
+                    s.metricValue,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            <Text
+                style={[
+                    s.metricLabel,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {label}
+            </Text>
+        </Card>
     );
 }
 
@@ -395,15 +846,46 @@ function MetricCard({
 function TypeSectionHeader({ caseType, count }: { caseType: CaseType; count: number }) {
     const { theme } = useUnistyles();
     const config = CASE_TYPE_CONFIG[caseType];
-
     return (
         <View style={s.typeSectionHeader}>
-            <View style={[s.typeSectionIconCircle, { backgroundColor: `${config.color}18` }]}>
+            <View
+                style={[
+                    s.typeSectionIconCircle,
+                    {
+                        backgroundColor: `${config.color}18`
+                    }
+                ]}
+            >
                 <Ionicons name={config.icon} size={16} color={config.color} />
             </View>
-            <Text style={[s.typeSectionTitle, { color: theme.colors.onSurface }]}>{caseType}</Text>
-            <View style={[s.typeSectionCount, { backgroundColor: `${config.color}18` }]}>
-                <Text style={[s.typeSectionCountText, { color: config.color }]}>{count}</Text>
+            <Text
+                style={[
+                    s.typeSectionTitle,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {caseType}
+            </Text>
+            <View
+                style={[
+                    s.typeSectionCount,
+                    {
+                        backgroundColor: `${config.color}18`
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        s.typeSectionCountText,
+                        {
+                            color: config.color
+                        }
+                    ]}
+                >
+                    {count}
+                </Text>
             </View>
         </View>
     );
@@ -423,33 +905,97 @@ function CaseRow({
     const { theme } = useUnistyles();
     const statusConfig = STATUS_CONFIG[legalCase.status];
     const deadlineColor = urgencyColor(legalCase.deadlineUrgency, theme);
-
     return (
         <Pressable
             onPress={onPress}
             style={({ pressed }) => [
                 s.caseRow,
-                { backgroundColor: theme.colors.surfaceContainer },
-                isSelected && { borderColor: theme.colors.primary, borderWidth: 1.5 },
-                pressed && { opacity: 0.85 }
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                },
+                isSelected && {
+                    borderColor: theme.colors.primary,
+                    borderWidth: 1.5
+                },
+                pressed && {
+                    opacity: 0.85
+                }
             ]}
         >
             <View style={s.caseRowTop}>
-                <Text style={[s.caseNumber, { color: theme.colors.onSurfaceVariant }]}>{legalCase.caseNumber}</Text>
-                <View style={[s.statusChip, { backgroundColor: `${statusConfig.color}18` }]}>
-                    <Text style={[s.statusChipText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
+                <Text
+                    style={[
+                        s.caseNumber,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    {legalCase.caseNumber}
+                </Text>
+                <View
+                    style={[
+                        s.statusChip,
+                        {
+                            backgroundColor: `${statusConfig.color}18`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            s.statusChipText,
+                            {
+                                color: statusConfig.color
+                            }
+                        ]}
+                    >
+                        {statusConfig.label}
+                    </Text>
                 </View>
             </View>
-            <Text style={[s.caseTitle, { color: theme.colors.onSurface }]} numberOfLines={2}>
+            <Text
+                style={[
+                    s.caseTitle,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+                numberOfLines={2}
+            >
                 {legalCase.title}
             </Text>
-            <Text style={[s.caseClient, { color: theme.colors.onSurfaceVariant }]}>{legalCase.clientName}</Text>
+            <Text
+                style={[
+                    s.caseClient,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {legalCase.clientName}
+            </Text>
             <View style={s.caseRowBottom}>
                 <View style={s.caseDeadlineRow}>
                     <Ionicons name="calendar-outline" size={12} color={deadlineColor} />
-                    <Text style={[s.caseDeadlineText, { color: deadlineColor }]}>{legalCase.nextDeadline}</Text>
+                    <Text
+                        style={[
+                            s.caseDeadlineText,
+                            {
+                                color: deadlineColor
+                            }
+                        ]}
+                    >
+                        {legalCase.nextDeadline}
+                    </Text>
                 </View>
-                <Text style={[s.caseBilled, { color: theme.colors.onSurface }]}>
+                <Text
+                    style={[
+                        s.caseBilled,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
                     {formatCurrency(legalCase.totalBilled)}
                 </Text>
             </View>
@@ -464,62 +1010,186 @@ function DetailPanel({ legalCase, onClose }: { legalCase: LegalCase; onClose: ()
     const statusConfig = STATUS_CONFIG[legalCase.status];
     const typeConfig = CASE_TYPE_CONFIG[legalCase.type];
     const [activeTab, setActiveTab] = React.useState<"timeline" | "documents" | "billing">("timeline");
-
     const totalHours = legalCase.billing.reduce((sum, e) => sum + e.hours, 0);
     const totalAmount = legalCase.billing.reduce((sum, e) => sum + e.hours * e.rate, 0);
-
     return (
-        <View style={[s.detailPanel, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <View
+            style={[
+                s.detailPanel,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             {/* Header */}
             <View style={s.detailHeader}>
                 <View style={s.detailHeaderLeft}>
-                    <View style={[s.detailTypeIcon, { backgroundColor: `${typeConfig.color}18` }]}>
+                    <View
+                        style={[
+                            s.detailTypeIcon,
+                            {
+                                backgroundColor: `${typeConfig.color}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name={typeConfig.icon} size={18} color={typeConfig.color} />
                     </View>
                     <View style={s.detailHeaderInfo}>
-                        <Text style={[s.detailCaseNumber, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                s.detailCaseNumber,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {legalCase.caseNumber}
                         </Text>
-                        <Text style={[s.detailTitle, { color: theme.colors.onSurface }]} numberOfLines={2}>
+                        <Text
+                            style={[
+                                s.detailTitle,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                            numberOfLines={2}
+                        >
                             {legalCase.title}
                         </Text>
-                        <Text style={[s.detailClient, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                s.detailClient,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {legalCase.clientName}
                         </Text>
                     </View>
                 </View>
-                <View style={[s.statusChip, { backgroundColor: `${statusConfig.color}18` }]}>
-                    <Text style={[s.statusChipText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
+                <View
+                    style={[
+                        s.statusChip,
+                        {
+                            backgroundColor: `${statusConfig.color}18`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            s.statusChipText,
+                            {
+                                color: statusConfig.color
+                            }
+                        ]}
+                    >
+                        {statusConfig.label}
+                    </Text>
                 </View>
             </View>
 
             {/* Summary row */}
             <View style={s.detailSummaryRow}>
-                <View style={[s.detailSummaryCard, { backgroundColor: theme.colors.surface }]}>
-                    <Text style={[s.detailSummaryLabel, { color: theme.colors.onSurfaceVariant }]}>BILLED</Text>
-                    <Text style={[s.detailSummaryValue, { color: theme.colors.onSurface }]}>
-                        {formatCurrency(legalCase.totalBilled)}
+                <Card
+                    style={[
+                        s.detailSummaryCard,
+                        {
+                            backgroundColor: theme.colors.surface
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            s.detailSummaryLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        BILLED
                     </Text>
-                </View>
-                <View style={[s.detailSummaryCard, { backgroundColor: theme.colors.surface }]}>
-                    <Text style={[s.detailSummaryLabel, { color: theme.colors.onSurfaceVariant }]}>HOURS</Text>
-                    <Text style={[s.detailSummaryValue, { color: theme.colors.onSurface }]}>{totalHours}h</Text>
-                </View>
-                <View style={[s.detailSummaryCard, { backgroundColor: theme.colors.surface }]}>
-                    <Text style={[s.detailSummaryLabel, { color: theme.colors.onSurfaceVariant }]}>DEADLINE</Text>
                     <Text
                         style={[
                             s.detailSummaryValue,
-                            { color: urgencyColor(legalCase.deadlineUrgency, theme), fontSize: 13 }
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {formatCurrency(legalCase.totalBilled)}
+                    </Text>
+                </Card>
+                <Card
+                    style={[
+                        s.detailSummaryCard,
+                        {
+                            backgroundColor: theme.colors.surface
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            s.detailSummaryLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        HOURS
+                    </Text>
+                    <Text
+                        style={[
+                            s.detailSummaryValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {totalHours}h
+                    </Text>
+                </Card>
+                <Card
+                    style={[
+                        s.detailSummaryCard,
+                        {
+                            backgroundColor: theme.colors.surface
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            s.detailSummaryLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        DEADLINE
+                    </Text>
+                    <Text
+                        style={[
+                            s.detailSummaryValue,
+                            {
+                                color: urgencyColor(legalCase.deadlineUrgency, theme),
+                                fontSize: 13
+                            }
                         ]}
                     >
                         {legalCase.nextDeadline}
                     </Text>
-                </View>
+                </Card>
             </View>
 
             {/* Tabs */}
-            <View style={[s.tabBar, { borderBottomColor: theme.colors.outlineVariant }]}>
+            <View
+                style={[
+                    s.tabBar,
+                    {
+                        borderBottomColor: theme.colors.outlineVariant
+                    }
+                ]}
+            >
                 {(["timeline", "documents", "billing"] as const).map((tab) => {
                     const isActive = activeTab === tab;
                     const tabLabel = tab.charAt(0).toUpperCase() + tab.slice(1);
@@ -528,13 +1198,24 @@ function DetailPanel({ legalCase, onClose }: { legalCase: LegalCase; onClose: ()
                             <Text
                                 style={[
                                     s.tabText,
-                                    { color: isActive ? theme.colors.primary : theme.colors.onSurfaceVariant },
+                                    {
+                                        color: isActive ? theme.colors.primary : theme.colors.onSurfaceVariant
+                                    },
                                     isActive && s.tabTextActive
                                 ]}
                             >
                                 {tabLabel}
                             </Text>
-                            {isActive && <View style={[s.tabIndicator, { backgroundColor: theme.colors.primary }]} />}
+                            {isActive && (
+                                <View
+                                    style={[
+                                        s.tabIndicator,
+                                        {
+                                            backgroundColor: theme.colors.primary
+                                        }
+                                    ]}
+                                />
+                            )}
                         </Pressable>
                     );
                 })}
@@ -549,21 +1230,46 @@ function DetailPanel({ legalCase, onClose }: { legalCase: LegalCase; onClose: ()
                         return (
                             <View key={event.id} style={s.timelineRow}>
                                 <View style={s.timelineSide}>
-                                    <View style={[s.timelineDot, { backgroundColor: `${theme.colors.primary}30` }]}>
+                                    <View
+                                        style={[
+                                            s.timelineDot,
+                                            {
+                                                backgroundColor: `${theme.colors.primary}30`
+                                            }
+                                        ]}
+                                    >
                                         <Ionicons name={eventIcon} size={12} color={theme.colors.primary} />
                                     </View>
                                     {!isLast && (
                                         <View
                                             style={[
                                                 s.timelineVertLine,
-                                                { backgroundColor: theme.colors.outlineVariant }
+                                                {
+                                                    backgroundColor: theme.colors.outlineVariant
+                                                }
                                             ]}
                                         />
                                     )}
                                 </View>
                                 <View style={s.timelineContent}>
-                                    <Text style={[s.timelineDate, { color: theme.colors.primary }]}>{event.date}</Text>
-                                    <Text style={[s.timelineLabel, { color: theme.colors.onSurface }]}>
+                                    <Text
+                                        style={[
+                                            s.timelineDate,
+                                            {
+                                                color: theme.colors.primary
+                                            }
+                                        ]}
+                                    >
+                                        {event.date}
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            s.timelineLabel,
+                                            {
+                                                color: theme.colors.onSurface
+                                            }
+                                        ]}
+                                    >
                                         {event.label}
                                     </Text>
                                 </View>
@@ -578,15 +1284,45 @@ function DetailPanel({ legalCase, onClose }: { legalCase: LegalCase; onClose: ()
                     {legalCase.documents.map((doc) => {
                         const fileIcon = FILE_TYPE_ICONS[doc.fileType] ?? "document-outline";
                         return (
-                            <View key={doc.id} style={[s.docRow, { borderBottomColor: theme.colors.outlineVariant }]}>
-                                <View style={[s.docIconCircle, { backgroundColor: `${theme.colors.primary}14` }]}>
+                            <View
+                                key={doc.id}
+                                style={[
+                                    s.docRow,
+                                    {
+                                        borderBottomColor: theme.colors.outlineVariant
+                                    }
+                                ]}
+                            >
+                                <View
+                                    style={[
+                                        s.docIconCircle,
+                                        {
+                                            backgroundColor: `${theme.colors.primary}14`
+                                        }
+                                    ]}
+                                >
                                     <Ionicons name={fileIcon} size={16} color={theme.colors.primary} />
                                 </View>
                                 <View style={s.docInfo}>
-                                    <Text style={[s.docName, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                                    <Text
+                                        style={[
+                                            s.docName,
+                                            {
+                                                color: theme.colors.onSurface
+                                            }
+                                        ]}
+                                        numberOfLines={1}
+                                    >
                                         {doc.name}
                                     </Text>
-                                    <Text style={[s.docDate, { color: theme.colors.onSurfaceVariant }]}>
+                                    <Text
+                                        style={[
+                                            s.docDate,
+                                            {
+                                                color: theme.colors.onSurfaceVariant
+                                            }
+                                        ]}
+                                    >
                                         {doc.date}
                                     </Text>
                                 </View>
@@ -602,25 +1338,74 @@ function DetailPanel({ legalCase, onClose }: { legalCase: LegalCase; onClose: ()
                     {legalCase.billing.map((entry) => (
                         <View
                             key={entry.description}
-                            style={[s.billingRow, { borderBottomColor: theme.colors.outlineVariant }]}
+                            style={[
+                                s.billingRow,
+                                {
+                                    borderBottomColor: theme.colors.outlineVariant
+                                }
+                            ]}
                         >
                             <View style={s.billingInfo}>
-                                <Text style={[s.billingDesc, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        s.billingDesc,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {entry.description}
                                 </Text>
-                                <Text style={[s.billingHours, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        s.billingHours,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     {entry.hours}h @ {formatCurrency(entry.rate)}/hr
                                 </Text>
                             </View>
-                            <Text style={[s.billingAmount, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    s.billingAmount,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {formatCurrency(entry.hours * entry.rate)}
                             </Text>
                         </View>
                     ))}
                     {/* Billing total */}
-                    <View style={[s.billingTotalRow, { borderTopColor: theme.colors.outline }]}>
-                        <Text style={[s.billingTotalLabel, { color: theme.colors.onSurface }]}>Total</Text>
-                        <Text style={[s.billingTotalValue, { color: theme.colors.primary }]}>
+                    <View
+                        style={[
+                            s.billingTotalRow,
+                            {
+                                borderTopColor: theme.colors.outline
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                s.billingTotalLabel,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            Total
+                        </Text>
+                        <Text
+                            style={[
+                                s.billingTotalValue,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
                             {formatCurrency(totalAmount)}
                         </Text>
                     </View>
@@ -632,11 +1417,24 @@ function DetailPanel({ legalCase, onClose }: { legalCase: LegalCase; onClose: ()
                 onPress={onClose}
                 style={({ pressed }) => [
                     s.closeButton,
-                    { borderColor: theme.colors.outlineVariant },
-                    pressed && { opacity: 0.85 }
+                    {
+                        borderColor: theme.colors.outlineVariant
+                    },
+                    pressed && {
+                        opacity: 0.85
+                    }
                 ]}
             >
-                <Text style={[s.closeButtonText, { color: theme.colors.onSurface }]}>Close</Text>
+                <Text
+                    style={[
+                        s.closeButtonText,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Close
+                </Text>
             </Pressable>
         </View>
     );
@@ -656,7 +1454,6 @@ function FilterChip({
     color: string;
 }) {
     const { theme } = useUnistyles();
-
     return (
         <Pressable
             onPress={onPress}
@@ -668,7 +1465,16 @@ function FilterChip({
                 }
             ]}
         >
-            <Text style={[s.filterChipText, { color: isActive ? color : theme.colors.onSurfaceVariant }]}>{label}</Text>
+            <Text
+                style={[
+                    s.filterChipText,
+                    {
+                        color: isActive ? color : theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {label}
+            </Text>
         </Pressable>
     );
 }
@@ -686,24 +1492,44 @@ export function LegalCasesPage() {
         (c) => c.deadlineUrgency === "urgent" || c.deadlineUrgency === "overdue" || c.deadlineUrgency === "soon"
     );
     const billableHoursThisMonth = CASES.reduce((sum, c) => sum + c.billing.reduce((s, b) => s + b.hours, 0), 0);
-
     const filteredTypes = activeTypeFilter ? [activeTypeFilter] : CASE_TYPES;
     const selectedCase = selectedCaseId ? (CASES.find((c) => c.id === selectedCaseId) ?? null) : null;
-
     const handleFilterPress = React.useCallback((caseType: CaseType) => {
         setActiveTypeFilter((prev) => (prev === caseType ? null : caseType));
     }, []);
-
     return (
         <ShowcasePage density="spacious" topInset={16} contentGap={20}>
             {/* Page Title */}
             <View style={s.pageTitleRow}>
-                <View style={[s.pageTitleIcon, { backgroundColor: `${theme.colors.primary}18` }]}>
+                <View
+                    style={[
+                        s.pageTitleIcon,
+                        {
+                            backgroundColor: `${theme.colors.primary}18`
+                        }
+                    ]}
+                >
                     <Ionicons name="briefcase-outline" size={22} color={theme.colors.primary} />
                 </View>
                 <View style={s.pageTitleText}>
-                    <Text style={[s.pageTitle, { color: theme.colors.onSurface }]}>Case Management</Text>
-                    <Text style={[s.pageSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            s.pageTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Case Management
+                    </Text>
+                    <Text
+                        style={[
+                            s.pageSubtitle,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         Law Office of J. Harrison
                     </Text>
                 </View>
@@ -780,7 +1606,7 @@ export function LegalCasesPage() {
 
 // --- Styles ---
 
-const s = StyleSheet.create((theme) => ({
+const s = StyleSheet.create((_theme) => ({
     // Page title
     pageTitleRow: {
         flexDirection: "row",
@@ -808,7 +1634,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 13,
         lineHeight: 18
     },
-
     // Metrics row
     metricsRow: {
         flexDirection: "row",
@@ -841,7 +1666,6 @@ const s = StyleSheet.create((theme) => ({
         textTransform: "uppercase",
         letterSpacing: 0.4
     },
-
     // Filter row
     filterRow: {
         flexDirection: "row",
@@ -858,7 +1682,6 @@ const s = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
-
     // Type section
     typeSection: {
         gap: 10
@@ -893,12 +1716,10 @@ const s = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
-
     // Case list
     caseList: {
         gap: 8
     },
-
     // Case row card
     caseRow: {
         borderRadius: 12,
@@ -957,7 +1778,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 13,
         lineHeight: 18
     },
-
     // Detail panel
     detailPanel: {
         borderRadius: 16,
@@ -1002,7 +1822,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 13,
         lineHeight: 18
     },
-
     // Detail summary row
     detailSummaryRow: {
         flexDirection: "row",
@@ -1026,7 +1845,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 16,
         lineHeight: 22
     },
-
     // Tab bar
     tabBar: {
         flexDirection: "row",
@@ -1053,12 +1871,10 @@ const s = StyleSheet.create((theme) => ({
         height: 2,
         borderRadius: 1
     },
-
     // Tab content
     tabContent: {
         gap: 0
     },
-
     // Timeline
     timelineRow: {
         flexDirection: "row",
@@ -1096,7 +1912,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 13,
         lineHeight: 19
     },
-
     // Documents
     docRow: {
         flexDirection: "row",
@@ -1126,7 +1941,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 16
     },
-
     // Billing
     billingRow: {
         flexDirection: "row",
@@ -1171,7 +1985,6 @@ const s = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 16
     },
-
     // Close button
     closeButton: {
         borderWidth: 1,

@@ -1,13 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type TaskType = "bug" | "feature" | "chore";
 type Priority = "high" | "medium" | "low";
-
 type SprintTask = {
     id: string;
     title: string;
@@ -16,7 +15,6 @@ type SprintTask = {
     type: TaskType;
     priority: Priority;
 };
-
 type SprintColumn = {
     title: string;
     status: string;
@@ -60,7 +58,14 @@ const sprintColumns: SprintColumn[] = [
         title: "In Progress",
         status: "in_progress",
         tasks: [
-            { id: "t4", title: "Add dark mode toggle", assignee: "AW", points: 5, type: "feature", priority: "high" },
+            {
+                id: "t4",
+                title: "Add dark mode toggle",
+                assignee: "AW",
+                points: 5,
+                type: "feature",
+                priority: "high"
+            },
             {
                 id: "t5",
                 title: "Refactor payment service tests",
@@ -156,7 +161,6 @@ const sprintColumns: SprintColumn[] = [
         ]
     }
 ];
-
 const completedPoints = 34;
 const totalPoints = 50;
 const daysTotal = 10;
@@ -165,7 +169,12 @@ const velocity = 8.5;
 
 // Burndown data: ideal line goes from totalPoints to 0 over daysTotal.
 // Actual line tracks remaining points at end of each day.
-const burndownIdeal = Array.from({ length: daysTotal + 1 }, (_, i) => totalPoints - (totalPoints / daysTotal) * i);
+const burndownIdeal = Array.from(
+    {
+        length: daysTotal + 1
+    },
+    (_, i) => totalPoints - (totalPoints / daysTotal) * i
+);
 const burndownActual = [50, 47, 42, 40, 35, 30, 24, 16]; // 8 data points (day 0 through day 7)
 
 // Column colors for the segmented progress bar
@@ -181,11 +190,25 @@ function BurndownChart() {
     // Normalize values to chart height
     const maxVal = totalPoints;
     const pointsToY = (val: number) => chartHeight - (val / maxVal) * chartHeight;
-
     return (
         <View style={s.burndownContainer}>
-            <Text style={[s.burndownLabel, { color: theme.colors.onSurfaceVariant }]}>Burndown</Text>
-            <View style={{ width: chartWidth, height: chartHeight, position: "relative" }}>
+            <Text
+                style={[
+                    s.burndownLabel,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                Burndown
+            </Text>
+            <View
+                style={{
+                    width: chartWidth,
+                    height: chartHeight,
+                    position: "relative"
+                }}
+            >
                 {/* Grid lines */}
                 {[0, 0.25, 0.5, 0.75, 1].map((frac) => (
                     <View
@@ -212,7 +235,6 @@ function BurndownChart() {
                     const dy = y2 - y1;
                     const length = Math.sqrt(dx * dx + dy * dy);
                     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
                     return (
                         <View
                             key={`ideal-${val}`}
@@ -223,7 +245,11 @@ function BurndownChart() {
                                 width: `${length}%`,
                                 height: 2,
                                 backgroundColor: theme.colors.outlineVariant,
-                                transform: [{ rotate: `${angle}deg` }],
+                                transform: [
+                                    {
+                                        rotate: `${angle}deg`
+                                    }
+                                ],
                                 transformOrigin: "left center",
                                 opacity: 0.6
                             }}
@@ -263,7 +289,6 @@ function BurndownChart() {
                     const dxPx = (dxPct / 100) * 250;
                     const lengthPx = Math.sqrt(dxPx * dxPx + dy * dy);
                     const angle = Math.atan2(dy, dxPx) * (180 / Math.PI);
-
                     return (
                         <View
                             key={`line-${val}`}
@@ -274,7 +299,11 @@ function BurndownChart() {
                                 width: lengthPx,
                                 height: 2,
                                 backgroundColor: theme.colors.primary,
-                                transform: [{ rotate: `${angle}deg` }],
+                                transform: [
+                                    {
+                                        rotate: `${angle}deg`
+                                    }
+                                ],
                                 transformOrigin: "left center",
                                 zIndex: 1
                             }}
@@ -297,25 +326,72 @@ function BurndownChart() {
             </View>
             <View style={s.burndownLegend}>
                 <View style={s.legendItem}>
-                    <View style={[s.legendDot, { backgroundColor: theme.colors.outlineVariant }]} />
-                    <Text style={[s.legendText, { color: theme.colors.onSurfaceVariant }]}>Ideal</Text>
+                    <View
+                        style={[
+                            s.legendDot,
+                            {
+                                backgroundColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    />
+                    <Text
+                        style={[
+                            s.legendText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Ideal
+                    </Text>
                 </View>
                 <View style={s.legendItem}>
-                    <View style={[s.legendDot, { backgroundColor: theme.colors.primary }]} />
-                    <Text style={[s.legendText, { color: theme.colors.onSurfaceVariant }]}>Actual</Text>
+                    <View
+                        style={[
+                            s.legendDot,
+                            {
+                                backgroundColor: theme.colors.primary
+                            }
+                        ]}
+                    />
+                    <Text
+                        style={[
+                            s.legendText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Actual
+                    </Text>
                 </View>
                 <View style={s.legendItem}>
-                    <View style={[s.legendLine, { backgroundColor: theme.colors.error, opacity: 0.5 }]} />
-                    <Text style={[s.legendText, { color: theme.colors.onSurfaceVariant }]}>Today</Text>
+                    <View
+                        style={[
+                            s.legendLine,
+                            {
+                                backgroundColor: theme.colors.error,
+                                opacity: 0.5
+                            }
+                        ]}
+                    />
+                    <Text
+                        style={[
+                            s.legendText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Today
+                    </Text>
                 </View>
             </View>
         </View>
     );
 }
-
 function SegmentedProgressBar() {
     const columnPoints = sprintColumns.map((col) => col.tasks.reduce((sum, t) => sum + t.points, 0));
-
     return (
         <View style={s.segmentedBar}>
             {columnPoints.map((pts, i) => {
@@ -339,31 +415,88 @@ function SegmentedProgressBar() {
         </View>
     );
 }
-
 function MetricCard({ value, label, color }: { value: string; label: string; color: string }) {
     const { theme } = useUnistyles();
     return (
-        <View style={[s.metricCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-            <Text style={[s.metricValue, { color }]}>{value}</Text>
-            <Text style={[s.metricLabel, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
-        </View>
+        <Card
+            style={[
+                s.metricCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    s.metricValue,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            <Text
+                style={[
+                    s.metricLabel,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {label}
+            </Text>
+        </Card>
     );
 }
-
 function TypePill({ type }: { type: TaskType }) {
-    const config: Record<TaskType, { label: string; bg: string; fg: string }> = {
-        bug: { label: "Bug", bg: "#EF444420", fg: "#EF4444" },
-        feature: { label: "Feature", bg: "#3B82F620", fg: "#3B82F6" },
-        chore: { label: "Chore", bg: "#9CA3AF20", fg: "#9CA3AF" }
+    const config: Record<
+        TaskType,
+        {
+            label: string;
+            bg: string;
+            fg: string;
+        }
+    > = {
+        bug: {
+            label: "Bug",
+            bg: "#EF444420",
+            fg: "#EF4444"
+        },
+        feature: {
+            label: "Feature",
+            bg: "#3B82F620",
+            fg: "#3B82F6"
+        },
+        chore: {
+            label: "Chore",
+            bg: "#9CA3AF20",
+            fg: "#9CA3AF"
+        }
     };
     const { label, bg, fg } = config[type];
     return (
-        <View style={[s.typePill, { backgroundColor: bg }]}>
-            <Text style={[s.typePillText, { color: fg }]}>{label}</Text>
+        <View
+            style={[
+                s.typePill,
+                {
+                    backgroundColor: bg
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    s.typePillText,
+                    {
+                        color: fg
+                    }
+                ]}
+            >
+                {label}
+            </Text>
         </View>
     );
 }
-
 function TaskCard({ task, isDone }: { task: SprintTask; isDone: boolean }) {
     const { theme } = useUnistyles();
     const priorityColors: Record<Priority, string> = {
@@ -371,17 +504,32 @@ function TaskCard({ task, isDone }: { task: SprintTask; isDone: boolean }) {
         medium: "#F59E0B",
         low: "#3B82F6"
     };
-
     return (
-        <View style={[s.taskCard, { backgroundColor: theme.colors.surface }]}>
+        <Card
+            style={[
+                s.taskCard,
+                {
+                    backgroundColor: theme.colors.surface
+                }
+            ]}
+        >
             {/* Priority strip on left edge */}
-            <View style={[s.priorityStrip, { backgroundColor: priorityColors[task.priority] }]} />
+            <View
+                style={[
+                    s.priorityStrip,
+                    {
+                        backgroundColor: priorityColors[task.priority]
+                    }
+                ]}
+            />
 
             <View style={s.taskCardContent}>
                 <Text
                     style={[
                         s.taskTitle,
-                        { color: isDone ? theme.colors.onSurfaceVariant : theme.colors.onSurface },
+                        {
+                            color: isDone ? theme.colors.onSurfaceVariant : theme.colors.onSurface
+                        },
                         isDone && s.taskTitleDone
                     ]}
                     numberOfLines={2}
@@ -391,42 +539,120 @@ function TaskCard({ task, isDone }: { task: SprintTask; isDone: boolean }) {
 
                 <View style={s.taskCardBottom}>
                     {/* Assignee initials */}
-                    <View style={[s.assigneeCircle, { backgroundColor: theme.colors.primary + "20" }]}>
-                        <Text style={[s.assigneeText, { color: theme.colors.primary }]}>{task.assignee}</Text>
+                    <View
+                        style={[
+                            s.assigneeCircle,
+                            {
+                                backgroundColor: `${theme.colors.primary}20`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                s.assigneeText,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
+                            {task.assignee}
+                        </Text>
                     </View>
 
                     <TypePill type={task.type} />
 
                     {/* Story points circle */}
-                    <View style={[s.pointsCircle, { backgroundColor: theme.colors.tertiary + "18" }]}>
-                        <Text style={[s.pointsText, { color: theme.colors.tertiary }]}>{task.points}</Text>
+                    <View
+                        style={[
+                            s.pointsCircle,
+                            {
+                                backgroundColor: `${theme.colors.tertiary}18`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                s.pointsText,
+                                {
+                                    color: theme.colors.tertiary
+                                }
+                            ]}
+                        >
+                            {task.points}
+                        </Text>
                     </View>
                 </View>
             </View>
-        </View>
+        </Card>
     );
 }
-
 function KanbanColumn({ column, index }: { column: SprintColumn; index: number }) {
     const { theme } = useUnistyles();
     const columnColor = COLUMN_COLORS[index];
     const columnPoints = column.tasks.reduce((sum, t) => sum + t.points, 0);
     const isDone = column.status === "done";
-
     return (
-        <View style={[s.kanbanColumn, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <View
+            style={[
+                s.kanbanColumn,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             {/* Colored top border */}
-            <View style={[s.columnTopBorder, { backgroundColor: columnColor }]} />
+            <View
+                style={[
+                    s.columnTopBorder,
+                    {
+                        backgroundColor: columnColor
+                    }
+                ]}
+            />
 
             {/* Column header */}
             <View style={s.columnHeader}>
                 <View style={s.columnHeaderLeft}>
-                    <Text style={[s.columnTitle, { color: theme.colors.onSurface }]}>{column.title}</Text>
-                    <View style={[s.countBadge, { backgroundColor: columnColor + "20" }]}>
-                        <Text style={[s.countBadgeText, { color: columnColor }]}>{column.tasks.length}</Text>
+                    <Text
+                        style={[
+                            s.columnTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {column.title}
+                    </Text>
+                    <View
+                        style={[
+                            s.countBadge,
+                            {
+                                backgroundColor: `${columnColor}20`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                s.countBadgeText,
+                                {
+                                    color: columnColor
+                                }
+                            ]}
+                        >
+                            {column.tasks.length}
+                        </Text>
                     </View>
                 </View>
-                <Text style={[s.columnPoints, { color: theme.colors.onSurfaceVariant }]}>{columnPoints} pts</Text>
+                <Text
+                    style={[
+                        s.columnPoints,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    {columnPoints} pts
+                </Text>
             </View>
 
             {/* Task cards */}
@@ -443,21 +669,52 @@ function KanbanColumn({ column, index }: { column: SprintColumn; index: number }
 
 export function SprintBoardPage() {
     const { theme } = useUnistyles();
-
     return (
         <ShowcasePage edgeToEdge bottomInset={32} contentBackgroundColor={theme.colors.surfaceContainerHighest}>
             {/* Sprint header */}
             <View style={s.sprintHeader}>
                 <View style={s.sprintTitleRow}>
                     <View>
-                        <Text style={[s.sprintName, { color: theme.colors.onSurface }]}>Sprint 24</Text>
-                        <Text style={[s.sprintDates, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                s.sprintName,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            Sprint 24
+                        </Text>
+                        <Text
+                            style={[
+                                s.sprintDates,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Feb 24 - Mar 7, 2026
                         </Text>
                     </View>
-                    <View style={[s.sprintStatusBadge, { backgroundColor: theme.colors.primary + "18" }]}>
+                    <View
+                        style={[
+                            s.sprintStatusBadge,
+                            {
+                                backgroundColor: `${theme.colors.primary}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name="timer-outline" size={14} color={theme.colors.primary} />
-                        <Text style={[s.sprintStatusText, { color: theme.colors.primary }]}>Active</Text>
+                        <Text
+                            style={[
+                                s.sprintStatusText,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
+                            Active
+                        </Text>
                     </View>
                 </View>
 
@@ -473,16 +730,44 @@ export function SprintBoardPage() {
                 </View>
 
                 {/* Story points with segmented bar */}
-                <View style={[s.pointsSection, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <View
+                    style={[
+                        s.pointsSection,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <View style={s.pointsHeader}>
-                        <Text style={[s.pointsLarge, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                s.pointsLarge,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {completedPoints}
-                            <Text style={[s.pointsTotal, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    s.pointsTotal,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {" "}
                                 / {totalPoints}
                             </Text>
                         </Text>
-                        <Text style={[s.pointsPercentage, { color: theme.colors.primary }]}>
+                        <Text
+                            style={[
+                                s.pointsPercentage,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
                             {Math.round((completedPoints / totalPoints) * 100)}%
                         </Text>
                     </View>
@@ -490,8 +775,22 @@ export function SprintBoardPage() {
                     <View style={s.segmentLegend}>
                         {sprintColumns.map((col, i) => (
                             <View key={col.status} style={s.segmentLegendItem}>
-                                <View style={[s.segmentLegendDot, { backgroundColor: COLUMN_COLORS[i] }]} />
-                                <Text style={[s.segmentLegendText, { color: theme.colors.onSurfaceVariant }]}>
+                                <View
+                                    style={[
+                                        s.segmentLegendDot,
+                                        {
+                                            backgroundColor: COLUMN_COLORS[i]
+                                        }
+                                    ]}
+                                />
+                                <Text
+                                    style={[
+                                        s.segmentLegendText,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     {col.title}
                                 </Text>
                             </View>
@@ -500,7 +799,14 @@ export function SprintBoardPage() {
                 </View>
 
                 {/* Burndown chart */}
-                <View style={[s.burndownSection, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <View
+                    style={[
+                        s.burndownSection,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <BurndownChart />
                 </View>
             </View>
@@ -522,7 +828,7 @@ export function SprintBoardPage() {
 
 // --- Styles ---
 
-const s = StyleSheet.create((theme) => ({
+const s = StyleSheet.create((_theme) => ({
     // Sprint header
     sprintHeader: {
         padding: 16,
@@ -556,7 +862,6 @@ const s = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
-
     // Metrics row
     metricsRow: {
         flexDirection: "row",
@@ -579,7 +884,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 14
     },
-
     // Points section
     pointsSection: {
         borderRadius: 12,
@@ -630,7 +934,6 @@ const s = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Burndown section
     burndownSection: {
         borderRadius: 12,
@@ -667,7 +970,6 @@ const s = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 10
     },
-
     // Kanban board
     kanbanScroll: {
         flex: 1
@@ -722,7 +1024,6 @@ const s = StyleSheet.create((theme) => ({
         paddingHorizontal: 8,
         paddingBottom: 8
     },
-
     // Task card
     taskCard: {
         borderRadius: 8,
@@ -731,7 +1032,10 @@ const s = StyleSheet.create((theme) => ({
         overflow: "hidden",
         shadowColor: "#000",
         shadowOpacity: 0.04,
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: {
+            width: 0,
+            height: 1
+        },
         shadowRadius: 2,
         elevation: 1
     },

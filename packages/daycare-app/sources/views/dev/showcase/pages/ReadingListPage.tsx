@@ -1,28 +1,26 @@
 import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { Card } from "@/components/Card";
+import { Section } from "@/components/Section";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
 type Genre = "Fiction" | "Non-Fiction" | "Science" | "History" | "Biography" | "Self-Help";
-
 type BookBase = {
     id: string;
     title: string;
     author: string;
     genre: Genre;
 };
-
 type CurrentlyReadingBook = BookBase & {
     status: "reading";
     progress: number; // 0-100
 };
-
 type WantToReadBook = BookBase & {
     status: "want";
 };
-
 type FinishedBook = BookBase & {
     status: "finished";
     rating: number; // 1-5
@@ -42,7 +40,14 @@ const GENRE_COLORS: Record<Genre, string> = {
 // --- Mock data ---
 
 const currentlyReading: CurrentlyReadingBook[] = [
-    { id: "1", title: "Project Hail Mary", author: "Andy Weir", genre: "Fiction", status: "reading", progress: 72 },
+    {
+        id: "1",
+        title: "Project Hail Mary",
+        author: "Andy Weir",
+        genre: "Fiction",
+        status: "reading",
+        progress: 72
+    },
     {
         id: "2",
         title: "Thinking, Fast and Slow",
@@ -60,17 +65,53 @@ const currentlyReading: CurrentlyReadingBook[] = [
         progress: 58
     }
 ];
-
 const wantToRead: WantToReadBook[] = [
-    { id: "4", title: "The Silk Roads", author: "Peter Frankopan", genre: "History", status: "want" },
-    { id: "5", title: "Atomic Habits", author: "James Clear", genre: "Self-Help", status: "want" },
-    { id: "6", title: "Leonardo da Vinci", author: "Walter Isaacson", genre: "Biography", status: "want" },
-    { id: "7", title: "Klara and the Sun", author: "Kazuo Ishiguro", genre: "Fiction", status: "want" }
+    {
+        id: "4",
+        title: "The Silk Roads",
+        author: "Peter Frankopan",
+        genre: "History",
+        status: "want"
+    },
+    {
+        id: "5",
+        title: "Atomic Habits",
+        author: "James Clear",
+        genre: "Self-Help",
+        status: "want"
+    },
+    {
+        id: "6",
+        title: "Leonardo da Vinci",
+        author: "Walter Isaacson",
+        genre: "Biography",
+        status: "want"
+    },
+    {
+        id: "7",
+        title: "Klara and the Sun",
+        author: "Kazuo Ishiguro",
+        genre: "Fiction",
+        status: "want"
+    }
 ];
-
 const finished: FinishedBook[] = [
-    { id: "8", title: "Sapiens", author: "Yuval Noah Harari", genre: "History", status: "finished", rating: 5 },
-    { id: "9", title: "Dune", author: "Frank Herbert", genre: "Fiction", status: "finished", rating: 5 },
+    {
+        id: "8",
+        title: "Sapiens",
+        author: "Yuval Noah Harari",
+        genre: "History",
+        status: "finished",
+        rating: 5
+    },
+    {
+        id: "9",
+        title: "Dune",
+        author: "Frank Herbert",
+        genre: "Fiction",
+        status: "finished",
+        rating: 5
+    },
     {
         id: "10",
         title: "The Immortal Life of Henrietta Lacks",
@@ -96,16 +137,21 @@ const finished: FinishedBook[] = [
         rating: 3
     }
 ];
-
 const avgRating = (finished.reduce((sum, b) => sum + b.rating, 0) / finished.length).toFixed(1);
 
 // --- Circular progress ring ---
 
 function ProgressRing({ progress, size, color }: { progress: number; size: number; color: string }) {
     const strokeWidth = 3;
-
     return (
-        <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+        <View
+            style={{
+                width: size,
+                height: size,
+                alignItems: "center",
+                justifyContent: "center"
+            }}
+        >
             {/* Background track */}
             <View
                 style={{
@@ -114,7 +160,7 @@ function ProgressRing({ progress, size, color }: { progress: number; size: numbe
                     height: size,
                     borderRadius: size / 2,
                     borderWidth: strokeWidth,
-                    borderColor: color + "25"
+                    borderColor: `${color}25`
                 }}
             />
             {/* Filled arc approximated with a dashed border trick */}
@@ -130,10 +176,22 @@ function ProgressRing({ progress, size, color }: { progress: number; size: numbe
                     borderRightColor: progress >= 50 ? color : "transparent",
                     borderBottomColor: progress >= 75 ? color : "transparent",
                     borderLeftColor: progress < 100 ? "transparent" : color,
-                    transform: [{ rotate: "-90deg" }]
+                    transform: [
+                        {
+                            rotate: "-90deg"
+                        }
+                    ]
                 }}
             />
-            <Text style={{ fontFamily: "IBMPlexSans-SemiBold", fontSize: size * 0.24, color }}>{progress}%</Text>
+            <Text
+                style={{
+                    fontFamily: "IBMPlexSans-SemiBold",
+                    fontSize: size * 0.24,
+                    color
+                }}
+            >
+                {progress}%
+            </Text>
         </View>
     );
 }
@@ -153,7 +211,10 @@ function BookCover({ title, genre, width, height }: { title: string; genre: Genr
                 justifyContent: "center",
                 // Subtle gradient-like effect with inner shadow
                 shadowColor: "#000",
-                shadowOffset: { width: 2, height: 2 },
+                shadowOffset: {
+                    width: 2,
+                    height: 2
+                },
                 shadowOpacity: 0.15,
                 shadowRadius: 4,
                 elevation: 3
@@ -177,8 +238,23 @@ function BookCover({ title, genre, width, height }: { title: string; genre: Genr
 function GenreChip({ genre }: { genre: Genre }) {
     const color = GENRE_COLORS[genre];
     return (
-        <View style={{ backgroundColor: color + "18", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
-            <Text style={{ fontFamily: "IBMPlexSans-Medium", fontSize: 11, color }}>{genre}</Text>
+        <View
+            style={{
+                backgroundColor: `${color}18`,
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 10
+            }}
+        >
+            <Text
+                style={{
+                    fontFamily: "IBMPlexSans-Medium",
+                    fontSize: 11,
+                    color
+                }}
+            >
+                {genre}
+            </Text>
         </View>
     );
 }
@@ -187,7 +263,12 @@ function GenreChip({ genre }: { genre: Genre }) {
 
 function RatingDots({ rating, color }: { rating: number; color: string }) {
     return (
-        <View style={{ flexDirection: "row", gap: 4 }}>
+        <View
+            style={{
+                flexDirection: "row",
+                gap: 4
+            }}
+        >
             {[1, 2, 3, 4, 5].map((i) => (
                 <View
                     key={i}
@@ -195,7 +276,7 @@ function RatingDots({ rating, color }: { rating: number; color: string }) {
                         width: 10,
                         height: 10,
                         borderRadius: 5,
-                        backgroundColor: i <= rating ? color : color + "30"
+                        backgroundColor: i <= rating ? color : `${color}30`
                     }}
                 />
             ))}
@@ -208,7 +289,14 @@ function RatingDots({ rating, color }: { rating: number; color: string }) {
 function SectionHeader({ title, icon }: { title: string; icon: keyof typeof Ionicons.glyphMap }) {
     const { theme } = useUnistyles();
     return (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <View
+            style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 12
+            }}
+        >
             <Ionicons name={icon} size={20} color={theme.colors.onSurface} />
             <Text
                 style={{
@@ -227,52 +315,48 @@ function SectionHeader({ title, icon }: { title: string; icon: keyof typeof Ioni
 
 export function ReadingListPage() {
     const { theme } = useUnistyles();
-
     return (
         <ShowcasePage topInset={20} bottomInset={20} contentGap={28}>
             {/* Top metrics row */}
             <View style={s.metricsRow}>
-                <View style={s.metricCard(theme.colors.surfaceContainer, theme.colors.primary)}>
+                <Card style={s.metricCard(theme.colors.surfaceContainer, theme.colors.primary)}>
                     <Ionicons name="book" size={22} color={theme.colors.primary} />
                     <Text style={s.metricValue(theme.colors.primary)}>{finished.length}</Text>
                     <Text style={s.metricLabel(theme.colors.onSurfaceVariant)}>Read</Text>
-                </View>
-                <View style={s.metricCard(theme.colors.surfaceContainer, theme.colors.tertiary)}>
+                </Card>
+                <Card style={s.metricCard(theme.colors.surfaceContainer, theme.colors.tertiary)}>
                     <Ionicons name="glasses" size={22} color={theme.colors.tertiary} />
                     <Text style={s.metricValue(theme.colors.tertiary)}>{currentlyReading.length}</Text>
                     <Text style={s.metricLabel(theme.colors.onSurfaceVariant)}>Reading</Text>
-                </View>
-                <View style={s.metricCard(theme.colors.surfaceContainer, "#f59e0b")}>
+                </Card>
+                <Card style={s.metricCard(theme.colors.surfaceContainer, "#f59e0b")}>
                     <Ionicons name="star" size={22} color="#f59e0b" />
                     <Text style={s.metricValue("#f59e0b")}>{avgRating} ★</Text>
                     <Text style={s.metricLabel(theme.colors.onSurfaceVariant)}>Avg</Text>
-                </View>
+                </Card>
             </View>
 
             {/* Currently Reading */}
-            <View>
-                <SectionHeader title="Currently Reading" icon="glasses-outline" />
-                <View style={{ gap: 12 }}>
-                    {currentlyReading.map((book) => {
-                        const genreColor = GENRE_COLORS[book.genre];
-                        return (
-                            <View key={book.id} style={s.readingCard(theme.colors.surfaceContainer)}>
-                                <BookCover title={book.title} genre={book.genre} width={72} height={100} />
-                                <View style={s.readingCardRight}>
-                                    <Text style={s.bookTitle(theme.colors.onSurface)} numberOfLines={2}>
-                                        {book.title}
-                                    </Text>
-                                    <Text style={s.bookAuthor(theme.colors.onSurfaceVariant)}>{book.author}</Text>
-                                    <GenreChip genre={book.genre} />
-                                </View>
-                                <View style={s.progressRingContainer}>
-                                    <ProgressRing progress={book.progress} size={56} color={genreColor} />
-                                </View>
+            <Section title="Currently Reading" icon="glasses-outline" spacing={0} gap={12}>
+                {currentlyReading.map((book) => {
+                    const genreColor = GENRE_COLORS[book.genre];
+                    return (
+                        <Card key={book.id} style={s.readingCard(theme.colors.surfaceContainer)}>
+                            <BookCover title={book.title} genre={book.genre} width={72} height={100} />
+                            <View style={s.readingCardRight}>
+                                <Text style={s.bookTitle(theme.colors.onSurface)} numberOfLines={2}>
+                                    {book.title}
+                                </Text>
+                                <Text style={s.bookAuthor(theme.colors.onSurfaceVariant)}>{book.author}</Text>
+                                <GenreChip genre={book.genre} />
                             </View>
-                        );
-                    })}
-                </View>
-            </View>
+                            <View style={s.progressRingContainer}>
+                                <ProgressRing progress={book.progress} size={56} color={genreColor} />
+                            </View>
+                        </Card>
+                    );
+                })}
+            </Section>
 
             {/* Want to Read - horizontal book spines */}
             <View>
@@ -280,12 +364,15 @@ export function ReadingListPage() {
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ gap: 12, paddingVertical: 4 }}
+                    contentContainerStyle={{
+                        gap: 12,
+                        paddingVertical: 4
+                    }}
                 >
                     {wantToRead.map((book) => {
                         const genreColor = GENRE_COLORS[book.genre];
                         return (
-                            <View key={book.id} style={s.spineCard(genreColor)}>
+                            <Card key={book.id} style={s.spineCard(genreColor)}>
                                 <Text style={s.spineTitle} numberOfLines={2}>
                                     {book.title}
                                 </Text>
@@ -293,7 +380,7 @@ export function ReadingListPage() {
                                 <Text style={s.spineAuthor} numberOfLines={1}>
                                     {book.author}
                                 </Text>
-                            </View>
+                            </Card>
                         );
                     })}
                 </ScrollView>
@@ -302,9 +389,13 @@ export function ReadingListPage() {
             {/* Finished */}
             <View>
                 <SectionHeader title="Finished" icon="checkmark-circle" />
-                <View style={{ gap: 10 }}>
+                <View
+                    style={{
+                        gap: 10
+                    }}
+                >
                     {finished.map((book) => (
-                        <View key={book.id} style={s.finishedCard(theme.colors.surfaceContainer)}>
+                        <Card key={book.id} style={s.finishedCard(theme.colors.surfaceContainer)}>
                             <BookCover title={book.title} genre={book.genre} width={48} height={68} />
                             <View style={s.finishedCardContent}>
                                 <Text style={s.finishedTitle(theme.colors.onSurface)} numberOfLines={1}>
@@ -314,9 +405,9 @@ export function ReadingListPage() {
                                 <RatingDots rating={book.rating} color="#f59e0b" />
                             </View>
                             <View style={s.finishedBadge}>
-                                <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary + "80"} />
+                                <Ionicons name="checkmark-circle" size={20} color={`${theme.colors.primary}80`} />
                             </View>
-                        </View>
+                        </Card>
                     ))}
                 </View>
             </View>
@@ -326,7 +417,7 @@ export function ReadingListPage() {
 
 // --- Styles ---
 
-const s = StyleSheet.create((theme) => ({
+const s = StyleSheet.create((_theme) => ({
     metricsRow: {
         flexDirection: "row",
         gap: 10
@@ -340,7 +431,7 @@ const s = StyleSheet.create((theme) => ({
         alignItems: "center" as const,
         gap: 4,
         borderWidth: 1,
-        borderColor: accent + "20"
+        borderColor: `${accent}20`
     }),
     metricValue: (color: string) => ({
         fontFamily: "IBMPlexSans-SemiBold" as const,
@@ -389,7 +480,10 @@ const s = StyleSheet.create((theme) => ({
         alignItems: "center" as const,
         // Book spine shadow
         shadowColor: "#000",
-        shadowOffset: { width: 2, height: 3 },
+        shadowOffset: {
+            width: 2,
+            height: 3
+        },
         shadowOpacity: 0.18,
         shadowRadius: 4,
         elevation: 4

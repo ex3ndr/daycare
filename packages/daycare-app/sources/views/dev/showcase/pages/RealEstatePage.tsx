@@ -2,26 +2,24 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { Grid } from "@/components/Grid";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type OccupancyStatus = "occupied" | "vacant" | "maintenance";
 type PropertyType = "Residential" | "Commercial" | "Vacation Rental";
-
 type Expense = {
     label: string;
     amount: number;
     color: string;
 };
-
 type Tenant = {
     name: string;
     since: string;
     leaseEnd: string;
     monthlyRent: number;
 };
-
 type MortgageInfo = {
     lender: string;
     balance: number;
@@ -29,7 +27,6 @@ type MortgageInfo = {
     monthlyPayment: number;
     remainingYears: number;
 };
-
 type Property = {
     id: string;
     address: string;
@@ -52,7 +49,6 @@ const PORTFOLIO_TREND = "+8.2%";
 const TOTAL_PROPERTIES = 8;
 const MONTHLY_RENTAL_INCOME = 18_450;
 const AVG_OCCUPANCY = 87.5;
-
 const properties: Property[] = [
     {
         id: "r1",
@@ -72,12 +68,33 @@ const properties: Property[] = [
             remainingYears: 22
         },
         expenses: [
-            { label: "Mortgage", amount: 1260, color: "#3B82F6" },
-            { label: "Insurance", amount: 180, color: "#F59E0B" },
-            { label: "Tax", amount: 320, color: "#EF4444" },
-            { label: "Maintenance", amount: 150, color: "#8B5CF6" }
+            {
+                label: "Mortgage",
+                amount: 1260,
+                color: "#3B82F6"
+            },
+            {
+                label: "Insurance",
+                amount: 180,
+                color: "#F59E0B"
+            },
+            {
+                label: "Tax",
+                amount: 320,
+                color: "#EF4444"
+            },
+            {
+                label: "Maintenance",
+                amount: 150,
+                color: "#8B5CF6"
+            }
         ],
-        tenant: { name: "Sarah Johnson", since: "Jan 2024", leaseEnd: "Dec 2026", monthlyRent: 2400 }
+        tenant: {
+            name: "Sarah Johnson",
+            since: "Jan 2024",
+            leaseEnd: "Dec 2026",
+            monthlyRent: 2400
+        }
     },
     {
         id: "r2",
@@ -97,12 +114,33 @@ const properties: Property[] = [
             remainingYears: 25
         },
         expenses: [
-            { label: "Mortgage", amount: 1040, color: "#3B82F6" },
-            { label: "Insurance", amount: 155, color: "#F59E0B" },
-            { label: "Tax", amount: 275, color: "#EF4444" },
-            { label: "Maintenance", amount: 120, color: "#8B5CF6" }
+            {
+                label: "Mortgage",
+                amount: 1040,
+                color: "#3B82F6"
+            },
+            {
+                label: "Insurance",
+                amount: 155,
+                color: "#F59E0B"
+            },
+            {
+                label: "Tax",
+                amount: 275,
+                color: "#EF4444"
+            },
+            {
+                label: "Maintenance",
+                amount: 120,
+                color: "#8B5CF6"
+            }
         ],
-        tenant: { name: "Mike Chen", since: "Mar 2025", leaseEnd: "Feb 2027", monthlyRent: 1950 }
+        tenant: {
+            name: "Mike Chen",
+            since: "Mar 2025",
+            leaseEnd: "Feb 2027",
+            monthlyRent: 1950
+        }
     },
     {
         id: "r3",
@@ -122,10 +160,26 @@ const properties: Property[] = [
             remainingYears: 28
         },
         expenses: [
-            { label: "Mortgage", amount: 1870, color: "#3B82F6" },
-            { label: "Insurance", amount: 210, color: "#F59E0B" },
-            { label: "Tax", amount: 390, color: "#EF4444" },
-            { label: "Maintenance", amount: 80, color: "#8B5CF6" }
+            {
+                label: "Mortgage",
+                amount: 1870,
+                color: "#3B82F6"
+            },
+            {
+                label: "Insurance",
+                amount: 210,
+                color: "#F59E0B"
+            },
+            {
+                label: "Tax",
+                amount: 390,
+                color: "#EF4444"
+            },
+            {
+                label: "Maintenance",
+                amount: 80,
+                color: "#8B5CF6"
+            }
         ],
         tenant: null
     },
@@ -147,12 +201,33 @@ const properties: Property[] = [
             remainingYears: 18
         },
         expenses: [
-            { label: "Mortgage", amount: 2890, color: "#3B82F6" },
-            { label: "Insurance", amount: 450, color: "#F59E0B" },
-            { label: "Tax", amount: 620, color: "#EF4444" },
-            { label: "Maintenance", amount: 300, color: "#8B5CF6" }
+            {
+                label: "Mortgage",
+                amount: 2890,
+                color: "#3B82F6"
+            },
+            {
+                label: "Insurance",
+                amount: 450,
+                color: "#F59E0B"
+            },
+            {
+                label: "Tax",
+                amount: 620,
+                color: "#EF4444"
+            },
+            {
+                label: "Maintenance",
+                amount: 300,
+                color: "#8B5CF6"
+            }
         ],
-        tenant: { name: "TechStart Inc.", since: "Jun 2023", leaseEnd: "May 2028", monthlyRent: 5200 }
+        tenant: {
+            name: "TechStart Inc.",
+            since: "Jun 2023",
+            leaseEnd: "May 2028",
+            monthlyRent: 5200
+        }
     },
     {
         id: "c2",
@@ -172,10 +247,26 @@ const properties: Property[] = [
             remainingYears: 20
         },
         expenses: [
-            { label: "Mortgage", amount: 2240, color: "#3B82F6" },
-            { label: "Insurance", amount: 380, color: "#F59E0B" },
-            { label: "Tax", amount: 510, color: "#EF4444" },
-            { label: "Renovation", amount: 2500, color: "#EC4899" }
+            {
+                label: "Mortgage",
+                amount: 2240,
+                color: "#3B82F6"
+            },
+            {
+                label: "Insurance",
+                amount: 380,
+                color: "#F59E0B"
+            },
+            {
+                label: "Tax",
+                amount: 510,
+                color: "#EF4444"
+            },
+            {
+                label: "Renovation",
+                amount: 2500,
+                color: "#EC4899"
+            }
         ],
         tenant: null
     },
@@ -197,13 +288,38 @@ const properties: Property[] = [
             remainingYears: 24
         },
         expenses: [
-            { label: "Mortgage", amount: 1580, color: "#3B82F6" },
-            { label: "Insurance", amount: 320, color: "#F59E0B" },
-            { label: "Tax", amount: 410, color: "#EF4444" },
-            { label: "Cleaning", amount: 600, color: "#14B8A6" },
-            { label: "Platform Fees", amount: 480, color: "#8B5CF6" }
+            {
+                label: "Mortgage",
+                amount: 1580,
+                color: "#3B82F6"
+            },
+            {
+                label: "Insurance",
+                amount: 320,
+                color: "#F59E0B"
+            },
+            {
+                label: "Tax",
+                amount: 410,
+                color: "#EF4444"
+            },
+            {
+                label: "Cleaning",
+                amount: 600,
+                color: "#14B8A6"
+            },
+            {
+                label: "Platform Fees",
+                amount: 480,
+                color: "#8B5CF6"
+            }
         ],
-        tenant: { name: "Various (Airbnb)", since: "Apr 2024", leaseEnd: "Rolling", monthlyRent: 4800 }
+        tenant: {
+            name: "Various (Airbnb)",
+            since: "Apr 2024",
+            leaseEnd: "Rolling",
+            monthlyRent: 4800
+        }
     },
     {
         id: "v2",
@@ -223,13 +339,38 @@ const properties: Property[] = [
             remainingYears: 26
         },
         expenses: [
-            { label: "Mortgage", amount: 1390, color: "#3B82F6" },
-            { label: "Insurance", amount: 260, color: "#F59E0B" },
-            { label: "Tax", amount: 340, color: "#EF4444" },
-            { label: "Cleaning", amount: 450, color: "#14B8A6" },
-            { label: "Platform Fees", amount: 320, color: "#8B5CF6" }
+            {
+                label: "Mortgage",
+                amount: 1390,
+                color: "#3B82F6"
+            },
+            {
+                label: "Insurance",
+                amount: 260,
+                color: "#F59E0B"
+            },
+            {
+                label: "Tax",
+                amount: 340,
+                color: "#EF4444"
+            },
+            {
+                label: "Cleaning",
+                amount: 450,
+                color: "#14B8A6"
+            },
+            {
+                label: "Platform Fees",
+                amount: 320,
+                color: "#8B5CF6"
+            }
         ],
-        tenant: { name: "Various (VRBO)", since: "Sep 2024", leaseEnd: "Rolling", monthlyRent: 3200 }
+        tenant: {
+            name: "Various (VRBO)",
+            since: "Sep 2024",
+            leaseEnd: "Rolling",
+            monthlyRent: 3200
+        }
     },
     {
         id: "v3",
@@ -249,35 +390,61 @@ const properties: Property[] = [
             remainingYears: 28
         },
         expenses: [
-            { label: "Mortgage", amount: 2520, color: "#3B82F6" },
-            { label: "Insurance", amount: 380, color: "#F59E0B" },
-            { label: "Tax", amount: 540, color: "#EF4444" },
-            { label: "Maintenance", amount: 200, color: "#8B5CF6" }
+            {
+                label: "Mortgage",
+                amount: 2520,
+                color: "#3B82F6"
+            },
+            {
+                label: "Insurance",
+                amount: 380,
+                color: "#F59E0B"
+            },
+            {
+                label: "Tax",
+                amount: 540,
+                color: "#EF4444"
+            },
+            {
+                label: "Maintenance",
+                amount: 200,
+                color: "#8B5CF6"
+            }
         ],
         tenant: null
     }
 ];
-
 const PROPERTY_TYPES: PropertyType[] = ["Residential", "Commercial", "Vacation Rental"];
-
 const TYPE_ICONS: Record<PropertyType, keyof typeof Ionicons.glyphMap> = {
     Residential: "home-outline",
     Commercial: "business-outline",
     "Vacation Rental": "bed-outline"
 };
-
 const TYPE_COLORS: Record<PropertyType, string> = {
     Residential: "#3B82F6",
     Commercial: "#8B5CF6",
     "Vacation Rental": "#F59E0B"
 };
-
-const OCCUPANCY_COLORS: Record<OccupancyStatus, { bg: string; text: string }> = {
-    occupied: { bg: "#10B98120", text: "#10B981" },
-    vacant: { bg: "#EF444420", text: "#EF4444" },
-    maintenance: { bg: "#F59E0B20", text: "#F59E0B" }
+const OCCUPANCY_COLORS: Record<
+    OccupancyStatus,
+    {
+        bg: string;
+        text: string;
+    }
+> = {
+    occupied: {
+        bg: "#10B98120",
+        text: "#10B981"
+    },
+    vacant: {
+        bg: "#EF444420",
+        text: "#EF4444"
+    },
+    maintenance: {
+        bg: "#F59E0B20",
+        text: "#F59E0B"
+    }
 };
-
 const OCCUPANCY_LABELS: Record<OccupancyStatus, string> = {
     occupied: "Occupied",
     vacant: "Vacant",
@@ -295,12 +462,13 @@ function formatCurrency(n: number): string {
     }
     return `$${n.toLocaleString("en-US")}`;
 }
-
 function formatFullCurrency(n: number): string {
     return `$${n.toLocaleString("en-US")}`;
 }
-
-function groupByType(items: Property[]): { type: PropertyType; items: Property[] }[] {
+function groupByType(items: Property[]): {
+    type: PropertyType;
+    items: Property[];
+}[] {
     return PROPERTY_TYPES.map((type) => ({
         type,
         items: items.filter((p) => p.type === type)
@@ -323,20 +491,61 @@ function MetricCard({
     subtitle?: string;
 }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[metricStyles.card, { backgroundColor: theme.colors.surfaceContainer }]}>
-            <View style={[metricStyles.iconBadge, { backgroundColor: `${color}18` }]}>
+        <Card
+            style={[
+                metricStyles.card,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
+            <View
+                style={[
+                    metricStyles.iconBadge,
+                    {
+                        backgroundColor: `${color}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={20} color={color} />
             </View>
-            <Text style={[metricStyles.title, { color: theme.colors.onSurfaceVariant }]}>{title}</Text>
-            <Text style={[metricStyles.value, { color: theme.colors.onSurface }]}>{value}</Text>
-            {subtitle && <Text style={[metricStyles.subtitle, { color }]}>{subtitle}</Text>}
-        </View>
+            <Text
+                style={[
+                    metricStyles.title,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {title}
+            </Text>
+            <Text
+                style={[
+                    metricStyles.value,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            {subtitle && (
+                <Text
+                    style={[
+                        metricStyles.subtitle,
+                        {
+                            color
+                        }
+                    ]}
+                >
+                    {subtitle}
+                </Text>
+            )}
+        </Card>
     );
 }
-
-const metricStyles = StyleSheet.create((theme) => ({
+const metricStyles = StyleSheet.create((_theme) => ({
     card: {
         flex: 1,
         minWidth: 140,
@@ -372,52 +581,111 @@ const metricStyles = StyleSheet.create((theme) => ({
 function ExpenseBreakdown({ expenses }: { expenses: Expense[] }) {
     const { theme } = useUnistyles();
     const maxAmount = Math.max(...expenses.map((e) => e.amount));
-
     return (
         <View style={expenseStyles.container}>
-            <Text style={[expenseStyles.heading, { color: theme.colors.onSurface }]}>Expense Breakdown</Text>
+            <Text
+                style={[
+                    expenseStyles.heading,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                Expense Breakdown
+            </Text>
             <View style={expenseStyles.bars}>
                 {expenses.map((expense) => {
                     const pct = maxAmount > 0 ? (expense.amount / maxAmount) * 100 : 0;
                     return (
                         <View key={expense.label} style={expenseStyles.barRow}>
                             <View style={expenseStyles.barLabelCol}>
-                                <View style={[expenseStyles.barDot, { backgroundColor: expense.color }]} />
+                                <View
+                                    style={[
+                                        expenseStyles.barDot,
+                                        {
+                                            backgroundColor: expense.color
+                                        }
+                                    ]}
+                                />
                                 <Text
-                                    style={[expenseStyles.barLabel, { color: theme.colors.onSurfaceVariant }]}
+                                    style={[
+                                        expenseStyles.barLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
                                     numberOfLines={1}
                                 >
                                     {expense.label}
                                 </Text>
                             </View>
                             <View style={expenseStyles.barTrackCol}>
-                                <View style={[expenseStyles.barTrack, { backgroundColor: `${expense.color}14` }]}>
+                                <View
+                                    style={[
+                                        expenseStyles.barTrack,
+                                        {
+                                            backgroundColor: `${expense.color}14`
+                                        }
+                                    ]}
+                                >
                                     <View
                                         style={[
                                             expenseStyles.barFill,
-                                            { width: `${Math.max(pct, 4)}%`, backgroundColor: expense.color }
+                                            {
+                                                width: `${Math.max(pct, 4)}%`,
+                                                backgroundColor: expense.color
+                                            }
                                         ]}
                                     />
                                 </View>
                             </View>
-                            <Text style={[expenseStyles.barAmount, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    expenseStyles.barAmount,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {formatFullCurrency(expense.amount)}
                             </Text>
                         </View>
                     );
                 })}
             </View>
-            <View style={[expenseStyles.totalRow, { borderTopColor: theme.colors.outlineVariant }]}>
-                <Text style={[expenseStyles.totalLabel, { color: theme.colors.onSurfaceVariant }]}>Total Monthly</Text>
-                <Text style={[expenseStyles.totalAmount, { color: theme.colors.onSurface }]}>
+            <View
+                style={[
+                    expenseStyles.totalRow,
+                    {
+                        borderTopColor: theme.colors.outlineVariant
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        expenseStyles.totalLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    Total Monthly
+                </Text>
+                <Text
+                    style={[
+                        expenseStyles.totalAmount,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
                     {formatFullCurrency(expenses.reduce((s, e) => s + e.amount, 0))}
                 </Text>
             </View>
         </View>
     );
 }
-
-const expenseStyles = StyleSheet.create((theme) => ({
+const expenseStyles = StyleSheet.create((_theme) => ({
     container: {
         gap: 10,
         paddingTop: 8
@@ -503,38 +771,103 @@ function PropertyCard({
     const isUp = appreciation >= 0;
     const appreciationPct = ((appreciation / property.purchasePrice) * 100).toFixed(1);
     const occupancyStyle = OCCUPANCY_COLORS[property.occupancy];
-
     return (
-        <View style={[cardStyles.card, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Card
+            style={[
+                cardStyles.card,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             <Pressable onPress={onToggle} style={cardStyles.cardHeader}>
                 <View style={cardStyles.cardMainInfo}>
                     <View style={cardStyles.addressRow}>
-                        <Text style={[cardStyles.address, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                cardStyles.address,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {property.address}
                         </Text>
-                        <View style={[cardStyles.occupancyBadge, { backgroundColor: occupancyStyle.bg }]}>
-                            <Text style={[cardStyles.occupancyText, { color: occupancyStyle.text }]}>
+                        <View
+                            style={[
+                                cardStyles.occupancyBadge,
+                                {
+                                    backgroundColor: occupancyStyle.bg
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    cardStyles.occupancyText,
+                                    {
+                                        color: occupancyStyle.text
+                                    }
+                                ]}
+                            >
                                 {OCCUPANCY_LABELS[property.occupancy]}
                             </Text>
                         </View>
                     </View>
-                    <Text style={[cardStyles.city, { color: theme.colors.onSurfaceVariant }]}>{property.city}</Text>
+                    <Text
+                        style={[
+                            cardStyles.city,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        {property.city}
+                    </Text>
 
                     <View style={cardStyles.statsRow}>
                         <View style={cardStyles.statItem}>
-                            <Text style={[cardStyles.statLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    cardStyles.statLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Purchase
                             </Text>
-                            <Text style={[cardStyles.statValue, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    cardStyles.statValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {formatCurrency(property.purchasePrice)}
                             </Text>
                         </View>
                         <View style={cardStyles.statItem}>
-                            <Text style={[cardStyles.statLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    cardStyles.statLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Current
                             </Text>
                             <View style={cardStyles.valueWithTrend}>
-                                <Text style={[cardStyles.statValue, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        cardStyles.statValue,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {formatCurrency(property.currentValue)}
                                 </Text>
                                 <Ionicons
@@ -542,21 +875,60 @@ function PropertyCard({
                                     size={12}
                                     color={isUp ? "#10B981" : "#EF4444"}
                                 />
-                                <Text style={[cardStyles.trendPct, { color: isUp ? "#10B981" : "#EF4444" }]}>
+                                <Text
+                                    style={[
+                                        cardStyles.trendPct,
+                                        {
+                                            color: isUp ? "#10B981" : "#EF4444"
+                                        }
+                                    ]}
+                                >
                                     {isUp ? "+" : ""}
                                     {appreciationPct}%
                                 </Text>
                             </View>
                         </View>
                         <View style={cardStyles.statItem}>
-                            <Text style={[cardStyles.statLabel, { color: theme.colors.onSurfaceVariant }]}>Rent</Text>
-                            <Text style={[cardStyles.statValue, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    cardStyles.statLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
+                                Rent
+                            </Text>
+                            <Text
+                                style={[
+                                    cardStyles.statValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {property.monthlyRent > 0 ? formatCurrency(property.monthlyRent) : "--"}
                             </Text>
                         </View>
                         <View style={cardStyles.statItem}>
-                            <Text style={[cardStyles.statLabel, { color: theme.colors.onSurfaceVariant }]}>ROI</Text>
-                            <Text style={[cardStyles.roiValue, { color: property.roi >= 0 ? "#10B981" : "#EF4444" }]}>
+                            <Text
+                                style={[
+                                    cardStyles.statLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
+                                ROI
+                            </Text>
+                            <Text
+                                style={[
+                                    cardStyles.roiValue,
+                                    {
+                                        color: property.roi >= 0 ? "#10B981" : "#EF4444"
+                                    }
+                                ]}
+                            >
                                 {property.roi >= 0 ? "+" : ""}
                                 {property.roi}%
                             </Text>
@@ -573,57 +945,141 @@ function PropertyCard({
 
             {/* Expanded detail panel */}
             {isExpanded && (
-                <View style={[cardStyles.detailPanel, { borderTopColor: theme.colors.outlineVariant }]}>
+                <View
+                    style={[
+                        cardStyles.detailPanel,
+                        {
+                            borderTopColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                >
                     {/* Mortgage info */}
                     <View style={cardStyles.detailSection}>
                         <View style={cardStyles.detailSectionHeader}>
                             <Ionicons name="card-outline" size={16} color={theme.colors.primary} />
-                            <Text style={[cardStyles.detailSectionTitle, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    cardStyles.detailSectionTitle,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 Mortgage
                             </Text>
                         </View>
-                        <View style={cardStyles.detailGrid}>
+                        <Grid style={cardStyles.detailGrid}>
                             <View style={cardStyles.detailGridItem}>
-                                <Text style={[cardStyles.detailLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        cardStyles.detailLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Lender
                                 </Text>
-                                <Text style={[cardStyles.detailValue, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        cardStyles.detailValue,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {property.mortgage.lender}
                                 </Text>
                             </View>
                             <View style={cardStyles.detailGridItem}>
-                                <Text style={[cardStyles.detailLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        cardStyles.detailLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Balance
                                 </Text>
-                                <Text style={[cardStyles.detailValue, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        cardStyles.detailValue,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {formatFullCurrency(property.mortgage.balance)}
                                 </Text>
                             </View>
                             <View style={cardStyles.detailGridItem}>
-                                <Text style={[cardStyles.detailLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        cardStyles.detailLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Rate
                                 </Text>
-                                <Text style={[cardStyles.detailValue, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        cardStyles.detailValue,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {property.mortgage.rate}%
                                 </Text>
                             </View>
                             <View style={cardStyles.detailGridItem}>
-                                <Text style={[cardStyles.detailLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        cardStyles.detailLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Monthly
                                 </Text>
-                                <Text style={[cardStyles.detailValue, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        cardStyles.detailValue,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {formatFullCurrency(property.mortgage.monthlyPayment)}
                                 </Text>
                             </View>
                             <View style={cardStyles.detailGridItem}>
-                                <Text style={[cardStyles.detailLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        cardStyles.detailLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Remaining
                                 </Text>
-                                <Text style={[cardStyles.detailValue, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        cardStyles.detailValue,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {property.mortgage.remainingYears} yrs
                                 </Text>
                             </View>
-                        </View>
+                        </Grid>
                     </View>
 
                     {/* Expense breakdown */}
@@ -633,50 +1089,115 @@ function PropertyCard({
                     <View style={cardStyles.detailSection}>
                         <View style={cardStyles.detailSectionHeader}>
                             <Ionicons name="person-outline" size={16} color={theme.colors.primary} />
-                            <Text style={[cardStyles.detailSectionTitle, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    cardStyles.detailSectionTitle,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 Tenant
                             </Text>
                         </View>
                         {property.tenant ? (
-                            <View style={cardStyles.detailGrid}>
+                            <Grid style={cardStyles.detailGrid}>
                                 <View style={cardStyles.detailGridItem}>
-                                    <Text style={[cardStyles.detailLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                    <Text
+                                        style={[
+                                            cardStyles.detailLabel,
+                                            {
+                                                color: theme.colors.onSurfaceVariant
+                                            }
+                                        ]}
+                                    >
                                         Name
                                     </Text>
-                                    <Text style={[cardStyles.detailValue, { color: theme.colors.onSurface }]}>
+                                    <Text
+                                        style={[
+                                            cardStyles.detailValue,
+                                            {
+                                                color: theme.colors.onSurface
+                                            }
+                                        ]}
+                                    >
                                         {property.tenant.name}
                                     </Text>
                                 </View>
                                 <View style={cardStyles.detailGridItem}>
-                                    <Text style={[cardStyles.detailLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                    <Text
+                                        style={[
+                                            cardStyles.detailLabel,
+                                            {
+                                                color: theme.colors.onSurfaceVariant
+                                            }
+                                        ]}
+                                    >
                                         Since
                                     </Text>
-                                    <Text style={[cardStyles.detailValue, { color: theme.colors.onSurface }]}>
+                                    <Text
+                                        style={[
+                                            cardStyles.detailValue,
+                                            {
+                                                color: theme.colors.onSurface
+                                            }
+                                        ]}
+                                    >
                                         {property.tenant.since}
                                     </Text>
                                 </View>
                                 <View style={cardStyles.detailGridItem}>
-                                    <Text style={[cardStyles.detailLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                    <Text
+                                        style={[
+                                            cardStyles.detailLabel,
+                                            {
+                                                color: theme.colors.onSurfaceVariant
+                                            }
+                                        ]}
+                                    >
                                         Lease End
                                     </Text>
-                                    <Text style={[cardStyles.detailValue, { color: theme.colors.onSurface }]}>
+                                    <Text
+                                        style={[
+                                            cardStyles.detailValue,
+                                            {
+                                                color: theme.colors.onSurface
+                                            }
+                                        ]}
+                                    >
                                         {property.tenant.leaseEnd}
                                     </Text>
                                 </View>
                                 <View style={cardStyles.detailGridItem}>
-                                    <Text style={[cardStyles.detailLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                    <Text
+                                        style={[
+                                            cardStyles.detailLabel,
+                                            {
+                                                color: theme.colors.onSurfaceVariant
+                                            }
+                                        ]}
+                                    >
                                         Rent
                                     </Text>
-                                    <Text style={[cardStyles.detailValue, { color: theme.colors.onSurface }]}>
+                                    <Text
+                                        style={[
+                                            cardStyles.detailValue,
+                                            {
+                                                color: theme.colors.onSurface
+                                            }
+                                        ]}
+                                    >
                                         {formatFullCurrency(property.tenant.monthlyRent)}/mo
                                     </Text>
                                 </View>
-                            </View>
+                            </Grid>
                         ) : (
                             <View
                                 style={[
                                     cardStyles.emptyTenant,
-                                    { backgroundColor: `${OCCUPANCY_COLORS[property.occupancy].text}10` }
+                                    {
+                                        backgroundColor: `${OCCUPANCY_COLORS[property.occupancy].text}10`
+                                    }
                                 ]}
                             >
                                 <Ionicons
@@ -691,7 +1212,9 @@ function PropertyCard({
                                 <Text
                                     style={[
                                         cardStyles.emptyTenantText,
-                                        { color: OCCUPANCY_COLORS[property.occupancy].text }
+                                        {
+                                            color: OCCUPANCY_COLORS[property.occupancy].text
+                                        }
                                     ]}
                                 >
                                     {property.occupancy === "maintenance"
@@ -703,11 +1226,10 @@ function PropertyCard({
                     </View>
                 </View>
             )}
-        </View>
+        </Card>
     );
 }
-
-const cardStyles = StyleSheet.create((theme) => ({
+const cardStyles = StyleSheet.create((_theme) => ({
     card: {
         borderRadius: 14,
         overflow: "hidden"
@@ -853,16 +1375,47 @@ function SectionHeader({
     count: number;
 }) {
     const { theme } = useUnistyles();
-
     return (
         <Pressable onPress={onToggle} style={sectionStyles.header}>
             <View style={sectionStyles.titleRow}>
-                <View style={[sectionStyles.iconBadge, { backgroundColor: `${iconColor}18` }]}>
+                <View
+                    style={[
+                        sectionStyles.iconBadge,
+                        {
+                            backgroundColor: `${iconColor}18`
+                        }
+                    ]}
+                >
                     <Ionicons name={icon} size={18} color={iconColor} />
                 </View>
-                <Text style={[sectionStyles.title, { color: theme.colors.onSurface }]}>{title}</Text>
-                <View style={[sectionStyles.countBadge, { backgroundColor: `${iconColor}18` }]}>
-                    <Text style={[sectionStyles.countText, { color: iconColor }]}>{count}</Text>
+                <Text
+                    style={[
+                        sectionStyles.title,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    {title}
+                </Text>
+                <View
+                    style={[
+                        sectionStyles.countBadge,
+                        {
+                            backgroundColor: `${iconColor}18`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            sectionStyles.countText,
+                            {
+                                color: iconColor
+                            }
+                        ]}
+                    >
+                        {count}
+                    </Text>
                 </View>
             </View>
             <Ionicons
@@ -873,8 +1426,7 @@ function SectionHeader({
         </Pressable>
     );
 }
-
-const sectionStyles = StyleSheet.create((theme) => ({
+const sectionStyles = StyleSheet.create((_theme) => ({
     header: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -923,7 +1475,6 @@ function FilterChips({
 }) {
     const { theme } = useUnistyles();
     const filters: (PropertyType | "all")[] = ["all", ...PROPERTY_TYPES];
-
     return (
         <View style={filterStyles.row}>
             {filters.map((filter) => {
@@ -950,7 +1501,12 @@ function FilterChips({
                             />
                         )}
                         <Text
-                            style={[filterStyles.chipText, { color: isActive ? color : theme.colors.onSurfaceVariant }]}
+                            style={[
+                                filterStyles.chipText,
+                                {
+                                    color: isActive ? color : theme.colors.onSurfaceVariant
+                                }
+                            ]}
                         >
                             {filter === "all" ? "All" : filter}
                         </Text>
@@ -960,8 +1516,7 @@ function FilterChips({
         </View>
     );
 }
-
-const filterStyles = StyleSheet.create((theme) => ({
+const filterStyles = StyleSheet.create((_theme) => ({
     row: {
         flexDirection: "row",
         flexWrap: "wrap",
@@ -989,14 +1544,11 @@ export function RealEstatePage() {
     const [activeFilter, setActiveFilter] = React.useState<PropertyType | "all">("all");
     const [expandedId, setExpandedId] = React.useState<string | null>(null);
     const [collapsedSections, setCollapsedSections] = React.useState<Set<PropertyType>>(new Set());
-
     const filteredProperties = React.useMemo(() => {
         if (activeFilter === "all") return properties;
         return properties.filter((p) => p.type === activeFilter);
     }, [activeFilter]);
-
     const grouped = React.useMemo(() => groupByType(filteredProperties), [filteredProperties]);
-
     const toggleSection = React.useCallback((type: PropertyType) => {
         setCollapsedSections((prev) => {
             const next = new Set(prev);
@@ -1008,23 +1560,51 @@ export function RealEstatePage() {
             return next;
         });
     }, []);
-
     const toggleProperty = React.useCallback((id: string) => {
         setExpandedId((prev) => (prev === id ? null : id));
     }, []);
-
     return (
         <ShowcasePage topInset={24} bottomInset={60}>
             {/* Hero: Portfolio Value */}
             <View style={pageStyles.hero}>
-                <Text style={[pageStyles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>PORTFOLIO VALUE</Text>
-                <Text style={[pageStyles.heroValue, { color: theme.colors.onSurface }]}>
+                <Text
+                    style={[
+                        pageStyles.heroLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    PORTFOLIO VALUE
+                </Text>
+                <Text
+                    style={[
+                        pageStyles.heroValue,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
                     ${TOTAL_PORTFOLIO_VALUE.toLocaleString("en-US")}
                 </Text>
                 <View style={pageStyles.heroBadgeRow}>
-                    <View style={[pageStyles.heroBadge, { backgroundColor: "#10B98118" }]}>
+                    <View
+                        style={[
+                            pageStyles.heroBadge,
+                            {
+                                backgroundColor: "#10B98118"
+                            }
+                        ]}
+                    >
                         <Ionicons name="trending-up" size={14} color="#10B981" />
-                        <Text style={[pageStyles.heroBadgeText, { color: "#10B981" }]}>
+                        <Text
+                            style={[
+                                pageStyles.heroBadgeText,
+                                {
+                                    color: "#10B981"
+                                }
+                            ]}
+                        >
                             {PORTFOLIO_TREND} this year
                         </Text>
                     </View>
@@ -1032,7 +1612,7 @@ export function RealEstatePage() {
             </View>
 
             {/* Metric Cards */}
-            <View style={pageStyles.metricsGrid}>
+            <Grid style={pageStyles.metricsGrid}>
                 <MetricCard
                     title="Properties"
                     value={`${TOTAL_PROPERTIES}`}
@@ -1061,7 +1641,7 @@ export function RealEstatePage() {
                     color="#F59E0B"
                     subtitle="Avg rate"
                 />
-            </View>
+            </Grid>
 
             {/* Filter chips */}
             <FilterChips activeFilter={activeFilter} onFilter={setActiveFilter} />
@@ -1071,7 +1651,6 @@ export function RealEstatePage() {
                 const isExpanded = !collapsedSections.has(group.type);
                 const typeColor = TYPE_COLORS[group.type];
                 const typeIcon = TYPE_ICONS[group.type];
-
                 return (
                     <React.Fragment key={group.type}>
                         <SectionHeader
@@ -1103,7 +1682,7 @@ export function RealEstatePage() {
 
 // --- Page Styles ---
 
-const pageStyles = StyleSheet.create((theme) => ({
+const pageStyles = StyleSheet.create((_theme) => ({
     hero: {
         alignItems: "center",
         paddingTop: 8,

@@ -2,9 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type QueueEpisode = {
     id: string;
@@ -14,7 +14,6 @@ type QueueEpisode = {
     progress: number; // 0-100, 0 = unplayed
     color: string;
 };
-
 type NewEpisode = {
     id: string;
     title: string;
@@ -23,7 +22,6 @@ type NewEpisode = {
     publishDate: string;
     color: string;
 };
-
 type Subscription = {
     id: string;
     name: string;
@@ -77,7 +75,6 @@ const initialQueue: QueueEpisode[] = [
         color: "#0891b2"
     }
 ];
-
 const newEpisodes: NewEpisode[] = [
     {
         id: "n1",
@@ -112,7 +109,6 @@ const newEpisodes: NewEpisode[] = [
         color: "#d97706"
     }
 ];
-
 const subscriptions: Subscription[] = [
     {
         id: "s1",
@@ -174,7 +170,6 @@ function formatDuration(minutes: number): string {
     }
     return `${m}m`;
 }
-
 function getInitials(name: string): string {
     return name
         .split(" ")
@@ -226,13 +221,45 @@ function StatCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <View style={[styles.statCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-            <View style={[styles.statIconCircle, { backgroundColor: `${accentColor}18` }]}>
+        <Card
+            style={[
+                styles.statCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.statIconCircle,
+                    {
+                        backgroundColor: `${accentColor}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={20} color={accentColor} />
             </View>
-            <Text style={[styles.statValue, { color: theme.colors.onSurface }]}>{value}</Text>
-            <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
-        </View>
+            <Text
+                style={[
+                    styles.statValue,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            <Text
+                style={[
+                    styles.statLabel,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {label}
+            </Text>
+        </Card>
     );
 }
 
@@ -251,10 +278,35 @@ function SectionHeader({
     return (
         <View style={styles.sectionHeader}>
             <Ionicons name={icon} size={20} color={theme.colors.onSurface} />
-            <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>{title}</Text>
+            <Text
+                style={[
+                    styles.sectionTitle,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {title}
+            </Text>
             {count !== undefined && (
-                <View style={[styles.countBadge, { backgroundColor: `${theme.colors.primary}18` }]}>
-                    <Text style={[styles.countBadgeText, { color: theme.colors.primary }]}>{count}</Text>
+                <View
+                    style={[
+                        styles.countBadge,
+                        {
+                            backgroundColor: `${theme.colors.primary}18`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.countBadgeText,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
+                        {count}
+                    </Text>
                 </View>
             )}
         </View>
@@ -265,7 +317,14 @@ function SectionHeader({
 
 function ProgressBar({ progress, color, trackColor }: { progress: number; color: string; trackColor: string }) {
     return (
-        <View style={[styles.progressTrack, { backgroundColor: trackColor }]}>
+        <View
+            style={[
+                styles.progressTrack,
+                {
+                    backgroundColor: trackColor
+                }
+            ]}
+        >
             <View
                 style={[
                     styles.progressFill,
@@ -299,13 +358,35 @@ function QueueItem({
     const { theme } = useUnistyles();
     const isPartiallyPlayed = episode.progress > 0;
     const remainingMinutes = Math.round(episode.duration * (1 - episode.progress / 100));
-
     return (
-        <View style={[styles.queueCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Card
+            style={[
+                styles.queueCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             <View style={styles.queueCardContent}>
                 {/* Order number */}
-                <View style={[styles.orderBadge, { backgroundColor: `${theme.colors.primary}15` }]}>
-                    <Text style={[styles.orderNumber, { color: theme.colors.primary }]}>{index + 1}</Text>
+                <View
+                    style={[
+                        styles.orderBadge,
+                        {
+                            backgroundColor: `${theme.colors.primary}15`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.orderNumber,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
+                        {index + 1}
+                    </Text>
                 </View>
 
                 {/* Artwork */}
@@ -313,22 +394,59 @@ function QueueItem({
 
                 {/* Info */}
                 <View style={styles.queueInfo}>
-                    <Text style={[styles.episodeTitle, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                    <Text
+                        style={[
+                            styles.episodeTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                        numberOfLines={1}
+                    >
                         {episode.title}
                     </Text>
-                    <Text style={[styles.podcastName, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
+                    <Text
+                        style={[
+                            styles.podcastName,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                        numberOfLines={1}
+                    >
                         {episode.podcastName}
                     </Text>
                     <View style={styles.queueMeta}>
-                        <Text style={[styles.durationText, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.durationText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {isPartiallyPlayed
                                 ? `${formatDuration(remainingMinutes)} left`
                                 : formatDuration(episode.duration)}
                         </Text>
                         {isPartiallyPlayed && (
-                            <View style={[styles.playingBadge, { backgroundColor: `${theme.colors.primary}18` }]}>
+                            <View
+                                style={[
+                                    styles.playingBadge,
+                                    {
+                                        backgroundColor: `${theme.colors.primary}18`
+                                    }
+                                ]}
+                            >
                                 <Ionicons name="play" size={8} color={theme.colors.primary} />
-                                <Text style={[styles.playingBadgeText, { color: theme.colors.primary }]}>
+                                <Text
+                                    style={[
+                                        styles.playingBadgeText,
+                                        {
+                                            color: theme.colors.primary
+                                        }
+                                    ]}
+                                >
                                     In Progress
                                 </Text>
                             </View>
@@ -377,7 +495,7 @@ function QueueItem({
                     />
                 </View>
             )}
-        </View>
+        </Card>
     );
 }
 
@@ -386,35 +504,95 @@ function QueueItem({
 function NewEpisodeItem({ episode }: { episode: NewEpisode }) {
     const { theme } = useUnistyles();
     const isToday = episode.publishDate === "Today";
-
     return (
-        <View style={[styles.newEpisodeCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Card
+            style={[
+                styles.newEpisodeCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             <PodcastArtwork name={episode.podcastName} color={episode.color} size={44} />
             <View style={styles.newEpisodeInfo}>
                 <View style={styles.newEpisodeTitleRow}>
-                    <Text style={[styles.episodeTitle, { color: theme.colors.onSurface, flex: 1 }]} numberOfLines={1}>
+                    <Text
+                        style={[
+                            styles.episodeTitle,
+                            {
+                                color: theme.colors.onSurface,
+                                flex: 1
+                            }
+                        ]}
+                        numberOfLines={1}
+                    >
                         {episode.title}
                     </Text>
                     {isToday && (
-                        <View style={[styles.newBadge, { backgroundColor: theme.colors.primary }]}>
-                            <Text style={[styles.newBadgeText, { color: theme.colors.onPrimary }]}>NEW</Text>
+                        <View
+                            style={[
+                                styles.newBadge,
+                                {
+                                    backgroundColor: theme.colors.primary
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.newBadgeText,
+                                    {
+                                        color: theme.colors.onPrimary
+                                    }
+                                ]}
+                            >
+                                NEW
+                            </Text>
                         </View>
                     )}
                 </View>
-                <Text style={[styles.podcastName, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
+                <Text
+                    style={[
+                        styles.podcastName,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                    numberOfLines={1}
+                >
                     {episode.podcastName}
                 </Text>
                 <View style={styles.newEpisodeMeta}>
-                    <Text style={[styles.metaText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.metaText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {episode.publishDate}
                     </Text>
-                    <View style={[styles.metaDot, { backgroundColor: theme.colors.outlineVariant }]} />
-                    <Text style={[styles.durationText, { color: theme.colors.onSurfaceVariant }]}>
+                    <View
+                        style={[
+                            styles.metaDot,
+                            {
+                                backgroundColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    />
+                    <Text
+                        style={[
+                            styles.durationText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {formatDuration(episode.duration)}
                     </Text>
                 </View>
             </View>
-        </View>
+        </Card>
     );
 }
 
@@ -422,7 +600,6 @@ function NewEpisodeItem({ episode }: { episode: NewEpisode }) {
 
 function SubscriptionItem({ subscription }: { subscription: Subscription }) {
     const { theme } = useUnistyles();
-
     const frequencyColors: Record<string, string> = {
         Daily: "#d97706",
         Weekly: "#059669",
@@ -430,30 +607,83 @@ function SubscriptionItem({ subscription }: { subscription: Subscription }) {
         Monthly: "#7c3aed"
     };
     const freqColor = frequencyColors[subscription.frequency] || theme.colors.primary;
-
     return (
-        <View style={[styles.subscriptionCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Card
+            style={[
+                styles.subscriptionCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             <PodcastArtwork name={subscription.name} color={subscription.color} size={44} />
             <View style={styles.subscriptionInfo}>
-                <Text style={[styles.subscriptionName, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                <Text
+                    style={[
+                        styles.subscriptionName,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                    numberOfLines={1}
+                >
                     {subscription.name}
                 </Text>
                 <View style={styles.subscriptionMeta}>
-                    <View style={[styles.frequencyChip, { backgroundColor: `${freqColor}18` }]}>
-                        <Text style={[styles.frequencyChipText, { color: freqColor }]}>{subscription.frequency}</Text>
+                    <View
+                        style={[
+                            styles.frequencyChip,
+                            {
+                                backgroundColor: `${freqColor}18`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.frequencyChipText,
+                                {
+                                    color: freqColor
+                                }
+                            ]}
+                        >
+                            {subscription.frequency}
+                        </Text>
                     </View>
-                    <Text style={[styles.metaText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.metaText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {subscription.episodeCount} eps
                     </Text>
                 </View>
             </View>
             <View style={styles.subscriptionRight}>
-                <Text style={[styles.lastEpisodeLabel, { color: theme.colors.onSurfaceVariant }]}>Last ep</Text>
-                <Text style={[styles.lastEpisodeDate, { color: theme.colors.onSurface }]}>
+                <Text
+                    style={[
+                        styles.lastEpisodeLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    Last ep
+                </Text>
+                <Text
+                    style={[
+                        styles.lastEpisodeDate,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
                     {subscription.lastEpisodeDate}
                 </Text>
             </View>
-        </View>
+        </Card>
     );
 }
 
@@ -462,7 +692,6 @@ function SubscriptionItem({ subscription }: { subscription: Subscription }) {
 export function PodcastQueuePage() {
     const { theme } = useUnistyles();
     const [queue, setQueue] = React.useState(initialQueue);
-
     const moveUp = React.useCallback((index: number) => {
         if (index <= 0) return;
         setQueue((prev) => {
@@ -473,7 +702,6 @@ export function PodcastQueuePage() {
             return next;
         });
     }, []);
-
     const moveDown = React.useCallback((index: number) => {
         setQueue((prev) => {
             if (index >= prev.length - 1) return prev;
@@ -491,10 +719,12 @@ export function PodcastQueuePage() {
         return sum + remaining;
     }, 0);
     const totalQueueHours = (totalQueueMinutes / 60).toFixed(1);
-
     return (
         <ShowcasePage
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
             topInset={20}
             bottomInset={48}
             contentGap={28}
@@ -559,7 +789,7 @@ export function PodcastQueuePage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Stats
     statsRow: {
         flexDirection: "row",
@@ -588,7 +818,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Section
     section: {
         gap: 12
@@ -615,7 +844,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 12
     },
-
     // Queue card
     queueCard: {
         borderRadius: 14,
@@ -685,7 +913,6 @@ const styles = StyleSheet.create((theme) => ({
     queueProgressContainer: {
         paddingHorizontal: 4
     },
-
     // Progress bar
     progressTrack: {
         height: 4,
@@ -696,7 +923,6 @@ const styles = StyleSheet.create((theme) => ({
         height: "100%",
         borderRadius: 2
     },
-
     // New episode card
     newEpisodeCard: {
         borderRadius: 14,
@@ -739,7 +965,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 3,
         borderRadius: 1.5
     },
-
     // Subscription card
     subscriptionCard: {
         borderRadius: 14,

@@ -2,15 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type MealType = "All" | "Breakfast" | "Lunch" | "Dinner" | "Snacks";
 type Difficulty = "easy" | "medium" | "hard";
 type DietaryTag = "vegetarian" | "gluten-free" | "dairy-free";
 type Cuisine = "Italian" | "Mexican" | "Japanese" | "Indian" | "American" | "Thai";
-
 type Recipe = {
     id: string;
     name: string;
@@ -21,14 +20,16 @@ type Recipe = {
     difficulty: Difficulty;
     dietary: DietaryTag[];
     servings: number;
-    ingredients: { name: string; amount: string }[];
+    ingredients: {
+        name: string;
+        amount: string;
+    }[];
     steps: string[];
 };
 
 // --- Constants ---
 
 const MEAL_TYPES: MealType[] = ["All", "Breakfast", "Lunch", "Dinner", "Snacks"];
-
 const MEAL_ICONS: Record<MealType, keyof typeof Ionicons.glyphMap> = {
     All: "grid-outline",
     Breakfast: "sunny-outline",
@@ -36,25 +37,21 @@ const MEAL_ICONS: Record<MealType, keyof typeof Ionicons.glyphMap> = {
     Dinner: "moon-outline",
     Snacks: "cafe-outline"
 };
-
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
     easy: "#16a34a",
     medium: "#d97706",
     hard: "#dc2626"
 };
-
 const DIETARY_COLORS: Record<DietaryTag, string> = {
     vegetarian: "#16a34a",
     "gluten-free": "#7c3aed",
     "dairy-free": "#0891b2"
 };
-
 const DIETARY_ICONS: Record<DietaryTag, keyof typeof Ionicons.glyphMap> = {
     vegetarian: "leaf-outline",
     "gluten-free": "nutrition-outline",
     "dairy-free": "water-outline"
 };
-
 const CUISINE_COLORS: Record<Cuisine, string> = {
     Italian: "#dc2626",
     Mexican: "#ea580c",
@@ -78,12 +75,30 @@ const RECIPES: Recipe[] = [
         dietary: ["vegetarian"],
         servings: 2,
         ingredients: [
-            { name: "Sourdough bread", amount: "2 slices" },
-            { name: "Ripe avocado", amount: "1 large" },
-            { name: "Eggs", amount: "2" },
-            { name: "Lemon juice", amount: "1 tsp" },
-            { name: "Red pepper flakes", amount: "pinch" },
-            { name: "Salt & pepper", amount: "to taste" }
+            {
+                name: "Sourdough bread",
+                amount: "2 slices"
+            },
+            {
+                name: "Ripe avocado",
+                amount: "1 large"
+            },
+            {
+                name: "Eggs",
+                amount: "2"
+            },
+            {
+                name: "Lemon juice",
+                amount: "1 tsp"
+            },
+            {
+                name: "Red pepper flakes",
+                amount: "pinch"
+            },
+            {
+                name: "Salt & pepper",
+                amount: "to taste"
+            }
         ],
         steps: [
             "Toast the sourdough bread until golden and crispy.",
@@ -105,12 +120,30 @@ const RECIPES: Recipe[] = [
         dietary: ["vegetarian"],
         servings: 4,
         ingredients: [
-            { name: "Pizza dough", amount: "500g" },
-            { name: "San Marzano tomatoes", amount: "400g can" },
-            { name: "Fresh mozzarella", amount: "250g" },
-            { name: "Fresh basil", amount: "1 bunch" },
-            { name: "Olive oil", amount: "2 tbsp" },
-            { name: "Salt", amount: "1 tsp" }
+            {
+                name: "Pizza dough",
+                amount: "500g"
+            },
+            {
+                name: "San Marzano tomatoes",
+                amount: "400g can"
+            },
+            {
+                name: "Fresh mozzarella",
+                amount: "250g"
+            },
+            {
+                name: "Fresh basil",
+                amount: "1 bunch"
+            },
+            {
+                name: "Olive oil",
+                amount: "2 tbsp"
+            },
+            {
+                name: "Salt",
+                amount: "1 tsp"
+            }
         ],
         steps: [
             "Preheat oven to 250C (480F) with a pizza stone or inverted baking sheet inside.",
@@ -133,14 +166,38 @@ const RECIPES: Recipe[] = [
         dietary: ["gluten-free", "dairy-free"],
         servings: 3,
         ingredients: [
-            { name: "Rice noodles", amount: "250g" },
-            { name: "Chicken breast", amount: "300g" },
-            { name: "Eggs", amount: "2" },
-            { name: "Bean sprouts", amount: "1 cup" },
-            { name: "Fish sauce", amount: "3 tbsp" },
-            { name: "Tamarind paste", amount: "2 tbsp" },
-            { name: "Crushed peanuts", amount: "1/4 cup" },
-            { name: "Lime", amount: "1" }
+            {
+                name: "Rice noodles",
+                amount: "250g"
+            },
+            {
+                name: "Chicken breast",
+                amount: "300g"
+            },
+            {
+                name: "Eggs",
+                amount: "2"
+            },
+            {
+                name: "Bean sprouts",
+                amount: "1 cup"
+            },
+            {
+                name: "Fish sauce",
+                amount: "3 tbsp"
+            },
+            {
+                name: "Tamarind paste",
+                amount: "2 tbsp"
+            },
+            {
+                name: "Crushed peanuts",
+                amount: "1/4 cup"
+            },
+            {
+                name: "Lime",
+                amount: "1"
+            }
         ],
         steps: [
             "Soak rice noodles in warm water for 20 minutes, then drain.",
@@ -162,11 +219,26 @@ const RECIPES: Recipe[] = [
         dietary: ["gluten-free", "dairy-free"],
         servings: 6,
         ingredients: [
-            { name: "Sushi rice (cooked)", amount: "3 cups" },
-            { name: "Nori sheets", amount: "3" },
-            { name: "Salmon flakes", amount: "1/2 cup" },
-            { name: "Salt", amount: "1 tsp" },
-            { name: "Sesame seeds", amount: "1 tbsp" }
+            {
+                name: "Sushi rice (cooked)",
+                amount: "3 cups"
+            },
+            {
+                name: "Nori sheets",
+                amount: "3"
+            },
+            {
+                name: "Salmon flakes",
+                amount: "1/2 cup"
+            },
+            {
+                name: "Salt",
+                amount: "1 tsp"
+            },
+            {
+                name: "Sesame seeds",
+                amount: "1 tbsp"
+            }
         ],
         steps: [
             "Season cooked sushi rice with salt while still warm.",
@@ -188,14 +260,38 @@ const RECIPES: Recipe[] = [
         dietary: ["dairy-free"],
         servings: 4,
         ingredients: [
-            { name: "Pork shoulder", amount: "500g" },
-            { name: "Pineapple", amount: "4 slices" },
-            { name: "Dried guajillo chiles", amount: "4" },
-            { name: "Corn tortillas", amount: "12 small" },
-            { name: "White onion", amount: "1" },
-            { name: "Cilantro", amount: "1 bunch" },
-            { name: "Lime", amount: "2" },
-            { name: "Achiote paste", amount: "2 tbsp" }
+            {
+                name: "Pork shoulder",
+                amount: "500g"
+            },
+            {
+                name: "Pineapple",
+                amount: "4 slices"
+            },
+            {
+                name: "Dried guajillo chiles",
+                amount: "4"
+            },
+            {
+                name: "Corn tortillas",
+                amount: "12 small"
+            },
+            {
+                name: "White onion",
+                amount: "1"
+            },
+            {
+                name: "Cilantro",
+                amount: "1 bunch"
+            },
+            {
+                name: "Lime",
+                amount: "2"
+            },
+            {
+                name: "Achiote paste",
+                amount: "2 tbsp"
+            }
         ],
         steps: [
             "Rehydrate guajillo chiles in hot water for 15 minutes, then blend with achiote paste.",
@@ -217,14 +313,38 @@ const RECIPES: Recipe[] = [
         dietary: ["vegetarian", "gluten-free"],
         servings: 4,
         ingredients: [
-            { name: "Paneer", amount: "300g" },
-            { name: "Fresh spinach", amount: "500g" },
-            { name: "Onion", amount: "1 large" },
-            { name: "Garlic cloves", amount: "4" },
-            { name: "Ginger", amount: "1 inch" },
-            { name: "Green chili", amount: "2" },
-            { name: "Cream", amount: "3 tbsp" },
-            { name: "Garam masala", amount: "1 tsp" }
+            {
+                name: "Paneer",
+                amount: "300g"
+            },
+            {
+                name: "Fresh spinach",
+                amount: "500g"
+            },
+            {
+                name: "Onion",
+                amount: "1 large"
+            },
+            {
+                name: "Garlic cloves",
+                amount: "4"
+            },
+            {
+                name: "Ginger",
+                amount: "1 inch"
+            },
+            {
+                name: "Green chili",
+                amount: "2"
+            },
+            {
+                name: "Cream",
+                amount: "3 tbsp"
+            },
+            {
+                name: "Garam masala",
+                amount: "1 tsp"
+            }
         ],
         steps: [
             "Blanch spinach in boiling water for 2 minutes, then transfer to ice water.",
@@ -246,11 +366,26 @@ const RECIPES: Recipe[] = [
         dietary: ["vegetarian", "gluten-free"],
         servings: 1,
         ingredients: [
-            { name: "Greek yogurt", amount: "1 cup" },
-            { name: "Granola", amount: "1/2 cup" },
-            { name: "Mixed berries", amount: "1/2 cup" },
-            { name: "Honey", amount: "1 tbsp" },
-            { name: "Chia seeds", amount: "1 tsp" }
+            {
+                name: "Greek yogurt",
+                amount: "1 cup"
+            },
+            {
+                name: "Granola",
+                amount: "1/2 cup"
+            },
+            {
+                name: "Mixed berries",
+                amount: "1/2 cup"
+            },
+            {
+                name: "Honey",
+                amount: "1 tbsp"
+            },
+            {
+                name: "Chia seeds",
+                amount: "1 tsp"
+            }
         ],
         steps: [
             "Layer half the yogurt in the bottom of a glass or bowl.",
@@ -270,12 +405,30 @@ const RECIPES: Recipe[] = [
         dietary: [],
         servings: 2,
         ingredients: [
-            { name: "Flour tortillas", amount: "2 large" },
-            { name: "Grilled chicken breast", amount: "200g" },
-            { name: "Romaine lettuce", amount: "2 cups" },
-            { name: "Parmesan cheese", amount: "1/4 cup" },
-            { name: "Caesar dressing", amount: "3 tbsp" },
-            { name: "Croutons", amount: "1/4 cup" }
+            {
+                name: "Flour tortillas",
+                amount: "2 large"
+            },
+            {
+                name: "Grilled chicken breast",
+                amount: "200g"
+            },
+            {
+                name: "Romaine lettuce",
+                amount: "2 cups"
+            },
+            {
+                name: "Parmesan cheese",
+                amount: "1/4 cup"
+            },
+            {
+                name: "Caesar dressing",
+                amount: "3 tbsp"
+            },
+            {
+                name: "Croutons",
+                amount: "1/4 cup"
+            }
         ],
         steps: [
             "Season chicken with salt and pepper, grill until internal temp reaches 74C.",
@@ -297,14 +450,38 @@ const RECIPES: Recipe[] = [
         dietary: ["dairy-free"],
         servings: 2,
         ingredients: [
-            { name: "Ramen noodles", amount: "200g" },
-            { name: "White miso paste", amount: "3 tbsp" },
-            { name: "Chicken broth", amount: "4 cups" },
-            { name: "Soft-boiled eggs", amount: "2" },
-            { name: "Chashu pork", amount: "6 slices" },
-            { name: "Corn kernels", amount: "1/4 cup" },
-            { name: "Green onions", amount: "2 stalks" },
-            { name: "Nori", amount: "2 sheets" }
+            {
+                name: "Ramen noodles",
+                amount: "200g"
+            },
+            {
+                name: "White miso paste",
+                amount: "3 tbsp"
+            },
+            {
+                name: "Chicken broth",
+                amount: "4 cups"
+            },
+            {
+                name: "Soft-boiled eggs",
+                amount: "2"
+            },
+            {
+                name: "Chashu pork",
+                amount: "6 slices"
+            },
+            {
+                name: "Corn kernels",
+                amount: "1/4 cup"
+            },
+            {
+                name: "Green onions",
+                amount: "2 stalks"
+            },
+            {
+                name: "Nori",
+                amount: "2 sheets"
+            }
         ],
         steps: [
             "Bring chicken broth to a simmer and dissolve miso paste into it.",
@@ -326,12 +503,30 @@ const RECIPES: Recipe[] = [
         dietary: ["vegetarian", "dairy-free"],
         servings: 4,
         ingredients: [
-            { name: "Ciabatta bread", amount: "1 loaf" },
-            { name: "Roma tomatoes", amount: "4" },
-            { name: "Fresh basil", amount: "8 leaves" },
-            { name: "Garlic cloves", amount: "2" },
-            { name: "Extra virgin olive oil", amount: "3 tbsp" },
-            { name: "Balsamic vinegar", amount: "1 tbsp" }
+            {
+                name: "Ciabatta bread",
+                amount: "1 loaf"
+            },
+            {
+                name: "Roma tomatoes",
+                amount: "4"
+            },
+            {
+                name: "Fresh basil",
+                amount: "8 leaves"
+            },
+            {
+                name: "Garlic cloves",
+                amount: "2"
+            },
+            {
+                name: "Extra virgin olive oil",
+                amount: "3 tbsp"
+            },
+            {
+                name: "Balsamic vinegar",
+                amount: "1 tbsp"
+            }
         ],
         steps: [
             "Dice tomatoes, combine with torn basil, olive oil, balsamic vinegar, salt and pepper.",
@@ -353,14 +548,38 @@ const RECIPES: Recipe[] = [
         dietary: ["gluten-free"],
         servings: 4,
         ingredients: [
-            { name: "Chicken thighs", amount: "600g" },
-            { name: "Yogurt", amount: "1/2 cup" },
-            { name: "Tomato puree", amount: "400g" },
-            { name: "Butter", amount: "3 tbsp" },
-            { name: "Heavy cream", amount: "1/2 cup" },
-            { name: "Garam masala", amount: "2 tsp" },
-            { name: "Kasuri methi", amount: "1 tbsp" },
-            { name: "Garlic-ginger paste", amount: "2 tbsp" }
+            {
+                name: "Chicken thighs",
+                amount: "600g"
+            },
+            {
+                name: "Yogurt",
+                amount: "1/2 cup"
+            },
+            {
+                name: "Tomato puree",
+                amount: "400g"
+            },
+            {
+                name: "Butter",
+                amount: "3 tbsp"
+            },
+            {
+                name: "Heavy cream",
+                amount: "1/2 cup"
+            },
+            {
+                name: "Garam masala",
+                amount: "2 tsp"
+            },
+            {
+                name: "Kasuri methi",
+                amount: "1 tbsp"
+            },
+            {
+                name: "Garlic-ginger paste",
+                amount: "2 tbsp"
+            }
         ],
         steps: [
             "Marinate chicken in yogurt, garam masala, and salt for at least 30 minutes.",
@@ -382,12 +601,30 @@ const RECIPES: Recipe[] = [
         dietary: ["vegetarian", "gluten-free", "dairy-free"],
         servings: 4,
         ingredients: [
-            { name: "Ripe avocados", amount: "3" },
-            { name: "Lime juice", amount: "2 tbsp" },
-            { name: "Red onion", amount: "1/4 cup diced" },
-            { name: "Jalapeno", amount: "1 small" },
-            { name: "Cilantro", amount: "2 tbsp chopped" },
-            { name: "Tortilla chips", amount: "1 bag" }
+            {
+                name: "Ripe avocados",
+                amount: "3"
+            },
+            {
+                name: "Lime juice",
+                amount: "2 tbsp"
+            },
+            {
+                name: "Red onion",
+                amount: "1/4 cup diced"
+            },
+            {
+                name: "Jalapeno",
+                amount: "1 small"
+            },
+            {
+                name: "Cilantro",
+                amount: "2 tbsp chopped"
+            },
+            {
+                name: "Tortilla chips",
+                amount: "1 bag"
+            }
         ],
         steps: [
             "Halve avocados, remove pits, and scoop flesh into a bowl.",
@@ -401,14 +638,20 @@ const RECIPES: Recipe[] = [
 
 // --- Helper: group recipes by cuisine ---
 
-function groupByCuisine(recipes: Recipe[]): { cuisine: Cuisine; recipes: Recipe[] }[] {
+function groupByCuisine(recipes: Recipe[]): {
+    cuisine: Cuisine;
+    recipes: Recipe[];
+}[] {
     const map = new Map<Cuisine, Recipe[]>();
     for (const recipe of recipes) {
         const list = map.get(recipe.cuisine) ?? [];
         list.push(recipe);
         map.set(recipe.cuisine, list);
     }
-    return Array.from(map.entries()).map(([cuisine, recs]) => ({ cuisine, recipes: recs }));
+    return Array.from(map.entries()).map(([cuisine, recs]) => ({
+        cuisine,
+        recipes: recs
+    }));
 }
 
 // --- Sub-components ---
@@ -426,13 +669,18 @@ function DifficultyChip({ difficulty }: { difficulty: Difficulty }) {
                 borderColor: `${color}40`
             }}
         >
-            <Text style={{ fontFamily: "IBMPlexSans-Medium", fontSize: 11, color }}>
+            <Text
+                style={{
+                    fontFamily: "IBMPlexSans-Medium",
+                    fontSize: 11,
+                    color
+                }}
+            >
                 {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
             </Text>
         </View>
     );
 }
-
 function DietaryBadge({ tag }: { tag: DietaryTag }) {
     const color = DIETARY_COLORS[tag];
     const icon = DIETARY_ICONS[tag];
@@ -449,42 +697,96 @@ function DietaryBadge({ tag }: { tag: DietaryTag }) {
             }}
         >
             <Ionicons name={icon} size={11} color={color} />
-            <Text style={{ fontFamily: "IBMPlexSans-Regular", fontSize: 10, color }}>{tag}</Text>
+            <Text
+                style={{
+                    fontFamily: "IBMPlexSans-Regular",
+                    fontSize: 10,
+                    color
+                }}
+            >
+                {tag}
+            </Text>
         </View>
     );
 }
-
 function TimeIndicator({ minutes, label, color }: { minutes: number; label: string; color: string }) {
     return (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+        <View
+            style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 3
+            }}
+        >
             <Ionicons name="time-outline" size={13} color={color} />
-            <Text style={{ fontFamily: "IBMPlexMono-Regular", fontSize: 11, color }}>
+            <Text
+                style={{
+                    fontFamily: "IBMPlexMono-Regular",
+                    fontSize: 11,
+                    color
+                }}
+            >
                 {minutes > 0 ? `${minutes}m` : "--"}
             </Text>
-            <Text style={{ fontFamily: "IBMPlexSans-Regular", fontSize: 10, color, opacity: 0.7 }}>{label}</Text>
+            <Text
+                style={{
+                    fontFamily: "IBMPlexSans-Regular",
+                    fontSize: 10,
+                    color,
+                    opacity: 0.7
+                }}
+            >
+                {label}
+            </Text>
         </View>
     );
 }
-
 function CuisineHeader({ cuisine }: { cuisine: Cuisine; count: number }) {
     const { theme } = useUnistyles();
     const color = CUISINE_COLORS[cuisine];
-
     return (
         <View style={styles.cuisineHeader}>
-            <View style={[styles.cuisineAccent, { backgroundColor: color }]} />
+            <View
+                style={[
+                    styles.cuisineAccent,
+                    {
+                        backgroundColor: color
+                    }
+                ]}
+            />
             <Ionicons name="flag-outline" size={16} color={color} />
-            <Text style={[styles.cuisineTitle, { color: theme.colors.onSurface }]}>{cuisine}</Text>
-            <View style={[styles.cuisineLine, { backgroundColor: `${color}30` }]} />
+            <Text
+                style={[
+                    styles.cuisineTitle,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {cuisine}
+            </Text>
+            <View
+                style={[
+                    styles.cuisineLine,
+                    {
+                        backgroundColor: `${color}30`
+                    }
+                ]}
+            />
         </View>
     );
 }
-
 function SegmentedControl({ active, onSelect }: { active: MealType; onSelect: (tab: MealType) => void }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[styles.segmentedContainer, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <View
+            style={[
+                styles.segmentedContainer,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             {MEAL_TYPES.map((type) => {
                 const isActive = active === type;
                 return (
@@ -519,18 +821,19 @@ function SegmentedControl({ active, onSelect }: { active: MealType; onSelect: (t
         </View>
     );
 }
-
 function IngredientCheckbox({
     ingredient,
     checked,
     onToggle
 }: {
-    ingredient: { name: string; amount: string };
+    ingredient: {
+        name: string;
+        amount: string;
+    };
     checked: boolean;
     onToggle: () => void;
 }) {
     const { theme } = useUnistyles();
-
     return (
         <Pressable onPress={onToggle} style={styles.ingredientRow}>
             <View
@@ -555,11 +858,19 @@ function IngredientCheckbox({
             >
                 {ingredient.name}
             </Text>
-            <Text style={[styles.ingredientAmount, { color: theme.colors.onSurfaceVariant }]}>{ingredient.amount}</Text>
+            <Text
+                style={[
+                    styles.ingredientAmount,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {ingredient.amount}
+            </Text>
         </Pressable>
     );
 }
-
 function RecipeDetail({
     recipe,
     checkedIngredients,
@@ -570,26 +881,53 @@ function RecipeDetail({
     onToggleIngredient: (index: number) => void;
 }) {
     const { theme } = useUnistyles();
-
     return (
         <View
             style={[
                 styles.detailPanel,
-                { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant }
+                {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.outlineVariant
+                }
             ]}
         >
             {/* Serving size */}
             <View style={styles.servingRow}>
                 <Ionicons name="people-outline" size={16} color={theme.colors.primary} />
-                <Text style={[styles.servingText, { color: theme.colors.onSurface }]}>Serves {recipe.servings}</Text>
+                <Text
+                    style={[
+                        styles.servingText,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Serves {recipe.servings}
+                </Text>
             </View>
 
             {/* Ingredients */}
             <View style={styles.detailSection}>
                 <View style={styles.detailSectionHeader}>
                     <Ionicons name="list-outline" size={16} color={theme.colors.tertiary} />
-                    <Text style={[styles.detailSectionTitle, { color: theme.colors.onSurface }]}>Ingredients</Text>
-                    <Text style={[styles.detailSectionCount, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.detailSectionTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Ingredients
+                    </Text>
+                    <Text
+                        style={[
+                            styles.detailSectionCount,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {checkedIngredients.size}/{recipe.ingredients.length}
                     </Text>
                 </View>
@@ -607,21 +945,54 @@ function RecipeDetail({
             <View style={styles.detailSection}>
                 <View style={styles.detailSectionHeader}>
                     <Ionicons name="footsteps-outline" size={16} color={theme.colors.secondary} />
-                    <Text style={[styles.detailSectionTitle, { color: theme.colors.onSurface }]}>Instructions</Text>
+                    <Text
+                        style={[
+                            styles.detailSectionTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Instructions
+                    </Text>
                 </View>
                 {recipe.steps.map((step, i) => (
                     <View key={`${recipe.id}-step-${i}`} style={styles.stepRow}>
-                        <View style={[styles.stepNumber, { backgroundColor: `${theme.colors.primary}18` }]}>
-                            <Text style={[styles.stepNumberText, { color: theme.colors.primary }]}>{i + 1}</Text>
+                        <View
+                            style={[
+                                styles.stepNumber,
+                                {
+                                    backgroundColor: `${theme.colors.primary}18`
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.stepNumberText,
+                                    {
+                                        color: theme.colors.primary
+                                    }
+                                ]}
+                            >
+                                {i + 1}
+                            </Text>
                         </View>
-                        <Text style={[styles.stepText, { color: theme.colors.onSurface }]}>{step}</Text>
+                        <Text
+                            style={[
+                                styles.stepText,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            {step}
+                        </Text>
                     </View>
                 ))}
             </View>
         </View>
     );
 }
-
 function RecipeCard({
     recipe,
     expanded,
@@ -638,25 +1009,47 @@ function RecipeCard({
     const { theme } = useUnistyles();
     const cuisineColor = CUISINE_COLORS[recipe.cuisine];
     const totalTime = recipe.prepTime + recipe.cookTime;
-
     return (
-        <View
+        <Card
             style={[
                 styles.recipeCard,
-                { backgroundColor: theme.colors.surfaceContainer, borderColor: theme.colors.outlineVariant }
+                {
+                    backgroundColor: theme.colors.surfaceContainer,
+                    borderColor: theme.colors.outlineVariant
+                }
             ]}
         >
             {/* Color strip at top */}
-            <View style={[styles.cardStrip, { backgroundColor: cuisineColor }]} />
+            <View
+                style={[
+                    styles.cardStrip,
+                    {
+                        backgroundColor: cuisineColor
+                    }
+                ]}
+            />
 
             <Pressable
                 onPress={onToggle}
-                style={({ pressed }) => [styles.cardPressable, { opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [
+                    styles.cardPressable,
+                    {
+                        opacity: pressed ? 0.85 : 1
+                    }
+                ]}
             >
                 {/* Top row: name + expand icon */}
                 <View style={styles.cardTopRow}>
                     <View style={styles.cardTitleArea}>
-                        <Text style={[styles.recipeName, { color: theme.colors.onSurface }]} numberOfLines={2}>
+                        <Text
+                            style={[
+                                styles.recipeName,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                            numberOfLines={2}
+                        >
                             {recipe.name}
                         </Text>
                     </View>
@@ -672,9 +1065,24 @@ function RecipeCard({
                     <TimeIndicator minutes={recipe.prepTime} label="prep" color={theme.colors.onSurfaceVariant} />
                     <TimeIndicator minutes={recipe.cookTime} label="cook" color={theme.colors.onSurfaceVariant} />
                     <View style={styles.timeDivider} />
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                    <View
+                        style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 3
+                        }}
+                    >
                         <Ionicons name="hourglass-outline" size={13} color={theme.colors.primary} />
-                        <Text style={[styles.totalTime, { color: theme.colors.primary }]}>{totalTime}m</Text>
+                        <Text
+                            style={[
+                                styles.totalTime,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
+                            {totalTime}m
+                        </Text>
                     </View>
                 </View>
 
@@ -695,7 +1103,7 @@ function RecipeCard({
                     onToggleIngredient={onToggleIngredient}
                 />
             )}
-        </View>
+        </Card>
     );
 }
 
@@ -706,22 +1114,17 @@ export function RecipeCollectionPage() {
     const [activeMeal, setActiveMeal] = React.useState<MealType>("All");
     const [expandedId, setExpandedId] = React.useState<string | null>(null);
     const [checkedMap, setCheckedMap] = React.useState<Record<string, Set<number>>>({});
-
     const filteredRecipes = React.useMemo(() => {
         if (activeMeal === "All") return RECIPES;
         return RECIPES.filter((r) => r.mealType === activeMeal);
     }, [activeMeal]);
-
     const groups = React.useMemo(() => groupByCuisine(filteredRecipes), [filteredRecipes]);
-
     const totalRecipes = filteredRecipes.length;
     const easyCount = filteredRecipes.filter((r) => r.difficulty === "easy").length;
     const vegCount = filteredRecipes.filter((r) => r.dietary.includes("vegetarian")).length;
-
     const handleToggle = React.useCallback((id: string) => {
         setExpandedId((prev) => (prev === id ? null : id));
     }, []);
-
     const handleIngredientToggle = React.useCallback((recipeId: string, index: number) => {
         setCheckedMap((prev) => {
             const current = prev[recipeId] ?? new Set<number>();
@@ -731,40 +1134,138 @@ export function RecipeCollectionPage() {
             } else {
                 next.add(index);
             }
-            return { ...prev, [recipeId]: next };
+            return {
+                ...prev,
+                [recipeId]: next
+            };
         });
     }, []);
-
     return (
-        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }}>
+        <ShowcasePage
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
+        >
             {/* Header area */}
             <View style={styles.headerSection}>
                 <View style={styles.headerTitleRow}>
                     <Ionicons name="restaurant" size={24} color={theme.colors.primary} />
-                    <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>Recipe Collection</Text>
+                    <Text
+                        style={[
+                            styles.headerTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Recipe Collection
+                    </Text>
                 </View>
-                <Text style={[styles.headerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.headerSubtitle,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {totalRecipes} recipes across {groups.length} cuisines
                 </Text>
             </View>
 
             {/* Quick stats row */}
             <View style={styles.statsRow}>
-                <View style={[styles.statCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <Card
+                    style={[
+                        styles.statCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <Ionicons name="book-outline" size={18} color={theme.colors.primary} />
-                    <Text style={[styles.statValue, { color: theme.colors.primary }]}>{totalRecipes}</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>Recipes</Text>
-                </View>
-                <View style={[styles.statCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                    <Text
+                        style={[
+                            styles.statValue,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
+                        {totalRecipes}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.statLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Recipes
+                    </Text>
+                </Card>
+                <Card
+                    style={[
+                        styles.statCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <Ionicons name="flash-outline" size={18} color={DIFFICULTY_COLORS.easy} />
-                    <Text style={[styles.statValue, { color: DIFFICULTY_COLORS.easy }]}>{easyCount}</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>Quick & Easy</Text>
-                </View>
-                <View style={[styles.statCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                    <Text
+                        style={[
+                            styles.statValue,
+                            {
+                                color: DIFFICULTY_COLORS.easy
+                            }
+                        ]}
+                    >
+                        {easyCount}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.statLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Quick & Easy
+                    </Text>
+                </Card>
+                <Card
+                    style={[
+                        styles.statCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <Ionicons name="leaf-outline" size={18} color={DIETARY_COLORS.vegetarian} />
-                    <Text style={[styles.statValue, { color: DIETARY_COLORS.vegetarian }]}>{vegCount}</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>Vegetarian</Text>
-                </View>
+                    <Text
+                        style={[
+                            styles.statValue,
+                            {
+                                color: DIETARY_COLORS.vegetarian
+                            }
+                        ]}
+                    >
+                        {vegCount}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.statLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Vegetarian
+                    </Text>
+                </Card>
             </View>
 
             {/* Segmented control */}
@@ -795,7 +1296,14 @@ export function RecipeCollectionPage() {
             {groups.length === 0 && (
                 <View style={styles.emptyState}>
                     <Ionicons name="search-outline" size={40} color={theme.colors.outlineVariant} />
-                    <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.emptyText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         No recipes found for this meal type
                     </Text>
                 </View>
@@ -827,7 +1335,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         marginLeft: 34
     },
-
     // Stats
     statsRow: {
         flexDirection: "row",
@@ -850,7 +1357,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Segmented control
     segmentedContainer: {
         flexDirection: "row",
@@ -872,7 +1378,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
-
     // Cuisine group
     groupsContainer: {
         gap: 20
@@ -899,12 +1404,10 @@ const styles = StyleSheet.create((theme) => ({
         height: 1,
         marginLeft: 8
     },
-
     // Recipe list
     recipeList: {
         gap: 10
     },
-
     // Recipe card
     recipeCard: {
         borderRadius: 14,
@@ -951,7 +1454,6 @@ const styles = StyleSheet.create((theme) => ({
         flexWrap: "wrap",
         gap: 6
     },
-
     // Detail panel
     detailPanel: {
         borderTopWidth: 1,
@@ -968,7 +1470,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
-
     // Detail section
     detailSection: {
         gap: 8
@@ -988,7 +1489,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 12,
         marginLeft: "auto"
     },
-
     // Ingredient checkbox
     ingredientRow: {
         flexDirection: "row",
@@ -1013,7 +1513,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 11
     },
-
     // Steps
     stepRow: {
         flexDirection: "row",
@@ -1038,7 +1537,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         lineHeight: 20
     },
-
     // Empty state
     emptyState: {
         alignItems: "center",

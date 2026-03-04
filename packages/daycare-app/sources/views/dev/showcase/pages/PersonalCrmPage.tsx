@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { Card } from "@/components/Card";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type ContactCategory = "All" | "Clients" | "Partners" | "Personal";
@@ -205,7 +206,6 @@ function groupAlphabetically(contacts: Contact[]): Map<string, Contact[]> {
 function Thermometer({ strength }: { strength: RelationshipStrength }) {
     const fill = getThermometerFill(strength);
     const color = getThermometerColor(strength);
-    const { theme } = useUnistyles();
 
     return (
         <View style={styles.thermometerTrack}>
@@ -228,7 +228,7 @@ function Thermometer({ strength }: { strength: RelationshipStrength }) {
 function Avatar({ name, category }: { name: string; category: Exclude<ContactCategory, "All"> }) {
     const color = getCategoryColor(category);
     return (
-        <View style={[styles.avatar, { backgroundColor: color + "18" }]}>
+        <View style={[styles.avatar, { backgroundColor: `${color}18` }]}>
             <Text style={[styles.avatarText, { color }]}>{getInitials(name)}</Text>
         </View>
     );
@@ -237,7 +237,7 @@ function Avatar({ name, category }: { name: string; category: Exclude<ContactCat
 /** A single contact card row. */
 function ContactCard({ contact }: { contact: Contact }) {
     return (
-        <Pressable style={styles.card}>
+        <Card style={styles.card}>
             <Avatar name={contact.name} category={contact.category} />
             <View style={styles.cardCenter}>
                 <Text style={styles.cardName} numberOfLines={1}>
@@ -251,14 +251,12 @@ function ContactCard({ contact }: { contact: Contact }) {
                 </Text>
             </View>
             <Thermometer strength={contact.strength} />
-        </Pressable>
+        </Card>
     );
 }
 
 /** Section divider with a large translucent letter in the background. */
 function LetterDivider({ letter }: { letter: string }) {
-    const { theme } = useUnistyles();
-
     return (
         <View style={styles.dividerContainer}>
             <Text style={styles.dividerLetter}>{letter}</Text>

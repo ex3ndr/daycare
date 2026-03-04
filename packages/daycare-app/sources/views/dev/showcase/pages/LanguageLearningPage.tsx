@@ -2,12 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type LanguageKey = "japanese" | "spanish" | "french" | "korean";
-
 type Language = {
     key: LanguageKey;
     name: string;
@@ -19,21 +18,18 @@ type Language = {
     xp: number;
     xpToNext: number;
 };
-
 type PracticeItem = {
     id: string;
     category: string;
     icon: keyof typeof Ionicons.glyphMap;
     completed: boolean;
 };
-
 type VocabWord = {
     id: string;
     native: string;
     translation: string;
     mastery: number; // 0-100
 };
-
 type Resource = {
     id: string;
     name: string;
@@ -90,85 +86,333 @@ const LANGUAGES: Language[] = [
         xpToNext: 1000
     }
 ];
-
 const PRACTICE_DATA: Record<LanguageKey, PracticeItem[]> = {
     japanese: [
-        { id: "j1", category: "Vocabulary", icon: "text-outline", completed: true },
-        { id: "j2", category: "Grammar", icon: "construct-outline", completed: true },
-        { id: "j3", category: "Listening", icon: "headset-outline", completed: false },
-        { id: "j4", category: "Speaking", icon: "mic-outline", completed: false },
-        { id: "j5", category: "Reading", icon: "book-outline", completed: true }
+        {
+            id: "j1",
+            category: "Vocabulary",
+            icon: "text-outline",
+            completed: true
+        },
+        {
+            id: "j2",
+            category: "Grammar",
+            icon: "construct-outline",
+            completed: true
+        },
+        {
+            id: "j3",
+            category: "Listening",
+            icon: "headset-outline",
+            completed: false
+        },
+        {
+            id: "j4",
+            category: "Speaking",
+            icon: "mic-outline",
+            completed: false
+        },
+        {
+            id: "j5",
+            category: "Reading",
+            icon: "book-outline",
+            completed: true
+        }
     ],
     spanish: [
-        { id: "s1", category: "Vocabulary", icon: "text-outline", completed: true },
-        { id: "s2", category: "Grammar", icon: "construct-outline", completed: false },
-        { id: "s3", category: "Listening", icon: "headset-outline", completed: true },
-        { id: "s4", category: "Speaking", icon: "mic-outline", completed: false },
-        { id: "s5", category: "Reading", icon: "book-outline", completed: false }
+        {
+            id: "s1",
+            category: "Vocabulary",
+            icon: "text-outline",
+            completed: true
+        },
+        {
+            id: "s2",
+            category: "Grammar",
+            icon: "construct-outline",
+            completed: false
+        },
+        {
+            id: "s3",
+            category: "Listening",
+            icon: "headset-outline",
+            completed: true
+        },
+        {
+            id: "s4",
+            category: "Speaking",
+            icon: "mic-outline",
+            completed: false
+        },
+        {
+            id: "s5",
+            category: "Reading",
+            icon: "book-outline",
+            completed: false
+        }
     ],
     french: [
-        { id: "f1", category: "Vocabulary", icon: "text-outline", completed: false },
-        { id: "f2", category: "Grammar", icon: "construct-outline", completed: false },
-        { id: "f3", category: "Listening", icon: "headset-outline", completed: true },
-        { id: "f4", category: "Speaking", icon: "mic-outline", completed: false },
-        { id: "f5", category: "Reading", icon: "book-outline", completed: false }
+        {
+            id: "f1",
+            category: "Vocabulary",
+            icon: "text-outline",
+            completed: false
+        },
+        {
+            id: "f2",
+            category: "Grammar",
+            icon: "construct-outline",
+            completed: false
+        },
+        {
+            id: "f3",
+            category: "Listening",
+            icon: "headset-outline",
+            completed: true
+        },
+        {
+            id: "f4",
+            category: "Speaking",
+            icon: "mic-outline",
+            completed: false
+        },
+        {
+            id: "f5",
+            category: "Reading",
+            icon: "book-outline",
+            completed: false
+        }
     ],
     korean: [
-        { id: "k1", category: "Vocabulary", icon: "text-outline", completed: false },
-        { id: "k2", category: "Grammar", icon: "construct-outline", completed: false },
-        { id: "k3", category: "Listening", icon: "headset-outline", completed: false },
-        { id: "k4", category: "Speaking", icon: "mic-outline", completed: false },
-        { id: "k5", category: "Reading", icon: "book-outline", completed: false }
+        {
+            id: "k1",
+            category: "Vocabulary",
+            icon: "text-outline",
+            completed: false
+        },
+        {
+            id: "k2",
+            category: "Grammar",
+            icon: "construct-outline",
+            completed: false
+        },
+        {
+            id: "k3",
+            category: "Listening",
+            icon: "headset-outline",
+            completed: false
+        },
+        {
+            id: "k4",
+            category: "Speaking",
+            icon: "mic-outline",
+            completed: false
+        },
+        {
+            id: "k5",
+            category: "Reading",
+            icon: "book-outline",
+            completed: false
+        }
     ]
 };
-
 const VOCAB_DATA: Record<LanguageKey, VocabWord[]> = {
     japanese: [
-        { id: "jv1", native: "\u5143\u6C17", translation: "energy, vigor", mastery: 85 },
-        { id: "jv2", native: "\u7D4C\u9A13", translation: "experience", mastery: 62 },
-        { id: "jv3", native: "\u74B0\u5883", translation: "environment", mastery: 40 },
-        { id: "jv4", native: "\u5F71\u97FF", translation: "influence", mastery: 28 },
-        { id: "jv5", native: "\u6311\u6226", translation: "challenge", mastery: 15 }
+        {
+            id: "jv1",
+            native: "\u5143\u6C17",
+            translation: "energy, vigor",
+            mastery: 85
+        },
+        {
+            id: "jv2",
+            native: "\u7D4C\u9A13",
+            translation: "experience",
+            mastery: 62
+        },
+        {
+            id: "jv3",
+            native: "\u74B0\u5883",
+            translation: "environment",
+            mastery: 40
+        },
+        {
+            id: "jv4",
+            native: "\u5F71\u97FF",
+            translation: "influence",
+            mastery: 28
+        },
+        {
+            id: "jv5",
+            native: "\u6311\u6226",
+            translation: "challenge",
+            mastery: 15
+        }
     ],
     spanish: [
-        { id: "sv1", native: "desarrollo", translation: "development", mastery: 90 },
-        { id: "sv2", native: "conocimiento", translation: "knowledge", mastery: 72 },
-        { id: "sv3", native: "esperanza", translation: "hope", mastery: 55 },
-        { id: "sv4", native: "madrugada", translation: "early morning", mastery: 30 },
-        { id: "sv5", native: "desaf\u00EDo", translation: "challenge", mastery: 18 }
+        {
+            id: "sv1",
+            native: "desarrollo",
+            translation: "development",
+            mastery: 90
+        },
+        {
+            id: "sv2",
+            native: "conocimiento",
+            translation: "knowledge",
+            mastery: 72
+        },
+        {
+            id: "sv3",
+            native: "esperanza",
+            translation: "hope",
+            mastery: 55
+        },
+        {
+            id: "sv4",
+            native: "madrugada",
+            translation: "early morning",
+            mastery: 30
+        },
+        {
+            id: "sv5",
+            native: "desaf\u00EDo",
+            translation: "challenge",
+            mastery: 18
+        }
     ],
     french: [
-        { id: "fv1", native: "d\u00E9veloppement", translation: "development", mastery: 78 },
-        { id: "fv2", native: "quotidien", translation: "daily", mastery: 50 },
-        { id: "fv3", native: "connaissance", translation: "knowledge", mastery: 35 },
-        { id: "fv4", native: "\u00E9panouissement", translation: "fulfillment", mastery: 12 }
+        {
+            id: "fv1",
+            native: "d\u00E9veloppement",
+            translation: "development",
+            mastery: 78
+        },
+        {
+            id: "fv2",
+            native: "quotidien",
+            translation: "daily",
+            mastery: 50
+        },
+        {
+            id: "fv3",
+            native: "connaissance",
+            translation: "knowledge",
+            mastery: 35
+        },
+        {
+            id: "fv4",
+            native: "\u00E9panouissement",
+            translation: "fulfillment",
+            mastery: 12
+        }
     ],
     korean: [
-        { id: "kv1", native: "\uD559\uC2B5", translation: "study, learning", mastery: 60 },
-        { id: "kv2", native: "\uACBD\uD5D8", translation: "experience", mastery: 42 },
-        { id: "kv3", native: "\uC5F0\uC2B5", translation: "practice", mastery: 20 }
+        {
+            id: "kv1",
+            native: "\uD559\uC2B5",
+            translation: "study, learning",
+            mastery: 60
+        },
+        {
+            id: "kv2",
+            native: "\uACBD\uD5D8",
+            translation: "experience",
+            mastery: 42
+        },
+        {
+            id: "kv3",
+            native: "\uC5F0\uC2B5",
+            translation: "practice",
+            mastery: 20
+        }
     ]
 };
-
 const RESOURCE_DATA: Record<LanguageKey, Resource[]> = {
     japanese: [
-        { id: "jr1", name: "Genki II Textbook", type: "book", icon: "book-outline", progress: 65 },
-        { id: "jr2", name: "WaniKani", type: "app", icon: "phone-portrait-outline", progress: 48 },
-        { id: "jr3", name: "JapanesePod101", type: "course", icon: "desktop-outline", progress: 32 }
+        {
+            id: "jr1",
+            name: "Genki II Textbook",
+            type: "book",
+            icon: "book-outline",
+            progress: 65
+        },
+        {
+            id: "jr2",
+            name: "WaniKani",
+            type: "app",
+            icon: "phone-portrait-outline",
+            progress: 48
+        },
+        {
+            id: "jr3",
+            name: "JapanesePod101",
+            type: "course",
+            icon: "desktop-outline",
+            progress: 32
+        }
     ],
     spanish: [
-        { id: "sr1", name: "Assimil Spanish", type: "book", icon: "book-outline", progress: 55 },
-        { id: "sr2", name: "Anki Deck", type: "app", icon: "phone-portrait-outline", progress: 70 },
-        { id: "sr3", name: "SpanishPod101", type: "course", icon: "desktop-outline", progress: 40 }
+        {
+            id: "sr1",
+            name: "Assimil Spanish",
+            type: "book",
+            icon: "book-outline",
+            progress: 55
+        },
+        {
+            id: "sr2",
+            name: "Anki Deck",
+            type: "app",
+            icon: "phone-portrait-outline",
+            progress: 70
+        },
+        {
+            id: "sr3",
+            name: "SpanishPod101",
+            type: "course",
+            icon: "desktop-outline",
+            progress: 40
+        }
     ],
     french: [
-        { id: "fr1", name: "Alter Ego+ A2", type: "book", icon: "book-outline", progress: 30 },
-        { id: "fr2", name: "Duolingo", type: "app", icon: "phone-portrait-outline", progress: 62 }
+        {
+            id: "fr1",
+            name: "Alter Ego+ A2",
+            type: "book",
+            icon: "book-outline",
+            progress: 30
+        },
+        {
+            id: "fr2",
+            name: "Duolingo",
+            type: "app",
+            icon: "phone-portrait-outline",
+            progress: 62
+        }
     ],
     korean: [
-        { id: "kr1", name: "Talk To Me In Korean", type: "book", icon: "book-outline", progress: 15 },
-        { id: "kr2", name: "LingoDeer", type: "app", icon: "phone-portrait-outline", progress: 22 },
-        { id: "kr3", name: "TTMIK Course", type: "course", icon: "desktop-outline", progress: 8 }
+        {
+            id: "kr1",
+            name: "Talk To Me In Korean",
+            type: "book",
+            icon: "book-outline",
+            progress: 15
+        },
+        {
+            id: "kr2",
+            name: "LingoDeer",
+            type: "app",
+            icon: "phone-portrait-outline",
+            progress: 22
+        },
+        {
+            id: "kr3",
+            name: "TTMIK Course",
+            type: "course",
+            icon: "desktop-outline",
+            progress: 8
+        }
     ]
 };
 
@@ -184,11 +428,36 @@ function getMasteryColor(mastery: number, primary: string, tertiary: string, err
 
 function StreakDisplay({ streak, color, bgColor }: { streak: number; color: string; bgColor: string }) {
     return (
-        <View style={[styles.streakCard, { backgroundColor: bgColor }]}>
+        <Card
+            style={[
+                styles.streakCard,
+                {
+                    backgroundColor: bgColor
+                }
+            ]}
+        >
             <Ionicons name="flame" size={32} color={color} />
-            <Text style={[styles.streakNumber, { color }]}>{streak}</Text>
-            <Text style={[styles.streakLabel, { color: `${color}AA` }]}>day streak</Text>
-        </View>
+            <Text
+                style={[
+                    styles.streakNumber,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {streak}
+            </Text>
+            <Text
+                style={[
+                    styles.streakLabel,
+                    {
+                        color: `${color}AA`
+                    }
+                ]}
+            >
+                day streak
+            </Text>
+        </Card>
     );
 }
 
@@ -212,10 +481,35 @@ function MetricTile({
     labelColor: string;
 }) {
     return (
-        <View style={[styles.metricTile, { backgroundColor: bgColor }]}>
+        <View
+            style={[
+                styles.metricTile,
+                {
+                    backgroundColor: bgColor
+                }
+            ]}
+        >
             <Ionicons name={icon} size={20} color={iconColor} />
-            <Text style={[styles.metricValue, { color: textColor }]}>{value}</Text>
-            <Text style={[styles.metricLabel, { color: labelColor }]}>{label}</Text>
+            <Text
+                style={[
+                    styles.metricValue,
+                    {
+                        color: textColor
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            <Text
+                style={[
+                    styles.metricLabel,
+                    {
+                        color: labelColor
+                    }
+                ]}
+            >
+                {label}
+            </Text>
         </View>
     );
 }
@@ -236,20 +530,50 @@ function XPProgressBar({
     textColor: string;
 }) {
     const pct = Math.min((xp / xpToNext) * 100, 100);
-
     return (
         <View style={styles.xpContainer}>
             <View style={styles.xpHeader}>
                 <View style={styles.xpLabelRow}>
                     <Ionicons name="star" size={14} color={color} />
-                    <Text style={[styles.xpLabel, { color: textColor }]}>XP Progress</Text>
+                    <Text
+                        style={[
+                            styles.xpLabel,
+                            {
+                                color: textColor
+                            }
+                        ]}
+                    >
+                        XP Progress
+                    </Text>
                 </View>
-                <Text style={[styles.xpCount, { color }]}>
+                <Text
+                    style={[
+                        styles.xpCount,
+                        {
+                            color
+                        }
+                    ]}
+                >
                     {xp.toLocaleString()} / {xpToNext.toLocaleString()}
                 </Text>
             </View>
-            <View style={[styles.xpTrack, { backgroundColor: trackColor }]}>
-                <View style={[styles.xpFill, { width: `${pct}%`, backgroundColor: color }]} />
+            <View
+                style={[
+                    styles.xpTrack,
+                    {
+                        backgroundColor: trackColor
+                    }
+                ]}
+            >
+                <View
+                    style={[
+                        styles.xpFill,
+                        {
+                            width: `${pct}%`,
+                            backgroundColor: color
+                        }
+                    ]}
+                />
             </View>
         </View>
     );
@@ -281,30 +605,84 @@ function VocabCard({
     trackColor: string;
 }) {
     const masteryColor = getMasteryColor(word.mastery, primaryColor, tertiaryColor, errorColor);
-
     return (
         <Pressable
             onPress={onReveal}
-            style={({ pressed }) => [styles.vocabCard, { backgroundColor: surfaceBg, opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [
+                styles.vocabCard,
+                {
+                    backgroundColor: surfaceBg,
+                    opacity: pressed ? 0.85 : 1
+                }
+            ]}
         >
             <View style={styles.vocabTopRow}>
-                <Text style={[styles.vocabNative, { color: textColor }]}>{word.native}</Text>
+                <Text
+                    style={[
+                        styles.vocabNative,
+                        {
+                            color: textColor
+                        }
+                    ]}
+                >
+                    {word.native}
+                </Text>
                 {revealed ? (
-                    <Text style={[styles.vocabTranslation, { color: subtextColor }]}>{word.translation}</Text>
+                    <Text
+                        style={[
+                            styles.vocabTranslation,
+                            {
+                                color: subtextColor
+                            }
+                        ]}
+                    >
+                        {word.translation}
+                    </Text>
                 ) : (
                     <View style={styles.vocabRevealHint}>
                         <Ionicons name="eye-outline" size={14} color={subtextColor} />
-                        <Text style={[styles.vocabRevealText, { color: subtextColor }]}>tap to reveal</Text>
+                        <Text
+                            style={[
+                                styles.vocabRevealText,
+                                {
+                                    color: subtextColor
+                                }
+                            ]}
+                        >
+                            tap to reveal
+                        </Text>
                     </View>
                 )}
             </View>
             <View style={styles.vocabBottomRow}>
-                <View style={[styles.vocabProgressTrack, { backgroundColor: trackColor }]}>
+                <View
+                    style={[
+                        styles.vocabProgressTrack,
+                        {
+                            backgroundColor: trackColor
+                        }
+                    ]}
+                >
                     <View
-                        style={[styles.vocabProgressFill, { width: `${word.mastery}%`, backgroundColor: masteryColor }]}
+                        style={[
+                            styles.vocabProgressFill,
+                            {
+                                width: `${word.mastery}%`,
+                                backgroundColor: masteryColor
+                            }
+                        ]}
                     />
                 </View>
-                <Text style={[styles.vocabMasteryText, { color: masteryColor }]}>{word.mastery}%</Text>
+                <Text
+                    style={[
+                        styles.vocabMasteryText,
+                        {
+                            color: masteryColor
+                        }
+                    ]}
+                >
+                    {word.mastery}%
+                </Text>
             </View>
         </Pressable>
     );
@@ -326,12 +704,10 @@ export function LanguageLearningPage() {
         return state as Record<LanguageKey, Record<string, boolean>>;
     });
     const [revealedWords, setRevealedWords] = React.useState<Record<string, boolean>>({});
-
     const lang = LANGUAGES.find((l) => l.key === selectedLang)!;
     const practice = PRACTICE_DATA[selectedLang];
     const vocab = VOCAB_DATA[selectedLang];
     const resources = RESOURCE_DATA[selectedLang];
-
     const togglePractice = React.useCallback(
         (itemId: string) => {
             setPracticeState((prev) => ({
@@ -344,17 +720,24 @@ export function LanguageLearningPage() {
         },
         [selectedLang]
     );
-
     const toggleReveal = React.useCallback((wordId: string) => {
-        setRevealedWords((prev) => ({ ...prev, [wordId]: !prev[wordId] }));
+        setRevealedWords((prev) => ({
+            ...prev,
+            [wordId]: !prev[wordId]
+        }));
     }, []);
-
     const practiceCompleted = practice.filter((p) => practiceState[selectedLang][p.id]).length;
-
     return (
         <ShowcasePage density="spacious" horizontalInset={16}>
             {/* Language Selector Tabs */}
-            <View style={[styles.segmentedControl, { backgroundColor: theme.colors.surfaceContainer }]}>
+            <View
+                style={[
+                    styles.segmentedControl,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
                 {LANGUAGES.map((l) => {
                     const isActive = l.key === selectedLang;
                     return (
@@ -372,7 +755,9 @@ export function LanguageLearningPage() {
                             <Text
                                 style={[
                                     styles.segmentLabel,
-                                    { color: isActive ? theme.colors.onPrimary : theme.colors.onSurfaceVariant }
+                                    {
+                                        color: isActive ? theme.colors.onPrimary : theme.colors.onSurfaceVariant
+                                    }
                                 ]}
                                 numberOfLines={1}
                             >
@@ -387,9 +772,25 @@ export function LanguageLearningPage() {
             <View style={styles.heroRow}>
                 <StreakDisplay streak={lang.streak} color={theme.colors.error} bgColor={`${theme.colors.error}14`} />
                 <View style={styles.heroRight}>
-                    <View style={[styles.levelBadge, { backgroundColor: `${theme.colors.primary}18` }]}>
+                    <View
+                        style={[
+                            styles.levelBadge,
+                            {
+                                backgroundColor: `${theme.colors.primary}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name="shield-checkmark" size={16} color={theme.colors.primary} />
-                        <Text style={[styles.levelText, { color: theme.colors.primary }]}>{lang.level}</Text>
+                        <Text
+                            style={[
+                                styles.levelText,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
+                            {lang.level}
+                        </Text>
                     </View>
                     <View style={styles.heroMetrics}>
                         <MetricTile
@@ -428,15 +829,38 @@ export function LanguageLearningPage() {
                 <View style={styles.sectionHeader}>
                     <View style={styles.sectionTitleRow}>
                         <Ionicons name="checkbox-outline" size={20} color={theme.colors.onSurface} />
-                        <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Daily Practice</Text>
+                        <Text
+                            style={[
+                                styles.sectionTitle,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            Daily Practice
+                        </Text>
                     </View>
-                    <Text style={[styles.sectionCount, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.sectionCount,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {practiceCompleted}/{practice.length}
                     </Text>
                 </View>
 
                 {/* Practice progress bar */}
-                <View style={[styles.practiceProgressTrack, { backgroundColor: theme.colors.outlineVariant }]}>
+                <View
+                    style={[
+                        styles.practiceProgressTrack,
+                        {
+                            backgroundColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                >
                     <View
                         style={[
                             styles.practiceProgressFill,
@@ -516,10 +940,35 @@ export function LanguageLearningPage() {
                 <View style={styles.sectionHeader}>
                     <View style={styles.sectionTitleRow}>
                         <Ionicons name="language-outline" size={20} color={theme.colors.onSurface} />
-                        <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Vocabulary Review</Text>
+                        <Text
+                            style={[
+                                styles.sectionTitle,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            Vocabulary Review
+                        </Text>
                     </View>
-                    <View style={[styles.dueBadge, { backgroundColor: `${theme.colors.error}18` }]}>
-                        <Text style={[styles.dueText, { color: theme.colors.error }]}>{vocab.length} due</Text>
+                    <View
+                        style={[
+                            styles.dueBadge,
+                            {
+                                backgroundColor: `${theme.colors.error}18`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.dueText,
+                                {
+                                    color: theme.colors.error
+                                }
+                            ]}
+                        >
+                            {vocab.length} due
+                        </Text>
                     </View>
                 </View>
                 <View style={styles.vocabList}>
@@ -546,7 +995,16 @@ export function LanguageLearningPage() {
                 <View style={styles.sectionHeader}>
                     <View style={styles.sectionTitleRow}>
                         <Ionicons name="library-outline" size={20} color={theme.colors.onSurface} />
-                        <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Resources</Text>
+                        <Text
+                            style={[
+                                styles.sectionTitle,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            Resources
+                        </Text>
                     </View>
                 </View>
                 <View style={styles.resourceList}>
@@ -557,9 +1015,8 @@ export function LanguageLearningPage() {
                                 : resource.type === "app"
                                   ? theme.colors.primary
                                   : theme.colors.secondary;
-
                         return (
-                            <View
+                            <Card
                                 key={resource.id}
                                 style={[
                                     styles.resourceCard,
@@ -569,19 +1026,45 @@ export function LanguageLearningPage() {
                                     }
                                 ]}
                             >
-                                <View style={[styles.resourceIconCircle, { backgroundColor: `${typeColor}18` }]}>
+                                <View
+                                    style={[
+                                        styles.resourceIconCircle,
+                                        {
+                                            backgroundColor: `${typeColor}18`
+                                        }
+                                    ]}
+                                >
                                     <Ionicons name={resource.icon} size={20} color={typeColor} />
                                 </View>
                                 <View style={styles.resourceContent}>
                                     <View style={styles.resourceTopRow}>
                                         <Text
-                                            style={[styles.resourceName, { color: theme.colors.onSurface }]}
+                                            style={[
+                                                styles.resourceName,
+                                                {
+                                                    color: theme.colors.onSurface
+                                                }
+                                            ]}
                                             numberOfLines={1}
                                         >
                                             {resource.name}
                                         </Text>
-                                        <View style={[styles.resourceTypeBadge, { backgroundColor: `${typeColor}18` }]}>
-                                            <Text style={[styles.resourceTypeText, { color: typeColor }]}>
+                                        <View
+                                            style={[
+                                                styles.resourceTypeBadge,
+                                                {
+                                                    backgroundColor: `${typeColor}18`
+                                                }
+                                            ]}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.resourceTypeText,
+                                                    {
+                                                        color: typeColor
+                                                    }
+                                                ]}
+                                            >
                                                 {resource.type}
                                             </Text>
                                         </View>
@@ -590,7 +1073,9 @@ export function LanguageLearningPage() {
                                         <View
                                             style={[
                                                 styles.resourceProgressTrack,
-                                                { backgroundColor: theme.colors.outlineVariant }
+                                                {
+                                                    backgroundColor: theme.colors.outlineVariant
+                                                }
                                             ]}
                                         >
                                             <View
@@ -606,14 +1091,16 @@ export function LanguageLearningPage() {
                                         <Text
                                             style={[
                                                 styles.resourceProgressText,
-                                                { color: theme.colors.onSurfaceVariant }
+                                                {
+                                                    color: theme.colors.onSurfaceVariant
+                                                }
                                             ]}
                                         >
                                             {resource.progress}%
                                         </Text>
                                     </View>
                                 </View>
-                            </View>
+                            </Card>
                         );
                     })}
                 </View>
@@ -624,7 +1111,7 @@ export function LanguageLearningPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Segmented control
     segmentedControl: {
         flexDirection: "row",
@@ -649,7 +1136,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
-
     // Hero row: streak + level + metrics
     heroRow: {
         flexDirection: "row",
@@ -695,7 +1181,6 @@ const styles = StyleSheet.create((theme) => ({
         flexDirection: "row",
         gap: 10
     },
-
     // Metric tile
     metricTile: {
         flex: 1,
@@ -712,7 +1197,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // XP bar
     xpContainer: {
         marginTop: 16,
@@ -745,7 +1229,6 @@ const styles = StyleSheet.create((theme) => ({
         height: "100%",
         borderRadius: 4
     },
-
     // Sections
     section: {
         marginTop: 28,
@@ -769,7 +1252,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 13
     },
-
     // Practice progress bar
     practiceProgressTrack: {
         height: 6,
@@ -780,7 +1262,6 @@ const styles = StyleSheet.create((theme) => ({
         height: "100%",
         borderRadius: 3
     },
-
     // Practice list
     practiceList: {
         gap: 8
@@ -813,7 +1294,6 @@ const styles = StyleSheet.create((theme) => ({
         alignItems: "center",
         justifyContent: "center"
     },
-
     // Vocab
     dueBadge: {
         paddingHorizontal: 8,
@@ -875,7 +1355,6 @@ const styles = StyleSheet.create((theme) => ({
         width: 36,
         textAlign: "right"
     },
-
     // Resources
     resourceList: {
         gap: 10

@@ -2,12 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
+import { Grid } from "@/components/Grid";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type WineType = "Red" | "White" | "Ros\u00e9" | "Sparkling" | "Dessert";
-
 type Wine = {
     id: string;
     name: string;
@@ -35,7 +35,6 @@ const WINE_TYPE_COLORS: Record<WineType, string> = {
     Sparkling: "#B8860B",
     Dessert: "#CD853F"
 };
-
 const WINE_TYPE_ICONS: Record<WineType, keyof typeof Ionicons.glyphMap> = {
     Red: "wine-outline",
     White: "wine-outline",
@@ -264,26 +263,32 @@ const WINES: Wine[] = [
         servingTempC: 11
     }
 ];
-
 const WINE_TYPES: WineType[] = ["Red", "White", "Ros\u00e9", "Sparkling", "Dessert"];
 
 // --- Helpers ---
 
-function groupByType(wines: Wine[]): { type: WineType; wines: Wine[] }[] {
-    const groups: { type: WineType; wines: Wine[] }[] = [];
+function groupByType(wines: Wine[]): {
+    type: WineType;
+    wines: Wine[];
+}[] {
+    const groups: {
+        type: WineType;
+        wines: Wine[];
+    }[] = [];
     for (const wineType of WINE_TYPES) {
         const matching = wines.filter((w) => w.type === wineType);
         if (matching.length > 0) {
-            groups.push({ type: wineType, wines: matching });
+            groups.push({
+                type: wineType,
+                wines: matching
+            });
         }
     }
     return groups;
 }
-
 function formatCurrency(value: number): string {
     return `$${value.toLocaleString()}`;
 }
-
 function drinkWindowLabel(from: number, to: number): string {
     const now = 2026;
     if (now < from) return "Too young";
@@ -291,7 +296,6 @@ function drinkWindowLabel(from: number, to: number): string {
     if (to - now <= 2) return "Drink now";
     return "In window";
 }
-
 function drinkWindowColor(from: number, to: number): string {
     const now = 2026;
     if (now < from) return "#7c3aed";
@@ -304,14 +308,18 @@ function drinkWindowColor(from: number, to: number): string {
 
 function StarRating({ rating, size, color }: { rating: number; size: number; color: string }) {
     return (
-        <View style={{ flexDirection: "row", gap: 2 }}>
+        <View
+            style={{
+                flexDirection: "row",
+                gap: 2
+            }}
+        >
             {[1, 2, 3, 4, 5].map((i) => (
                 <Ionicons key={i} name={i <= rating ? "star" : "star-outline"} size={size} color={color} />
             ))}
         </View>
     );
 }
-
 function MetricCard({
     icon,
     value,
@@ -325,80 +333,200 @@ function MetricCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <View style={[styles.metricCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-            <View style={[styles.metricIconCircle, { backgroundColor: `${accentColor}18` }]}>
+        <Card
+            style={[
+                styles.metricCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.metricIconCircle,
+                    {
+                        backgroundColor: `${accentColor}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={20} color={accentColor} />
             </View>
-            <Text style={[styles.metricValue, { color: accentColor }]}>{value}</Text>
-            <Text style={[styles.metricLabel, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
-        </View>
+            <Text
+                style={[
+                    styles.metricValue,
+                    {
+                        color: accentColor
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            <Text
+                style={[
+                    styles.metricLabel,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {label}
+            </Text>
+        </Card>
     );
 }
-
 function TypeSectionHeader({ wineType, count }: { wineType: WineType; count: number }) {
     const { theme } = useUnistyles();
     const color = WINE_TYPE_COLORS[wineType];
     const icon = WINE_TYPE_ICONS[wineType];
-
     return (
         <View style={styles.sectionHeader}>
-            <View style={[styles.sectionAccent, { backgroundColor: color }]} />
+            <View
+                style={[
+                    styles.sectionAccent,
+                    {
+                        backgroundColor: color
+                    }
+                ]}
+            />
             <Ionicons name={icon} size={18} color={color} />
-            <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>{wineType}</Text>
-            <View style={[styles.sectionCountBadge, { backgroundColor: `${color}20` }]}>
-                <Text style={[styles.sectionCountText, { color }]}>{count}</Text>
+            <Text
+                style={[
+                    styles.sectionTitle,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {wineType}
+            </Text>
+            <View
+                style={[
+                    styles.sectionCountBadge,
+                    {
+                        backgroundColor: `${color}20`
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.sectionCountText,
+                        {
+                            color
+                        }
+                    ]}
+                >
+                    {count}
+                </Text>
             </View>
-            <View style={[styles.sectionLine, { backgroundColor: `${color}30` }]} />
+            <View
+                style={[
+                    styles.sectionLine,
+                    {
+                        backgroundColor: `${color}30`
+                    }
+                ]}
+            />
         </View>
     );
 }
-
 function QuantityBadge({ quantity }: { quantity: number }) {
     const { theme } = useUnistyles();
     const isLow = quantity <= 2;
     const badgeColor = isLow ? "#dc2626" : theme.colors.primary;
-
     return (
-        <View style={[styles.quantityBadge, { backgroundColor: `${badgeColor}18`, borderColor: `${badgeColor}40` }]}>
+        <View
+            style={[
+                styles.quantityBadge,
+                {
+                    backgroundColor: `${badgeColor}18`,
+                    borderColor: `${badgeColor}40`
+                }
+            ]}
+        >
             <Ionicons name="layers-outline" size={11} color={badgeColor} />
-            <Text style={[styles.quantityText, { color: badgeColor }]}>
+            <Text
+                style={[
+                    styles.quantityText,
+                    {
+                        color: badgeColor
+                    }
+                ]}
+            >
                 {quantity} {quantity === 1 ? "btl" : "btls"}
             </Text>
         </View>
     );
 }
-
 function DrinkWindowIndicator({ from, to }: { from: number; to: number }) {
     const label = drinkWindowLabel(from, to);
     const color = drinkWindowColor(from, to);
-
     return (
-        <View style={[styles.drinkWindowBadge, { backgroundColor: `${color}14` }]}>
-            <View style={[styles.drinkWindowDot, { backgroundColor: color }]} />
-            <Text style={[styles.drinkWindowText, { color }]}>{label}</Text>
+        <View
+            style={[
+                styles.drinkWindowBadge,
+                {
+                    backgroundColor: `${color}14`
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.drinkWindowDot,
+                    {
+                        backgroundColor: color
+                    }
+                ]}
+            />
+            <Text
+                style={[
+                    styles.drinkWindowText,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {label}
+            </Text>
         </View>
     );
 }
-
 function WineDetailPanel({ wine }: { wine: Wine }) {
     const { theme } = useUnistyles();
     const valueChange = wine.currentValue - wine.purchasePrice;
     const valuePositive = valueChange >= 0;
-
     return (
         <View
             style={[
                 styles.detailPanel,
-                { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant }
+                {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.outlineVariant
+                }
             ]}
         >
             {/* Tasting Notes */}
             <View style={styles.detailSection}>
                 <View style={styles.detailSectionHeader}>
                     <Ionicons name="chatbubble-ellipses-outline" size={15} color={theme.colors.tertiary} />
-                    <Text style={[styles.detailSectionTitle, { color: theme.colors.onSurface }]}>Tasting Notes</Text>
+                    <Text
+                        style={[
+                            styles.detailSectionTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Tasting Notes
+                    </Text>
                 </View>
-                <Text style={[styles.tastingNotesText, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.tastingNotesText,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {wine.tastingNotes}
                 </Text>
             </View>
@@ -407,39 +535,119 @@ function WineDetailPanel({ wine }: { wine: Wine }) {
             <View style={styles.detailSection}>
                 <View style={styles.detailSectionHeader}>
                     <Ionicons name="cash-outline" size={15} color={theme.colors.primary} />
-                    <Text style={[styles.detailSectionTitle, { color: theme.colors.onSurface }]}>Valuation</Text>
+                    <Text
+                        style={[
+                            styles.detailSectionTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Valuation
+                    </Text>
                 </View>
-                <View style={styles.priceGrid}>
+                <Grid style={styles.priceGrid}>
                     <View style={styles.priceItem}>
-                        <Text style={[styles.priceLabel, { color: theme.colors.onSurfaceVariant }]}>Purchase</Text>
-                        <Text style={[styles.priceValue, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                styles.priceLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
+                            Purchase
+                        </Text>
+                        <Text
+                            style={[
+                                styles.priceValue,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {formatCurrency(wine.purchasePrice)}
                         </Text>
                     </View>
                     <View style={styles.priceItem}>
-                        <Text style={[styles.priceLabel, { color: theme.colors.onSurfaceVariant }]}>Current</Text>
-                        <Text style={[styles.priceValue, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                styles.priceLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
+                            Current
+                        </Text>
+                        <Text
+                            style={[
+                                styles.priceValue,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {formatCurrency(wine.currentValue)}
                         </Text>
                     </View>
                     <View style={styles.priceItem}>
-                        <Text style={[styles.priceLabel, { color: theme.colors.onSurfaceVariant }]}>Change</Text>
-                        <Text style={[styles.priceValue, { color: valuePositive ? "#16a34a" : "#dc2626" }]}>
+                        <Text
+                            style={[
+                                styles.priceLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
+                            Change
+                        </Text>
+                        <Text
+                            style={[
+                                styles.priceValue,
+                                {
+                                    color: valuePositive ? "#16a34a" : "#dc2626"
+                                }
+                            ]}
+                        >
                             {valuePositive ? "+" : ""}
                             {formatCurrency(valueChange)}
                         </Text>
                     </View>
-                </View>
+                </Grid>
             </View>
 
             {/* Serving Temperature */}
             <View style={styles.servingTempRow}>
                 <Ionicons name="thermometer-outline" size={16} color={theme.colors.secondary} />
-                <Text style={[styles.servingTempLabel, { color: theme.colors.onSurfaceVariant }]}>Serve at</Text>
-                <Text style={[styles.servingTempValue, { color: theme.colors.onSurface }]}>
+                <Text
+                    style={[
+                        styles.servingTempLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    Serve at
+                </Text>
+                <Text
+                    style={[
+                        styles.servingTempValue,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
                     {wine.servingTempC}\u00b0C
                 </Text>
-                <Text style={[styles.servingTempHint, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.servingTempHint,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     ({Math.round(wine.servingTempC * 1.8 + 32)}\u00b0F)
                 </Text>
             </View>
@@ -447,47 +655,95 @@ function WineDetailPanel({ wine }: { wine: Wine }) {
             {/* Drink Window Detail */}
             <View style={styles.drinkWindowDetailRow}>
                 <Ionicons name="calendar-outline" size={16} color={theme.colors.primary} />
-                <Text style={[styles.drinkWindowDetailText, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.drinkWindowDetailText,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     Drink window: {wine.drinkFrom}\u2013{wine.drinkTo}
                 </Text>
             </View>
         </View>
     );
 }
-
 function WineCard({ wine, expanded, onToggle }: { wine: Wine; expanded: boolean; onToggle: () => void }) {
     const { theme } = useUnistyles();
     const typeColor = WINE_TYPE_COLORS[wine.type];
-
     return (
-        <View
+        <Card
             style={[
                 styles.wineCard,
-                { backgroundColor: theme.colors.surfaceContainer, borderColor: theme.colors.outlineVariant }
+                {
+                    backgroundColor: theme.colors.surfaceContainer,
+                    borderColor: theme.colors.outlineVariant
+                }
             ]}
         >
             {/* Wine type color strip */}
-            <View style={[styles.cardStrip, { backgroundColor: typeColor }]} />
+            <View
+                style={[
+                    styles.cardStrip,
+                    {
+                        backgroundColor: typeColor
+                    }
+                ]}
+            />
 
             <Pressable
                 onPress={onToggle}
-                style={({ pressed }) => [styles.cardPressable, { opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [
+                    styles.cardPressable,
+                    {
+                        opacity: pressed ? 0.85 : 1
+                    }
+                ]}
             >
                 {/* Top row: vintage + name + chevron */}
                 <View style={styles.cardTopRow}>
                     <View
                         style={[
                             styles.vintageBadge,
-                            { backgroundColor: `${typeColor}14`, borderColor: `${typeColor}30` }
+                            {
+                                backgroundColor: `${typeColor}14`,
+                                borderColor: `${typeColor}30`
+                            }
                         ]}
                     >
-                        <Text style={[styles.vintageText, { color: typeColor }]}>{wine.vintage}</Text>
+                        <Text
+                            style={[
+                                styles.vintageText,
+                                {
+                                    color: typeColor
+                                }
+                            ]}
+                        >
+                            {wine.vintage}
+                        </Text>
                     </View>
                     <View style={styles.cardTitleArea}>
-                        <Text style={[styles.wineName, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                styles.wineName,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {wine.name}
                         </Text>
-                        <Text style={[styles.producerText, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                styles.producerText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {wine.producer}
                         </Text>
                     </View>
@@ -502,7 +758,15 @@ function WineCard({ wine, expanded, onToggle }: { wine: Wine; expanded: boolean;
                 <View style={styles.infoRow}>
                     <View style={styles.regionContainer}>
                         <Ionicons name="location-outline" size={12} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[styles.regionText, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                styles.regionText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {wine.region}
                         </Text>
                     </View>
@@ -513,11 +777,23 @@ function WineCard({ wine, expanded, onToggle }: { wine: Wine; expanded: boolean;
                     <View
                         style={[
                             styles.varietalChip,
-                            { backgroundColor: `${typeColor}14`, borderColor: `${typeColor}30` }
+                            {
+                                backgroundColor: `${typeColor}14`,
+                                borderColor: `${typeColor}30`
+                            }
                         ]}
                     >
                         <Ionicons name="leaf-outline" size={11} color={typeColor} />
-                        <Text style={[styles.varietalText, { color: typeColor }]}>{wine.varietal}</Text>
+                        <Text
+                            style={[
+                                styles.varietalText,
+                                {
+                                    color: typeColor
+                                }
+                            ]}
+                        >
+                            {wine.varietal}
+                        </Text>
                     </View>
 
                     <QuantityBadge quantity={wine.quantity} />
@@ -532,7 +808,7 @@ function WineCard({ wine, expanded, onToggle }: { wine: Wine; expanded: boolean;
 
             {/* Expandable detail */}
             {expanded && <WineDetailPanel wine={wine} />}
-        </View>
+        </Card>
     );
 }
 
@@ -541,27 +817,44 @@ function WineCard({ wine, expanded, onToggle }: { wine: Wine; expanded: boolean;
 export function WineCellarPage() {
     const { theme } = useUnistyles();
     const [expandedId, setExpandedId] = React.useState<string | null>(null);
-
     const totalBottles = React.useMemo(() => WINES.reduce((sum, w) => sum + w.quantity, 0), []);
     const totalValue = React.useMemo(() => WINES.reduce((sum, w) => sum + w.currentValue * w.quantity, 0), []);
     const oldestVintage = React.useMemo(() => Math.min(...WINES.map((w) => w.vintage)), []);
     const varietalsCount = React.useMemo(() => new Set(WINES.map((w) => w.varietal)).size, []);
-
     const groups = React.useMemo(() => groupByType(WINES), []);
-
     const handleToggle = React.useCallback((id: string) => {
         setExpandedId((prev) => (prev === id ? null : id));
     }, []);
-
     return (
-        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }}>
+        <ShowcasePage
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
+        >
             {/* Header */}
             <View style={styles.headerSection}>
                 <View style={styles.headerTitleRow}>
                     <Ionicons name="wine" size={26} color="#8B1A1A" />
-                    <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>Wine Cellar</Text>
+                    <Text
+                        style={[
+                            styles.headerTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Wine Cellar
+                    </Text>
                 </View>
-                <Text style={[styles.headerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.headerSubtitle,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {totalBottles} bottles across {groups.length} categories
                 </Text>
             </View>
@@ -607,7 +900,14 @@ export function WineCellarPage() {
             {groups.length === 0 && (
                 <View style={styles.emptyState}>
                     <Ionicons name="wine-outline" size={40} color={theme.colors.outlineVariant} />
-                    <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.emptyText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         No wines in your collection
                     </Text>
                 </View>
@@ -618,7 +918,7 @@ export function WineCellarPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Header
     headerSection: {
         paddingTop: 24,
@@ -639,7 +939,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         marginLeft: 36
     },
-
     // Metrics
     metricsRow: {
         flexDirection: "row",
@@ -669,7 +968,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 10
     },
-
     // Section header
     sectionHeader: {
         flexDirection: "row",
@@ -699,7 +997,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 1,
         marginLeft: 4
     },
-
     // Groups
     groupsContainer: {
         gap: 22
@@ -710,7 +1007,6 @@ const styles = StyleSheet.create((theme) => ({
     wineList: {
         gap: 10
     },
-
     // Wine card
     wineCard: {
         borderRadius: 14,
@@ -820,7 +1116,6 @@ const styles = StyleSheet.create((theme) => ({
         flexDirection: "row",
         alignItems: "center"
     },
-
     // Detail panel
     detailPanel: {
         borderTopWidth: 1,
@@ -863,7 +1158,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 14
     },
-
     // Serving temperature
     servingTempRow: {
         flexDirection: "row",
@@ -882,7 +1176,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
-
     // Drink window detail
     drinkWindowDetailRow: {
         flexDirection: "row",
@@ -893,7 +1186,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
-
     // Empty state
     emptyState: {
         alignItems: "center",

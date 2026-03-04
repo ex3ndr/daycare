@@ -1,12 +1,11 @@
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type Source = "Referral" | "LinkedIn" | "Direct";
-
 type Candidate = {
     name: string;
     role: string;
@@ -14,12 +13,10 @@ type Candidate = {
     source: Source;
     stageIndex: number;
 };
-
 type Stage = {
     label: string;
     candidates: Omit<Candidate, "stageIndex">[];
 };
-
 type JobOpening = {
     title: string;
     stages: Stage[];
@@ -34,41 +31,116 @@ const jobOpenings: JobOpening[] = [
             {
                 label: "Applied",
                 candidates: [
-                    { name: "Priya Sharma", role: "Senior Frontend Engineer", daysInStage: 2, source: "LinkedIn" },
-                    { name: "Marcus Johnson", role: "Backend Engineer", daysInStage: 5, source: "Referral" },
-                    { name: "Lena Petrova", role: "Senior Frontend Engineer", daysInStage: 1, source: "Direct" },
-                    { name: "David Kim", role: "DevOps Engineer", daysInStage: 3, source: "LinkedIn" },
-                    { name: "Amara Osei", role: "Backend Engineer", daysInStage: 7, source: "Referral" }
+                    {
+                        name: "Priya Sharma",
+                        role: "Senior Frontend Engineer",
+                        daysInStage: 2,
+                        source: "LinkedIn"
+                    },
+                    {
+                        name: "Marcus Johnson",
+                        role: "Backend Engineer",
+                        daysInStage: 5,
+                        source: "Referral"
+                    },
+                    {
+                        name: "Lena Petrova",
+                        role: "Senior Frontend Engineer",
+                        daysInStage: 1,
+                        source: "Direct"
+                    },
+                    {
+                        name: "David Kim",
+                        role: "DevOps Engineer",
+                        daysInStage: 3,
+                        source: "LinkedIn"
+                    },
+                    {
+                        name: "Amara Osei",
+                        role: "Backend Engineer",
+                        daysInStage: 7,
+                        source: "Referral"
+                    }
                 ]
             },
             {
                 label: "Phone Screen",
                 candidates: [
-                    { name: "Jonas Eriksson", role: "Senior Frontend Engineer", daysInStage: 4, source: "LinkedIn" },
-                    { name: "Sofia Mendez", role: "DevOps Engineer", daysInStage: 2, source: "Direct" },
-                    { name: "Chen Wei", role: "Backend Engineer", daysInStage: 6, source: "Referral" }
+                    {
+                        name: "Jonas Eriksson",
+                        role: "Senior Frontend Engineer",
+                        daysInStage: 4,
+                        source: "LinkedIn"
+                    },
+                    {
+                        name: "Sofia Mendez",
+                        role: "DevOps Engineer",
+                        daysInStage: 2,
+                        source: "Direct"
+                    },
+                    {
+                        name: "Chen Wei",
+                        role: "Backend Engineer",
+                        daysInStage: 6,
+                        source: "Referral"
+                    }
                 ]
             },
             {
                 label: "Technical",
                 candidates: [
-                    { name: "Aisha Diallo", role: "Senior Frontend Engineer", daysInStage: 3, source: "Referral" },
-                    { name: "Ryan O'Connor", role: "Backend Engineer", daysInStage: 8, source: "LinkedIn" },
-                    { name: "Mei Lin", role: "DevOps Engineer", daysInStage: 1, source: "Direct" }
+                    {
+                        name: "Aisha Diallo",
+                        role: "Senior Frontend Engineer",
+                        daysInStage: 3,
+                        source: "Referral"
+                    },
+                    {
+                        name: "Ryan O'Connor",
+                        role: "Backend Engineer",
+                        daysInStage: 8,
+                        source: "LinkedIn"
+                    },
+                    {
+                        name: "Mei Lin",
+                        role: "DevOps Engineer",
+                        daysInStage: 1,
+                        source: "Direct"
+                    }
                 ]
             },
             {
                 label: "Offer",
                 candidates: [
-                    { name: "Tomasz Nowak", role: "Senior Frontend Engineer", daysInStage: 2, source: "Referral" },
-                    { name: "Elena Vasquez", role: "Backend Engineer", daysInStage: 5, source: "LinkedIn" }
+                    {
+                        name: "Tomasz Nowak",
+                        role: "Senior Frontend Engineer",
+                        daysInStage: 2,
+                        source: "Referral"
+                    },
+                    {
+                        name: "Elena Vasquez",
+                        role: "Backend Engineer",
+                        daysInStage: 5,
+                        source: "LinkedIn"
+                    }
                 ]
             },
             {
                 label: "Hired",
                 candidates: [
-                    { name: "Kenji Tanaka", role: "DevOps Engineer", daysInStage: 0, source: "Referral" },
-                    { name: "Fatima Al-Rashid", role: "Senior Frontend Engineer", daysInStage: 0, source: "Direct" }
+                    {
+                        name: "Kenji Tanaka",
+                        role: "DevOps Engineer",
+                        daysInStage: 0,
+                        source: "Referral"
+                    },
+                    {
+                        name: "Fatima Al-Rashid",
+                        role: "Senior Frontend Engineer",
+                        daysInStage: 0,
+                        source: "Direct"
+                    }
                 ]
             }
         ]
@@ -79,21 +151,52 @@ const jobOpenings: JobOpening[] = [
             {
                 label: "Applied",
                 candidates: [
-                    { name: "Hannah Liu", role: "Product Manager", daysInStage: 3, source: "LinkedIn" },
-                    { name: "Oscar Reyes", role: "Product Designer", daysInStage: 1, source: "Direct" }
+                    {
+                        name: "Hannah Liu",
+                        role: "Product Manager",
+                        daysInStage: 3,
+                        source: "LinkedIn"
+                    },
+                    {
+                        name: "Oscar Reyes",
+                        role: "Product Designer",
+                        daysInStage: 1,
+                        source: "Direct"
+                    }
                 ]
             },
             {
                 label: "Phone Screen",
-                candidates: [{ name: "Nina Johansson", role: "Product Manager", daysInStage: 5, source: "Referral" }]
+                candidates: [
+                    {
+                        name: "Nina Johansson",
+                        role: "Product Manager",
+                        daysInStage: 5,
+                        source: "Referral"
+                    }
+                ]
             },
             {
                 label: "Technical",
-                candidates: [{ name: "Raj Patel", role: "Product Designer", daysInStage: 2, source: "LinkedIn" }]
+                candidates: [
+                    {
+                        name: "Raj Patel",
+                        role: "Product Designer",
+                        daysInStage: 2,
+                        source: "LinkedIn"
+                    }
+                ]
             },
             {
                 label: "Offer",
-                candidates: [{ name: "Claire Dubois", role: "Product Manager", daysInStage: 1, source: "Referral" }]
+                candidates: [
+                    {
+                        name: "Claire Dubois",
+                        role: "Product Manager",
+                        daysInStage: 1,
+                        source: "Referral"
+                    }
+                ]
             },
             {
                 label: "Hired",
@@ -112,9 +215,7 @@ function initialsFrom(name: string): string {
     }
     return name.slice(0, 2).toUpperCase();
 }
-
 const avatarColors = ["#6366F1", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6", "#EF4444", "#14B8A6"];
-
 function colorForName(name: string): string {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -122,7 +223,6 @@ function colorForName(name: string): string {
     }
     return avatarColors[Math.abs(hash) % avatarColors.length];
 }
-
 const sourceColors: Record<Source, string> = {
     Referral: "#10B981",
     LinkedIn: "#3B82F6",
@@ -140,7 +240,10 @@ function flattenCandidates(job: JobOpening): Candidate[] {
     const result: Candidate[] = [];
     for (let si = 0; si < job.stages.length; si++) {
         for (const c of job.stages[si].candidates) {
-            result.push({ ...c, stageIndex: si });
+            result.push({
+                ...c,
+                stageIndex: si
+            });
         }
     }
     return result;
@@ -176,7 +279,6 @@ function FunnelBar({ stages }: { stages: Stage[] }) {
         </View>
     );
 }
-
 function StageFilterTabs({
     stages,
     activeIndex,
@@ -204,7 +306,14 @@ function StageFilterTabs({
                     }
                 ]}
             >
-                <Text style={[styles.tabPillText, { color: activeIndex === null ? "#FFFFFF" : textColor }]}>
+                <Text
+                    style={[
+                        styles.tabPillText,
+                        {
+                            color: activeIndex === null ? "#FFFFFF" : textColor
+                        }
+                    ]}
+                >
                     {allLabel}
                 </Text>
             </Pressable>
@@ -221,7 +330,14 @@ function StageFilterTabs({
                             }
                         ]}
                     >
-                        <Text style={[styles.tabPillText, { color: isActive ? "#FFFFFF" : textColor }]}>
+                        <Text
+                            style={[
+                                styles.tabPillText,
+                                {
+                                    color: isActive ? "#FFFFFF" : textColor
+                                }
+                            ]}
+                        >
                             {stage.label}
                         </Text>
                     </Pressable>
@@ -230,7 +346,6 @@ function StageFilterTabs({
         </ScrollView>
     );
 }
-
 function CandidateCard({
     candidate,
     totalStages,
@@ -253,9 +368,8 @@ function CandidateCard({
     const progress = (candidate.stageIndex + 1) / totalStages;
     const stageColor = stageColors[candidate.stageIndex];
     const dayLabel = candidate.daysInStage === 0 ? "Today" : `Day ${candidate.daysInStage} in stage`;
-
     return (
-        <View
+        <Card
             style={[
                 styles.card,
                 {
@@ -267,32 +381,103 @@ function CandidateCard({
         >
             <View style={styles.cardBody}>
                 {/* Avatar */}
-                <View style={[styles.avatar, { backgroundColor: `${avatarColor}20` }]}>
-                    <Text style={[styles.avatarText, { color: avatarColor }]}>{initials}</Text>
+                <View
+                    style={[
+                        styles.avatar,
+                        {
+                            backgroundColor: `${avatarColor}20`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.avatarText,
+                            {
+                                color: avatarColor
+                            }
+                        ]}
+                    >
+                        {initials}
+                    </Text>
                 </View>
 
                 {/* Center info */}
                 <View style={styles.cardCenter}>
-                    <Text style={[styles.cardName, { color: textColor }]} numberOfLines={1}>
+                    <Text
+                        style={[
+                            styles.cardName,
+                            {
+                                color: textColor
+                            }
+                        ]}
+                        numberOfLines={1}
+                    >
                         {candidate.name}
                     </Text>
-                    <Text style={[styles.cardRole, { color: subtextColor }]} numberOfLines={1}>
+                    <Text
+                        style={[
+                            styles.cardRole,
+                            {
+                                color: subtextColor
+                            }
+                        ]}
+                        numberOfLines={1}
+                    >
                         {candidate.role}
                     </Text>
-                    <Text style={[styles.cardDays, { color: subtextColor }]}>{dayLabel}</Text>
+                    <Text
+                        style={[
+                            styles.cardDays,
+                            {
+                                color: subtextColor
+                            }
+                        ]}
+                    >
+                        {dayLabel}
+                    </Text>
                 </View>
 
                 {/* Right: source badge + stage dot */}
                 <View style={styles.cardRight}>
-                    <View style={[styles.sourceBadge, { backgroundColor: sourceBg }]}>
-                        <Text style={[styles.sourceBadgeText, { color: sourceFg }]}>{candidate.source}</Text>
+                    <View
+                        style={[
+                            styles.sourceBadge,
+                            {
+                                backgroundColor: sourceBg
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.sourceBadgeText,
+                                {
+                                    color: sourceFg
+                                }
+                            ]}
+                        >
+                            {candidate.source}
+                        </Text>
                     </View>
-                    <View style={[styles.stageDot, { backgroundColor: stageColor }]} />
+                    <View
+                        style={[
+                            styles.stageDot,
+                            {
+                                backgroundColor: stageColor
+                            }
+                        ]}
+                    />
                 </View>
             </View>
 
             {/* Progress bar */}
-            <View style={[styles.progressTrack, { backgroundColor: borderColor }]}>
+            <View
+                style={[
+                    styles.progressTrack,
+                    {
+                        backgroundColor: borderColor
+                    }
+                ]}
+            >
                 <View
                     style={[
                         styles.progressFill,
@@ -303,7 +488,7 @@ function CandidateCard({
                     ]}
                 />
             </View>
-        </View>
+        </Card>
     );
 }
 
@@ -317,7 +502,6 @@ export function RecruitmentPipelinePage() {
     const { theme } = useUnistyles();
     const [selectedJob, setSelectedJob] = React.useState(0);
     const [stageFilter, setStageFilter] = React.useState<number | null>(null);
-
     const job = jobOpenings[selectedJob];
     const allCandidates = React.useMemo(() => flattenCandidates(job), [job]);
     const filtered = stageFilter === null ? allCandidates : allCandidates.filter((c) => c.stageIndex === stageFilter);
@@ -327,7 +511,6 @@ export function RecruitmentPipelinePage() {
         setSelectedJob(idx);
         setStageFilter(null);
     };
-
     return (
         <ShowcasePage edgeToEdge contentBackgroundColor={theme.colors.surface}>
             {/* Job opening selector */}
@@ -378,8 +561,24 @@ export function RecruitmentPipelinePage() {
 
             {/* Section header + filter tabs */}
             <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>All Candidates</Text>
-                <Text style={[styles.sectionCount, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.sectionTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    All Candidates
+                </Text>
+                <Text
+                    style={[
+                        styles.sectionCount,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {filtered.length} shown
                 </Text>
             </View>
@@ -408,7 +607,14 @@ export function RecruitmentPipelinePage() {
                 ))}
                 {filtered.length === 0 && (
                     <View style={styles.emptyState}>
-                        <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.emptyText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             No candidates in this stage
                         </Text>
                     </View>
@@ -420,7 +626,7 @@ export function RecruitmentPipelinePage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     jobSelectorRow: {
         flexDirection: "row",
         gap: 10,
@@ -504,7 +710,10 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 14,
         borderWidth: 1,
         overflow: "hidden",
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: {
+            width: 0,
+            height: 2
+        },
         shadowOpacity: 0.06,
         shadowRadius: 8,
         elevation: 2

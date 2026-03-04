@@ -2,12 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
+import { Card } from "@/components/Card";
 
 // --- Types ---
+import { Grid } from "@/components/Grid";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type CampaignStatus = "draft" | "scheduled" | "sent";
-
 type Segment = {
     name: string;
     recipients: number;
@@ -15,7 +16,6 @@ type Segment = {
     clickRate: number;
     color: string;
 };
-
 type ABVariant = {
     label: string;
     subjectLine: string;
@@ -23,7 +23,6 @@ type ABVariant = {
     clickRate: number;
     winner: boolean;
 };
-
 type Campaign = {
     id: string;
     name: string;
@@ -41,10 +40,29 @@ type Campaign = {
 
 // --- Constants ---
 
-const STATUS_CONFIG: Record<CampaignStatus, { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = {
-    draft: { label: "Draft", icon: "create-outline", color: "#F59E0B" },
-    scheduled: { label: "Scheduled", icon: "time-outline", color: "#6366F1" },
-    sent: { label: "Sent", icon: "checkmark-circle-outline", color: "#10B981" }
+const STATUS_CONFIG: Record<
+    CampaignStatus,
+    {
+        label: string;
+        icon: keyof typeof Ionicons.glyphMap;
+        color: string;
+    }
+> = {
+    draft: {
+        label: "Draft",
+        icon: "create-outline",
+        color: "#F59E0B"
+    },
+    scheduled: {
+        label: "Scheduled",
+        icon: "time-outline",
+        color: "#6366F1"
+    },
+    sent: {
+        label: "Sent",
+        icon: "checkmark-circle-outline",
+        color: "#10B981"
+    }
 };
 
 // --- Mock Data ---
@@ -78,9 +96,27 @@ const CAMPAIGNS: Campaign[] = [
             }
         ],
         segments: [
-            { name: "Active Users", recipients: 5200, openRate: 52.1, clickRate: 12.4, color: "#10B981" },
-            { name: "Free Tier", recipients: 4100, openRate: 35.8, clickRate: 5.2, color: "#3B82F6" },
-            { name: "Inactive (30d)", recipients: 3180, openRate: 28.4, clickRate: 3.1, color: "#9CA3AF" }
+            {
+                name: "Active Users",
+                recipients: 5200,
+                openRate: 52.1,
+                clickRate: 12.4,
+                color: "#10B981"
+            },
+            {
+                name: "Free Tier",
+                recipients: 4100,
+                openRate: 35.8,
+                clickRate: 5.2,
+                color: "#3B82F6"
+            },
+            {
+                name: "Inactive (30d)",
+                recipients: 3180,
+                openRate: 28.4,
+                clickRate: 3.1,
+                color: "#9CA3AF"
+            }
         ]
     },
     {
@@ -95,9 +131,27 @@ const CAMPAIGNS: Campaign[] = [
         contentPreview:
             "Every month, we spotlight a customer who's achieved incredible results. This month, meet Meridian Labs - they went from a small team of 5 to a 45-person operation in just 18 months...",
         segments: [
-            { name: "Enterprise", recipients: 2400, openRate: 48.2, clickRate: 16.8, color: "#6366F1" },
-            { name: "Pro Users", recipients: 5100, openRate: 40.1, clickRate: 12.5, color: "#3B82F6" },
-            { name: "Free Tier", recipients: 4400, openRate: 29.3, clickRate: 5.8, color: "#9CA3AF" }
+            {
+                name: "Enterprise",
+                recipients: 2400,
+                openRate: 48.2,
+                clickRate: 16.8,
+                color: "#6366F1"
+            },
+            {
+                name: "Pro Users",
+                recipients: 5100,
+                openRate: 40.1,
+                clickRate: 12.5,
+                color: "#3B82F6"
+            },
+            {
+                name: "Free Tier",
+                recipients: 4400,
+                openRate: 29.3,
+                clickRate: 5.8,
+                color: "#9CA3AF"
+            }
         ]
     },
     {
@@ -112,8 +166,20 @@ const CAMPAIGNS: Campaign[] = [
         contentPreview:
             "Here's your weekly digest! This week: top 5 productivity hacks from our power users, a community Q&A recap, and an exclusive sneak peek at our upcoming feature...",
         segments: [
-            { name: "Digest Subscribers", recipients: 8900, openRate: 34.5, clickRate: 7.8, color: "#10B981" },
-            { name: "All Others", recipients: 4300, openRate: 24.1, clickRate: 3.5, color: "#9CA3AF" }
+            {
+                name: "Digest Subscribers",
+                recipients: 8900,
+                openRate: 34.5,
+                clickRate: 7.8,
+                color: "#10B981"
+            },
+            {
+                name: "All Others",
+                recipients: 4300,
+                openRate: 24.1,
+                clickRate: 3.5,
+                color: "#9CA3AF"
+            }
         ]
     },
     {
@@ -192,7 +258,13 @@ const CAMPAIGNS: Campaign[] = [
                 clickRate: 0,
                 winner: false
             },
-            { label: "B", subjectLine: "Come back and see what's changed", openRate: 0, clickRate: 0, winner: false }
+            {
+                label: "B",
+                subjectLine: "Come back and see what's changed",
+                openRate: 0,
+                clickRate: 0,
+                winner: false
+            }
         ]
     }
 ];
@@ -204,27 +276,22 @@ function formatNumber(n: number): string {
     if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
     return n.toString();
 }
-
 function campaignsByStatus(status: CampaignStatus): Campaign[] {
     return CAMPAIGNS.filter((c) => c.status === status);
 }
-
 function averageOpenRate(): number {
     const sent = CAMPAIGNS.filter((c) => c.status === "sent" && c.openRate !== undefined);
     if (sent.length === 0) return 0;
     return sent.reduce((sum, c) => sum + (c.openRate ?? 0), 0) / sent.length;
 }
-
 function averageClickRate(): number {
     const sent = CAMPAIGNS.filter((c) => c.status === "sent" && c.clickRate !== undefined);
     if (sent.length === 0) return 0;
     return sent.reduce((sum, c) => sum + (c.clickRate ?? 0), 0) / sent.length;
 }
-
 function campaignsSentThisMonth(): number {
     return CAMPAIGNS.filter((c) => c.status === "sent" && c.sendDate.startsWith("Mar")).length;
 }
-
 const SUBSCRIBER_COUNT = 14200;
 const SUBSCRIBER_TREND = "+820";
 
@@ -245,7 +312,6 @@ function MetricsRow({
     const avgOpen = averageOpenRate();
     const avgClick = averageClickRate();
     const sentCount = campaignsSentThisMonth();
-
     const metrics = [
         {
             label: "Subscribers",
@@ -275,39 +341,98 @@ function MetricsRow({
             color: "#F59E0B"
         }
     ];
-
     return (
-        <View style={styles.metricsGrid}>
+        <Grid style={styles.metricsGrid}>
             {metrics.map((m) => (
-                <View key={m.label} style={[styles.metricCard, { backgroundColor: surfaceColor, borderColor }]}>
+                <Card
+                    key={m.label}
+                    style={[
+                        styles.metricCard,
+                        {
+                            backgroundColor: surfaceColor,
+                            borderColor
+                        }
+                    ]}
+                >
                     <View style={styles.metricCardHeader}>
-                        <View style={[styles.metricIconBadge, { backgroundColor: `${m.color}18` }]}>
+                        <View
+                            style={[
+                                styles.metricIconBadge,
+                                {
+                                    backgroundColor: `${m.color}18`
+                                }
+                            ]}
+                        >
                             <Ionicons name={m.icon} size={18} color={m.color} />
                         </View>
                     </View>
-                    <Text style={[styles.metricValue, { color: textColor }]}>{m.value}</Text>
-                    <Text style={[styles.metricLabel, { color: subtextColor }]}>{m.label}</Text>
+                    <Text
+                        style={[
+                            styles.metricValue,
+                            {
+                                color: textColor
+                            }
+                        ]}
+                    >
+                        {m.value}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.metricLabel,
+                            {
+                                color: subtextColor
+                            }
+                        ]}
+                    >
+                        {m.label}
+                    </Text>
                     {m.trend && (
-                        <View style={[styles.trendBadge, { backgroundColor: "#10B98118" }]}>
+                        <View
+                            style={[
+                                styles.trendBadge,
+                                {
+                                    backgroundColor: "#10B98118"
+                                }
+                            ]}
+                        >
                             <Ionicons name="arrow-up" size={10} color="#10B981" />
-                            <Text style={[styles.trendText, { color: "#10B981" }]}>{m.trend}</Text>
+                            <Text
+                                style={[
+                                    styles.trendText,
+                                    {
+                                        color: "#10B981"
+                                    }
+                                ]}
+                            >
+                                {m.trend}
+                            </Text>
                         </View>
                     )}
                     {m.gauge !== undefined && (
                         <View style={styles.gaugeContainer}>
-                            <View style={[styles.gaugeTrack, { backgroundColor: `${m.color}18` }]}>
+                            <View
+                                style={[
+                                    styles.gaugeTrack,
+                                    {
+                                        backgroundColor: `${m.color}18`
+                                    }
+                                ]}
+                            >
                                 <View
                                     style={[
                                         styles.gaugeFill,
-                                        { width: `${Math.min(m.gauge, 100)}%`, backgroundColor: m.color }
+                                        {
+                                            width: `${Math.min(m.gauge, 100)}%`,
+                                            backgroundColor: m.color
+                                        }
                                     ]}
                                 />
                             </View>
                         </View>
                     )}
-                </View>
+                </Card>
             ))}
-        </View>
+        </Grid>
     );
 }
 
@@ -335,10 +460,35 @@ function SectionHeader({
         <Pressable onPress={onToggle} style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
                 <Ionicons name={icon} size={18} color={iconColor} />
-                <Text style={[styles.sectionTitle, { color: textColor }]}>{title}</Text>
+                <Text
+                    style={[
+                        styles.sectionTitle,
+                        {
+                            color: textColor
+                        }
+                    ]}
+                >
+                    {title}
+                </Text>
                 {count !== undefined && (
-                    <View style={[styles.sectionCount, { backgroundColor: `${iconColor}18` }]}>
-                        <Text style={[styles.sectionCountText, { color: iconColor }]}>{count}</Text>
+                    <View
+                        style={[
+                            styles.sectionCount,
+                            {
+                                backgroundColor: `${iconColor}18`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.sectionCountText,
+                                {
+                                    color: iconColor
+                                }
+                            ]}
+                        >
+                            {count}
+                        </Text>
                     </View>
                 )}
             </View>
@@ -351,10 +501,34 @@ function SectionHeader({
 function DraftProgressBar({ completion, color }: { completion: number; color: string }) {
     return (
         <View style={styles.progressContainer}>
-            <View style={[styles.progressTrack, { backgroundColor: `${color}18` }]}>
-                <View style={[styles.progressFill, { width: `${completion}%`, backgroundColor: color }]} />
+            <View
+                style={[
+                    styles.progressTrack,
+                    {
+                        backgroundColor: `${color}18`
+                    }
+                ]}
+            >
+                <View
+                    style={[
+                        styles.progressFill,
+                        {
+                            width: `${completion}%`,
+                            backgroundColor: color
+                        }
+                    ]}
+                />
             </View>
-            <Text style={[styles.progressLabel, { color }]}>{completion}%</Text>
+            <Text
+                style={[
+                    styles.progressLabel,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {completion}%
+            </Text>
         </View>
     );
 }
@@ -376,7 +550,6 @@ function CampaignRow({
     borderColor: string;
 }) {
     const statusCfg = STATUS_CONFIG[campaign.status];
-
     return (
         <Pressable onPress={onPress}>
             <View
@@ -390,29 +563,86 @@ function CampaignRow({
             >
                 <View style={styles.campaignMain}>
                     <View style={styles.campaignTitleRow}>
-                        <Text style={[styles.campaignName, { color: textColor }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                styles.campaignName,
+                                {
+                                    color: textColor
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {campaign.name}
                         </Text>
-                        <View style={[styles.statusChip, { backgroundColor: `${statusCfg.color}18` }]}>
+                        <View
+                            style={[
+                                styles.statusChip,
+                                {
+                                    backgroundColor: `${statusCfg.color}18`
+                                }
+                            ]}
+                        >
                             <Ionicons name={statusCfg.icon} size={12} color={statusCfg.color} />
-                            <Text style={[styles.statusChipText, { color: statusCfg.color }]}>{statusCfg.label}</Text>
+                            <Text
+                                style={[
+                                    styles.statusChipText,
+                                    {
+                                        color: statusCfg.color
+                                    }
+                                ]}
+                            >
+                                {statusCfg.label}
+                            </Text>
                         </View>
                     </View>
                     {campaign.subjectLine ? (
-                        <Text style={[styles.subjectLine, { color: subtextColor }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                styles.subjectLine,
+                                {
+                                    color: subtextColor
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {campaign.subjectLine}
                         </Text>
                     ) : (
-                        <Text style={[styles.subjectLineEmpty, { color: subtextColor }]}>No subject line yet</Text>
+                        <Text
+                            style={[
+                                styles.subjectLineEmpty,
+                                {
+                                    color: subtextColor
+                                }
+                            ]}
+                        >
+                            No subject line yet
+                        </Text>
                     )}
                     <View style={styles.campaignMetaRow}>
                         <View style={styles.campaignMetaItem}>
                             <Ionicons name="calendar-outline" size={12} color={subtextColor} />
-                            <Text style={[styles.campaignMetaText, { color: subtextColor }]}>{campaign.sendDate}</Text>
+                            <Text
+                                style={[
+                                    styles.campaignMetaText,
+                                    {
+                                        color: subtextColor
+                                    }
+                                ]}
+                            >
+                                {campaign.sendDate}
+                            </Text>
                         </View>
                         <View style={styles.campaignMetaItem}>
                             <Ionicons name="people-outline" size={12} color={subtextColor} />
-                            <Text style={[styles.campaignMetaText, { color: subtextColor }]}>
+                            <Text
+                                style={[
+                                    styles.campaignMetaText,
+                                    {
+                                        color: subtextColor
+                                    }
+                                ]}
+                            >
                                 {formatNumber(campaign.recipients)}
                             </Text>
                         </View>
@@ -453,26 +683,68 @@ function CampaignDetail({
     borderColor: string;
 }) {
     return (
-        <View style={[styles.detailPanel, { backgroundColor: surfaceColor, borderColor }]}>
+        <View
+            style={[
+                styles.detailPanel,
+                {
+                    backgroundColor: surfaceColor,
+                    borderColor
+                }
+            ]}
+        >
             {/* Content preview */}
             <View style={styles.detailSection}>
                 <View style={styles.detailSectionHeader}>
                     <Ionicons name="document-text-outline" size={16} color={subtextColor} />
-                    <Text style={[styles.detailSectionTitle, { color: textColor }]}>Content Preview</Text>
+                    <Text
+                        style={[
+                            styles.detailSectionTitle,
+                            {
+                                color: textColor
+                            }
+                        ]}
+                    >
+                        Content Preview
+                    </Text>
                 </View>
-                <Text style={[styles.contentPreview, { color: textColor }]}>{campaign.contentPreview}</Text>
+                <Text
+                    style={[
+                        styles.contentPreview,
+                        {
+                            color: textColor
+                        }
+                    ]}
+                >
+                    {campaign.contentPreview}
+                </Text>
             </View>
 
             {/* A/B test variants */}
             {campaign.abVariants && campaign.abVariants.length > 0 && (
                 <View style={styles.detailSection}>
-                    <View style={[styles.detailDivider, { borderColor }]} />
+                    <View
+                        style={[
+                            styles.detailDivider,
+                            {
+                                borderColor
+                            }
+                        ]}
+                    />
                     <View style={styles.detailSectionHeader}>
                         <Ionicons name="git-compare-outline" size={16} color="#8B5CF6" />
-                        <Text style={[styles.detailSectionTitle, { color: textColor }]}>A/B Test Variants</Text>
+                        <Text
+                            style={[
+                                styles.detailSectionTitle,
+                                {
+                                    color: textColor
+                                }
+                            ]}
+                        >
+                            A/B Test Variants
+                        </Text>
                     </View>
                     {campaign.abVariants.map((variant) => (
-                        <View
+                        <Card
                             key={variant.label}
                             style={[
                                 styles.variantCard,
@@ -487,42 +759,79 @@ function CampaignDetail({
                                     <View
                                         style={[
                                             styles.variantBadge,
-                                            { backgroundColor: variant.winner ? "#10B98118" : `${borderColor}80` }
+                                            {
+                                                backgroundColor: variant.winner ? "#10B98118" : `${borderColor}80`
+                                            }
                                         ]}
                                     >
                                         <Text
                                             style={[
                                                 styles.variantBadgeText,
-                                                { color: variant.winner ? "#10B981" : subtextColor }
+                                                {
+                                                    color: variant.winner ? "#10B981" : subtextColor
+                                                }
                                             ]}
                                         >
                                             {variant.label}
                                         </Text>
                                     </View>
                                     {variant.winner && (
-                                        <View style={[styles.winnerBadge, { backgroundColor: "#10B98118" }]}>
+                                        <View
+                                            style={[
+                                                styles.winnerBadge,
+                                                {
+                                                    backgroundColor: "#10B98118"
+                                                }
+                                            ]}
+                                        >
                                             <Ionicons name="trophy-outline" size={11} color="#10B981" />
                                             <Text style={styles.winnerText}>Winner</Text>
                                         </View>
                                     )}
                                 </View>
                             </View>
-                            <Text style={[styles.variantSubject, { color: textColor }]} numberOfLines={2}>
+                            <Text
+                                style={[
+                                    styles.variantSubject,
+                                    {
+                                        color: textColor
+                                    }
+                                ]}
+                                numberOfLines={2}
+                            >
                                 {variant.subjectLine}
                             </Text>
                             {campaign.status === "sent" && (
                                 <View style={styles.variantMetrics}>
                                     <View style={styles.variantMetricItem}>
-                                        <Text style={[styles.variantMetricLabel, { color: subtextColor }]}>Open</Text>
+                                        <Text
+                                            style={[
+                                                styles.variantMetricLabel,
+                                                {
+                                                    color: subtextColor
+                                                }
+                                            ]}
+                                        >
+                                            Open
+                                        </Text>
                                         <Text style={styles.variantMetricValue}>{variant.openRate.toFixed(1)}%</Text>
                                     </View>
                                     <View style={styles.variantMetricItem}>
-                                        <Text style={[styles.variantMetricLabel, { color: subtextColor }]}>Click</Text>
+                                        <Text
+                                            style={[
+                                                styles.variantMetricLabel,
+                                                {
+                                                    color: subtextColor
+                                                }
+                                            ]}
+                                        >
+                                            Click
+                                        </Text>
                                         <Text style={styles.variantMetricValue}>{variant.clickRate.toFixed(1)}%</Text>
                                     </View>
                                 </View>
                             )}
-                        </View>
+                        </Card>
                     ))}
                 </View>
             )}
@@ -530,10 +839,26 @@ function CampaignDetail({
             {/* Segment performance breakdown */}
             {campaign.segments && campaign.segments.length > 0 && (
                 <View style={styles.detailSection}>
-                    <View style={[styles.detailDivider, { borderColor }]} />
+                    <View
+                        style={[
+                            styles.detailDivider,
+                            {
+                                borderColor
+                            }
+                        ]}
+                    />
                     <View style={styles.detailSectionHeader}>
                         <Ionicons name="pie-chart-outline" size={16} color="#3B82F6" />
-                        <Text style={[styles.detailSectionTitle, { color: textColor }]}>Segment Breakdown</Text>
+                        <Text
+                            style={[
+                                styles.detailSectionTitle,
+                                {
+                                    color: textColor
+                                }
+                            ]}
+                        >
+                            Segment Breakdown
+                        </Text>
                     </View>
                     {campaign.segments.map((seg) => {
                         const recipientPct = (seg.recipients / campaign.recipients) * 100;
@@ -541,16 +866,46 @@ function CampaignDetail({
                             <View key={seg.name} style={styles.segmentRow}>
                                 <View style={styles.segmentHeader}>
                                     <View style={styles.segmentNameRow}>
-                                        <View style={[styles.segmentDot, { backgroundColor: seg.color }]} />
-                                        <Text style={[styles.segmentName, { color: textColor }]}>{seg.name}</Text>
+                                        <View
+                                            style={[
+                                                styles.segmentDot,
+                                                {
+                                                    backgroundColor: seg.color
+                                                }
+                                            ]}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.segmentName,
+                                                {
+                                                    color: textColor
+                                                }
+                                            ]}
+                                        >
+                                            {seg.name}
+                                        </Text>
                                     </View>
-                                    <Text style={[styles.segmentRecipients, { color: subtextColor }]}>
+                                    <Text
+                                        style={[
+                                            styles.segmentRecipients,
+                                            {
+                                                color: subtextColor
+                                            }
+                                        ]}
+                                    >
                                         {formatNumber(seg.recipients)} ({recipientPct.toFixed(0)}%)
                                     </Text>
                                 </View>
                                 {/* Recipient proportion bar */}
                                 <View style={styles.segmentBarContainer}>
-                                    <View style={[styles.segmentBarTrack, { backgroundColor: `${seg.color}18` }]}>
+                                    <View
+                                        style={[
+                                            styles.segmentBarTrack,
+                                            {
+                                                backgroundColor: `${seg.color}18`
+                                            }
+                                        ]}
+                                    >
                                         <View
                                             style={[
                                                 styles.segmentBarFill,
@@ -564,13 +919,27 @@ function CampaignDetail({
                                 </View>
                                 <View style={styles.segmentMetrics}>
                                     <View style={styles.segmentMetricItem}>
-                                        <Text style={[styles.segmentMetricLabel, { color: subtextColor }]}>
+                                        <Text
+                                            style={[
+                                                styles.segmentMetricLabel,
+                                                {
+                                                    color: subtextColor
+                                                }
+                                            ]}
+                                        >
                                             Open Rate
                                         </Text>
                                         <Text style={styles.segmentMetricValue}>{seg.openRate.toFixed(1)}%</Text>
                                     </View>
                                     <View style={styles.segmentMetricItem}>
-                                        <Text style={[styles.segmentMetricLabel, { color: subtextColor }]}>
+                                        <Text
+                                            style={[
+                                                styles.segmentMetricLabel,
+                                                {
+                                                    color: subtextColor
+                                                }
+                                            ]}
+                                        >
                                             Click Rate
                                         </Text>
                                         <Text style={styles.segmentMetricValue}>{seg.clickRate.toFixed(1)}%</Text>
@@ -600,29 +969,69 @@ export function NewsletterCampaignsPage() {
         scheduled: true,
         sent: true
     });
-
     const toggleSection = React.useCallback((status: CampaignStatus) => {
-        setExpandedSections((prev) => ({ ...prev, [status]: !prev[status] }));
+        setExpandedSections((prev) => ({
+            ...prev,
+            [status]: !prev[status]
+        }));
     }, []);
-
     const handleCampaignPress = React.useCallback((id: string) => {
         setSelectedCampaignId((prev) => (prev === id ? null : id));
     }, []);
-
     const statusOrder: CampaignStatus[] = ["draft", "scheduled", "sent"];
-
     return (
         <ShowcasePage bottomInset={60} contentBackgroundColor={theme.colors.surface}>
             {/* Hero: subscriber count with trend */}
             <View style={styles.heroSection}>
-                <Text style={[styles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>NEWSLETTER</Text>
-                <Text style={[styles.heroValue, { color: theme.colors.onSurface }]}>
+                <Text
+                    style={[
+                        styles.heroLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    NEWSLETTER
+                </Text>
+                <Text
+                    style={[
+                        styles.heroValue,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
                     {formatNumber(SUBSCRIBER_COUNT)}
                 </Text>
-                <Text style={[styles.heroSub, { color: theme.colors.onSurfaceVariant }]}>Active subscribers</Text>
-                <View style={[styles.heroBadge, { backgroundColor: "#10B98118" }]}>
+                <Text
+                    style={[
+                        styles.heroSub,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    Active subscribers
+                </Text>
+                <View
+                    style={[
+                        styles.heroBadge,
+                        {
+                            backgroundColor: "#10B98118"
+                        }
+                    ]}
+                >
                     <Ionicons name="arrow-up" size={12} color="#10B981" />
-                    <Text style={[styles.heroBadgeText, { color: "#10B981" }]}>{SUBSCRIBER_TREND} this month</Text>
+                    <Text
+                        style={[
+                            styles.heroBadgeText,
+                            {
+                                color: "#10B981"
+                            }
+                        ]}
+                    >
+                        {SUBSCRIBER_TREND} this month
+                    </Text>
                 </View>
             </View>
 
@@ -639,7 +1048,6 @@ export function NewsletterCampaignsPage() {
                 const campaigns = campaignsByStatus(status);
                 const cfg = STATUS_CONFIG[status];
                 const isExpanded = expandedSections[status];
-
                 return (
                     <View key={status}>
                         <SectionHeader
@@ -653,7 +1061,14 @@ export function NewsletterCampaignsPage() {
                             count={campaigns.length}
                         />
                         {isExpanded && (
-                            <View style={[styles.sectionCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                            <Card
+                                style={[
+                                    styles.sectionCard,
+                                    {
+                                        backgroundColor: theme.colors.surfaceContainer
+                                    }
+                                ]}
+                            >
                                 {campaigns.map((campaign) => (
                                     <React.Fragment key={campaign.id}>
                                         <CampaignRow
@@ -675,7 +1090,7 @@ export function NewsletterCampaignsPage() {
                                         )}
                                     </React.Fragment>
                                 ))}
-                            </View>
+                            </Card>
                         )}
                     </View>
                 );
@@ -686,7 +1101,7 @@ export function NewsletterCampaignsPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Hero
     heroSection: {
         alignItems: "center",
@@ -723,7 +1138,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
-
     // Metrics grid
     metricsGrid: {
         flexDirection: "row",
@@ -774,7 +1188,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 10
     },
-
     // Gauge (for open/click rate cards)
     gaugeContainer: {
         marginTop: 2
@@ -788,7 +1201,6 @@ const styles = StyleSheet.create((theme) => ({
         height: "100%",
         borderRadius: 3
     },
-
     // Section header
     sectionHeader: {
         flexDirection: "row",
@@ -821,7 +1233,6 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 16,
         overflow: "hidden"
     },
-
     // Campaign row
     campaignRow: {
         paddingHorizontal: 14,
@@ -886,7 +1297,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 12,
         color: "#10B981"
     },
-
     // Draft progress bar
     progressContainer: {
         flexDirection: "row",
@@ -910,7 +1320,6 @@ const styles = StyleSheet.create((theme) => ({
         width: 32,
         textAlign: "right"
     },
-
     // Detail panel
     detailPanel: {
         borderRadius: 12,
@@ -940,7 +1349,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         lineHeight: 20
     },
-
     // A/B variant cards
     variantCard: {
         borderRadius: 10,
@@ -1005,7 +1413,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 14,
         color: "#10B981"
     },
-
     // Segment breakdown
     segmentRow: {
         gap: 6,

@@ -2,12 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type Priority = "high" | "medium" | "low";
-
 type Task = {
     id: string;
     description: string;
@@ -17,7 +16,6 @@ type Task = {
     priority: Priority;
     done: boolean;
 };
-
 type Category = {
     name: string;
     icon: keyof typeof Ionicons.glyphMap;
@@ -32,17 +30,14 @@ const PRIORITY_COLORS: Record<Priority, string> = {
     medium: "#f59e0b",
     low: "#22c55e"
 };
-
 const PRIORITY_LABELS: Record<Priority, string> = {
     high: "High",
     medium: "Med",
     low: "Low"
 };
-
 const EVENT_NAME = "TechSummit 2026";
 const EVENT_DATE = "2026-04-18";
 const EVENT_VENUE = "Grand Pacific Convention Center, Toronto";
-
 const TOTAL_BUDGET = 185000;
 const SPENT_BUDGET = 127450;
 const REMAINING_BUDGET = TOTAL_BUDGET - SPENT_BUDGET;
@@ -254,15 +249,13 @@ function daysUntilEvent(): number {
     const event = new Date(EVENT_DATE);
     return Math.ceil((event.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
-
 function formatBudget(n: number): string {
     if (n === 0) return "$0";
-    if (n >= 1000) return "$" + (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + "k";
-    return "$" + n.toLocaleString("en-US");
+    if (n >= 1000) return `$${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k`;
+    return `$${n.toLocaleString("en-US")}`;
 }
-
 function formatBudgetFull(n: number): string {
-    return "$" + n.toLocaleString("en-US");
+    return `$${n.toLocaleString("en-US")}`;
 }
 
 // --- Initials avatar ---
@@ -273,15 +266,29 @@ function Avatar({ name, color }: { name: string; color: string }) {
         .map((w) => w[0])
         .join("")
         .slice(0, 2);
-
     return (
-        <View style={[avatarStyles.circle, { backgroundColor: color + "20" }]}>
-            <Text style={[avatarStyles.text, { color }]}>{initials}</Text>
+        <View
+            style={[
+                avatarStyles.circle,
+                {
+                    backgroundColor: `${color}20`
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    avatarStyles.text,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {initials}
+            </Text>
         </View>
     );
 }
-
-const avatarStyles = StyleSheet.create((theme) => ({
+const avatarStyles = StyleSheet.create((_theme) => ({
     circle: {
         width: 28,
         height: 28,
@@ -299,15 +306,29 @@ const avatarStyles = StyleSheet.create((theme) => ({
 
 function PriorityChip({ priority }: { priority: Priority }) {
     const color = PRIORITY_COLORS[priority];
-
     return (
-        <View style={[chipStyles.container, { backgroundColor: color + "18" }]}>
-            <Text style={[chipStyles.label, { color }]}>{PRIORITY_LABELS[priority]}</Text>
+        <View
+            style={[
+                chipStyles.container,
+                {
+                    backgroundColor: `${color}18`
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    chipStyles.label,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {PRIORITY_LABELS[priority]}
+            </Text>
         </View>
     );
 }
-
-const chipStyles = StyleSheet.create((theme) => ({
+const chipStyles = StyleSheet.create((_theme) => ({
     container: {
         paddingHorizontal: 8,
         paddingVertical: 2,
@@ -325,9 +346,15 @@ const chipStyles = StyleSheet.create((theme) => ({
 
 function TaskRow({ task, categoryColor, onToggle }: { task: Task; categoryColor: string; onToggle: () => void }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[taskStyles.row, { backgroundColor: theme.colors.surface }]}>
+        <View
+            style={[
+                taskStyles.row,
+                {
+                    backgroundColor: theme.colors.surface
+                }
+            ]}
+        >
             {/* Checkbox */}
             <Pressable onPress={onToggle} style={taskStyles.checkboxArea}>
                 <View
@@ -348,7 +375,9 @@ function TaskRow({ task, categoryColor, onToggle }: { task: Task; categoryColor:
                 <Text
                     style={[
                         taskStyles.description,
-                        { color: task.done ? theme.colors.onSurfaceVariant : theme.colors.onSurface },
+                        {
+                            color: task.done ? theme.colors.onSurfaceVariant : theme.colors.onSurface
+                        },
                         task.done && taskStyles.strikethrough
                     ]}
                     numberOfLines={2}
@@ -359,23 +388,51 @@ function TaskRow({ task, categoryColor, onToggle }: { task: Task; categoryColor:
                 {/* Meta row: assignee, deadline, budget, priority */}
                 <View style={taskStyles.metaRow}>
                     <Avatar name={task.assignee} color={categoryColor} />
-                    <Text style={[taskStyles.assigneeName, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            taskStyles.assigneeName,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {task.assignee.split(" ")[0]}
                     </Text>
 
                     <View style={taskStyles.metaSpacer} />
 
                     {/* Deadline badge */}
-                    <View style={[taskStyles.deadlineBadge, { backgroundColor: theme.colors.surfaceContainer }]}>
+                    <View
+                        style={[
+                            taskStyles.deadlineBadge,
+                            {
+                                backgroundColor: theme.colors.surfaceContainer
+                            }
+                        ]}
+                    >
                         <Ionicons name="calendar-outline" size={11} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[taskStyles.deadlineText, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                taskStyles.deadlineText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {task.deadline}
                         </Text>
                     </View>
 
                     {/* Budget */}
                     {task.budget > 0 && (
-                        <Text style={[taskStyles.budgetAmount, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                taskStyles.budgetAmount,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {formatBudget(task.budget)}
                         </Text>
                     )}
@@ -386,7 +443,6 @@ function TaskRow({ task, categoryColor, onToggle }: { task: Task; categoryColor:
         </View>
     );
 }
-
 const taskStyles = StyleSheet.create((theme) => ({
     row: {
         flexDirection: "row",
@@ -394,7 +450,7 @@ const taskStyles = StyleSheet.create((theme) => ({
         paddingHorizontal: 12,
         gap: 10,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.outlineVariant + "40"
+        borderBottomColor: `${theme.colors.outlineVariant}40`
     },
     checkboxArea: {
         paddingTop: 2
@@ -464,22 +520,50 @@ function CategorySection({
 }) {
     const { theme } = useUnistyles();
     const [collapsed, setCollapsed] = React.useState(false);
-
     const completedCount = category.tasks.filter((t) => taskStates[t.id] ?? t.done).length;
     const totalCount = category.tasks.length;
     const progress = totalCount > 0 ? completedCount / totalCount : 0;
-
     return (
-        <View style={[sectionStyles.container, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <View
+            style={[
+                sectionStyles.container,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             {/* Section header */}
             <Pressable onPress={() => setCollapsed((c) => !c)} style={sectionStyles.header}>
-                <View style={[sectionStyles.iconCircle, { backgroundColor: category.color + "20" }]}>
+                <View
+                    style={[
+                        sectionStyles.iconCircle,
+                        {
+                            backgroundColor: `${category.color}20`
+                        }
+                    ]}
+                >
                     <Ionicons name={category.icon} size={18} color={category.color} />
                 </View>
 
                 <View style={sectionStyles.headerText}>
-                    <Text style={[sectionStyles.categoryName, { color: theme.colors.onSurface }]}>{category.name}</Text>
-                    <Text style={[sectionStyles.progressLabel, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            sectionStyles.categoryName,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {category.name}
+                    </Text>
+                    <Text
+                        style={[
+                            sectionStyles.progressLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {completedCount}/{totalCount} completed
                     </Text>
                 </View>
@@ -487,7 +571,12 @@ function CategorySection({
                 {/* Progress ring (simplified as bar) */}
                 <View style={sectionStyles.progressBarWrap}>
                     <View
-                        style={[sectionStyles.progressTrack, { backgroundColor: theme.colors.outlineVariant + "40" }]}
+                        style={[
+                            sectionStyles.progressTrack,
+                            {
+                                backgroundColor: `${theme.colors.outlineVariant}40`
+                            }
+                        ]}
                     >
                         <View
                             style={[
@@ -514,7 +603,10 @@ function CategorySection({
                     {category.tasks.map((task) => (
                         <TaskRow
                             key={task.id}
-                            task={{ ...task, done: taskStates[task.id] ?? task.done }}
+                            task={{
+                                ...task,
+                                done: taskStates[task.id] ?? task.done
+                            }}
                             categoryColor={category.color}
                             onToggle={() => onToggleTask(task.id)}
                         />
@@ -524,7 +616,6 @@ function CategorySection({
         </View>
     );
 }
-
 const sectionStyles = StyleSheet.create((theme) => ({
     container: {
         borderRadius: 12,
@@ -570,7 +661,7 @@ const sectionStyles = StyleSheet.create((theme) => ({
     },
     taskList: {
         borderTopWidth: 1,
-        borderTopColor: theme.colors.outlineVariant + "40"
+        borderTopColor: `${theme.colors.outlineVariant}40`
     }
 }));
 
@@ -588,19 +679,49 @@ function BudgetMetric({
     iconColor: string;
 }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[metricStyles.card, { backgroundColor: theme.colors.surfaceContainer }]}>
-            <View style={[metricStyles.iconDot, { backgroundColor: iconColor + "18" }]}>
+        <Card
+            style={[
+                metricStyles.card,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
+            <View
+                style={[
+                    metricStyles.iconDot,
+                    {
+                        backgroundColor: `${iconColor}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={18} color={iconColor} />
             </View>
-            <Text style={[metricStyles.value, { color: theme.colors.onSurface }]}>{value}</Text>
-            <Text style={[metricStyles.label, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
-        </View>
+            <Text
+                style={[
+                    metricStyles.value,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            <Text
+                style={[
+                    metricStyles.label,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {label}
+            </Text>
+        </Card>
     );
 }
-
-const metricStyles = StyleSheet.create((theme) => ({
+const metricStyles = StyleSheet.create((_theme) => ({
     card: {
         flex: 1,
         borderRadius: 12,
@@ -641,9 +762,11 @@ export function EventPlanningPage() {
         }
         return initial;
     });
-
     const handleToggleTask = React.useCallback((id: string) => {
-        setTaskStates((prev) => ({ ...prev, [id]: !prev[id] }));
+        setTaskStates((prev) => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
     }, []);
 
     // Compute overall stats
@@ -652,46 +775,121 @@ export function EventPlanningPage() {
     const totalTasks = allTasks.length;
     const overallProgress = totalTasks > 0 ? completedCount / totalTasks : 0;
     const spentFraction = SPENT_BUDGET / TOTAL_BUDGET;
-
     return (
         <ShowcasePage topInset={16} bottomInset={48} contentGap={20}>
             {/* Hero event card */}
-            <View style={[heroStyles.card, { backgroundColor: theme.colors.primary }]}>
+            <Card
+                style={[
+                    heroStyles.card,
+                    {
+                        backgroundColor: theme.colors.primary
+                    }
+                ]}
+            >
                 <View style={heroStyles.topRow}>
                     <View style={heroStyles.eventInfo}>
-                        <Text style={[heroStyles.eventName, { color: theme.colors.onPrimary }]}>{EVENT_NAME}</Text>
+                        <Text
+                            style={[
+                                heroStyles.eventName,
+                                {
+                                    color: theme.colors.onPrimary
+                                }
+                            ]}
+                        >
+                            {EVENT_NAME}
+                        </Text>
                         <View style={heroStyles.venueRow}>
-                            <Ionicons name="location-outline" size={14} color={theme.colors.onPrimary + "B0"} />
-                            <Text style={[heroStyles.venue, { color: theme.colors.onPrimary + "B0" }]}>
+                            <Ionicons name="location-outline" size={14} color={`${theme.colors.onPrimary}B0`} />
+                            <Text
+                                style={[
+                                    heroStyles.venue,
+                                    {
+                                        color: `${theme.colors.onPrimary}B0`
+                                    }
+                                ]}
+                            >
                                 {EVENT_VENUE}
                             </Text>
                         </View>
                         <View style={heroStyles.dateRow}>
-                            <Ionicons name="calendar-outline" size={14} color={theme.colors.onPrimary + "B0"} />
-                            <Text style={[heroStyles.dateText, { color: theme.colors.onPrimary + "B0" }]}>
+                            <Ionicons name="calendar-outline" size={14} color={`${theme.colors.onPrimary}B0`} />
+                            <Text
+                                style={[
+                                    heroStyles.dateText,
+                                    {
+                                        color: `${theme.colors.onPrimary}B0`
+                                    }
+                                ]}
+                            >
                                 April 18, 2026
                             </Text>
                         </View>
                     </View>
 
                     {/* Large countdown */}
-                    <View style={[heroStyles.countdownCircle, { backgroundColor: theme.colors.onPrimary + "20" }]}>
-                        <Text style={[heroStyles.countdownNumber, { color: theme.colors.onPrimary }]}>{countdown}</Text>
-                        <Text style={[heroStyles.countdownLabel, { color: theme.colors.onPrimary + "B0" }]}>days</Text>
+                    <View
+                        style={[
+                            heroStyles.countdownCircle,
+                            {
+                                backgroundColor: `${theme.colors.onPrimary}20`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                heroStyles.countdownNumber,
+                                {
+                                    color: theme.colors.onPrimary
+                                }
+                            ]}
+                        >
+                            {countdown}
+                        </Text>
+                        <Text
+                            style={[
+                                heroStyles.countdownLabel,
+                                {
+                                    color: `${theme.colors.onPrimary}B0`
+                                }
+                            ]}
+                        >
+                            days
+                        </Text>
                     </View>
                 </View>
 
                 {/* Overall progress bar */}
                 <View style={heroStyles.progressSection}>
                     <View style={heroStyles.progressHeader}>
-                        <Text style={[heroStyles.progressTitle, { color: theme.colors.onPrimary + "D0" }]}>
+                        <Text
+                            style={[
+                                heroStyles.progressTitle,
+                                {
+                                    color: `${theme.colors.onPrimary}D0`
+                                }
+                            ]}
+                        >
                             Task Progress
                         </Text>
-                        <Text style={[heroStyles.progressPercent, { color: theme.colors.onPrimary }]}>
+                        <Text
+                            style={[
+                                heroStyles.progressPercent,
+                                {
+                                    color: theme.colors.onPrimary
+                                }
+                            ]}
+                        >
                             {Math.round(overallProgress * 100)}%
                         </Text>
                     </View>
-                    <View style={[heroStyles.progressTrack, { backgroundColor: theme.colors.onPrimary + "30" }]}>
+                    <View
+                        style={[
+                            heroStyles.progressTrack,
+                            {
+                                backgroundColor: `${theme.colors.onPrimary}30`
+                            }
+                        ]}
+                    >
                         <View
                             style={[
                                 heroStyles.progressFill,
@@ -702,11 +900,18 @@ export function EventPlanningPage() {
                             ]}
                         />
                     </View>
-                    <Text style={[heroStyles.progressSubtext, { color: theme.colors.onPrimary + "90" }]}>
+                    <Text
+                        style={[
+                            heroStyles.progressSubtext,
+                            {
+                                color: `${theme.colors.onPrimary}90`
+                            }
+                        ]}
+                    >
                         {completedCount} of {totalTasks} tasks completed
                     </Text>
                 </View>
-            </View>
+            </Card>
 
             {/* Category task sections */}
             {CATEGORIES.map((category) => (
@@ -722,7 +927,16 @@ export function EventPlanningPage() {
             <View style={budgetStyles.wrapper}>
                 <View style={budgetStyles.titleRow}>
                     <Ionicons name="wallet-outline" size={20} color={theme.colors.onSurface} />
-                    <Text style={[budgetStyles.title, { color: theme.colors.onSurface }]}>Budget Summary</Text>
+                    <Text
+                        style={[
+                            budgetStyles.title,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Budget Summary
+                    </Text>
                 </View>
 
                 {/* Three metric cards */}
@@ -748,16 +962,44 @@ export function EventPlanningPage() {
                 </View>
 
                 {/* Budget progress bar */}
-                <View style={[budgetStyles.barCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <Card
+                    style={[
+                        budgetStyles.barCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <View style={budgetStyles.barHeader}>
-                        <Text style={[budgetStyles.barLabel, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                budgetStyles.barLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Budget Utilization
                         </Text>
-                        <Text style={[budgetStyles.barPercent, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                budgetStyles.barPercent,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {Math.round(spentFraction * 100)}%
                         </Text>
                     </View>
-                    <View style={[budgetStyles.barTrack, { backgroundColor: theme.colors.outlineVariant + "40" }]}>
+                    <View
+                        style={[
+                            budgetStyles.barTrack,
+                            {
+                                backgroundColor: `${theme.colors.outlineVariant}40`
+                            }
+                        ]}
+                    >
                         <View
                             style={[
                                 budgetStyles.barSpent,
@@ -779,19 +1021,47 @@ export function EventPlanningPage() {
                     </View>
                     <View style={budgetStyles.barLegend}>
                         <View style={budgetStyles.legendItem}>
-                            <View style={[budgetStyles.legendDot, { backgroundColor: "#f59e0b" }]} />
-                            <Text style={[budgetStyles.legendText, { color: theme.colors.onSurfaceVariant }]}>
+                            <View
+                                style={[
+                                    budgetStyles.legendDot,
+                                    {
+                                        backgroundColor: "#f59e0b"
+                                    }
+                                ]}
+                            />
+                            <Text
+                                style={[
+                                    budgetStyles.legendText,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Spent
                             </Text>
                         </View>
                         <View style={budgetStyles.legendItem}>
-                            <View style={[budgetStyles.legendDot, { backgroundColor: "#22c55e60" }]} />
-                            <Text style={[budgetStyles.legendText, { color: theme.colors.onSurfaceVariant }]}>
+                            <View
+                                style={[
+                                    budgetStyles.legendDot,
+                                    {
+                                        backgroundColor: "#22c55e60"
+                                    }
+                                ]}
+                            />
+                            <Text
+                                style={[
+                                    budgetStyles.legendText,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Remaining
                             </Text>
                         </View>
                     </View>
-                </View>
+                </Card>
             </View>
         </ShowcasePage>
     );
@@ -799,7 +1069,7 @@ export function EventPlanningPage() {
 
 // --- Hero styles ---
 
-const heroStyles = StyleSheet.create((theme) => ({
+const heroStyles = StyleSheet.create((_theme) => ({
     card: {
         borderRadius: 16,
         padding: 20,
@@ -890,7 +1160,7 @@ const heroStyles = StyleSheet.create((theme) => ({
 
 // --- Budget styles ---
 
-const budgetStyles = StyleSheet.create((theme) => ({
+const budgetStyles = StyleSheet.create((_theme) => ({
     wrapper: {
         gap: 14
     },

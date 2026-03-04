@@ -2,9 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type RetroItem = {
     id: string;
@@ -12,7 +12,6 @@ type RetroItem = {
     votes: number;
     author: string;
 };
-
 type ActionItem = {
     id: string;
     description: string;
@@ -22,7 +21,6 @@ type ActionItem = {
     done: boolean;
     carriedOver: boolean;
 };
-
 type PreviousAction = {
     id: string;
     description: string;
@@ -37,34 +35,104 @@ type PreviousAction = {
 const SPRINT_NUMBER = 24;
 const SPRINT_DATE_RANGE = "Feb 24 - Mar 7, 2026";
 const PARTICIPANT_COUNT = 8;
-
 const PARTICIPANTS = [
-    { initials: "JK", color: "#3B82F6" },
-    { initials: "SM", color: "#8B5CF6" },
-    { initials: "AL", color: "#EC4899" },
-    { initials: "RD", color: "#F59E0B" },
-    { initials: "KM", color: "#10B981" },
-    { initials: "NP", color: "#EF4444" },
-    { initials: "TW", color: "#06B6D4" },
-    { initials: "BL", color: "#6366F1" }
+    {
+        initials: "JK",
+        color: "#3B82F6"
+    },
+    {
+        initials: "SM",
+        color: "#8B5CF6"
+    },
+    {
+        initials: "AL",
+        color: "#EC4899"
+    },
+    {
+        initials: "RD",
+        color: "#F59E0B"
+    },
+    {
+        initials: "KM",
+        color: "#10B981"
+    },
+    {
+        initials: "NP",
+        color: "#EF4444"
+    },
+    {
+        initials: "TW",
+        color: "#06B6D4"
+    },
+    {
+        initials: "BL",
+        color: "#6366F1"
+    }
 ];
-
 const INITIAL_WENT_WELL: RetroItem[] = [
-    { id: "w1", text: "Deployment pipeline improvements saved hours of manual work", votes: 6, author: "JK" },
-    { id: "w2", text: "Great cross-team collaboration on the auth migration", votes: 5, author: "SM" },
-    { id: "w3", text: "Sprint goal achieved ahead of schedule", votes: 4, author: "AL" },
-    { id: "w4", text: "New code review process caught several bugs early", votes: 3, author: "RD" },
-    { id: "w5", text: "Knowledge sharing sessions were very helpful", votes: 2, author: "KM" }
+    {
+        id: "w1",
+        text: "Deployment pipeline improvements saved hours of manual work",
+        votes: 6,
+        author: "JK"
+    },
+    {
+        id: "w2",
+        text: "Great cross-team collaboration on the auth migration",
+        votes: 5,
+        author: "SM"
+    },
+    {
+        id: "w3",
+        text: "Sprint goal achieved ahead of schedule",
+        votes: 4,
+        author: "AL"
+    },
+    {
+        id: "w4",
+        text: "New code review process caught several bugs early",
+        votes: 3,
+        author: "RD"
+    },
+    {
+        id: "w5",
+        text: "Knowledge sharing sessions were very helpful",
+        votes: 2,
+        author: "KM"
+    }
 ];
-
 const INITIAL_COULD_IMPROVE: RetroItem[] = [
-    { id: "i1", text: "Story estimation was off for backend tasks this sprint", votes: 5, author: "RD" },
-    { id: "i2", text: "Too many context switches between projects", votes: 4, author: "NP" },
-    { id: "i3", text: "Staging environment was unstable for two days", votes: 3, author: "TW" },
-    { id: "i4", text: "Documentation not updated after API changes", votes: 2, author: "SM" },
-    { id: "i5", text: "Standup meetings running over 15 minutes regularly", votes: 1, author: "BL" }
+    {
+        id: "i1",
+        text: "Story estimation was off for backend tasks this sprint",
+        votes: 5,
+        author: "RD"
+    },
+    {
+        id: "i2",
+        text: "Too many context switches between projects",
+        votes: 4,
+        author: "NP"
+    },
+    {
+        id: "i3",
+        text: "Staging environment was unstable for two days",
+        votes: 3,
+        author: "TW"
+    },
+    {
+        id: "i4",
+        text: "Documentation not updated after API changes",
+        votes: 2,
+        author: "SM"
+    },
+    {
+        id: "i5",
+        text: "Standup meetings running over 15 minutes regularly",
+        votes: 1,
+        author: "BL"
+    }
 ];
-
 const INITIAL_ACTION_ITEMS: ActionItem[] = [
     {
         id: "a1",
@@ -112,7 +180,6 @@ const INITIAL_ACTION_ITEMS: ActionItem[] = [
         carriedOver: true
     }
 ];
-
 const PREVIOUS_ACTIONS: PreviousAction[] = [
     {
         id: "pa1",
@@ -175,7 +242,6 @@ function ParticipantAvatars() {
     const maxVisible = 6;
     const visible = PARTICIPANTS.slice(0, maxVisible);
     const overflow = PARTICIPANT_COUNT - maxVisible;
-
     return (
         <View style={s.avatarRow}>
             {visible.map((p, idx) => (
@@ -191,7 +257,16 @@ function ParticipantAvatars() {
                         }
                     ]}
                 >
-                    <Text style={[s.avatarText, { color: p.color }]}>{p.initials}</Text>
+                    <Text
+                        style={[
+                            s.avatarText,
+                            {
+                                color: p.color
+                            }
+                        ]}
+                    >
+                        {p.initials}
+                    </Text>
                 </View>
             ))}
             {overflow > 0 && (
@@ -206,35 +281,94 @@ function ParticipantAvatars() {
                         }
                     ]}
                 >
-                    <Text style={[s.avatarText, { color: theme.colors.onSurfaceVariant }]}>+{overflow}</Text>
+                    <Text
+                        style={[
+                            s.avatarText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        +{overflow}
+                    </Text>
                 </View>
             )}
         </View>
     );
 }
-
 function VoteButton({ votes, onVote }: { votes: number; onVote: () => void }) {
     const { theme } = useUnistyles();
-
     return (
-        <Pressable onPress={onVote} style={[s.voteButton, { backgroundColor: theme.colors.surfaceContainerHighest }]}>
+        <Pressable
+            onPress={onVote}
+            style={[
+                s.voteButton,
+                {
+                    backgroundColor: theme.colors.surfaceContainerHighest
+                }
+            ]}
+        >
             <Ionicons name="chevron-up-outline" size={14} color={theme.colors.primary} />
-            <Text style={[s.voteCount, { color: theme.colors.primary }]}>{votes}</Text>
+            <Text
+                style={[
+                    s.voteCount,
+                    {
+                        color: theme.colors.primary
+                    }
+                ]}
+            >
+                {votes}
+            </Text>
         </Pressable>
     );
 }
-
 function RetroItemRow({ item, accentColor, onVote }: { item: RetroItem; accentColor: string; onVote: () => void }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[s.retroItemRow, { backgroundColor: theme.colors.surface }]}>
-            <View style={[s.retroItemAccent, { backgroundColor: accentColor }]} />
+        <View
+            style={[
+                s.retroItemRow,
+                {
+                    backgroundColor: theme.colors.surface
+                }
+            ]}
+        >
+            <View
+                style={[
+                    s.retroItemAccent,
+                    {
+                        backgroundColor: accentColor
+                    }
+                ]}
+            />
             <View style={s.retroItemContent}>
-                <Text style={[s.retroItemText, { color: theme.colors.onSurface }]}>{item.text}</Text>
+                <Text
+                    style={[
+                        s.retroItemText,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    {item.text}
+                </Text>
                 <View style={s.retroItemFooter}>
-                    <View style={[s.authorChip, { backgroundColor: `${getParticipantColor(item.author)}20` }]}>
-                        <Text style={[s.authorChipText, { color: getParticipantColor(item.author) }]}>
+                    <View
+                        style={[
+                            s.authorChip,
+                            {
+                                backgroundColor: `${getParticipantColor(item.author)}20`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                s.authorChipText,
+                                {
+                                    color: getParticipantColor(item.author)
+                                }
+                            ]}
+                        >
                             {item.author}
                         </Text>
                     </View>
@@ -244,7 +378,6 @@ function RetroItemRow({ item, accentColor, onVote }: { item: RetroItem; accentCo
         </View>
     );
 }
-
 function RetroSection({
     title,
     icon,
@@ -262,16 +395,55 @@ function RetroSection({
 }) {
     const { theme } = useUnistyles();
     const sorted = [...items].sort((a, b) => b.votes - a.votes);
-
     return (
-        <View style={[s.sectionCard, { backgroundColor: `${accentColor}08`, borderColor: `${accentColor}30` }]}>
+        <Card
+            style={[
+                s.sectionCard,
+                {
+                    backgroundColor: `${accentColor}08`,
+                    borderColor: `${accentColor}30`
+                }
+            ]}
+        >
             <View style={s.sectionHeader}>
-                <View style={[s.sectionIconCircle, { backgroundColor: `${accentColor}20` }]}>
+                <View
+                    style={[
+                        s.sectionIconCircle,
+                        {
+                            backgroundColor: `${accentColor}20`
+                        }
+                    ]}
+                >
                     <Ionicons name={icon} size={18} color={accentColor} />
                 </View>
-                <Text style={[s.sectionTitle, { color: theme.colors.onSurface }]}>{title}</Text>
-                <View style={[s.sectionCount, { backgroundColor: `${accentColor}20` }]}>
-                    <Text style={[s.sectionCountText, { color: accentColor }]}>{items.length}</Text>
+                <Text
+                    style={[
+                        s.sectionTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    {title}
+                </Text>
+                <View
+                    style={[
+                        s.sectionCount,
+                        {
+                            backgroundColor: `${accentColor}20`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            s.sectionCountText,
+                            {
+                                color: accentColor
+                            }
+                        ]}
+                    >
+                        {items.length}
+                    </Text>
                 </View>
             </View>
 
@@ -281,35 +453,73 @@ function RetroSection({
                 ))}
             </View>
 
-            <Pressable onPress={onAdd} style={[s.addButton, { borderColor: `${accentColor}40` }]}>
+            <Pressable
+                onPress={onAdd}
+                style={[
+                    s.addButton,
+                    {
+                        borderColor: `${accentColor}40`
+                    }
+                ]}
+            >
                 <Ionicons name="add-circle-outline" size={18} color={accentColor} />
-                <Text style={[s.addButtonText, { color: accentColor }]}>Add item</Text>
+                <Text
+                    style={[
+                        s.addButtonText,
+                        {
+                            color: accentColor
+                        }
+                    ]}
+                >
+                    Add item
+                </Text>
             </Pressable>
-        </View>
+        </Card>
     );
 }
-
 function ActionItemCard({ item, onToggle }: { item: ActionItem; onToggle: () => void }) {
     const { theme } = useUnistyles();
     const assigneeColor = getParticipantColor(item.assigneeInitials);
-
     return (
-        <View style={[s.actionCard, { backgroundColor: theme.colors.surface }]}>
+        <Card
+            style={[
+                s.actionCard,
+                {
+                    backgroundColor: theme.colors.surface
+                }
+            ]}
+        >
             <View style={s.actionCardTop}>
                 <Pressable onPress={onToggle} style={s.checkbox}>
                     {item.done ? (
-                        <View style={[s.checkboxChecked, { backgroundColor: theme.colors.primary }]}>
+                        <View
+                            style={[
+                                s.checkboxChecked,
+                                {
+                                    backgroundColor: theme.colors.primary
+                                }
+                            ]}
+                        >
                             <Ionicons name="checkmark" size={14} color="#ffffff" />
                         </View>
                     ) : (
-                        <View style={[s.checkboxUnchecked, { borderColor: theme.colors.outline }]} />
+                        <View
+                            style={[
+                                s.checkboxUnchecked,
+                                {
+                                    borderColor: theme.colors.outline
+                                }
+                            ]}
+                        />
                     )}
                 </Pressable>
                 <View style={s.actionCardContent}>
                     <Text
                         style={[
                             s.actionDescription,
-                            { color: item.done ? theme.colors.onSurfaceVariant : theme.colors.onSurface },
+                            {
+                                color: item.done ? theme.colors.onSurfaceVariant : theme.colors.onSurface
+                            },
                             item.done && s.strikethrough
                         ]}
                     >
@@ -318,40 +528,116 @@ function ActionItemCard({ item, onToggle }: { item: ActionItem; onToggle: () => 
                 </View>
             </View>
             <View style={s.actionCardBottom}>
-                <View style={[s.actionAvatar, { backgroundColor: `${assigneeColor}20` }]}>
-                    <Text style={[s.actionAvatarText, { color: assigneeColor }]}>{item.assigneeInitials}</Text>
+                <View
+                    style={[
+                        s.actionAvatar,
+                        {
+                            backgroundColor: `${assigneeColor}20`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            s.actionAvatarText,
+                            {
+                                color: assigneeColor
+                            }
+                        ]}
+                    >
+                        {item.assigneeInitials}
+                    </Text>
                 </View>
-                <Text style={[s.actionAssignee, { color: theme.colors.onSurfaceVariant }]}>{item.assignee}</Text>
+                <Text
+                    style={[
+                        s.actionAssignee,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    {item.assignee}
+                </Text>
                 <View style={s.actionCardRight}>
                     {item.carriedOver && (
-                        <View style={[s.carriedOverBadge, { backgroundColor: `${AMBER_TINT}18` }]}>
+                        <View
+                            style={[
+                                s.carriedOverBadge,
+                                {
+                                    backgroundColor: `${AMBER_TINT}18`
+                                }
+                            ]}
+                        >
                             <Ionicons name="repeat-outline" size={12} color={AMBER_TINT} />
-                            <Text style={[s.carriedOverText, { color: AMBER_TINT }]}>Carried over</Text>
+                            <Text
+                                style={[
+                                    s.carriedOverText,
+                                    {
+                                        color: AMBER_TINT
+                                    }
+                                ]}
+                            >
+                                Carried over
+                            </Text>
                         </View>
                     )}
-                    <View style={[s.dueDateChip, { backgroundColor: theme.colors.surfaceContainer }]}>
+                    <View
+                        style={[
+                            s.dueDateChip,
+                            {
+                                backgroundColor: theme.colors.surfaceContainer
+                            }
+                        ]}
+                    >
                         <Ionicons name="calendar-outline" size={12} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[s.dueDateText, { color: theme.colors.onSurfaceVariant }]}>{item.dueDate}</Text>
+                        <Text
+                            style={[
+                                s.dueDateText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
+                            {item.dueDate}
+                        </Text>
                     </View>
                 </View>
             </View>
-        </View>
+        </Card>
     );
 }
-
 function PreviousActionRow({ action }: { action: PreviousAction }) {
     const { theme } = useUnistyles();
     const assigneeColor = getParticipantColor(action.assigneeInitials);
-
     return (
-        <View style={[s.prevActionRow, { backgroundColor: theme.colors.surface }]}>
+        <View
+            style={[
+                s.prevActionRow,
+                {
+                    backgroundColor: theme.colors.surface
+                }
+            ]}
+        >
             <View style={s.prevActionLeft}>
                 {action.completed ? (
-                    <View style={[s.prevStatusDot, { backgroundColor: GREEN_TINT }]}>
+                    <View
+                        style={[
+                            s.prevStatusDot,
+                            {
+                                backgroundColor: GREEN_TINT
+                            }
+                        ]}
+                    >
                         <Ionicons name="checkmark" size={10} color="#ffffff" />
                     </View>
                 ) : (
-                    <View style={[s.prevStatusDot, { backgroundColor: theme.colors.error }]}>
+                    <View
+                        style={[
+                            s.prevStatusDot,
+                            {
+                                backgroundColor: theme.colors.error
+                            }
+                        ]}
+                    >
                         <Ionicons name="close" size={10} color="#ffffff" />
                     </View>
                 )}
@@ -359,17 +645,42 @@ function PreviousActionRow({ action }: { action: PreviousAction }) {
                     <Text
                         style={[
                             s.prevActionText,
-                            { color: action.completed ? theme.colors.onSurfaceVariant : theme.colors.onSurface },
+                            {
+                                color: action.completed ? theme.colors.onSurfaceVariant : theme.colors.onSurface
+                            },
                             action.completed && s.strikethrough
                         ]}
                     >
                         {action.description}
                     </Text>
                     <View style={s.prevActionMeta}>
-                        <View style={[s.miniAvatar, { backgroundColor: `${assigneeColor}20` }]}>
-                            <Text style={[s.miniAvatarText, { color: assigneeColor }]}>{action.assigneeInitials}</Text>
+                        <View
+                            style={[
+                                s.miniAvatar,
+                                {
+                                    backgroundColor: `${assigneeColor}20`
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    s.miniAvatarText,
+                                    {
+                                        color: assigneeColor
+                                    }
+                                ]}
+                            >
+                                {action.assigneeInitials}
+                            </Text>
                         </View>
-                        <Text style={[s.prevActionFrom, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                s.prevActionFrom,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {action.fromSprint}
                         </Text>
                     </View>
@@ -378,10 +689,19 @@ function PreviousActionRow({ action }: { action: PreviousAction }) {
             <View
                 style={[
                     s.prevStatusBadge,
-                    { backgroundColor: action.completed ? `${GREEN_TINT}18` : `${theme.colors.error}18` }
+                    {
+                        backgroundColor: action.completed ? `${GREEN_TINT}18` : `${theme.colors.error}18`
+                    }
                 ]}
             >
-                <Text style={[s.prevStatusText, { color: action.completed ? GREEN_TINT : theme.colors.error }]}>
+                <Text
+                    style={[
+                        s.prevStatusText,
+                        {
+                            color: action.completed ? GREEN_TINT : theme.colors.error
+                        }
+                    ]}
+                >
                     {action.completed ? "Done" : "Open"}
                 </Text>
             </View>
@@ -396,29 +716,66 @@ export function RetrospectiveBoardPage() {
     const [wentWell, setWentWell] = React.useState(INITIAL_WENT_WELL);
     const [couldImprove, setCouldImprove] = React.useState(INITIAL_COULD_IMPROVE);
     const [actionItems, setActionItems] = React.useState(INITIAL_ACTION_ITEMS);
-
     const handleVoteWell = React.useCallback((id: string) => {
-        setWentWell((prev) => prev.map((item) => (item.id === id ? { ...item, votes: item.votes + 1 } : item)));
+        setWentWell((prev) =>
+            prev.map((item) =>
+                item.id === id
+                    ? {
+                          ...item,
+                          votes: item.votes + 1
+                      }
+                    : item
+            )
+        );
     }, []);
-
     const handleVoteImprove = React.useCallback((id: string) => {
-        setCouldImprove((prev) => prev.map((item) => (item.id === id ? { ...item, votes: item.votes + 1 } : item)));
+        setCouldImprove((prev) =>
+            prev.map((item) =>
+                item.id === id
+                    ? {
+                          ...item,
+                          votes: item.votes + 1
+                      }
+                    : item
+            )
+        );
     }, []);
-
     const handleAddWell = React.useCallback(() => {
         const newId = `w${Date.now()}`;
-        setWentWell((prev) => [...prev, { id: newId, text: "New item added by you", votes: 0, author: "JK" }]);
+        setWentWell((prev) => [
+            ...prev,
+            {
+                id: newId,
+                text: "New item added by you",
+                votes: 0,
+                author: "JK"
+            }
+        ]);
     }, []);
-
     const handleAddImprove = React.useCallback(() => {
         const newId = `i${Date.now()}`;
-        setCouldImprove((prev) => [...prev, { id: newId, text: "New improvement suggestion", votes: 0, author: "JK" }]);
+        setCouldImprove((prev) => [
+            ...prev,
+            {
+                id: newId,
+                text: "New improvement suggestion",
+                votes: 0,
+                author: "JK"
+            }
+        ]);
     }, []);
-
     const handleToggleAction = React.useCallback((id: string) => {
-        setActionItems((prev) => prev.map((item) => (item.id === id ? { ...item, done: !item.done } : item)));
+        setActionItems((prev) =>
+            prev.map((item) =>
+                item.id === id
+                    ? {
+                          ...item,
+                          done: !item.done
+                      }
+                    : item
+            )
+        );
     }, []);
-
     const handleAddAction = React.useCallback(() => {
         const newId = `a${Date.now()}`;
         setActionItems((prev) => [
@@ -434,59 +791,206 @@ export function RetrospectiveBoardPage() {
             }
         ]);
     }, []);
-
     const completedActions = actionItems.filter((a) => a.done).length;
     const prevCompleted = PREVIOUS_ACTIONS.filter((a) => a.completed).length;
-
     return (
-        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} topInset={16} contentGap={16}>
+        <ShowcasePage
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
+            topInset={16}
+            contentGap={16}
+        >
             {/* Sprint header */}
-            <View style={[s.headerCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+            <Card
+                style={[
+                    s.headerCard,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
                 <View style={s.headerTop}>
                     <View>
-                        <Text style={[s.sprintLabel, { color: theme.colors.onSurfaceVariant }]}>RETROSPECTIVE</Text>
-                        <Text style={[s.sprintTitle, { color: theme.colors.onSurface }]}>Sprint {SPRINT_NUMBER}</Text>
-                        <Text style={[s.sprintDates, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                s.sprintLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
+                            RETROSPECTIVE
+                        </Text>
+                        <Text
+                            style={[
+                                s.sprintTitle,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            Sprint {SPRINT_NUMBER}
+                        </Text>
+                        <Text
+                            style={[
+                                s.sprintDates,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {SPRINT_DATE_RANGE}
                         </Text>
                     </View>
-                    <View style={[s.statusBadge, { backgroundColor: `${theme.colors.primary}18` }]}>
+                    <View
+                        style={[
+                            s.statusBadge,
+                            {
+                                backgroundColor: `${theme.colors.primary}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name="chatbubbles-outline" size={14} color={theme.colors.primary} />
-                        <Text style={[s.statusBadgeText, { color: theme.colors.primary }]}>In Progress</Text>
+                        <Text
+                            style={[
+                                s.statusBadgeText,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
+                            In Progress
+                        </Text>
                     </View>
                 </View>
 
                 <View style={s.headerDivider}>
-                    <View style={[s.dividerLine, { backgroundColor: theme.colors.outlineVariant }]} />
+                    <View
+                        style={[
+                            s.dividerLine,
+                            {
+                                backgroundColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    />
                 </View>
 
                 <View style={s.headerBottom}>
                     <ParticipantAvatars />
-                    <View style={[s.participantCount, { backgroundColor: theme.colors.surfaceContainerHighest }]}>
+                    <View
+                        style={[
+                            s.participantCount,
+                            {
+                                backgroundColor: theme.colors.surfaceContainerHighest
+                            }
+                        ]}
+                    >
                         <Ionicons name="people-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[s.participantCountText, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                s.participantCountText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {PARTICIPANT_COUNT} participants
                         </Text>
                     </View>
                 </View>
-            </View>
+            </Card>
 
             {/* Summary metrics */}
             <View style={s.metricsRow}>
-                <View style={[s.metricCard, { backgroundColor: `${GREEN_TINT}12` }]}>
-                    <Text style={[s.metricValue, { color: GREEN_TINT }]}>{wentWell.length}</Text>
-                    <Text style={[s.metricLabel, { color: theme.colors.onSurfaceVariant }]}>Positives</Text>
-                </View>
-                <View style={[s.metricCard, { backgroundColor: `${AMBER_TINT}12` }]}>
-                    <Text style={[s.metricValue, { color: AMBER_TINT }]}>{couldImprove.length}</Text>
-                    <Text style={[s.metricLabel, { color: theme.colors.onSurfaceVariant }]}>To Improve</Text>
-                </View>
-                <View style={[s.metricCard, { backgroundColor: `${theme.colors.primary}12` }]}>
-                    <Text style={[s.metricValue, { color: theme.colors.primary }]}>
+                <Card
+                    style={[
+                        s.metricCard,
+                        {
+                            backgroundColor: `${GREEN_TINT}12`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            s.metricValue,
+                            {
+                                color: GREEN_TINT
+                            }
+                        ]}
+                    >
+                        {wentWell.length}
+                    </Text>
+                    <Text
+                        style={[
+                            s.metricLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Positives
+                    </Text>
+                </Card>
+                <Card
+                    style={[
+                        s.metricCard,
+                        {
+                            backgroundColor: `${AMBER_TINT}12`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            s.metricValue,
+                            {
+                                color: AMBER_TINT
+                            }
+                        ]}
+                    >
+                        {couldImprove.length}
+                    </Text>
+                    <Text
+                        style={[
+                            s.metricLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        To Improve
+                    </Text>
+                </Card>
+                <Card
+                    style={[
+                        s.metricCard,
+                        {
+                            backgroundColor: `${theme.colors.primary}12`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            s.metricValue,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
                         {completedActions}/{actionItems.length}
                     </Text>
-                    <Text style={[s.metricLabel, { color: theme.colors.onSurfaceVariant }]}>Actions</Text>
-                </View>
+                    <Text
+                        style={[
+                            s.metricLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Actions
+                    </Text>
+                </Card>
             </View>
 
             {/* What Went Well */}
@@ -510,26 +1014,66 @@ export function RetrospectiveBoardPage() {
             />
 
             {/* Action Items */}
-            <View
+            <Card
                 style={[
                     s.sectionCard,
-                    { backgroundColor: theme.colors.surfaceContainer, borderColor: theme.colors.outlineVariant }
+                    {
+                        backgroundColor: theme.colors.surfaceContainer,
+                        borderColor: theme.colors.outlineVariant
+                    }
                 ]}
             >
                 <View style={s.sectionHeader}>
-                    <View style={[s.sectionIconCircle, { backgroundColor: `${theme.colors.primary}20` }]}>
+                    <View
+                        style={[
+                            s.sectionIconCircle,
+                            {
+                                backgroundColor: `${theme.colors.primary}20`
+                            }
+                        ]}
+                    >
                         <Ionicons name="rocket-outline" size={18} color={theme.colors.primary} />
                     </View>
-                    <Text style={[s.sectionTitle, { color: theme.colors.onSurface }]}>Action Items</Text>
-                    <View style={[s.sectionCount, { backgroundColor: `${theme.colors.primary}20` }]}>
-                        <Text style={[s.sectionCountText, { color: theme.colors.primary }]}>
+                    <Text
+                        style={[
+                            s.sectionTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Action Items
+                    </Text>
+                    <View
+                        style={[
+                            s.sectionCount,
+                            {
+                                backgroundColor: `${theme.colors.primary}20`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                s.sectionCountText,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
                             {completedActions}/{actionItems.length}
                         </Text>
                     </View>
                 </View>
 
                 {/* Progress bar */}
-                <View style={[s.progressBarBg, { backgroundColor: `${theme.colors.outlineVariant}40` }]}>
+                <View
+                    style={[
+                        s.progressBarBg,
+                        {
+                            backgroundColor: `${theme.colors.outlineVariant}40`
+                        }
+                    ]}
+                >
                     <View
                         style={[
                             s.progressBarFill,
@@ -549,34 +1093,88 @@ export function RetrospectiveBoardPage() {
 
                 <Pressable
                     onPress={handleAddAction}
-                    style={[s.addButton, { borderColor: theme.colors.outlineVariant }]}
+                    style={[
+                        s.addButton,
+                        {
+                            borderColor: theme.colors.outlineVariant
+                        }
+                    ]}
                 >
                     <Ionicons name="add-circle-outline" size={18} color={theme.colors.primary} />
-                    <Text style={[s.addButtonText, { color: theme.colors.primary }]}>Add action item</Text>
+                    <Text
+                        style={[
+                            s.addButtonText,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
+                        Add action item
+                    </Text>
                 </Pressable>
-            </View>
+            </Card>
 
             {/* Previous Retro Actions */}
-            <View
+            <Card
                 style={[
                     s.sectionCard,
-                    { backgroundColor: theme.colors.surfaceContainer, borderColor: theme.colors.outlineVariant }
+                    {
+                        backgroundColor: theme.colors.surfaceContainer,
+                        borderColor: theme.colors.outlineVariant
+                    }
                 ]}
             >
                 <View style={s.sectionHeader}>
-                    <View style={[s.sectionIconCircle, { backgroundColor: `${theme.colors.tertiary}20` }]}>
+                    <View
+                        style={[
+                            s.sectionIconCircle,
+                            {
+                                backgroundColor: `${theme.colors.tertiary}20`
+                            }
+                        ]}
+                    >
                         <Ionicons name="time-outline" size={18} color={theme.colors.tertiary} />
                     </View>
-                    <Text style={[s.sectionTitle, { color: theme.colors.onSurface }]}>Previous Retro Actions</Text>
-                    <View style={[s.sectionCount, { backgroundColor: `${theme.colors.tertiary}20` }]}>
-                        <Text style={[s.sectionCountText, { color: theme.colors.tertiary }]}>
+                    <Text
+                        style={[
+                            s.sectionTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Previous Retro Actions
+                    </Text>
+                    <View
+                        style={[
+                            s.sectionCount,
+                            {
+                                backgroundColor: `${theme.colors.tertiary}20`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                s.sectionCountText,
+                                {
+                                    color: theme.colors.tertiary
+                                }
+                            ]}
+                        >
                             {prevCompleted}/{PREVIOUS_ACTIONS.length}
                         </Text>
                     </View>
                 </View>
 
                 {/* Previous actions progress bar */}
-                <View style={[s.progressBarBg, { backgroundColor: `${theme.colors.outlineVariant}40` }]}>
+                <View
+                    style={[
+                        s.progressBarBg,
+                        {
+                            backgroundColor: `${theme.colors.outlineVariant}40`
+                        }
+                    ]}
+                >
                     <View
                         style={[
                             s.progressBarFill,
@@ -593,14 +1191,14 @@ export function RetrospectiveBoardPage() {
                         <PreviousActionRow key={action.id} action={action} />
                     ))}
                 </View>
-            </View>
+            </Card>
         </ShowcasePage>
     );
 }
 
 // --- Styles ---
 
-const s = StyleSheet.create((theme) => ({
+const s = StyleSheet.create((_theme) => ({
     // Header card
     headerCard: {
         borderRadius: 16,
@@ -684,7 +1282,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 12,
         lineHeight: 16
     },
-
     // Metrics row
     metricsRow: {
         flexDirection: "row",
@@ -707,7 +1304,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 14
     },
-
     // Section card (shared across went well, improve, action items, previous)
     sectionCard: {
         borderRadius: 14,
@@ -746,7 +1342,6 @@ const s = StyleSheet.create((theme) => ({
     sectionItems: {
         gap: 8
     },
-
     // Retro item row
     retroItemRow: {
         flexDirection: "row",
@@ -754,7 +1349,10 @@ const s = StyleSheet.create((theme) => ({
         overflow: "hidden",
         shadowColor: "#000",
         shadowOpacity: 0.04,
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: {
+            width: 0,
+            height: 1
+        },
         shadowRadius: 2,
         elevation: 1
     },
@@ -786,7 +1384,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 16
     },
-
     // Vote button
     voteButton: {
         flexDirection: "row",
@@ -801,7 +1398,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 12,
         lineHeight: 16
     },
-
     // Add button
     addButton: {
         flexDirection: "row",
@@ -818,7 +1414,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 13,
         lineHeight: 18
     },
-
     // Action item card
     actionCard: {
         borderRadius: 10,
@@ -826,7 +1421,10 @@ const s = StyleSheet.create((theme) => ({
         gap: 10,
         shadowColor: "#000",
         shadowOpacity: 0.04,
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: {
+            width: 0,
+            height: 1
+        },
         shadowRadius: 2,
         elevation: 1
     },
@@ -918,7 +1516,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 16
     },
-
     // Progress bar
     progressBarBg: {
         height: 6,
@@ -929,7 +1526,6 @@ const s = StyleSheet.create((theme) => ({
         height: 6,
         borderRadius: 3
     },
-
     // Previous action row
     prevActionRow: {
         flexDirection: "row",
@@ -939,7 +1535,10 @@ const s = StyleSheet.create((theme) => ({
         gap: 10,
         shadowColor: "#000",
         shadowOpacity: 0.04,
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: {
+            width: 0,
+            height: 1
+        },
         shadowRadius: 2,
         elevation: 1
     },

@@ -2,12 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
+import { Grid } from "@/components/Grid";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type TrendDirection = "up" | "down" | "flat";
-
 type MetricDef = {
     id: string;
     label: string;
@@ -18,7 +18,6 @@ type MetricDef = {
     icon: keyof typeof Ionicons.glyphMap;
     color: string;
 };
-
 type PlanTier = {
     id: string;
     name: string;
@@ -26,7 +25,6 @@ type PlanTier = {
     revenue: number;
     color: string;
 };
-
 type RecentSignup = {
     id: string;
     name: string;
@@ -36,9 +34,7 @@ type RecentSignup = {
     source: string;
     sourceColor: string;
 };
-
 type ChurnReason = "price" | "competitor" | "no longer needed" | "other";
-
 type ChurnEntry = {
     id: string;
     company: string;
@@ -112,14 +108,36 @@ const keyMetrics: MetricDef[] = [
         color: "#3B82F6"
     }
 ];
-
 const planTiers: PlanTier[] = [
-    { id: "enterprise", name: "Enterprise", subscribers: 24, revenue: 43200, color: "#6366F1" },
-    { id: "pro", name: "Pro", subscribers: 186, revenue: 27900, color: "#3B82F6" },
-    { id: "starter", name: "Starter", subscribers: 412, revenue: 10300, color: "#10B981" },
-    { id: "free", name: "Free", subscribers: 1840, revenue: 0, color: "#9CA3AF" }
+    {
+        id: "enterprise",
+        name: "Enterprise",
+        subscribers: 24,
+        revenue: 43200,
+        color: "#6366F1"
+    },
+    {
+        id: "pro",
+        name: "Pro",
+        subscribers: 186,
+        revenue: 27900,
+        color: "#3B82F6"
+    },
+    {
+        id: "starter",
+        name: "Starter",
+        subscribers: 412,
+        revenue: 10300,
+        color: "#10B981"
+    },
+    {
+        id: "free",
+        name: "Free",
+        subscribers: 1840,
+        revenue: 0,
+        color: "#9CA3AF"
+    }
 ];
-
 const recentSignups: RecentSignup[] = [
     {
         id: "s1",
@@ -185,7 +203,6 @@ const recentSignups: RecentSignup[] = [
         sourceColor: "#10B981"
     }
 ];
-
 const churnLog: ChurnEntry[] = [
     {
         id: "c1",
@@ -237,7 +254,6 @@ function formatCurrency(n: number): string {
     }
     return `$${n.toLocaleString()}`;
 }
-
 function trendIcon(direction: TrendDirection): keyof typeof Ionicons.glyphMap {
     switch (direction) {
         case "up":
@@ -258,14 +274,30 @@ function trendColor(direction: TrendDirection, metricId: string): string {
     }
     return direction === "up" ? "#10B981" : "#EF4444";
 }
-
-const churnReasonColors: Record<ChurnReason, { bg: string; text: string }> = {
-    price: { bg: "#FEE2E2", text: "#DC2626" },
-    competitor: { bg: "#FEF3C7", text: "#D97706" },
-    "no longer needed": { bg: "#E0E7FF", text: "#4F46E5" },
-    other: { bg: "#F3F4F6", text: "#6B7280" }
+const churnReasonColors: Record<
+    ChurnReason,
+    {
+        bg: string;
+        text: string;
+    }
+> = {
+    price: {
+        bg: "#FEE2E2",
+        text: "#DC2626"
+    },
+    competitor: {
+        bg: "#FEF3C7",
+        text: "#D97706"
+    },
+    "no longer needed": {
+        bg: "#E0E7FF",
+        text: "#4F46E5"
+    },
+    other: {
+        bg: "#F3F4F6",
+        text: "#6B7280"
+    }
 };
-
 const churnReasonLabels: Record<ChurnReason, string> = {
     price: "Price",
     competitor: "Competitor",
@@ -294,10 +326,16 @@ function MetricCard({
     borderColor: string;
 }) {
     const tc = trendColor(metric.trend, metric.id);
-
     return (
-        <Pressable onPress={onPress} style={({ pressed }) => [pressed && { opacity: 0.85 }]}>
-            <View
+        <Pressable
+            onPress={onPress}
+            style={({ pressed }) => [
+                pressed && {
+                    opacity: 0.85
+                }
+            ]}
+        >
+            <Card
                 style={[
                     styles.metricCard,
                     {
@@ -308,17 +346,58 @@ function MetricCard({
                 ]}
             >
                 <View style={styles.metricCardHeader}>
-                    <View style={[styles.metricIconBadge, { backgroundColor: `${metric.color}18` }]}>
+                    <View
+                        style={[
+                            styles.metricIconBadge,
+                            {
+                                backgroundColor: `${metric.color}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name={metric.icon} size={18} color={metric.color} />
                     </View>
-                    <View style={[styles.trendBadge, { backgroundColor: `${tc}14` }]}>
+                    <View
+                        style={[
+                            styles.trendBadge,
+                            {
+                                backgroundColor: `${tc}14`
+                            }
+                        ]}
+                    >
                         <Ionicons name={trendIcon(metric.trend)} size={10} color={tc} />
-                        <Text style={[styles.trendText, { color: tc }]}>{metric.trendLabel}</Text>
+                        <Text
+                            style={[
+                                styles.trendText,
+                                {
+                                    color: tc
+                                }
+                            ]}
+                        >
+                            {metric.trendLabel}
+                        </Text>
                     </View>
                 </View>
-                <Text style={[styles.metricValue, { color: textColor }]}>{metric.value}</Text>
-                <Text style={[styles.metricLabel, { color: subtextColor }]}>{metric.label}</Text>
-            </View>
+                <Text
+                    style={[
+                        styles.metricValue,
+                        {
+                            color: textColor
+                        }
+                    ]}
+                >
+                    {metric.value}
+                </Text>
+                <Text
+                    style={[
+                        styles.metricLabel,
+                        {
+                            color: subtextColor
+                        }
+                    ]}
+                >
+                    {metric.label}
+                </Text>
+            </Card>
         </Pressable>
     );
 }
@@ -338,25 +417,82 @@ function MetricDetail({
     borderColor: string;
 }) {
     const tc = trendColor(metric.trend, metric.id);
-
     return (
-        <View style={[styles.metricDetail, { backgroundColor: surfaceColor, borderColor }]}>
+        <View
+            style={[
+                styles.metricDetail,
+                {
+                    backgroundColor: surfaceColor,
+                    borderColor
+                }
+            ]}
+        >
             <View style={styles.metricDetailHeader}>
-                <View style={[styles.metricDetailIcon, { backgroundColor: `${metric.color}18` }]}>
+                <View
+                    style={[
+                        styles.metricDetailIcon,
+                        {
+                            backgroundColor: `${metric.color}18`
+                        }
+                    ]}
+                >
                     <Ionicons name={metric.icon} size={22} color={metric.color} />
                 </View>
                 <View style={styles.metricDetailTitleCol}>
-                    <Text style={[styles.metricDetailTitle, { color: textColor }]}>{metric.label}</Text>
+                    <Text
+                        style={[
+                            styles.metricDetailTitle,
+                            {
+                                color: textColor
+                            }
+                        ]}
+                    >
+                        {metric.label}
+                    </Text>
                     {metric.subValue && (
-                        <Text style={[styles.metricDetailSub, { color: subtextColor }]}>{metric.subValue}</Text>
+                        <Text
+                            style={[
+                                styles.metricDetailSub,
+                                {
+                                    color: subtextColor
+                                }
+                            ]}
+                        >
+                            {metric.subValue}
+                        </Text>
                     )}
                 </View>
             </View>
             <View style={styles.metricDetailValueRow}>
-                <Text style={[styles.metricDetailValue, { color: textColor }]}>{metric.value}</Text>
-                <View style={[styles.trendBadgeLarge, { backgroundColor: `${tc}14` }]}>
+                <Text
+                    style={[
+                        styles.metricDetailValue,
+                        {
+                            color: textColor
+                        }
+                    ]}
+                >
+                    {metric.value}
+                </Text>
+                <View
+                    style={[
+                        styles.trendBadgeLarge,
+                        {
+                            backgroundColor: `${tc}14`
+                        }
+                    ]}
+                >
                     <Ionicons name={trendIcon(metric.trend)} size={14} color={tc} />
-                    <Text style={[styles.trendTextLarge, { color: tc }]}>{metric.trendLabel}</Text>
+                    <Text
+                        style={[
+                            styles.trendTextLarge,
+                            {
+                                color: tc
+                            }
+                        ]}
+                    >
+                        {metric.trendLabel}
+                    </Text>
                 </View>
             </View>
             {/* Mini sparkline placeholder */}
@@ -375,10 +511,46 @@ function MetricDetail({
                 ))}
             </View>
             <View style={styles.sparklineLabels}>
-                <Text style={[styles.sparklineLabel, { color: subtextColor }]}>Apr</Text>
-                <Text style={[styles.sparklineLabel, { color: subtextColor }]}>Aug</Text>
-                <Text style={[styles.sparklineLabel, { color: subtextColor }]}>Dec</Text>
-                <Text style={[styles.sparklineLabel, { color: subtextColor }]}>Mar</Text>
+                <Text
+                    style={[
+                        styles.sparklineLabel,
+                        {
+                            color: subtextColor
+                        }
+                    ]}
+                >
+                    Apr
+                </Text>
+                <Text
+                    style={[
+                        styles.sparklineLabel,
+                        {
+                            color: subtextColor
+                        }
+                    ]}
+                >
+                    Aug
+                </Text>
+                <Text
+                    style={[
+                        styles.sparklineLabel,
+                        {
+                            color: subtextColor
+                        }
+                    ]}
+                >
+                    Dec
+                </Text>
+                <Text
+                    style={[
+                        styles.sparklineLabel,
+                        {
+                            color: subtextColor
+                        }
+                    ]}
+                >
+                    Mar
+                </Text>
             </View>
         </View>
     );
@@ -397,23 +569,62 @@ function TierBar({
     subtextColor: string;
 }) {
     const barPct = maxRevenue > 0 ? Math.max((tier.revenue / maxRevenue) * 100, tier.revenue > 0 ? 8 : 2) : 2;
-
     return (
         <View style={styles.tierRow}>
             <View style={styles.tierLabelCol}>
-                <View style={[styles.tierDot, { backgroundColor: tier.color }]} />
-                <Text style={[styles.tierName, { color: textColor }]}>{tier.name}</Text>
+                <View
+                    style={[
+                        styles.tierDot,
+                        {
+                            backgroundColor: tier.color
+                        }
+                    ]}
+                />
+                <Text
+                    style={[
+                        styles.tierName,
+                        {
+                            color: textColor
+                        }
+                    ]}
+                >
+                    {tier.name}
+                </Text>
             </View>
             <View style={styles.tierBarCol}>
                 <View style={styles.tierBarTrack}>
-                    <View style={[styles.tierBarFill, { width: `${barPct}%`, backgroundColor: tier.color }]} />
+                    <View
+                        style={[
+                            styles.tierBarFill,
+                            {
+                                width: `${barPct}%`,
+                                backgroundColor: tier.color
+                            }
+                        ]}
+                    />
                 </View>
             </View>
             <View style={styles.tierStatsCol}>
-                <Text style={[styles.tierRevenue, { color: textColor }]}>
+                <Text
+                    style={[
+                        styles.tierRevenue,
+                        {
+                            color: textColor
+                        }
+                    ]}
+                >
                     {tier.revenue > 0 ? formatCurrency(tier.revenue) : "$0"}
                 </Text>
-                <Text style={[styles.tierSubs, { color: subtextColor }]}>{tier.subscribers.toLocaleString()} subs</Text>
+                <Text
+                    style={[
+                        styles.tierSubs,
+                        {
+                            color: subtextColor
+                        }
+                    ]}
+                >
+                    {tier.subscribers.toLocaleString()} subs
+                </Text>
             </View>
         </View>
     );
@@ -432,22 +643,85 @@ function SignupRow({
     surfaceColor: string;
 }) {
     return (
-        <View style={[styles.signupRow, { backgroundColor: surfaceColor }]}>
+        <View
+            style={[
+                styles.signupRow,
+                {
+                    backgroundColor: surfaceColor
+                }
+            ]}
+        >
             <View style={styles.signupInfo}>
-                <Text style={[styles.signupName, { color: textColor }]} numberOfLines={1}>
+                <Text
+                    style={[
+                        styles.signupName,
+                        {
+                            color: textColor
+                        }
+                    ]}
+                    numberOfLines={1}
+                >
                     {signup.name}
                 </Text>
                 <View style={styles.signupChipRow}>
-                    <View style={[styles.planBadge, { backgroundColor: `${signup.planColor}18` }]}>
-                        <View style={[styles.planDot, { backgroundColor: signup.planColor }]} />
-                        <Text style={[styles.planBadgeText, { color: signup.planColor }]}>{signup.plan}</Text>
+                    <View
+                        style={[
+                            styles.planBadge,
+                            {
+                                backgroundColor: `${signup.planColor}18`
+                            }
+                        ]}
+                    >
+                        <View
+                            style={[
+                                styles.planDot,
+                                {
+                                    backgroundColor: signup.planColor
+                                }
+                            ]}
+                        />
+                        <Text
+                            style={[
+                                styles.planBadgeText,
+                                {
+                                    color: signup.planColor
+                                }
+                            ]}
+                        >
+                            {signup.plan}
+                        </Text>
                     </View>
-                    <View style={[styles.sourceChip, { backgroundColor: `${signup.sourceColor}14` }]}>
-                        <Text style={[styles.sourceChipText, { color: signup.sourceColor }]}>{signup.source}</Text>
+                    <View
+                        style={[
+                            styles.sourceChip,
+                            {
+                                backgroundColor: `${signup.sourceColor}14`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.sourceChipText,
+                                {
+                                    color: signup.sourceColor
+                                }
+                            ]}
+                        >
+                            {signup.source}
+                        </Text>
                     </View>
                 </View>
             </View>
-            <Text style={[styles.signupDate, { color: subtextColor }]}>{signup.signupDate}</Text>
+            <Text
+                style={[
+                    styles.signupDate,
+                    {
+                        color: subtextColor
+                    }
+                ]}
+            >
+                {signup.signupDate}
+            </Text>
         </View>
     );
 }
@@ -465,29 +739,93 @@ function ChurnRow({
     borderColor: string;
 }) {
     const reasonStyle = churnReasonColors[entry.reason];
-
     return (
-        <View style={[styles.churnRow, { borderBottomColor: borderColor }]}>
+        <View
+            style={[
+                styles.churnRow,
+                {
+                    borderBottomColor: borderColor
+                }
+            ]}
+        >
             <View style={styles.churnRowLeft}>
                 <View style={styles.churnCompanyRow}>
                     <Ionicons name="remove-circle-outline" size={16} color="#EF4444" />
-                    <Text style={[styles.churnCompany, { color: textColor }]} numberOfLines={1}>
+                    <Text
+                        style={[
+                            styles.churnCompany,
+                            {
+                                color: textColor
+                            }
+                        ]}
+                        numberOfLines={1}
+                    >
                         {entry.company}
                     </Text>
                 </View>
                 <View style={styles.churnMetaRow}>
-                    <Text style={[styles.churnPlan, { color: subtextColor }]}>{entry.plan}</Text>
-                    <Text style={[styles.churnDot, { color: subtextColor }]}>*</Text>
-                    <Text style={[styles.churnDate, { color: subtextColor }]}>{entry.churnDate}</Text>
+                    <Text
+                        style={[
+                            styles.churnPlan,
+                            {
+                                color: subtextColor
+                            }
+                        ]}
+                    >
+                        {entry.plan}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.churnDot,
+                            {
+                                color: subtextColor
+                            }
+                        ]}
+                    >
+                        *
+                    </Text>
+                    <Text
+                        style={[
+                            styles.churnDate,
+                            {
+                                color: subtextColor
+                            }
+                        ]}
+                    >
+                        {entry.churnDate}
+                    </Text>
                 </View>
             </View>
             <View style={styles.churnRowRight}>
-                <View style={[styles.reasonChip, { backgroundColor: reasonStyle.bg }]}>
-                    <Text style={[styles.reasonChipText, { color: reasonStyle.text }]}>
+                <View
+                    style={[
+                        styles.reasonChip,
+                        {
+                            backgroundColor: reasonStyle.bg
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.reasonChipText,
+                            {
+                                color: reasonStyle.text
+                            }
+                        ]}
+                    >
                         {churnReasonLabels[entry.reason]}
                     </Text>
                 </View>
-                <Text style={[styles.churnMrr, { color: "#EF4444" }]}>-${entry.mrr}/mo</Text>
+                <Text
+                    style={[
+                        styles.churnMrr,
+                        {
+                            color: "#EF4444"
+                        }
+                    ]}
+                >
+                    -${entry.mrr}/mo
+                </Text>
             </View>
         </View>
     );
@@ -518,10 +856,35 @@ function SectionHeader({
         <Pressable onPress={onToggle} style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
                 <Ionicons name={icon} size={18} color={iconColor} />
-                <Text style={[styles.sectionTitle, { color: textColor }]}>{title}</Text>
+                <Text
+                    style={[
+                        styles.sectionTitle,
+                        {
+                            color: textColor
+                        }
+                    ]}
+                >
+                    {title}
+                </Text>
                 {count !== undefined && (
-                    <View style={[styles.sectionCount, { backgroundColor: `${iconColor}18` }]}>
-                        <Text style={[styles.sectionCountText, { color: iconColor }]}>{count}</Text>
+                    <View
+                        style={[
+                            styles.sectionCount,
+                            {
+                                backgroundColor: `${iconColor}18`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.sectionCountText,
+                                {
+                                    color: iconColor
+                                }
+                            ]}
+                        >
+                            {count}
+                        </Text>
                     </View>
                 )}
             </View>
@@ -542,33 +905,64 @@ export function StartupMetricsPage() {
     const [revenueExpanded, setRevenueExpanded] = React.useState(true);
     const [signupsExpanded, setSignupsExpanded] = React.useState(true);
     const [churnExpanded, setChurnExpanded] = React.useState(true);
-
     const selectedMetric = selectedMetricId ? (keyMetrics.find((m) => m.id === selectedMetricId) ?? null) : null;
     const maxRevenue = Math.max(...planTiers.map((t) => t.revenue));
     const totalRevenue = planTiers.reduce((s, t) => s + t.revenue, 0);
     const totalSubscribers = planTiers.reduce((s, t) => s + t.subscribers, 0);
     const totalChurnMrr = churnLog.reduce((s, e) => s + e.mrr, 0);
-
     const handleMetricPress = React.useCallback((id: string) => {
         setSelectedMetricId((prev) => (prev === id ? null : id));
     }, []);
-
     return (
         <ShowcasePage bottomInset={60} contentBackgroundColor={theme.colors.surface}>
             {/* Hero summary */}
             <View style={styles.heroSection}>
-                <Text style={[styles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>TOTAL MRR</Text>
-                <Text style={[styles.heroValue, { color: theme.colors.onSurface }]}>$84,200</Text>
+                <Text
+                    style={[
+                        styles.heroLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    TOTAL MRR
+                </Text>
+                <Text
+                    style={[
+                        styles.heroValue,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    $84,200
+                </Text>
                 <View style={styles.heroBadgeRow}>
-                    <View style={[styles.heroBadge, { backgroundColor: "#10B98118" }]}>
+                    <View
+                        style={[
+                            styles.heroBadge,
+                            {
+                                backgroundColor: "#10B98118"
+                            }
+                        ]}
+                    >
                         <Ionicons name="arrow-up" size={14} color="#10B981" />
-                        <Text style={[styles.heroBadgeText, { color: "#10B981" }]}>+12.3% vs last month</Text>
+                        <Text
+                            style={[
+                                styles.heroBadgeText,
+                                {
+                                    color: "#10B981"
+                                }
+                            ]}
+                        >
+                            +12.3% vs last month
+                        </Text>
                     </View>
                 </View>
             </View>
 
             {/* 2x3 Metric Card Grid */}
-            <View style={styles.metricsGrid}>
+            <Grid style={styles.metricsGrid}>
                 {keyMetrics.map((metric) => (
                     <MetricCard
                         key={metric.id}
@@ -581,7 +975,7 @@ export function StartupMetricsPage() {
                         borderColor={theme.colors.outlineVariant}
                     />
                 ))}
-            </View>
+            </Grid>
 
             {/* Metric detail popover */}
             {selectedMetric && (
@@ -605,36 +999,108 @@ export function StartupMetricsPage() {
                 subtextColor={theme.colors.onSurfaceVariant}
             />
             {revenueExpanded && (
-                <View style={[styles.sectionCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <Card
+                    style={[
+                        styles.sectionCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     {/* Revenue summary row */}
                     <View style={styles.revenueSummaryRow}>
                         <View style={styles.revenueSumItem}>
-                            <Text style={[styles.revenueSumValue, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    styles.revenueSumValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {formatCurrency(totalRevenue)}
                             </Text>
-                            <Text style={[styles.revenueSumLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.revenueSumLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Total MRR
                             </Text>
                         </View>
-                        <View style={[styles.revenueSumDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                        <View
+                            style={[
+                                styles.revenueSumDivider,
+                                {
+                                    backgroundColor: theme.colors.outlineVariant
+                                }
+                            ]}
+                        />
                         <View style={styles.revenueSumItem}>
-                            <Text style={[styles.revenueSumValue, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    styles.revenueSumValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {totalSubscribers.toLocaleString()}
                             </Text>
-                            <Text style={[styles.revenueSumLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.revenueSumLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Total Subscribers
                             </Text>
                         </View>
-                        <View style={[styles.revenueSumDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                        <View
+                            style={[
+                                styles.revenueSumDivider,
+                                {
+                                    backgroundColor: theme.colors.outlineVariant
+                                }
+                            ]}
+                        />
                         <View style={styles.revenueSumItem}>
-                            <Text style={[styles.revenueSumValue, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    styles.revenueSumValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 ${(totalRevenue / totalSubscribers).toFixed(0)}
                             </Text>
-                            <Text style={[styles.revenueSumLabel, { color: theme.colors.onSurfaceVariant }]}>ARPU</Text>
+                            <Text
+                                style={[
+                                    styles.revenueSumLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
+                                ARPU
+                            </Text>
                         </View>
                     </View>
 
-                    <View style={[styles.sectionDivider, { borderColor: theme.colors.outlineVariant }]} />
+                    <View
+                        style={[
+                            styles.sectionDivider,
+                            {
+                                borderColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    />
 
                     {/* Tier bars */}
                     <View style={styles.tiersContainer}>
@@ -648,7 +1114,7 @@ export function StartupMetricsPage() {
                             />
                         ))}
                     </View>
-                </View>
+                </Card>
             )}
 
             {/* Recent Signups */}
@@ -663,11 +1129,25 @@ export function StartupMetricsPage() {
                 count={recentSignups.length}
             />
             {signupsExpanded && (
-                <View style={[styles.sectionCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <Card
+                    style={[
+                        styles.sectionCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     {recentSignups.map((signup, idx) => (
                         <React.Fragment key={signup.id}>
                             {idx > 0 && (
-                                <View style={[styles.signupDivider, { borderColor: theme.colors.outlineVariant }]} />
+                                <View
+                                    style={[
+                                        styles.signupDivider,
+                                        {
+                                            borderColor: theme.colors.outlineVariant
+                                        }
+                                    ]}
+                                />
                             )}
                             <SignupRow
                                 signup={signup}
@@ -677,7 +1157,7 @@ export function StartupMetricsPage() {
                             />
                         </React.Fragment>
                     ))}
-                </View>
+                </Card>
             )}
 
             {/* Churn Log */}
@@ -692,23 +1172,58 @@ export function StartupMetricsPage() {
                 count={churnLog.length}
             />
             {churnExpanded && (
-                <View style={[styles.sectionCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <Card
+                    style={[
+                        styles.sectionCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     {/* Churn summary */}
                     <View style={styles.churnSummary}>
-                        <View style={[styles.churnSummaryIcon, { backgroundColor: "#FEE2E220" }]}>
+                        <View
+                            style={[
+                                styles.churnSummaryIcon,
+                                {
+                                    backgroundColor: "#FEE2E220"
+                                }
+                            ]}
+                        >
                             <Ionicons name="warning-outline" size={18} color="#EF4444" />
                         </View>
                         <View style={styles.churnSummaryInfo}>
-                            <Text style={[styles.churnSummaryValue, { color: "#EF4444" }]}>
+                            <Text
+                                style={[
+                                    styles.churnSummaryValue,
+                                    {
+                                        color: "#EF4444"
+                                    }
+                                ]}
+                            >
                                 -${totalChurnMrr.toLocaleString()}/mo
                             </Text>
-                            <Text style={[styles.churnSummaryLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.churnSummaryLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Lost MRR this period ({churnLog.length} customers)
                             </Text>
                         </View>
                     </View>
 
-                    <View style={[styles.sectionDivider, { borderColor: theme.colors.outlineVariant }]} />
+                    <View
+                        style={[
+                            styles.sectionDivider,
+                            {
+                                borderColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    />
 
                     {churnLog.map((entry) => (
                         <ChurnRow
@@ -719,7 +1234,7 @@ export function StartupMetricsPage() {
                             borderColor={theme.colors.outlineVariant}
                         />
                     ))}
-                </View>
+                </Card>
             )}
         </ShowcasePage>
     );
@@ -727,7 +1242,7 @@ export function StartupMetricsPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Hero
     heroSection: {
         alignItems: "center",
@@ -763,7 +1278,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
-
     // 2x3 metric card grid
     metricsGrid: {
         flexDirection: "row",
@@ -813,7 +1327,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
-
     // Metric detail
     metricDetail: {
         borderRadius: 14,
@@ -888,7 +1401,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 10
     },
-
     // Section header
     sectionHeader: {
         flexDirection: "row",
@@ -927,7 +1439,6 @@ const styles = StyleSheet.create((theme) => ({
         marginHorizontal: 14,
         marginVertical: 8
     },
-
     // Revenue summary
     revenueSummaryRow: {
         flexDirection: "row",
@@ -955,7 +1466,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 32,
         marginHorizontal: 4
     },
-
     // Tier bars
     tiersContainer: {
         paddingHorizontal: 14,
@@ -1007,7 +1517,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 10
     },
-
     // Signup rows
     signupRow: {
         flexDirection: "row",
@@ -1063,7 +1572,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
-
     // Churn log
     churnSummary: {
         flexDirection: "row",

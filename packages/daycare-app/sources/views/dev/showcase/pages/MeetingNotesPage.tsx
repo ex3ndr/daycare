@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Text, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { Card } from "@/components/Card";
+import { Row } from "@/components/Row";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
@@ -252,14 +254,13 @@ function ConnectorLine() {
 function MeetingCard({ meeting }: { meeting: Meeting }) {
     const { theme } = useUnistyles();
     return (
-        <View style={styles.card(theme.colors.surfaceContainer, theme.colors.outlineVariant)}>
+        <Card style={styles.card(theme.colors.surfaceContainer, theme.colors.outlineVariant)}>
             {/* Top row: title and type chip */}
-            <View style={styles.cardTopRow}>
+            <Row trailing={<MeetingTypeChip type={meeting.type} />} style={styles.cardTopRow}>
                 <Text style={styles.cardTitle(theme.colors.onSurface)} numberOfLines={1}>
                     {meeting.title}
                 </Text>
-                <MeetingTypeChip type={meeting.type} />
-            </View>
+            </Row>
 
             {/* Date */}
             <Text style={styles.cardDate(theme.colors.onSurfaceVariant)}>{meeting.dateLabel}</Text>
@@ -269,7 +270,7 @@ function MeetingCard({ meeting }: { meeting: Meeting }) {
                 <AttendeeAvatars initials={meeting.attendeeInitials} overflow={meeting.attendeeOverflow} />
                 <ActionBadge count={meeting.actionItems} />
             </View>
-        </View>
+        </Card>
     );
 }
 
@@ -326,7 +327,7 @@ export function MeetingNotesPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     root: (bg: string) => ({
         flex: 1,
         backgroundColor: bg
@@ -467,7 +468,7 @@ const styles = StyleSheet.create((theme) => ({
         width: 26,
         height: 26,
         borderRadius: 13,
-        backgroundColor: bgBase + "20",
+        backgroundColor: `${bgBase}20`,
         alignItems: "center" as const,
         justifyContent: "center" as const,
         marginLeft: idx > 0 ? -8 : 0,
@@ -500,7 +501,7 @@ const styles = StyleSheet.create((theme) => ({
 
     // Chips
     chip: (color: string) => ({
-        backgroundColor: color + "18",
+        backgroundColor: `${color}18`,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 12
@@ -515,7 +516,7 @@ const styles = StyleSheet.create((theme) => ({
     actionBadge: (color: string) => ({
         flexDirection: "row" as const,
         alignItems: "center" as const,
-        backgroundColor: color + "15",
+        backgroundColor: `${color}15`,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 10

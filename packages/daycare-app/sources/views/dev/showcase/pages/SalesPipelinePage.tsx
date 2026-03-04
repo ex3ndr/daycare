@@ -2,12 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type DealStage = "Prospecting" | "Qualification" | "Proposal" | "Negotiation" | "Closed Won" | "Closed Lost";
-
 interface Deal {
     id: string;
     company: string;
@@ -25,9 +24,7 @@ interface Deal {
 // --- Mock Data ---
 
 const allStages: DealStage[] = ["Prospecting", "Qualification", "Proposal", "Negotiation", "Closed Won", "Closed Lost"];
-
 const monthlyTarget = 250000;
-
 const mockDeals: Deal[] = [
     {
         id: "d1",
@@ -221,11 +218,12 @@ function formatCurrency(amount: number): string {
     }
     return `$${amount.toLocaleString()}`;
 }
-
 function formatCurrencyFull(amount: number): string {
-    return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return `$${amount.toLocaleString("en-US", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    })}`;
 }
-
 function initialsFrom(name: string): string {
     const parts = name.split(" ");
     if (parts.length >= 2) {
@@ -233,9 +231,7 @@ function initialsFrom(name: string): string {
     }
     return name.slice(0, 2).toUpperCase();
 }
-
 const avatarHues = ["#6366F1", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6", "#EF4444", "#14B8A6"];
-
 function colorForName(name: string): string {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -288,12 +284,43 @@ function RevenueProgressBar({
     const pct = Math.min(current / target, 1);
     return (
         <View style={styles.progressBarContainer}>
-            <View style={[styles.progressBarTrack, { backgroundColor: trackColor }]}>
-                <View style={[styles.progressBarFill, { backgroundColor: barColor, width: `${pct * 100}%` }]} />
+            <View
+                style={[
+                    styles.progressBarTrack,
+                    {
+                        backgroundColor: trackColor
+                    }
+                ]}
+            >
+                <View
+                    style={[
+                        styles.progressBarFill,
+                        {
+                            backgroundColor: barColor,
+                            width: `${pct * 100}%`
+                        }
+                    ]}
+                />
             </View>
             <View style={styles.progressBarLabels}>
-                <Text style={[styles.progressBarPct, { color: barColor }]}>{Math.round(pct * 100)}%</Text>
-                <Text style={[styles.progressBarTarget, { color: trackColor }]}>
+                <Text
+                    style={[
+                        styles.progressBarPct,
+                        {
+                            color: barColor
+                        }
+                    ]}
+                >
+                    {Math.round(pct * 100)}%
+                </Text>
+                <Text
+                    style={[
+                        styles.progressBarTarget,
+                        {
+                            color: trackColor
+                        }
+                    ]}
+                >
                     {formatCurrencyFull(current)} / {formatCurrencyFull(target)}
                 </Text>
             </View>
@@ -320,7 +347,6 @@ function PipelineFunnel({
     // Only show active pipeline stages in funnel (not closed)
     const funnelStages: DealStage[] = ["Prospecting", "Qualification", "Proposal", "Negotiation"];
     const maxCount = Math.max(...funnelStages.map((s) => dealsByStage.get(s)?.length ?? 0), 1);
-
     return (
         <View style={styles.funnelContainer}>
             {funnelStages.map((stage, idx) => {
@@ -330,7 +356,6 @@ function PipelineFunnel({
                 const barWidth = Math.max((count / maxCount) * 100, 20);
                 const isActive = activeStage === stage;
                 const funnelColors = ["#93C5FD", "#60A5FA", "#3B82F6", "#1D4ED8"];
-
                 return (
                     <Pressable
                         key={stage}
@@ -339,12 +364,24 @@ function PipelineFunnel({
                     >
                         <View style={styles.funnelLabelCol}>
                             <Text
-                                style={[styles.funnelStageLabel, { color: isActive ? primaryColor : textColor }]}
+                                style={[
+                                    styles.funnelStageLabel,
+                                    {
+                                        color: isActive ? primaryColor : textColor
+                                    }
+                                ]}
                                 numberOfLines={1}
                             >
                                 {stage}
                             </Text>
-                            <Text style={[styles.funnelStageCount, { color: subtextColor }]}>
+                            <Text
+                                style={[
+                                    styles.funnelStageCount,
+                                    {
+                                        color: subtextColor
+                                    }
+                                ]}
+                            >
                                 {count} deal{count !== 1 ? "s" : ""}
                             </Text>
                         </View>
@@ -391,9 +428,23 @@ function StageFilterPills({
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsScroll}>
             <Pressable
                 onPress={() => onSelect(null)}
-                style={[styles.pill, { backgroundColor: activeStage === null ? primaryColor : surfaceColor }]}
+                style={[
+                    styles.pill,
+                    {
+                        backgroundColor: activeStage === null ? primaryColor : surfaceColor
+                    }
+                ]}
             >
-                <Text style={[styles.pillText, { color: activeStage === null ? "#FFFFFF" : textColor }]}>All</Text>
+                <Text
+                    style={[
+                        styles.pillText,
+                        {
+                            color: activeStage === null ? "#FFFFFF" : textColor
+                        }
+                    ]}
+                >
+                    All
+                </Text>
             </Pressable>
             {stages.map((stage) => {
                 const isActive = activeStage === stage;
@@ -402,16 +453,39 @@ function StageFilterPills({
                     <Pressable
                         key={stage}
                         onPress={() => onSelect(stage)}
-                        style={[styles.pill, { backgroundColor: isActive ? primaryColor : surfaceColor }]}
+                        style={[
+                            styles.pill,
+                            {
+                                backgroundColor: isActive ? primaryColor : surfaceColor
+                            }
+                        ]}
                     >
-                        <Text style={[styles.pillText, { color: isActive ? "#FFFFFF" : textColor }]}>{stage}</Text>
+                        <Text
+                            style={[
+                                styles.pillText,
+                                {
+                                    color: isActive ? "#FFFFFF" : textColor
+                                }
+                            ]}
+                        >
+                            {stage}
+                        </Text>
                         <View
                             style={[
                                 styles.pillBadge,
-                                { backgroundColor: isActive ? "rgba(255,255,255,0.25)" : `${primaryColor}20` }
+                                {
+                                    backgroundColor: isActive ? "rgba(255,255,255,0.25)" : `${primaryColor}20`
+                                }
                             ]}
                         >
-                            <Text style={[styles.pillBadgeText, { color: isActive ? "#FFFFFF" : primaryColor }]}>
+                            <Text
+                                style={[
+                                    styles.pillBadgeText,
+                                    {
+                                        color: isActive ? "#FFFFFF" : primaryColor
+                                    }
+                                ]}
+                            >
                                 {count}
                             </Text>
                         </View>
@@ -449,10 +523,16 @@ function DealCard({
     const ownerInitials = initialsFrom(deal.owner);
     const isLost = deal.stage === "Closed Lost";
     const isWon = deal.stage === "Closed Won";
-
     return (
-        <Pressable onPress={onToggle} style={({ pressed }) => [pressed && { opacity: 0.92 }]}>
-            <View
+        <Pressable
+            onPress={onToggle}
+            style={({ pressed }) => [
+                pressed && {
+                    opacity: 0.92
+                }
+            ]}
+        >
+            <Card
                 style={[
                     styles.dealCard,
                     {
@@ -478,17 +558,36 @@ function DealCard({
                             <Text
                                 style={[
                                     styles.dealCompany,
-                                    { color: textColor },
-                                    isLost && { textDecorationLine: "line-through", opacity: 0.6 }
+                                    {
+                                        color: textColor
+                                    },
+                                    isLost && {
+                                        textDecorationLine: "line-through",
+                                        opacity: 0.6
+                                    }
                                 ]}
                                 numberOfLines={1}
                             >
                                 {deal.company}
                             </Text>
-                            <Text style={[styles.dealCloseDate, { color: subtextColor }]}>{deal.expectedClose}</Text>
+                            <Text
+                                style={[
+                                    styles.dealCloseDate,
+                                    {
+                                        color: subtextColor
+                                    }
+                                ]}
+                            >
+                                {deal.expectedClose}
+                            </Text>
                         </View>
                         <Text
-                            style={[styles.dealValue, { color: isWon ? "#10B981" : isLost ? subtextColor : textColor }]}
+                            style={[
+                                styles.dealValue,
+                                {
+                                    color: isWon ? "#10B981" : isLost ? subtextColor : textColor
+                                }
+                            ]}
                         >
                             {formatCurrencyFull(deal.value)}
                         </Text>
@@ -496,49 +595,153 @@ function DealCard({
 
                     {/* Bottom row: probability chip + owner avatar */}
                     <View style={styles.dealBottomRow}>
-                        <View style={[styles.probChip, { backgroundColor: `${probColor}18` }]}>
-                            <View style={[styles.probDot, { backgroundColor: probColor }]} />
-                            <Text style={[styles.probText, { color: probColor }]}>{deal.probability}%</Text>
+                        <View
+                            style={[
+                                styles.probChip,
+                                {
+                                    backgroundColor: `${probColor}18`
+                                }
+                            ]}
+                        >
+                            <View
+                                style={[
+                                    styles.probDot,
+                                    {
+                                        backgroundColor: probColor
+                                    }
+                                ]}
+                            />
+                            <Text
+                                style={[
+                                    styles.probText,
+                                    {
+                                        color: probColor
+                                    }
+                                ]}
+                            >
+                                {deal.probability}%
+                            </Text>
                         </View>
 
                         <View style={styles.dealOwnerRow}>
-                            <Text style={[styles.dealOwnerName, { color: subtextColor }]} numberOfLines={1}>
+                            <Text
+                                style={[
+                                    styles.dealOwnerName,
+                                    {
+                                        color: subtextColor
+                                    }
+                                ]}
+                                numberOfLines={1}
+                            >
                                 {deal.owner}
                             </Text>
-                            <View style={[styles.ownerAvatar, { backgroundColor: `${ownerColor}20` }]}>
-                                <Text style={[styles.ownerAvatarText, { color: ownerColor }]}>{ownerInitials}</Text>
+                            <View
+                                style={[
+                                    styles.ownerAvatar,
+                                    {
+                                        backgroundColor: `${ownerColor}20`
+                                    }
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.ownerAvatarText,
+                                        {
+                                            color: ownerColor
+                                        }
+                                    ]}
+                                >
+                                    {ownerInitials}
+                                </Text>
                             </View>
                         </View>
                     </View>
 
                     {/* Expanded details */}
                     {isExpanded && (
-                        <View style={[styles.dealExpanded, { borderTopColor: borderColor }]}>
+                        <View
+                            style={[
+                                styles.dealExpanded,
+                                {
+                                    borderTopColor: borderColor
+                                }
+                            ]}
+                        >
                             <View style={styles.dealExpandedRow}>
                                 <Ionicons name="person-outline" size={14} color={subtextColor} />
-                                <Text style={[styles.dealExpandedLabel, { color: subtextColor }]}>Contact</Text>
-                                <Text style={[styles.dealExpandedValue, { color: textColor }]}>
+                                <Text
+                                    style={[
+                                        styles.dealExpandedLabel,
+                                        {
+                                            color: subtextColor
+                                        }
+                                    ]}
+                                >
+                                    Contact
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.dealExpandedValue,
+                                        {
+                                            color: textColor
+                                        }
+                                    ]}
+                                >
                                     {deal.contactName}, {deal.contactRole}
                                 </Text>
                             </View>
                             <View style={styles.dealExpandedRow}>
                                 <Ionicons name="time-outline" size={14} color={subtextColor} />
-                                <Text style={[styles.dealExpandedLabel, { color: subtextColor }]}>Last Activity</Text>
-                                <Text style={[styles.dealExpandedValue, { color: textColor }]}>
+                                <Text
+                                    style={[
+                                        styles.dealExpandedLabel,
+                                        {
+                                            color: subtextColor
+                                        }
+                                    ]}
+                                >
+                                    Last Activity
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.dealExpandedValue,
+                                        {
+                                            color: textColor
+                                        }
+                                    ]}
+                                >
                                     {deal.lastActivity}
                                 </Text>
                             </View>
                             {deal.notes ? (
                                 <View style={styles.dealExpandedRow}>
                                     <Ionicons name="document-text-outline" size={14} color={subtextColor} />
-                                    <Text style={[styles.dealExpandedLabel, { color: subtextColor }]}>Notes</Text>
-                                    <Text style={[styles.dealExpandedValue, { color: textColor }]}>{deal.notes}</Text>
+                                    <Text
+                                        style={[
+                                            styles.dealExpandedLabel,
+                                            {
+                                                color: subtextColor
+                                            }
+                                        ]}
+                                    >
+                                        Notes
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.dealExpandedValue,
+                                            {
+                                                color: textColor
+                                            }
+                                        ]}
+                                    >
+                                        {deal.notes}
+                                    </Text>
                                 </View>
                             ) : null}
                         </View>
                     )}
                 </View>
-            </View>
+            </Card>
         </Pressable>
     );
 }
@@ -563,16 +766,53 @@ function StageHeader({
     const isWon = stage === "Closed Won";
     const isLost = stage === "Closed Lost";
     const iconColor = isWon ? "#10B981" : isLost ? "#EF4444" : primaryColor;
-
     return (
         <View style={styles.stageHeader}>
             <Ionicons name={icon} size={18} color={iconColor} />
-            <Text style={[styles.stageHeaderLabel, { color: textColor }]}>{stage}</Text>
-            <View style={[styles.stageCountBadge, { backgroundColor: `${iconColor}18` }]}>
-                <Text style={[styles.stageCountText, { color: iconColor }]}>{count}</Text>
+            <Text
+                style={[
+                    styles.stageHeaderLabel,
+                    {
+                        color: textColor
+                    }
+                ]}
+            >
+                {stage}
+            </Text>
+            <View
+                style={[
+                    styles.stageCountBadge,
+                    {
+                        backgroundColor: `${iconColor}18`
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.stageCountText,
+                        {
+                            color: iconColor
+                        }
+                    ]}
+                >
+                    {count}
+                </Text>
             </View>
-            <View style={{ flex: 1 }} />
-            <Text style={[styles.stageTotal, { color: subtextColor }]}>{formatCurrencyFull(totalValue)}</Text>
+            <View
+                style={{
+                    flex: 1
+                }}
+            />
+            <Text
+                style={[
+                    styles.stageTotal,
+                    {
+                        color: subtextColor
+                    }
+                ]}
+            >
+                {formatCurrencyFull(totalValue)}
+            </Text>
         </View>
     );
 }
@@ -611,17 +851,38 @@ export function SalesPipelinePage() {
 
     // Filter stages to display
     const stagesToShow = stageFilter ? [stageFilter] : allStages;
-
     const handleToggleDeal = React.useCallback((dealId: string) => {
         setExpandedDealId((prev) => (prev === dealId ? null : dealId));
     }, []);
-
     return (
         <ShowcasePage edgeToEdge bottomInset={48} contentBackgroundColor={theme.colors.surface}>
             {/* Revenue Metrics Hero */}
-            <View style={[styles.metricsHero, { backgroundColor: theme.colors.surfaceContainer }]}>
-                <Text style={[styles.metricsLabel, { color: theme.colors.onSurfaceVariant }]}>MONTHLY TARGET</Text>
-                <Text style={[styles.metricsAmount, { color: theme.colors.onSurface }]}>
+            <View
+                style={[
+                    styles.metricsHero,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.metricsLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    MONTHLY TARGET
+                </Text>
+                <Text
+                    style={[
+                        styles.metricsAmount,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
                     {formatCurrencyFull(monthlyTarget)}
                 </Text>
                 <RevenueProgressBar
@@ -634,30 +895,110 @@ export function SalesPipelinePage() {
 
             {/* KPI Cards Row */}
             <View style={styles.kpiRow}>
-                <View style={[styles.kpiCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <Card
+                    style={[
+                        styles.kpiCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <Ionicons name="checkmark-done-outline" size={20} color="#10B981" />
-                    <Text style={[styles.kpiValue, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            styles.kpiValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         {formatCurrencyFull(closedThisMonth)}
                     </Text>
-                    <Text style={[styles.kpiLabel, { color: theme.colors.onSurfaceVariant }]}>Closed</Text>
-                </View>
-                <View style={[styles.kpiCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                    <Text
+                        style={[
+                            styles.kpiLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Closed
+                    </Text>
+                </Card>
+                <Card
+                    style={[
+                        styles.kpiCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <Ionicons name="layers-outline" size={20} color={theme.colors.primary} />
-                    <Text style={[styles.kpiValue, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            styles.kpiValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         {formatCurrencyFull(pipelineValue)}
                     </Text>
-                    <Text style={[styles.kpiLabel, { color: theme.colors.onSurfaceVariant }]}>Pipeline</Text>
-                </View>
-                <View style={[styles.kpiCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                    <Text
+                        style={[
+                            styles.kpiLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Pipeline
+                    </Text>
+                </Card>
+                <Card
+                    style={[
+                        styles.kpiCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <Ionicons name="trending-up-outline" size={20} color="#F59E0B" />
-                    <Text style={[styles.kpiValue, { color: theme.colors.onSurface }]}>{winRate}%</Text>
-                    <Text style={[styles.kpiLabel, { color: theme.colors.onSurfaceVariant }]}>Win Rate</Text>
-                </View>
+                    <Text
+                        style={[
+                            styles.kpiValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {winRate}%
+                    </Text>
+                    <Text
+                        style={[
+                            styles.kpiLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Win Rate
+                    </Text>
+                </Card>
             </View>
 
             {/* Pipeline Funnel */}
             <View style={styles.sectionContainer}>
-                <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Pipeline Funnel</Text>
+                <Text
+                    style={[
+                        styles.sectionTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Pipeline Funnel
+                </Text>
                 <PipelineFunnel
                     dealsByStage={dealsByStage}
                     activeStage={stageFilter}
@@ -685,7 +1026,6 @@ export function SalesPipelinePage() {
                     const deals = dealsByStage.get(stage) ?? [];
                     if (deals.length === 0 && stageFilter === null) return null;
                     const totalValue = deals.reduce((s, d) => s + d.value, 0);
-
                     return (
                         <View key={stage} style={styles.stageGroup}>
                             <StageHeader
@@ -698,7 +1038,14 @@ export function SalesPipelinePage() {
                             />
                             {deals.length === 0 ? (
                                 <View style={styles.emptyStage}>
-                                    <Text style={[styles.emptyStageText, { color: theme.colors.onSurfaceVariant }]}>
+                                    <Text
+                                        style={[
+                                            styles.emptyStageText,
+                                            {
+                                                color: theme.colors.onSurfaceVariant
+                                            }
+                                        ]}
+                                    >
                                         No deals in this stage
                                     </Text>
                                 </View>
@@ -730,7 +1077,7 @@ export function SalesPipelinePage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Revenue metrics hero
     metricsHero: {
         marginHorizontal: 16,
@@ -752,7 +1099,6 @@ const styles = StyleSheet.create((theme) => ({
         letterSpacing: -1,
         marginBottom: 12
     },
-
     // Progress bar
     progressBarContainer: {
         width: "100%",
@@ -781,7 +1127,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 11
     },
-
     // KPI cards
     kpiRow: {
         flexDirection: "row",
@@ -808,7 +1153,6 @@ const styles = StyleSheet.create((theme) => ({
         letterSpacing: 0.3,
         textTransform: "uppercase"
     },
-
     // Funnel
     sectionContainer: {
         paddingHorizontal: 16,
@@ -855,7 +1199,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 12,
         color: "#FFFFFF"
     },
-
     // Filter pills
     pillsScroll: {
         paddingHorizontal: 16,
@@ -885,7 +1228,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 10
     },
-
     // Deals container
     dealsContainer: {
         paddingHorizontal: 16,
@@ -894,7 +1236,6 @@ const styles = StyleSheet.create((theme) => ({
     stageGroup: {
         gap: 8
     },
-
     // Stage header
     stageHeader: {
         flexDirection: "row",
@@ -921,7 +1262,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 13
     },
-
     // Deal card
     dealsList: {
         gap: 8
@@ -1005,7 +1345,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 11
     },
-
     // Expanded deal details
     dealExpanded: {
         borderTopWidth: 1,
@@ -1028,7 +1367,6 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1,
         lineHeight: 18
     },
-
     // Empty stage
     emptyStage: {
         paddingVertical: 20,

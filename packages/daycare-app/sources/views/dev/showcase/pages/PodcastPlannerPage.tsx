@@ -2,23 +2,20 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type EpisodeStatus = "planning" | "recording" | "editing" | "published";
-
 type TalkingPoint = {
     text: string;
     checked: boolean;
 };
-
 type AudioFile = {
     label: string;
     duration: string;
     icon: keyof typeof Ionicons.glyphMap;
 };
-
 type Episode = {
     id: string;
     number: number;
@@ -38,13 +35,35 @@ type Episode = {
 
 // --- Constants ---
 
-const STATUS_META: Record<EpisodeStatus, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
-    planning: { label: "Planning", color: "#7c3aed", icon: "bulb-outline" },
-    recording: { label: "Recording", color: "#dc2626", icon: "mic-outline" },
-    editing: { label: "Editing", color: "#d97706", icon: "cut-outline" },
-    published: { label: "Published", color: "#16a34a", icon: "checkmark-circle-outline" }
+const STATUS_META: Record<
+    EpisodeStatus,
+    {
+        label: string;
+        color: string;
+        icon: keyof typeof Ionicons.glyphMap;
+    }
+> = {
+    planning: {
+        label: "Planning",
+        color: "#7c3aed",
+        icon: "bulb-outline"
+    },
+    recording: {
+        label: "Recording",
+        color: "#dc2626",
+        icon: "mic-outline"
+    },
+    editing: {
+        label: "Editing",
+        color: "#d97706",
+        icon: "cut-outline"
+    },
+    published: {
+        label: "Published",
+        color: "#16a34a",
+        icon: "checkmark-circle-outline"
+    }
 };
-
 const STATUS_ORDER: EpisodeStatus[] = ["planning", "recording", "editing", "published"];
 
 // --- Mock Data ---
@@ -64,18 +83,44 @@ const EPISODES: Episode[] = [
         outline:
             "Deep dive into how AI is reshaping the developer experience, from code completion to autonomous debugging. We explore the ethical considerations and where the industry is headed in the next 5 years.",
         talkingPoints: [
-            { text: "Introduction & guest background in AI research", checked: true },
-            { text: "Current state of AI dev tools landscape", checked: true },
-            { text: "Live demo: autonomous debugging session", checked: false },
-            { text: "Ethics of AI-generated code in production", checked: false },
-            { text: "Predictions for 2027 and beyond", checked: false },
-            { text: "Audience Q&A segment", checked: false }
+            {
+                text: "Introduction & guest background in AI research",
+                checked: true
+            },
+            {
+                text: "Current state of AI dev tools landscape",
+                checked: true
+            },
+            {
+                text: "Live demo: autonomous debugging session",
+                checked: false
+            },
+            {
+                text: "Ethics of AI-generated code in production",
+                checked: false
+            },
+            {
+                text: "Predictions for 2027 and beyond",
+                checked: false
+            },
+            {
+                text: "Audience Q&A segment",
+                checked: false
+            }
         ],
         showNotes:
             "Dr. Sarah Lin is a principal researcher at DeepMind focusing on developer productivity. Previously led tooling at Stripe. Author of 'Code & Conscience' (O'Reilly, 2025).",
         audioFiles: [
-            { label: "Raw Recording", duration: "1:12:34", icon: "document-outline" },
-            { label: "Edited Master", duration: "54:20", icon: "musical-notes-outline" }
+            {
+                label: "Raw Recording",
+                duration: "1:12:34",
+                icon: "document-outline"
+            },
+            {
+                label: "Edited Master",
+                duration: "54:20",
+                icon: "musical-notes-outline"
+            }
         ]
     },
     {
@@ -92,17 +137,40 @@ const EPISODES: Episode[] = [
         outline:
             "Marcus shares battle-tested patterns for building distributed systems that survive chaos. Real stories from running infrastructure at Netflix scale.",
         talkingPoints: [
-            { text: "Guest intro and Netflix journey", checked: true },
-            { text: "Circuit breaker patterns in practice", checked: true },
-            { text: "Chaos engineering war stories", checked: true },
-            { text: "Observability stack recommendations", checked: false },
-            { text: "Wrap-up and resource links", checked: false }
+            {
+                text: "Guest intro and Netflix journey",
+                checked: true
+            },
+            {
+                text: "Circuit breaker patterns in practice",
+                checked: true
+            },
+            {
+                text: "Chaos engineering war stories",
+                checked: true
+            },
+            {
+                text: "Observability stack recommendations",
+                checked: false
+            },
+            {
+                text: "Wrap-up and resource links",
+                checked: false
+            }
         ],
         showNotes:
             "Marcus Webb is a Staff Engineer at Netflix. 12 years in distributed systems. Maintainer of the Resilience4j library.",
         audioFiles: [
-            { label: "Raw Recording", duration: "1:05:11", icon: "document-outline" },
-            { label: "Draft Edit v2", duration: "48:15", icon: "musical-notes-outline" }
+            {
+                label: "Raw Recording",
+                duration: "1:05:11",
+                icon: "document-outline"
+            },
+            {
+                label: "Draft Edit v2",
+                duration: "48:15",
+                icon: "musical-notes-outline"
+            }
         ]
     },
     {
@@ -119,17 +187,40 @@ const EPISODES: Episode[] = [
         outline:
             "How Figma's design systems team manages consistency across 100+ components used by thousands of designers worldwide.",
         talkingPoints: [
-            { text: "Ava's path from graphic design to systems thinking", checked: true },
-            { text: "Token architecture and theming strategies", checked: true },
-            { text: "Versioning and breaking changes policy", checked: true },
-            { text: "Community contribution model", checked: true },
-            { text: "Measuring design system adoption", checked: true }
+            {
+                text: "Ava's path from graphic design to systems thinking",
+                checked: true
+            },
+            {
+                text: "Token architecture and theming strategies",
+                checked: true
+            },
+            {
+                text: "Versioning and breaking changes policy",
+                checked: true
+            },
+            {
+                text: "Community contribution model",
+                checked: true
+            },
+            {
+                text: "Measuring design system adoption",
+                checked: true
+            }
         ],
         showNotes:
             "Ava Patel leads the Design Systems team at Figma. Speaker at Config 2025. Co-author of the Design Tokens W3C spec.",
         audioFiles: [
-            { label: "Final Master", duration: "42:08", icon: "musical-notes-outline" },
-            { label: "Transcript (PDF)", duration: "18 pages", icon: "document-text-outline" }
+            {
+                label: "Final Master",
+                duration: "42:08",
+                icon: "musical-notes-outline"
+            },
+            {
+                label: "Transcript (PDF)",
+                duration: "18 pages",
+                icon: "document-text-outline"
+            }
         ]
     },
     {
@@ -146,16 +237,36 @@ const EPISODES: Episode[] = [
         outline:
             "James breaks down why most technical documentation fails and shares his framework for writing docs that developers actually read.",
         talkingPoints: [
-            { text: "Why docs are the #1 developer experience factor", checked: true },
-            { text: "The ARID framework for technical writing", checked: true },
-            { text: "Live review of good vs bad documentation", checked: true },
-            { text: "Tools and workflows for docs-as-code", checked: true }
+            {
+                text: "Why docs are the #1 developer experience factor",
+                checked: true
+            },
+            {
+                text: "The ARID framework for technical writing",
+                checked: true
+            },
+            {
+                text: "Live review of good vs bad documentation",
+                checked: true
+            },
+            {
+                text: "Tools and workflows for docs-as-code",
+                checked: true
+            }
         ],
         showNotes:
             "James Okonkwo is Head of Developer Relations at Vercel. Former tech writer at Google. Created the ARID documentation framework.",
         audioFiles: [
-            { label: "Final Master", duration: "38:22", icon: "musical-notes-outline" },
-            { label: "Transcript (PDF)", duration: "14 pages", icon: "document-text-outline" }
+            {
+                label: "Final Master",
+                duration: "38:22",
+                icon: "musical-notes-outline"
+            },
+            {
+                label: "Transcript (PDF)",
+                duration: "14 pages",
+                icon: "document-text-outline"
+            }
         ]
     },
     {
@@ -172,11 +283,26 @@ const EPISODES: Episode[] = [
         outline:
             "Exploring how WebAssembly is breaking out of the browser into server-side, edge computing, and embedded systems.",
         talkingPoints: [
-            { text: "Guest intro and Wasm background", checked: false },
-            { text: "WASI and the component model explained", checked: false },
-            { text: "Real-world Wasm use cases outside browsers", checked: false },
-            { text: "Performance benchmarks vs native", checked: false },
-            { text: "The plugin ecosystem and extensibility story", checked: false }
+            {
+                text: "Guest intro and Wasm background",
+                checked: false
+            },
+            {
+                text: "WASI and the component model explained",
+                checked: false
+            },
+            {
+                text: "Real-world Wasm use cases outside browsers",
+                checked: false
+            },
+            {
+                text: "Performance benchmarks vs native",
+                checked: false
+            },
+            {
+                text: "The plugin ecosystem and extensibility story",
+                checked: false
+            }
         ],
         showNotes:
             "Kai Nakamura is a core contributor to the Wasmtime runtime at the Bytecode Alliance. Previously worked on V8 at Google.",
@@ -196,11 +322,26 @@ const EPISODES: Episode[] = [
         outline:
             "Celebrating 50 episodes! Reflecting on the journey, listener stats, top moments, and announcing exciting changes for season 3.",
         talkingPoints: [
-            { text: "Journey from episode 1 to 50", checked: false },
-            { text: "Top 5 most downloaded episodes", checked: false },
-            { text: "Listener stats and demographics", checked: false },
-            { text: "Season 3 format changes announcement", checked: false },
-            { text: "Listener voicemails and shoutouts", checked: false }
+            {
+                text: "Journey from episode 1 to 50",
+                checked: false
+            },
+            {
+                text: "Top 5 most downloaded episodes",
+                checked: false
+            },
+            {
+                text: "Listener stats and demographics",
+                checked: false
+            },
+            {
+                text: "Season 3 format changes announcement",
+                checked: false
+            },
+            {
+                text: "Listener voicemails and shoutouts",
+                checked: false
+            }
         ],
         showNotes:
             "Special solo episode. No guest. Includes listener-submitted voice messages and community highlights.",
@@ -223,13 +364,21 @@ function daysUntil(dateStr: string): number {
     };
     return map[dateStr] ?? 0;
 }
-
-function groupByStatus(episodes: Episode[]): { status: EpisodeStatus; episodes: Episode[] }[] {
-    const groups: { status: EpisodeStatus; episodes: Episode[] }[] = [];
+function groupByStatus(episodes: Episode[]): {
+    status: EpisodeStatus;
+    episodes: Episode[];
+}[] {
+    const groups: {
+        status: EpisodeStatus;
+        episodes: Episode[];
+    }[] = [];
     for (const status of STATUS_ORDER) {
         const filtered = episodes.filter((ep) => ep.id !== UPCOMING_EPISODE.id && ep.status === status);
         if (filtered.length > 0) {
-            groups.push({ status, episodes: filtered });
+            groups.push({
+                status,
+                episodes: filtered
+            });
         }
     }
     return groups;
@@ -255,11 +404,18 @@ function StatusChip({ status, small }: { status: EpisodeStatus; small?: boolean 
             }}
         >
             <Ionicons name={meta.icon} size={size} color={meta.color} />
-            <Text style={{ fontFamily: "IBMPlexSans-Medium", fontSize: size, color: meta.color }}>{meta.label}</Text>
+            <Text
+                style={{
+                    fontFamily: "IBMPlexSans-Medium",
+                    fontSize: size,
+                    color: meta.color
+                }}
+            >
+                {meta.label}
+            </Text>
         </View>
     );
 }
-
 function GuestAvatar({ initials, color, size }: { initials: string; color: string; size: number }) {
     return (
         <View
@@ -286,43 +442,119 @@ function GuestAvatar({ initials, color, size }: { initials: string; color: strin
         </View>
     );
 }
-
 function EpisodeNumberBadge({ num }: { num: number }) {
     const { theme } = useUnistyles();
     return (
-        <View style={[styles.epBadge, { backgroundColor: theme.colors.primary }]}>
-            <Text style={[styles.epBadgeText, { color: theme.colors.onPrimary }]}>#{num}</Text>
+        <View
+            style={[
+                styles.epBadge,
+                {
+                    backgroundColor: theme.colors.primary
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    styles.epBadgeText,
+                    {
+                        color: theme.colors.onPrimary
+                    }
+                ]}
+            >
+                #{num}
+            </Text>
         </View>
     );
 }
-
 function CountdownRing({ days }: { days: number }) {
     const { theme } = useUnistyles();
     const isUrgent = days <= 3;
     const ringColor = isUrgent ? "#dc2626" : theme.colors.primary;
-
     return (
-        <View style={[styles.countdownRing, { borderColor: `${ringColor}30`, backgroundColor: `${ringColor}10` }]}>
-            <Text style={[styles.countdownNumber, { color: ringColor }]}>{days}</Text>
-            <Text style={[styles.countdownLabel, { color: `${ringColor}99` }]}>{days === 1 ? "day" : "days"}</Text>
+        <View
+            style={[
+                styles.countdownRing,
+                {
+                    borderColor: `${ringColor}30`,
+                    backgroundColor: `${ringColor}10`
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    styles.countdownNumber,
+                    {
+                        color: ringColor
+                    }
+                ]}
+            >
+                {days}
+            </Text>
+            <Text
+                style={[
+                    styles.countdownLabel,
+                    {
+                        color: `${ringColor}99`
+                    }
+                ]}
+            >
+                {days === 1 ? "day" : "days"}
+            </Text>
         </View>
     );
 }
-
 function HeroCard({ episode }: { episode: Episode }) {
     const { theme } = useUnistyles();
     const recordDays = daysUntil(episode.recordDate);
     const publishDays = daysUntil(episode.publishDate);
     const checkedCount = episode.talkingPoints.filter((tp) => tp.checked).length;
-
     return (
-        <View style={[styles.heroCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Card
+            style={[
+                styles.heroCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             {/* Gradient-like accent bar */}
             <View style={styles.heroAccentBar}>
-                <View style={[styles.heroAccentSegment, { backgroundColor: "#dc2626", flex: 1 }]} />
-                <View style={[styles.heroAccentSegment, { backgroundColor: "#d97706", flex: 1 }]} />
-                <View style={[styles.heroAccentSegment, { backgroundColor: "#7c3aed", flex: 1 }]} />
-                <View style={[styles.heroAccentSegment, { backgroundColor: theme.colors.primary, flex: 1 }]} />
+                <View
+                    style={[
+                        styles.heroAccentSegment,
+                        {
+                            backgroundColor: "#dc2626",
+                            flex: 1
+                        }
+                    ]}
+                />
+                <View
+                    style={[
+                        styles.heroAccentSegment,
+                        {
+                            backgroundColor: "#d97706",
+                            flex: 1
+                        }
+                    ]}
+                />
+                <View
+                    style={[
+                        styles.heroAccentSegment,
+                        {
+                            backgroundColor: "#7c3aed",
+                            flex: 1
+                        }
+                    ]}
+                />
+                <View
+                    style={[
+                        styles.heroAccentSegment,
+                        {
+                            backgroundColor: theme.colors.primary,
+                            flex: 1
+                        }
+                    ]}
+                />
             </View>
 
             <View style={styles.heroPadding}>
@@ -330,7 +562,16 @@ function HeroCard({ episode }: { episode: Episode }) {
                 <View style={styles.heroTopRow}>
                     <View style={styles.heroLabelRow}>
                         <Ionicons name="radio-outline" size={14} color={theme.colors.primary} />
-                        <Text style={[styles.heroLabel, { color: theme.colors.primary }]}>UP NEXT</Text>
+                        <Text
+                            style={[
+                                styles.heroLabel,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
+                            UP NEXT
+                        </Text>
                     </View>
                     <StatusChip status={episode.status} />
                 </View>
@@ -338,53 +579,132 @@ function HeroCard({ episode }: { episode: Episode }) {
                 {/* Title + episode number */}
                 <View style={styles.heroTitleRow}>
                     <EpisodeNumberBadge num={episode.number} />
-                    <Text style={[styles.heroTitle, { color: theme.colors.onSurface }]}>{episode.title}</Text>
+                    <Text
+                        style={[
+                            styles.heroTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {episode.title}
+                    </Text>
                 </View>
 
                 {/* Guest row */}
                 <View style={styles.heroGuestRow}>
                     <GuestAvatar initials={episode.guestInitials} color={episode.guestColor} size={32} />
                     <View>
-                        <Text style={[styles.heroGuestName, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                styles.heroGuestName,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {episode.guestName}
                         </Text>
-                        <Text style={[styles.heroGuestSub, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.heroGuestSub,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Guest Speaker
                         </Text>
                     </View>
                 </View>
 
                 {/* Countdown and dates section */}
-                <View style={[styles.heroCountdownSection, { backgroundColor: `${theme.colors.primary}08` }]}>
+                <View
+                    style={[
+                        styles.heroCountdownSection,
+                        {
+                            backgroundColor: `${theme.colors.primary}08`
+                        }
+                    ]}
+                >
                     <CountdownRing days={recordDays} />
                     <View style={styles.heroDatesList}>
                         <View style={styles.heroDateRow}>
                             <Ionicons name="mic" size={14} color="#dc2626" />
-                            <Text style={[styles.heroDateLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.heroDateLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Record:
                             </Text>
-                            <Text style={[styles.heroDateValue, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    styles.heroDateValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {episode.recordDate}
                             </Text>
                         </View>
                         <View style={styles.heroDateRow}>
                             <Ionicons name="cloud-upload" size={14} color="#16a34a" />
-                            <Text style={[styles.heroDateLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.heroDateLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Publish:
                             </Text>
-                            <Text style={[styles.heroDateValue, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    styles.heroDateValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {episode.publishDate}
                             </Text>
-                            <Text style={[styles.heroDateAway, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.heroDateAway,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 ({publishDays}d away)
                             </Text>
                         </View>
                         <View style={styles.heroDateRow}>
                             <Ionicons name="time-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                            <Text style={[styles.heroDateLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.heroDateLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Duration:
                             </Text>
-                            <Text style={[styles.heroDateValue, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    styles.heroDateValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {episode.duration}
                             </Text>
                         </View>
@@ -394,14 +714,35 @@ function HeroCard({ episode }: { episode: Episode }) {
                 {/* Prep progress bar */}
                 <View style={styles.heroProgressSection}>
                     <View style={styles.heroProgressHeader}>
-                        <Text style={[styles.heroProgressLabel, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.heroProgressLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Prep Progress
                         </Text>
-                        <Text style={[styles.heroProgressCount, { color: theme.colors.primary }]}>
+                        <Text
+                            style={[
+                                styles.heroProgressCount,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
                             {checkedCount}/{episode.talkingPoints.length}
                         </Text>
                     </View>
-                    <View style={[styles.heroProgressTrack, { backgroundColor: theme.colors.outlineVariant }]}>
+                    <View
+                        style={[
+                            styles.heroProgressTrack,
+                            {
+                                backgroundColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    >
                         <View
                             style={[
                                 styles.heroProgressFill,
@@ -414,26 +755,62 @@ function HeroCard({ episode }: { episode: Episode }) {
                     </View>
                 </View>
             </View>
-        </View>
+        </Card>
     );
 }
-
 function StatusSectionHeader({ status, count }: { status: EpisodeStatus; count: number }) {
     const { theme } = useUnistyles();
     const meta = STATUS_META[status];
     return (
         <View style={styles.sectionHeader}>
-            <View style={[styles.sectionAccent, { backgroundColor: meta.color }]} />
+            <View
+                style={[
+                    styles.sectionAccent,
+                    {
+                        backgroundColor: meta.color
+                    }
+                ]}
+            />
             <Ionicons name={meta.icon} size={18} color={meta.color} />
-            <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>{meta.label}</Text>
-            <View style={[styles.sectionCount, { backgroundColor: `${meta.color}18` }]}>
-                <Text style={{ fontFamily: "IBMPlexSans-SemiBold", fontSize: 12, color: meta.color }}>{count}</Text>
+            <Text
+                style={[
+                    styles.sectionTitle,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {meta.label}
+            </Text>
+            <View
+                style={[
+                    styles.sectionCount,
+                    {
+                        backgroundColor: `${meta.color}18`
+                    }
+                ]}
+            >
+                <Text
+                    style={{
+                        fontFamily: "IBMPlexSans-SemiBold",
+                        fontSize: 12,
+                        color: meta.color
+                    }}
+                >
+                    {count}
+                </Text>
             </View>
-            <View style={[styles.sectionLine, { backgroundColor: `${meta.color}20` }]} />
+            <View
+                style={[
+                    styles.sectionLine,
+                    {
+                        backgroundColor: `${meta.color}20`
+                    }
+                ]}
+            />
         </View>
     );
 }
-
 function TalkingPointItem({ point, onToggle }: { point: TalkingPoint; onToggle: () => void }) {
     const { theme } = useUnistyles();
     return (
@@ -463,23 +840,53 @@ function TalkingPointItem({ point, onToggle }: { point: TalkingPoint; onToggle: 
         </Pressable>
     );
 }
-
 function AudioFileRow({ file }: { file: AudioFile }) {
     const { theme } = useUnistyles();
     return (
-        <View style={[styles.audioRow, { backgroundColor: `${theme.colors.primary}08` }]}>
-            <View style={[styles.audioIconWrap, { backgroundColor: `${theme.colors.primary}18` }]}>
+        <View
+            style={[
+                styles.audioRow,
+                {
+                    backgroundColor: `${theme.colors.primary}08`
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.audioIconWrap,
+                    {
+                        backgroundColor: `${theme.colors.primary}18`
+                    }
+                ]}
+            >
                 <Ionicons name="play" size={14} color={theme.colors.primary} />
             </View>
             <View style={styles.audioInfo}>
-                <Text style={[styles.audioLabel, { color: theme.colors.onSurface }]}>{file.label}</Text>
-                <Text style={[styles.audioDuration, { color: theme.colors.onSurfaceVariant }]}>{file.duration}</Text>
+                <Text
+                    style={[
+                        styles.audioLabel,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    {file.label}
+                </Text>
+                <Text
+                    style={[
+                        styles.audioDuration,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    {file.duration}
+                </Text>
             </View>
             <Ionicons name={file.icon} size={18} color={theme.colors.onSurfaceVariant} />
         </View>
     );
 }
-
 function EpisodeDetailPanel({
     episode,
     talkingPoints,
@@ -491,24 +898,64 @@ function EpisodeDetailPanel({
 }) {
     const { theme } = useUnistyles();
     const checkedCount = talkingPoints.filter((tp) => tp.checked).length;
-
     return (
-        <View style={[styles.detailPanel, { borderTopColor: theme.colors.outlineVariant }]}>
+        <View
+            style={[
+                styles.detailPanel,
+                {
+                    borderTopColor: theme.colors.outlineVariant
+                }
+            ]}
+        >
             {/* Outline */}
             <View style={styles.detailSection}>
                 <View style={styles.detailSectionHeader}>
                     <Ionicons name="document-text-outline" size={16} color={theme.colors.tertiary} />
-                    <Text style={[styles.detailSectionTitle, { color: theme.colors.onSurface }]}>Episode Outline</Text>
+                    <Text
+                        style={[
+                            styles.detailSectionTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Episode Outline
+                    </Text>
                 </View>
-                <Text style={[styles.outlineText, { color: theme.colors.onSurfaceVariant }]}>{episode.outline}</Text>
+                <Text
+                    style={[
+                        styles.outlineText,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    {episode.outline}
+                </Text>
             </View>
 
             {/* Talking Points */}
             <View style={styles.detailSection}>
                 <View style={styles.detailSectionHeader}>
                     <Ionicons name="chatbubbles-outline" size={16} color={theme.colors.secondary} />
-                    <Text style={[styles.detailSectionTitle, { color: theme.colors.onSurface }]}>Talking Points</Text>
-                    <Text style={[styles.detailSectionCount, { color: theme.colors.primary }]}>
+                    <Text
+                        style={[
+                            styles.detailSectionTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Talking Points
+                    </Text>
+                    <Text
+                        style={[
+                            styles.detailSectionCount,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
                         {checkedCount}/{talkingPoints.length}
                     </Text>
                 </View>
@@ -521,9 +968,25 @@ function EpisodeDetailPanel({
             <View style={styles.detailSection}>
                 <View style={styles.detailSectionHeader}>
                     <Ionicons name="reader-outline" size={16} color="#d97706" />
-                    <Text style={[styles.detailSectionTitle, { color: theme.colors.onSurface }]}>Show Notes</Text>
+                    <Text
+                        style={[
+                            styles.detailSectionTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Show Notes
+                    </Text>
                 </View>
-                <Text style={[styles.showNotesText, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.showNotesText,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {episode.showNotes}
                 </Text>
             </View>
@@ -533,7 +996,16 @@ function EpisodeDetailPanel({
                 <View style={styles.detailSection}>
                     <View style={styles.detailSectionHeader}>
                         <Ionicons name="headset-outline" size={16} color={theme.colors.primary} />
-                        <Text style={[styles.detailSectionTitle, { color: theme.colors.onSurface }]}>Audio Files</Text>
+                        <Text
+                            style={[
+                                styles.detailSectionTitle,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            Audio Files
+                        </Text>
                     </View>
                     <View style={styles.audioList}>
                         {episode.audioFiles.map((file, i) => (
@@ -545,7 +1017,6 @@ function EpisodeDetailPanel({
         </View>
     );
 }
-
 function EpisodeRow({
     episode,
     expanded,
@@ -561,9 +1032,8 @@ function EpisodeRow({
 }) {
     const { theme } = useUnistyles();
     const statusColor = STATUS_META[episode.status].color;
-
     return (
-        <View
+        <Card
             style={[
                 styles.episodeCard,
                 {
@@ -573,30 +1043,62 @@ function EpisodeRow({
             ]}
         >
             {/* Color strip */}
-            <View style={[styles.episodeStrip, { backgroundColor: statusColor }]} />
+            <View
+                style={[
+                    styles.episodeStrip,
+                    {
+                        backgroundColor: statusColor
+                    }
+                ]}
+            />
 
             <Pressable
                 onPress={onToggle}
-                style={({ pressed }) => [styles.episodePressable, { opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [
+                    styles.episodePressable,
+                    {
+                        opacity: pressed ? 0.85 : 1
+                    }
+                ]}
             >
                 {/* Main row */}
                 <View style={styles.episodeMainRow}>
                     <EpisodeNumberBadge num={episode.number} />
                     <View style={styles.episodeTitleArea}>
-                        <Text style={[styles.episodeTitle, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                styles.episodeTitle,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {episode.title}
                         </Text>
                         <View style={styles.episodeMetaRow}>
                             <GuestAvatar initials={episode.guestInitials} color={episode.guestColor} size={22} />
                             <Text
-                                style={[styles.episodeGuestName, { color: theme.colors.onSurfaceVariant }]}
+                                style={[
+                                    styles.episodeGuestName,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
                                 numberOfLines={1}
                             >
                                 {episode.guestName}
                             </Text>
                             <View style={styles.episodeMetaDivider} />
                             <Ionicons name="time-outline" size={12} color={theme.colors.onSurfaceVariant} />
-                            <Text style={[styles.episodeDuration, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.episodeDuration,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {episode.duration}
                             </Text>
                         </View>
@@ -617,7 +1119,7 @@ function EpisodeRow({
             {expanded && (
                 <EpisodeDetailPanel episode={episode} talkingPoints={talkingPoints} onTogglePoint={onTogglePoint} />
             )}
-        </View>
+        </Card>
     );
 }
 
@@ -629,24 +1131,29 @@ export function PodcastPlannerPage() {
     const [talkingPointsMap, setTalkingPointsMap] = React.useState<Record<string, TalkingPoint[]>>(() => {
         const map: Record<string, TalkingPoint[]> = {};
         for (const ep of EPISODES) {
-            map[ep.id] = ep.talkingPoints.map((tp) => ({ ...tp }));
+            map[ep.id] = ep.talkingPoints.map((tp) => ({
+                ...tp
+            }));
         }
         return map;
     });
-
     const statusGroups = React.useMemo(() => groupByStatus(EPISODES), []);
-
     const handleToggleExpand = React.useCallback((id: string) => {
         setExpandedId((prev) => (prev === id ? null : id));
     }, []);
-
     const handleTogglePoint = React.useCallback((episodeId: string, index: number) => {
         setTalkingPointsMap((prev) => {
             const points = [...(prev[episodeId] ?? [])];
             if (points[index]) {
-                points[index] = { ...points[index], checked: !points[index].checked };
+                points[index] = {
+                    ...points[index],
+                    checked: !points[index].checked
+                };
             }
-            return { ...prev, [episodeId]: points };
+            return {
+                ...prev,
+                [episodeId]: points
+            };
         });
     }, []);
 
@@ -654,16 +1161,36 @@ export function PodcastPlannerPage() {
     const totalEpisodes = EPISODES.length;
     const publishedCount = EPISODES.filter((e) => e.status === "published").length;
     const inProgressCount = EPISODES.filter((e) => e.status === "recording" || e.status === "editing").length;
-
     return (
-        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }}>
+        <ShowcasePage
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
+        >
             {/* Page Header */}
             <View style={styles.pageHeader}>
                 <View style={styles.pageHeaderRow}>
                     <Ionicons name="mic" size={26} color={theme.colors.primary} />
                     <View>
-                        <Text style={[styles.pageTitle, { color: theme.colors.onSurface }]}>Podcast Planner</Text>
-                        <Text style={[styles.pageSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.pageTitle,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            Podcast Planner
+                        </Text>
+                        <Text
+                            style={[
+                                styles.pageSubtitle,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             DevTalk Weekly - Season 2
                         </Text>
                     </View>
@@ -672,21 +1199,96 @@ export function PodcastPlannerPage() {
 
             {/* Quick Stats */}
             <View style={styles.statsRow}>
-                <View style={[styles.statCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <Card
+                    style={[
+                        styles.statCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <Ionicons name="albums-outline" size={18} color={theme.colors.primary} />
-                    <Text style={[styles.statValue, { color: theme.colors.primary }]}>{totalEpisodes}</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>Episodes</Text>
-                </View>
-                <View style={[styles.statCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                    <Text
+                        style={[
+                            styles.statValue,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
+                        {totalEpisodes}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.statLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Episodes
+                    </Text>
+                </Card>
+                <Card
+                    style={[
+                        styles.statCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <Ionicons name="checkmark-circle-outline" size={18} color="#16a34a" />
-                    <Text style={[styles.statValue, { color: "#16a34a" }]}>{publishedCount}</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>Published</Text>
-                </View>
-                <View style={[styles.statCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                    <Text
+                        style={[
+                            styles.statValue,
+                            {
+                                color: "#16a34a"
+                            }
+                        ]}
+                    >
+                        {publishedCount}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.statLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Published
+                    </Text>
+                </Card>
+                <Card
+                    style={[
+                        styles.statCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <Ionicons name="pulse-outline" size={18} color="#d97706" />
-                    <Text style={[styles.statValue, { color: "#d97706" }]}>{inProgressCount}</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>In Progress</Text>
-                </View>
+                    <Text
+                        style={[
+                            styles.statValue,
+                            {
+                                color: "#d97706"
+                            }
+                        ]}
+                    >
+                        {inProgressCount}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.statLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        In Progress
+                    </Text>
+                </Card>
             </View>
 
             {/* Hero: Upcoming Episode */}
@@ -736,7 +1338,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         marginTop: 1
     },
-
     // Stats
     statsRow: {
         flexDirection: "row",
@@ -759,7 +1360,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Hero card
     heroCard: {
         borderRadius: 16,
@@ -869,7 +1469,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 6,
         borderRadius: 3
     },
-
     // Countdown ring
     countdownRing: {
         width: 60,
@@ -889,7 +1488,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 10,
         marginTop: -2
     },
-
     // Episode number badge
     epBadge: {
         minWidth: 36,
@@ -903,7 +1501,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 11
     },
-
     // Section header
     sectionHeader: {
         flexDirection: "row",
@@ -932,7 +1529,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 1,
         marginLeft: 4
     },
-
     // Status groups
     statusGroup: {
         marginBottom: 20
@@ -940,7 +1536,6 @@ const styles = StyleSheet.create((theme) => ({
     episodeList: {
         gap: 10
     },
-
     // Episode card
     episodeCard: {
         borderRadius: 14,
@@ -993,7 +1588,6 @@ const styles = StyleSheet.create((theme) => ({
     episodeChevron: {
         marginTop: 2
     },
-
     // Detail panel
     detailPanel: {
         borderTopWidth: 1,
@@ -1030,7 +1624,6 @@ const styles = StyleSheet.create((theme) => ({
         lineHeight: 20,
         fontStyle: "italic"
     },
-
     // Talking points
     talkingPointRow: {
         flexDirection: "row",
@@ -1052,7 +1645,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         lineHeight: 18
     },
-
     // Audio files
     audioList: {
         gap: 8

@@ -2,13 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type ReadingStatus = "to_read" | "reading" | "read" | "cited";
 type Field = "Machine Learning" | "NLP" | "Computer Vision" | "Robotics" | "Systems" | "HCI";
-
 type Paper = {
     id: string;
     title: string;
@@ -35,12 +34,31 @@ const FIELD_COLORS: Record<Field, string> = {
     Systems: "#ea580c",
     HCI: "#d946ef"
 };
-
-const STATUS_TABS: { key: ReadingStatus; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-    { key: "to_read", label: "To Read", icon: "bookmark-outline" },
-    { key: "reading", label: "Reading", icon: "glasses-outline" },
-    { key: "read", label: "Read", icon: "checkmark-circle-outline" },
-    { key: "cited", label: "Cited", icon: "link-outline" }
+const STATUS_TABS: {
+    key: ReadingStatus;
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+    {
+        key: "to_read",
+        label: "To Read",
+        icon: "bookmark-outline"
+    },
+    {
+        key: "reading",
+        label: "Reading",
+        icon: "glasses-outline"
+    },
+    {
+        key: "read",
+        label: "Read",
+        icon: "checkmark-circle-outline"
+    },
+    {
+        key: "cited",
+        label: "Cited",
+        icon: "link-outline"
+    }
 ];
 
 // --- Mock data ---
@@ -304,7 +322,6 @@ function truncateAuthors(authors: string[], max: number): string {
     if (authors.length <= max) return authors.join(", ");
     return `${authors.slice(0, max).join(", ")} et al. (+${authors.length - max})`;
 }
-
 function paperById(id: string): Paper | undefined {
     return PAPERS.find((p) => p.id === id);
 }
@@ -314,7 +331,12 @@ function paperById(id: string): Paper | undefined {
 function RelevanceStars({ rating, size }: { rating: number; size: number }) {
     const { theme } = useUnistyles();
     return (
-        <View style={{ flexDirection: "row", gap: 2 }}>
+        <View
+            style={{
+                flexDirection: "row",
+                gap: 2
+            }}
+        >
             {[1, 2, 3, 4, 5].map((i) => (
                 <Ionicons
                     key={i}
@@ -347,7 +369,14 @@ function VenueChip({ venue, venueType }: { venue: string; venueType: "conference
                 size={10}
                 color={isJournal ? theme.colors.primary : theme.colors.tertiary}
             />
-            <Text style={[styles.venueChipText, { color: isJournal ? theme.colors.primary : theme.colors.tertiary }]}>
+            <Text
+                style={[
+                    styles.venueChipText,
+                    {
+                        color: isJournal ? theme.colors.primary : theme.colors.tertiary
+                    }
+                ]}
+            >
                 {venue}
             </Text>
         </View>
@@ -359,8 +388,24 @@ function VenueChip({ venue, venueType }: { venue: string; venueType: "conference
 function YearBadge({ year }: { year: number }) {
     const { theme } = useUnistyles();
     return (
-        <View style={[styles.yearBadge, { backgroundColor: theme.colors.surfaceContainerHighest }]}>
-            <Text style={[styles.yearBadgeText, { color: theme.colors.onSurfaceVariant }]}>{year}</Text>
+        <View
+            style={[
+                styles.yearBadge,
+                {
+                    backgroundColor: theme.colors.surfaceContainerHighest
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    styles.yearBadgeText,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {year}
+            </Text>
         </View>
     );
 }
@@ -372,10 +417,42 @@ function FieldAccentHeader({ field, count }: { field: Field; count: number }) {
     const color = FIELD_COLORS[field];
     return (
         <View style={styles.fieldHeader}>
-            <View style={[styles.fieldAccentBar, { backgroundColor: color }]} />
-            <Text style={[styles.fieldHeaderText, { color: theme.colors.onSurface }]}>{field}</Text>
-            <View style={[styles.fieldCountBadge, { backgroundColor: `${color}20` }]}>
-                <Text style={[styles.fieldCountText, { color }]}>{count}</Text>
+            <View
+                style={[
+                    styles.fieldAccentBar,
+                    {
+                        backgroundColor: color
+                    }
+                ]}
+            />
+            <Text
+                style={[
+                    styles.fieldHeaderText,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {field}
+            </Text>
+            <View
+                style={[
+                    styles.fieldCountBadge,
+                    {
+                        backgroundColor: `${color}20`
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.fieldCountText,
+                        {
+                            color
+                        }
+                    ]}
+                >
+                    {count}
+                </Text>
             </View>
         </View>
     );
@@ -394,7 +471,14 @@ function SegmentedControl({
 }) {
     const { theme } = useUnistyles();
     return (
-        <View style={[styles.segmentedRow, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <View
+            style={[
+                styles.segmentedRow,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             {STATUS_TABS.map(({ key, label, icon }) => {
                 const isActive = activeTab === key;
                 return (
@@ -417,7 +501,9 @@ function SegmentedControl({
                         <Text
                             style={[
                                 styles.segmentLabel,
-                                { color: isActive ? theme.colors.onPrimary : theme.colors.onSurfaceVariant }
+                                {
+                                    color: isActive ? theme.colors.onPrimary : theme.colors.onSurfaceVariant
+                                }
                             ]}
                         >
                             {label}
@@ -435,7 +521,9 @@ function SegmentedControl({
                             <Text
                                 style={[
                                     styles.segmentCountText,
-                                    { color: isActive ? theme.colors.onPrimary : theme.colors.onSurfaceVariant }
+                                    {
+                                        color: isActive ? theme.colors.onPrimary : theme.colors.onSurfaceVariant
+                                    }
                                 ]}
                             >
                                 {counts[key]}
@@ -454,32 +542,62 @@ function PaperCard({ paper, isExpanded, onToggle }: { paper: Paper; isExpanded: 
     const { theme } = useUnistyles();
     const fieldColor = FIELD_COLORS[paper.field];
     const relatedPapers = paper.relatedPaperIds.map(paperById).filter(Boolean) as Paper[];
-
     return (
         <Pressable onPress={onToggle}>
-            <View style={[styles.paperCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+            <Card
+                style={[
+                    styles.paperCard,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
                 {/* Field color accent stripe on the left */}
-                <View style={[styles.paperAccentStripe, { backgroundColor: fieldColor }]} />
+                <View
+                    style={[
+                        styles.paperAccentStripe,
+                        {
+                            backgroundColor: fieldColor
+                        }
+                    ]}
+                />
 
                 <View style={styles.paperContent}>
                     {/* Top row: year badge + venue chip + relevance */}
                     <View style={styles.paperTopRow}>
                         <YearBadge year={paper.year} />
                         <VenueChip venue={paper.venue} venueType={paper.venueType} />
-                        <View style={{ flex: 1 }} />
+                        <View
+                            style={{
+                                flex: 1
+                            }}
+                        />
                         <RelevanceStars rating={paper.relevance} size={12} />
                     </View>
 
                     {/* Title */}
                     <Text
-                        style={[styles.paperTitle, { color: theme.colors.onSurface }]}
+                        style={[
+                            styles.paperTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
                         numberOfLines={isExpanded ? undefined : 2}
                     >
                         {paper.title}
                     </Text>
 
                     {/* Authors */}
-                    <Text style={[styles.paperAuthors, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
+                    <Text
+                        style={[
+                            styles.paperAuthors,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                        numberOfLines={1}
+                    >
                         {truncateAuthors(paper.authors, 3)}
                     </Text>
 
@@ -490,7 +608,14 @@ function PaperCard({ paper, isExpanded, onToggle }: { paper: Paper; isExpanded: 
                             size={16}
                             color={theme.colors.onSurfaceVariant}
                         />
-                        <Text style={[styles.expandHint, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.expandHint,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {isExpanded ? "Collapse" : "Show details"}
                         </Text>
                     </View>
@@ -502,11 +627,25 @@ function PaperCard({ paper, isExpanded, onToggle }: { paper: Paper; isExpanded: 
                             <View style={styles.detailSection}>
                                 <View style={styles.detailSectionHeader}>
                                     <Ionicons name="document-text-outline" size={14} color={theme.colors.primary} />
-                                    <Text style={[styles.detailSectionTitle, { color: theme.colors.primary }]}>
+                                    <Text
+                                        style={[
+                                            styles.detailSectionTitle,
+                                            {
+                                                color: theme.colors.primary
+                                            }
+                                        ]}
+                                    >
                                         Abstract
                                     </Text>
                                 </View>
-                                <Text style={[styles.abstractText, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        styles.abstractText,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {paper.abstract}
                                 </Text>
                             </View>
@@ -515,12 +654,35 @@ function PaperCard({ paper, isExpanded, onToggle }: { paper: Paper; isExpanded: 
                             <View style={styles.detailSection}>
                                 <View style={styles.detailSectionHeader}>
                                     <Ionicons name="bulb-outline" size={14} color="#f59e0b" />
-                                    <Text style={[styles.detailSectionTitle, { color: "#f59e0b" }]}>Key Findings</Text>
+                                    <Text
+                                        style={[
+                                            styles.detailSectionTitle,
+                                            {
+                                                color: "#f59e0b"
+                                            }
+                                        ]}
+                                    >
+                                        Key Findings
+                                    </Text>
                                 </View>
                                 {paper.keyFindings.map((finding) => (
                                     <View key={finding} style={styles.findingRow}>
-                                        <View style={[styles.findingBullet, { backgroundColor: fieldColor }]} />
-                                        <Text style={[styles.findingText, { color: theme.colors.onSurface }]}>
+                                        <View
+                                            style={[
+                                                styles.findingBullet,
+                                                {
+                                                    backgroundColor: fieldColor
+                                                }
+                                            ]}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.findingText,
+                                                {
+                                                    color: theme.colors.onSurface
+                                                }
+                                            ]}
+                                        >
                                             {finding}
                                         </Text>
                                     </View>
@@ -531,7 +693,14 @@ function PaperCard({ paper, isExpanded, onToggle }: { paper: Paper; isExpanded: 
                             <View style={styles.detailSection}>
                                 <View style={styles.detailSectionHeader}>
                                     <Ionicons name="code-slash-outline" size={14} color={theme.colors.tertiary} />
-                                    <Text style={[styles.detailSectionTitle, { color: theme.colors.tertiary }]}>
+                                    <Text
+                                        style={[
+                                            styles.detailSectionTitle,
+                                            {
+                                                color: theme.colors.tertiary
+                                            }
+                                        ]}
+                                    >
                                         BibTeX
                                     </Text>
                                 </View>
@@ -544,7 +713,14 @@ function PaperCard({ paper, isExpanded, onToggle }: { paper: Paper; isExpanded: 
                                         }
                                     ]}
                                 >
-                                    <Text style={[styles.bibtexText, { color: theme.colors.onSurface }]}>
+                                    <Text
+                                        style={[
+                                            styles.bibtexText,
+                                            {
+                                                color: theme.colors.onSurface
+                                            }
+                                        ]}
+                                    >
                                         {paper.bibtex}
                                     </Text>
                                 </View>
@@ -555,7 +731,14 @@ function PaperCard({ paper, isExpanded, onToggle }: { paper: Paper; isExpanded: 
                                 <View style={styles.detailSection}>
                                     <View style={styles.detailSectionHeader}>
                                         <Ionicons name="git-branch-outline" size={14} color={theme.colors.secondary} />
-                                        <Text style={[styles.detailSectionTitle, { color: theme.colors.secondary }]}>
+                                        <Text
+                                            style={[
+                                                styles.detailSectionTitle,
+                                                {
+                                                    color: theme.colors.secondary
+                                                }
+                                            ]}
+                                        >
                                             Related Papers
                                         </Text>
                                     </View>
@@ -564,15 +747,27 @@ function PaperCard({ paper, isExpanded, onToggle }: { paper: Paper; isExpanded: 
                                             key={rp.id}
                                             style={[
                                                 styles.relatedPaperRow,
-                                                { borderColor: theme.colors.outlineVariant }
+                                                {
+                                                    borderColor: theme.colors.outlineVariant
+                                                }
                                             ]}
                                         >
                                             <View
-                                                style={[styles.relatedDot, { backgroundColor: FIELD_COLORS[rp.field] }]}
+                                                style={[
+                                                    styles.relatedDot,
+                                                    {
+                                                        backgroundColor: FIELD_COLORS[rp.field]
+                                                    }
+                                                ]}
                                             />
                                             <View style={styles.relatedContent}>
                                                 <Text
-                                                    style={[styles.relatedTitle, { color: theme.colors.onSurface }]}
+                                                    style={[
+                                                        styles.relatedTitle,
+                                                        {
+                                                            color: theme.colors.onSurface
+                                                        }
+                                                    ]}
                                                     numberOfLines={1}
                                                 >
                                                     {rp.title}
@@ -580,7 +775,9 @@ function PaperCard({ paper, isExpanded, onToggle }: { paper: Paper; isExpanded: 
                                                 <Text
                                                     style={[
                                                         styles.relatedMeta,
-                                                        { color: theme.colors.onSurfaceVariant }
+                                                        {
+                                                            color: theme.colors.onSurfaceVariant
+                                                        }
                                                     ]}
                                                 >
                                                     {rp.authors[0]} et al., {rp.year} - {rp.venue}
@@ -598,7 +795,7 @@ function PaperCard({ paper, isExpanded, onToggle }: { paper: Paper; isExpanded: 
                         </View>
                     )}
                 </View>
-            </View>
+            </Card>
         </Pressable>
     );
 }
@@ -611,7 +808,6 @@ function StatsBar({ papers }: { papers: Paper[] }) {
     const cited = papers.filter((p) => p.status === "cited").length;
     const avgRelevance = totalPapers > 0 ? (papers.reduce((s, p) => s + p.relevance, 0) / totalPapers).toFixed(1) : "0";
     const uniqueVenues = new Set(papers.map((p) => p.venue)).size;
-
     const stats = [
         {
             label: "Papers",
@@ -638,15 +834,40 @@ function StatsBar({ papers }: { papers: Paper[] }) {
             color: "#059669"
         }
     ];
-
     return (
         <View style={styles.statsRow}>
             {stats.map((stat) => (
-                <View key={stat.label} style={[styles.statCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <Card
+                    key={stat.label}
+                    style={[
+                        styles.statCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <Ionicons name={stat.icon} size={18} color={stat.color} />
-                    <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>{stat.label}</Text>
-                </View>
+                    <Text
+                        style={[
+                            styles.statValue,
+                            {
+                                color: stat.color
+                            }
+                        ]}
+                    >
+                        {stat.value}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.statLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        {stat.label}
+                    </Text>
+                </Card>
             ))}
         </View>
     );
@@ -658,9 +879,7 @@ export function ResearchPapersPage() {
     const { theme } = useUnistyles();
     const [activeTab, setActiveTab] = React.useState<ReadingStatus>("to_read");
     const [expandedPaperId, setExpandedPaperId] = React.useState<string | null>(null);
-
     const filteredPapers = PAPERS.filter((p) => p.status === activeTab);
-
     const counts: Record<ReadingStatus, number> = {
         to_read: PAPERS.filter((p) => p.status === "to_read").length,
         reading: PAPERS.filter((p) => p.status === "reading").length,
@@ -670,24 +889,31 @@ export function ResearchPapersPage() {
 
     // Group filtered papers by field
     const groupedByField = React.useMemo(() => {
-        const groups: { field: Field; papers: Paper[] }[] = [];
+        const groups: {
+            field: Field;
+            papers: Paper[];
+        }[] = [];
         const fieldOrder: Field[] = ["Machine Learning", "NLP", "Computer Vision", "Robotics", "Systems", "HCI"];
         for (const field of fieldOrder) {
             const fieldPapers = filteredPapers.filter((p) => p.field === field);
             if (fieldPapers.length > 0) {
-                groups.push({ field, papers: fieldPapers });
+                groups.push({
+                    field,
+                    papers: fieldPapers
+                });
             }
         }
         return groups;
     }, [filteredPapers]);
-
     const handleTogglePaper = (paperId: string) => {
         setExpandedPaperId((prev) => (prev === paperId ? null : paperId));
     };
-
     return (
         <ShowcasePage
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
             topInset={20}
             bottomInset={20}
             contentGap={20}
@@ -696,9 +922,25 @@ export function ResearchPapersPage() {
             <View style={styles.headerBlock}>
                 <View style={styles.headerTitleRow}>
                     <Ionicons name="school-outline" size={24} color={theme.colors.primary} />
-                    <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>Research Library</Text>
+                    <Text
+                        style={[
+                            styles.headerTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Research Library
+                    </Text>
                 </View>
-                <Text style={[styles.headerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.headerSubtitle,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     Papers, citations, and reading progress
                 </Text>
             </View>
@@ -713,7 +955,14 @@ export function ResearchPapersPage() {
             {groupedByField.length === 0 ? (
                 <View style={styles.emptyState}>
                     <Ionicons name="document-outline" size={48} color={theme.colors.outlineVariant} />
-                    <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.emptyText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         No papers in this category
                     </Text>
                 </View>
@@ -761,7 +1010,6 @@ const styles = StyleSheet.create((theme) => ({
         lineHeight: 20,
         marginLeft: 34
     },
-
     // Stats
     statsRow: {
         flexDirection: "row",
@@ -785,7 +1033,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 14
     },
-
     // Segmented Control
     segmentedRow: {
         flexDirection: "row",
@@ -818,7 +1065,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 10,
         lineHeight: 14
     },
-
     // Venue Chip
     venueChip: {
         flexDirection: "row",
@@ -834,7 +1080,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 10,
         lineHeight: 14
     },
-
     // Year Badge
     yearBadge: {
         paddingHorizontal: 7,
@@ -846,7 +1091,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 16
     },
-
     // Field Header
     fieldHeader: {
         flexDirection: "row",
@@ -873,7 +1117,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 16
     },
-
     // Field Group
     fieldGroup: {
         gap: 10
@@ -881,7 +1124,6 @@ const styles = StyleSheet.create((theme) => ({
     paperList: {
         gap: 10
     },
-
     // Paper Card
     paperCard: {
         borderRadius: 12,
@@ -922,7 +1164,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 16
     },
-
     // Detail Panel
     detailPanel: {
         marginTop: 8,
@@ -949,7 +1190,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         lineHeight: 20
     },
-
     // Key Findings
     findingRow: {
         flexDirection: "row",
@@ -968,7 +1208,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         lineHeight: 20
     },
-
     // BibTeX
     bibtexBlock: {
         borderRadius: 8,
@@ -980,7 +1219,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 18
     },
-
     // Related Papers
     relatedPaperRow: {
         flexDirection: "row",
@@ -1010,7 +1248,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 14
     },
-
     // Empty State
     emptyState: {
         alignItems: "center",

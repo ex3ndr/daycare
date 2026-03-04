@@ -2,12 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
+import { Grid } from "@/components/Grid";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type CompetitorKey = "acme" | "nebula" | "vertex";
-
 type Competitor = {
     key: CompetitorKey;
     name: string;
@@ -19,7 +19,6 @@ type Competitor = {
     revenueGrowth: string;
     founded: string;
 };
-
 type TimelineEvent = {
     id: string;
     date: string;
@@ -28,7 +27,6 @@ type TimelineEvent = {
     icon: keyof typeof Ionicons.glyphMap;
     type: "product" | "funding" | "hiring" | "partnership";
 };
-
 type FeatureComparison = {
     feature: string;
     us: boolean;
@@ -36,11 +34,9 @@ type FeatureComparison = {
     nebula: boolean;
     vertex: boolean;
 };
-
 type SwotItem = {
     text: string;
 };
-
 type SwotData = {
     strengths: SwotItem[];
     weaknesses: SwotItem[];
@@ -85,9 +81,7 @@ const COMPETITORS: Record<CompetitorKey, Competitor> = {
         founded: "2016"
     }
 };
-
 const COMPETITOR_KEYS: CompetitorKey[] = ["acme", "nebula", "vertex"];
-
 const TIMELINE_EVENTS: Record<CompetitorKey, TimelineEvent[]> = {
     acme: [
         {
@@ -216,89 +210,218 @@ const TIMELINE_EVENTS: Record<CompetitorKey, TimelineEvent[]> = {
         }
     ]
 };
-
 const FEATURES: FeatureComparison[] = [
-    { feature: "AI Workflow Builder", us: true, acme: true, nebula: true, vertex: false },
-    { feature: "Real-time Collaboration", us: true, acme: false, nebula: false, vertex: true },
-    { feature: "Self-hosted Option", us: true, acme: false, nebula: true, vertex: false },
-    { feature: "API-first Architecture", us: true, acme: true, nebula: true, vertex: true },
-    { feature: "Multi-agent Orchestration", us: true, acme: false, nebula: true, vertex: false },
-    { feature: "SOC 2 Compliance", us: true, acme: true, nebula: false, vertex: true },
-    { feature: "White-label Support", us: false, acme: true, nebula: false, vertex: false },
-    { feature: "Mobile SDK", us: true, acme: false, nebula: false, vertex: true },
-    { feature: "Custom Plugin System", us: true, acme: true, nebula: true, vertex: false },
-    { feature: "Offline Mode", us: true, acme: false, nebula: false, vertex: false }
+    {
+        feature: "AI Workflow Builder",
+        us: true,
+        acme: true,
+        nebula: true,
+        vertex: false
+    },
+    {
+        feature: "Real-time Collaboration",
+        us: true,
+        acme: false,
+        nebula: false,
+        vertex: true
+    },
+    {
+        feature: "Self-hosted Option",
+        us: true,
+        acme: false,
+        nebula: true,
+        vertex: false
+    },
+    {
+        feature: "API-first Architecture",
+        us: true,
+        acme: true,
+        nebula: true,
+        vertex: true
+    },
+    {
+        feature: "Multi-agent Orchestration",
+        us: true,
+        acme: false,
+        nebula: true,
+        vertex: false
+    },
+    {
+        feature: "SOC 2 Compliance",
+        us: true,
+        acme: true,
+        nebula: false,
+        vertex: true
+    },
+    {
+        feature: "White-label Support",
+        us: false,
+        acme: true,
+        nebula: false,
+        vertex: false
+    },
+    {
+        feature: "Mobile SDK",
+        us: true,
+        acme: false,
+        nebula: false,
+        vertex: true
+    },
+    {
+        feature: "Custom Plugin System",
+        us: true,
+        acme: true,
+        nebula: true,
+        vertex: false
+    },
+    {
+        feature: "Offline Mode",
+        us: true,
+        acme: false,
+        nebula: false,
+        vertex: false
+    }
 ];
-
 const SWOT_DATA: Record<CompetitorKey, SwotData> = {
     acme: {
         strengths: [
-            { text: "Strong enterprise sales team and brand recognition" },
-            { text: "Deep integrations with legacy ERP systems" },
-            { text: "Proven SOC 2 and HIPAA compliance track record" }
+            {
+                text: "Strong enterprise sales team and brand recognition"
+            },
+            {
+                text: "Deep integrations with legacy ERP systems"
+            },
+            {
+                text: "Proven SOC 2 and HIPAA compliance track record"
+            }
         ],
         weaknesses: [
-            { text: "Slow product iteration cycle (quarterly releases)" },
-            { text: "No self-hosted deployment option" },
-            { text: "High churn in SMB segment" }
+            {
+                text: "Slow product iteration cycle (quarterly releases)"
+            },
+            {
+                text: "No self-hosted deployment option"
+            },
+            {
+                text: "High churn in SMB segment"
+            }
         ],
         opportunities: [
-            { text: "Fintech vertical expansion with new CTO hire" },
-            { text: "International markets largely untapped" },
-            { text: "Growing demand for AI automation in healthcare" }
+            {
+                text: "Fintech vertical expansion with new CTO hire"
+            },
+            {
+                text: "International markets largely untapped"
+            },
+            {
+                text: "Growing demand for AI automation in healthcare"
+            }
         ],
         threats: [
-            { text: "Nebula AI gaining developer mindshare rapidly" },
-            { text: "Pricing pressure from open-source alternatives" },
-            { text: "Key customer concentration risk (top 5 = 40% revenue)" }
+            {
+                text: "Nebula AI gaining developer mindshare rapidly"
+            },
+            {
+                text: "Pricing pressure from open-source alternatives"
+            },
+            {
+                text: "Key customer concentration risk (top 5 = 40% revenue)"
+            }
         ]
     },
     nebula: {
         strengths: [
-            { text: "Fastest product velocity in the market" },
-            { text: "Strong developer community and open-source presence" },
-            { text: "First-mover advantage in multi-agent orchestration" }
+            {
+                text: "Fastest product velocity in the market"
+            },
+            {
+                text: "Strong developer community and open-source presence"
+            },
+            {
+                text: "First-mover advantage in multi-agent orchestration"
+            }
         ],
         weaknesses: [
-            { text: "Limited enterprise sales infrastructure" },
-            { text: "No compliance certifications yet" },
-            { text: "Revenue still heavily dependent on self-serve" }
+            {
+                text: "Limited enterprise sales infrastructure"
+            },
+            {
+                text: "No compliance certifications yet"
+            },
+            {
+                text: "Revenue still heavily dependent on self-serve"
+            }
         ],
         opportunities: [
-            { text: "AWS partnership opens massive distribution channel" },
-            { text: "Enterprise customers seeking AI-native solutions" },
-            { text: "Potential to become the de facto open-source standard" }
+            {
+                text: "AWS partnership opens massive distribution channel"
+            },
+            {
+                text: "Enterprise customers seeking AI-native solutions"
+            },
+            {
+                text: "Potential to become the de facto open-source standard"
+            }
         ],
         threats: [
-            { text: "Well-funded competitors (Acme, Vertex) can copy features" },
-            { text: "Open-source model creates monetization challenges" },
-            { text: "Talent retention difficult at current burn rate" }
+            {
+                text: "Well-funded competitors (Acme, Vertex) can copy features"
+            },
+            {
+                text: "Open-source model creates monetization challenges"
+            },
+            {
+                text: "Talent retention difficult at current burn rate"
+            }
         ]
     },
     vertex: {
         strengths: [
-            { text: "Largest installed base among developer teams" },
-            { text: "Mature platform with 8+ years of development" },
-            { text: "Strong revenue and path to profitability / IPO" }
+            {
+                text: "Largest installed base among developer teams"
+            },
+            {
+                text: "Mature platform with 8+ years of development"
+            },
+            {
+                text: "Strong revenue and path to profitability / IPO"
+            }
         ],
         weaknesses: [
-            { text: "Legacy architecture limits AI feature velocity" },
-            { text: "No AI workflow builder or agent capabilities" },
-            { text: "Developer perception shifting to 'old guard'" }
+            {
+                text: "Legacy architecture limits AI feature velocity"
+            },
+            {
+                text: "No AI workflow builder or agent capabilities"
+            },
+            {
+                text: "Developer perception shifting to 'old guard'"
+            }
         ],
         opportunities: [
-            { text: "IPO capital could fund aggressive AI R&D" },
-            { text: "APAC expansion into underpenetrated markets" },
-            { text: "Acquisitions to fill AI and automation gaps" }
+            {
+                text: "IPO capital could fund aggressive AI R&D"
+            },
+            {
+                text: "APAC expansion into underpenetrated markets"
+            },
+            {
+                text: "Acquisitions to fill AI and automation gaps"
+            }
         ],
         threats: [
-            { text: "AI-native startups disrupting core collaboration use case" },
-            { text: "GitHub Copilot dependency creates platform risk" },
-            { text: "APAC expansion execution risk with local competitors" }
+            {
+                text: "AI-native startups disrupting core collaboration use case"
+            },
+            {
+                text: "GitHub Copilot dependency creates platform risk"
+            },
+            {
+                text: "APAC expansion execution risk with local competitors"
+            }
         ]
     }
 };
-
 const EVENT_TYPE_COLORS: Record<TimelineEvent["type"], string> = {
     product: "#3B82F6",
     funding: "#10B981",
@@ -310,10 +433,16 @@ const EVENT_TYPE_COLORS: Record<TimelineEvent["type"], string> = {
 
 function CompetitorTabs({ selected, onSelect }: { selected: CompetitorKey; onSelect: (key: CompetitorKey) => void }) {
     const { theme } = useUnistyles();
-
     return (
         <View style={s.tabsContainer}>
-            <View style={[s.tabsTrack, { backgroundColor: theme.colors.surfaceContainer }]}>
+            <View
+                style={[
+                    s.tabsTrack,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
                 {COMPETITOR_KEYS.map((key) => {
                     const competitor = COMPETITORS[key];
                     const isActive = selected === key;
@@ -355,7 +484,6 @@ function CompetitorTabs({ selected, onSelect }: { selected: CompetitorKey; onSel
 
 function OverviewSection({ competitor }: { competitor: Competitor }) {
     const { theme } = useUnistyles();
-
     const metrics = [
         {
             label: "Revenue",
@@ -379,22 +507,60 @@ function OverviewSection({ competitor }: { competitor: Competitor }) {
             color: "#8B5CF6"
         }
     ];
-
     return (
         <View style={s.section}>
             <View style={s.sectionHeader}>
                 <Ionicons name="analytics-outline" size={18} color={theme.colors.primary} />
-                <Text style={[s.sectionTitle, { color: theme.colors.onSurface }]}>Overview</Text>
+                <Text
+                    style={[
+                        s.sectionTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Overview
+                </Text>
             </View>
 
             {/* Competitor banner */}
-            <View style={[s.banner, { backgroundColor: theme.colors.surfaceContainer }]}>
-                <View style={[s.bannerIconCircle, { backgroundColor: `${theme.colors.primary}18` }]}>
+            <View
+                style={[
+                    s.banner,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
+                <View
+                    style={[
+                        s.bannerIconCircle,
+                        {
+                            backgroundColor: `${theme.colors.primary}18`
+                        }
+                    ]}
+                >
                     <Ionicons name={competitor.logo} size={24} color={theme.colors.primary} />
                 </View>
                 <View style={s.bannerText}>
-                    <Text style={[s.bannerName, { color: theme.colors.onSurface }]}>{competitor.name}</Text>
-                    <Text style={[s.bannerTagline, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            s.bannerName,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {competitor.name}
+                    </Text>
+                    <Text
+                        style={[
+                            s.bannerTagline,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {competitor.tagline}
                     </Text>
                 </View>
@@ -403,14 +569,56 @@ function OverviewSection({ competitor }: { competitor: Competitor }) {
             {/* Metric cards */}
             <View style={s.metricsRow}>
                 {metrics.map((m) => (
-                    <View key={m.label} style={[s.metricCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-                        <View style={[s.metricIconCircle, { backgroundColor: `${m.color}18` }]}>
+                    <Card
+                        key={m.label}
+                        style={[
+                            s.metricCard,
+                            {
+                                backgroundColor: theme.colors.surfaceContainer
+                            }
+                        ]}
+                    >
+                        <View
+                            style={[
+                                s.metricIconCircle,
+                                {
+                                    backgroundColor: `${m.color}18`
+                                }
+                            ]}
+                        >
                             <Ionicons name={m.icon} size={16} color={m.color} />
                         </View>
-                        <Text style={[s.metricValue, { color: theme.colors.onSurface }]}>{m.value}</Text>
-                        <Text style={[s.metricSub, { color: m.color }]}>{m.sub}</Text>
-                        <Text style={[s.metricLabel, { color: theme.colors.onSurfaceVariant }]}>{m.label}</Text>
-                    </View>
+                        <Text
+                            style={[
+                                s.metricValue,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            {m.value}
+                        </Text>
+                        <Text
+                            style={[
+                                s.metricSub,
+                                {
+                                    color: m.color
+                                }
+                            ]}
+                        >
+                            {m.sub}
+                        </Text>
+                        <Text
+                            style={[
+                                s.metricLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
+                            {m.label}
+                        </Text>
+                    </Card>
                 ))}
             </View>
         </View>
@@ -421,49 +629,117 @@ function OverviewSection({ competitor }: { competitor: Competitor }) {
 
 function TimelineSection({ events }: { events: TimelineEvent[] }) {
     const { theme } = useUnistyles();
-
     return (
         <View style={s.section}>
             <View style={s.sectionHeader}>
                 <Ionicons name="time-outline" size={18} color={theme.colors.primary} />
-                <Text style={[s.sectionTitle, { color: theme.colors.onSurface }]}>Recent Moves</Text>
+                <Text
+                    style={[
+                        s.sectionTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Recent Moves
+                </Text>
             </View>
 
-            <View style={[s.timelineContainer, { backgroundColor: theme.colors.surfaceContainer }]}>
+            <View
+                style={[
+                    s.timelineContainer,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
                 {events.map((event, index) => {
                     const color = EVENT_TYPE_COLORS[event.type];
                     const isLast = index === events.length - 1;
-
                     return (
                         <View key={event.id} style={s.timelineRow}>
                             {/* Timeline track: dot + connector line */}
                             <View style={s.timelineTrack}>
-                                <View style={[s.timelineDotOuter, { backgroundColor: `${color}25` }]}>
-                                    <View style={[s.timelineDotInner, { backgroundColor: color }]} />
+                                <View
+                                    style={[
+                                        s.timelineDotOuter,
+                                        {
+                                            backgroundColor: `${color}25`
+                                        }
+                                    ]}
+                                >
+                                    <View
+                                        style={[
+                                            s.timelineDotInner,
+                                            {
+                                                backgroundColor: color
+                                            }
+                                        ]}
+                                    />
                                 </View>
                                 {!isLast && (
                                     <View
-                                        style={[s.timelineConnector, { backgroundColor: theme.colors.outlineVariant }]}
+                                        style={[
+                                            s.timelineConnector,
+                                            {
+                                                backgroundColor: theme.colors.outlineVariant
+                                            }
+                                        ]}
                                     />
                                 )}
                             </View>
 
                             {/* Event content */}
                             <View style={s.timelineContent}>
-                                <Text style={[s.timelineDate, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        s.timelineDate,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     {event.date}
                                 </Text>
                                 <View style={s.timelineTitleRow}>
                                     <Ionicons name={event.icon} size={14} color={color} />
-                                    <Text style={[s.timelineTitle, { color: theme.colors.onSurface }]}>
+                                    <Text
+                                        style={[
+                                            s.timelineTitle,
+                                            {
+                                                color: theme.colors.onSurface
+                                            }
+                                        ]}
+                                    >
                                         {event.title}
                                     </Text>
                                 </View>
-                                <Text style={[s.timelineDescription, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        s.timelineDescription,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     {event.description}
                                 </Text>
-                                <View style={[s.timelineTypeBadge, { backgroundColor: `${color}18` }]}>
-                                    <Text style={[s.timelineTypeText, { color }]}>
+                                <View
+                                    style={[
+                                        s.timelineTypeBadge,
+                                        {
+                                            backgroundColor: `${color}18`
+                                        }
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            s.timelineTypeText,
+                                            {
+                                                color
+                                            }
+                                        ]}
+                                    >
                                         {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
                                     </Text>
                                 </View>
@@ -481,24 +757,60 @@ function TimelineSection({ events }: { events: TimelineEvent[] }) {
 function ComparisonSection({ selected }: { selected: CompetitorKey }) {
     const { theme } = useUnistyles();
     const columnHeaders = ["Us", COMPETITORS[selected].name];
-
     return (
         <View style={s.section}>
             <View style={s.sectionHeader}>
                 <Ionicons name="git-compare-outline" size={18} color={theme.colors.primary} />
-                <Text style={[s.sectionTitle, { color: theme.colors.onSurface }]}>Product Comparison</Text>
+                <Text
+                    style={[
+                        s.sectionTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Product Comparison
+                </Text>
             </View>
 
-            <View style={[s.comparisonCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+            <Card
+                style={[
+                    s.comparisonCard,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
                 {/* Table header */}
-                <View style={[s.comparisonHeaderRow, { borderBottomColor: theme.colors.outlineVariant }]}>
+                <View
+                    style={[
+                        s.comparisonHeaderRow,
+                        {
+                            borderBottomColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                >
                     <View style={s.comparisonFeatureCol}>
-                        <Text style={[s.comparisonHeaderText, { color: theme.colors.onSurfaceVariant }]}>Feature</Text>
+                        <Text
+                            style={[
+                                s.comparisonHeaderText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
+                            Feature
+                        </Text>
                     </View>
                     {columnHeaders.map((header) => (
                         <View key={header} style={s.comparisonCheckCol}>
                             <Text
-                                style={[s.comparisonHeaderText, { color: theme.colors.onSurfaceVariant }]}
+                                style={[
+                                    s.comparisonHeaderText,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
                                 numberOfLines={1}
                             >
                                 {header}
@@ -512,7 +824,6 @@ function ComparisonSection({ selected }: { selected: CompetitorKey }) {
                     const usHas = row.us;
                     const competitorHas = row[selected];
                     const isEven = index % 2 === 0;
-
                     return (
                         <View
                             key={row.feature}
@@ -525,7 +836,12 @@ function ComparisonSection({ selected }: { selected: CompetitorKey }) {
                         >
                             <View style={s.comparisonFeatureCol}>
                                 <Text
-                                    style={[s.comparisonFeatureText, { color: theme.colors.onSurface }]}
+                                    style={[
+                                        s.comparisonFeatureText,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
                                     numberOfLines={1}
                                 >
                                     {row.feature}
@@ -550,22 +866,52 @@ function ComparisonSection({ selected }: { selected: CompetitorKey }) {
                 })}
 
                 {/* Score summary */}
-                <View style={[s.comparisonSummaryRow, { borderTopColor: theme.colors.outlineVariant }]}>
+                <View
+                    style={[
+                        s.comparisonSummaryRow,
+                        {
+                            borderTopColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                >
                     <View style={s.comparisonFeatureCol}>
-                        <Text style={[s.comparisonSummaryLabel, { color: theme.colors.onSurfaceVariant }]}>Score</Text>
+                        <Text
+                            style={[
+                                s.comparisonSummaryLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
+                            Score
+                        </Text>
                     </View>
                     <View style={s.comparisonCheckCol}>
-                        <Text style={[s.comparisonScore, { color: "#10B981" }]}>
+                        <Text
+                            style={[
+                                s.comparisonScore,
+                                {
+                                    color: "#10B981"
+                                }
+                            ]}
+                        >
                             {FEATURES.filter((f) => f.us).length}/{FEATURES.length}
                         </Text>
                     </View>
                     <View style={s.comparisonCheckCol}>
-                        <Text style={[s.comparisonScore, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                s.comparisonScore,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {FEATURES.filter((f) => f[selected]).length}/{FEATURES.length}
                         </Text>
                     </View>
                 </View>
-            </View>
+            </Card>
         </View>
     );
 }
@@ -602,18 +948,25 @@ const SWOT_CONFIG = [
         bgAlpha: "12"
     }
 ];
-
 function SwotSection({ data }: { data: SwotData }) {
     const { theme } = useUnistyles();
-
     return (
         <View style={s.section}>
             <View style={s.sectionHeader}>
                 <Ionicons name="grid-outline" size={18} color={theme.colors.primary} />
-                <Text style={[s.sectionTitle, { color: theme.colors.onSurface }]}>SWOT Analysis</Text>
+                <Text
+                    style={[
+                        s.sectionTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    SWOT Analysis
+                </Text>
             </View>
 
-            <View style={s.swotGrid}>
+            <Grid style={s.swotGrid}>
                 {SWOT_CONFIG.map((config) => {
                     const items = data[config.key];
                     return (
@@ -629,17 +982,47 @@ function SwotSection({ data }: { data: SwotData }) {
                         >
                             {/* Quadrant header */}
                             <View style={s.swotQuadrantHeader}>
-                                <View style={[s.swotIconCircle, { backgroundColor: `${config.color}25` }]}>
+                                <View
+                                    style={[
+                                        s.swotIconCircle,
+                                        {
+                                            backgroundColor: `${config.color}25`
+                                        }
+                                    ]}
+                                >
                                     <Ionicons name={config.icon} size={14} color={config.color} />
                                 </View>
-                                <Text style={[s.swotQuadrantTitle, { color: config.color }]}>{config.title}</Text>
+                                <Text
+                                    style={[
+                                        s.swotQuadrantTitle,
+                                        {
+                                            color: config.color
+                                        }
+                                    ]}
+                                >
+                                    {config.title}
+                                </Text>
                             </View>
 
                             {/* Bullet items */}
                             {items.map((item) => (
                                 <View key={item.text} style={s.swotBulletRow}>
-                                    <View style={[s.swotBulletDot, { backgroundColor: config.color }]} />
-                                    <Text style={[s.swotBulletText, { color: theme.colors.onSurface }]}>
+                                    <View
+                                        style={[
+                                            s.swotBulletDot,
+                                            {
+                                                backgroundColor: config.color
+                                            }
+                                        ]}
+                                    />
+                                    <Text
+                                        style={[
+                                            s.swotBulletText,
+                                            {
+                                                color: theme.colors.onSurface
+                                            }
+                                        ]}
+                                    >
                                         {item.text}
                                     </Text>
                                 </View>
@@ -647,7 +1030,7 @@ function SwotSection({ data }: { data: SwotData }) {
                         </View>
                     );
                 })}
-            </View>
+            </Grid>
         </View>
     );
 }
@@ -657,26 +1040,50 @@ function SwotSection({ data }: { data: SwotData }) {
 export function CompetitiveAnalysisPage() {
     const { theme } = useUnistyles();
     const [selected, setSelected] = React.useState<CompetitorKey>("acme");
-
     const competitor = COMPETITORS[selected];
     const events = TIMELINE_EVENTS[selected];
     const swot = SWOT_DATA[selected];
-
     return (
         <ShowcasePage
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
             topInset={16}
             bottomInset={16}
             contentGap={20}
         >
             {/* Page title */}
             <View style={s.pageHeader}>
-                <View style={[s.pageIconCircle, { backgroundColor: `${theme.colors.primary}18` }]}>
+                <View
+                    style={[
+                        s.pageIconCircle,
+                        {
+                            backgroundColor: `${theme.colors.primary}18`
+                        }
+                    ]}
+                >
                     <Ionicons name="telescope-outline" size={22} color={theme.colors.primary} />
                 </View>
                 <View>
-                    <Text style={[s.pageTitle, { color: theme.colors.onSurface }]}>Competitive Intelligence</Text>
-                    <Text style={[s.pageSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            s.pageTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Competitive Intelligence
+                    </Text>
+                    <Text
+                        style={[
+                            s.pageSubtitle,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         Track and analyze competitor activity
                     </Text>
                 </View>
@@ -702,7 +1109,7 @@ export function CompetitiveAnalysisPage() {
 
 // --- Styles ---
 
-const s = StyleSheet.create((theme) => ({
+const s = StyleSheet.create((_theme) => ({
     // Page header
     pageHeader: {
         flexDirection: "row",
@@ -727,7 +1134,6 @@ const s = StyleSheet.create((theme) => ({
         lineHeight: 18,
         marginTop: 1
     },
-
     // Tabs
     tabsContainer: {
         marginTop: -4
@@ -752,7 +1158,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 13,
         lineHeight: 18
     },
-
     // Sections
     section: {
         gap: 12
@@ -767,7 +1172,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 17,
         lineHeight: 22
     },
-
     // Overview banner
     banner: {
         flexDirection: "row",
@@ -797,7 +1201,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 13,
         lineHeight: 18
     },
-
     // Metric cards
     metricsRow: {
         flexDirection: "row",
@@ -833,7 +1236,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 11,
         lineHeight: 14
     },
-
     // Timeline
     timelineContainer: {
         borderRadius: 14,
@@ -907,7 +1309,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 10,
         lineHeight: 14
     },
-
     // Comparison table
     comparisonCard: {
         borderRadius: 14,
@@ -960,7 +1361,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 14,
         lineHeight: 20
     },
-
     // SWOT grid
     swotGrid: {
         flexDirection: "row",

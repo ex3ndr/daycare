@@ -2,17 +2,16 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
+import { Grid } from "@/components/Grid";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type MuscleGroup = "chest" | "back" | "shoulders" | "legs" | "arms" | "core";
-
 type ExerciseSet = {
     reps: number;
     weight: number;
 };
-
 type Exercise = {
     id: string;
     name: string;
@@ -24,7 +23,6 @@ type Exercise = {
     completed: boolean;
     isPR: boolean;
 };
-
 type SummaryStats = {
     totalVolume: number;
     estimatedDuration: number;
@@ -41,7 +39,6 @@ const MUSCLE_GROUP_ICONS: Record<MuscleGroup, keyof typeof Ionicons.glyphMap> = 
     arms: "fitness-outline",
     core: "ellipse-outline"
 };
-
 const MUSCLE_GROUP_LABELS: Record<MuscleGroup, string> = {
     chest: "Chest",
     back: "Back",
@@ -50,7 +47,6 @@ const MUSCLE_GROUP_LABELS: Record<MuscleGroup, string> = {
     arms: "Arms",
     core: "Core"
 };
-
 const initialExercises: Exercise[] = [
     {
         id: "1",
@@ -59,7 +55,10 @@ const initialExercises: Exercise[] = [
         sets: 4,
         reps: 8,
         weight: 185,
-        previousSession: { reps: 8, weight: 180 },
+        previousSession: {
+            reps: 8,
+            weight: 180
+        },
         completed: false,
         isPR: true
     },
@@ -70,7 +69,10 @@ const initialExercises: Exercise[] = [
         sets: 3,
         reps: 10,
         weight: 65,
-        previousSession: { reps: 10, weight: 60 },
+        previousSession: {
+            reps: 10,
+            weight: 60
+        },
         completed: false,
         isPR: false
     },
@@ -81,7 +83,10 @@ const initialExercises: Exercise[] = [
         sets: 3,
         reps: 12,
         weight: 30,
-        previousSession: { reps: 12, weight: 30 },
+        previousSession: {
+            reps: 12,
+            weight: 30
+        },
         completed: false,
         isPR: false
     },
@@ -92,7 +97,10 @@ const initialExercises: Exercise[] = [
         sets: 4,
         reps: 8,
         weight: 115,
-        previousSession: { reps: 8, weight: 110 },
+        previousSession: {
+            reps: 8,
+            weight: 110
+        },
         completed: false,
         isPR: true
     },
@@ -103,7 +111,10 @@ const initialExercises: Exercise[] = [
         sets: 3,
         reps: 15,
         weight: 20,
-        previousSession: { reps: 15, weight: 20 },
+        previousSession: {
+            reps: 15,
+            weight: 20
+        },
         completed: false,
         isPR: false
     },
@@ -114,7 +125,10 @@ const initialExercises: Exercise[] = [
         sets: 3,
         reps: 12,
         weight: 55,
-        previousSession: { reps: 12, weight: 50 },
+        previousSession: {
+            reps: 12,
+            weight: 50
+        },
         completed: false,
         isPR: true
     },
@@ -125,7 +139,10 @@ const initialExercises: Exercise[] = [
         sets: 3,
         reps: 10,
         weight: 75,
-        previousSession: { reps: 10, weight: 75 },
+        previousSession: {
+            reps: 10,
+            weight: 75
+        },
         completed: false,
         isPR: false
     },
@@ -136,7 +153,10 @@ const initialExercises: Exercise[] = [
         sets: 3,
         reps: 15,
         weight: 0,
-        previousSession: { reps: 12, weight: 0 },
+        previousSession: {
+            reps: 12,
+            weight: 0
+        },
         completed: false,
         isPR: false
     }
@@ -156,16 +176,18 @@ function computeStats(exercises: Exercise[]): SummaryStats {
     // Rough estimate: ~3 min per set including rest
     const totalSets = exercises.reduce((sum, ex) => sum + ex.sets, 0);
     const estimatedDuration = Math.round(totalSets * 3);
-    return { totalVolume, estimatedDuration, prsHit };
+    return {
+        totalVolume,
+        estimatedDuration,
+        prsHit
+    };
 }
-
 function formatVolume(volume: number): string {
     if (volume >= 1000) {
         return `${(volume / 1000).toFixed(1)}k`;
     }
     return `${volume}`;
 }
-
 function groupByMuscle(exercises: Exercise[]): [MuscleGroup, Exercise[]][] {
     const groups = new Map<MuscleGroup, Exercise[]>();
     for (const ex of exercises) {
@@ -183,9 +205,25 @@ function groupByMuscle(exercises: Exercise[]): [MuscleGroup, Exercise[]][] {
 
 function PRBadge({ color, bgColor }: { color: string; bgColor: string }) {
     return (
-        <View style={[styles.prBadge, { backgroundColor: bgColor }]}>
+        <View
+            style={[
+                styles.prBadge,
+                {
+                    backgroundColor: bgColor
+                }
+            ]}
+        >
             <Ionicons name="trophy" size={10} color={color} />
-            <Text style={[styles.prBadgeText, { color }]}>PR</Text>
+            <Text
+                style={[
+                    styles.prBadgeText,
+                    {
+                        color
+                    }
+                ]}
+            >
+                PR
+            </Text>
         </View>
     );
 }
@@ -203,27 +241,74 @@ function WorkoutHeader({
 }) {
     const { theme } = useUnistyles();
     const progressPct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-
     return (
-        <View style={[styles.headerCard, { backgroundColor: theme.colors.primary }]}>
+        <Card
+            style={[
+                styles.headerCard,
+                {
+                    backgroundColor: theme.colors.primary
+                }
+            ]}
+        >
             <View style={styles.headerTopRow}>
                 <View style={styles.headerDayBadge}>
-                    <Text style={[styles.headerDayText, { color: theme.colors.primary }]}>DAY 24</Text>
+                    <Text
+                        style={[
+                            styles.headerDayText,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
+                        DAY 24
+                    </Text>
                 </View>
                 <View style={styles.headerTimeRow}>
                     <Ionicons name="time-outline" size={16} color={theme.colors.onPrimary} />
-                    <Text style={[styles.headerTimeText, { color: theme.colors.onPrimary }]}>~{duration} min</Text>
+                    <Text
+                        style={[
+                            styles.headerTimeText,
+                            {
+                                color: theme.colors.onPrimary
+                            }
+                        ]}
+                    >
+                        ~{duration} min
+                    </Text>
                 </View>
             </View>
 
-            <Text style={[styles.headerTitle, { color: theme.colors.onPrimary }]}>Push Day</Text>
-            <Text style={[styles.headerSubtitle, { color: `${theme.colors.onPrimary}BB` }]}>
+            <Text
+                style={[
+                    styles.headerTitle,
+                    {
+                        color: theme.colors.onPrimary
+                    }
+                ]}
+            >
+                Push Day
+            </Text>
+            <Text
+                style={[
+                    styles.headerSubtitle,
+                    {
+                        color: `${theme.colors.onPrimary}BB`
+                    }
+                ]}
+            >
                 Chest, Shoulders & Arms
             </Text>
 
             {/* Progress bar */}
             <View style={styles.headerProgressContainer}>
-                <View style={[styles.headerProgressTrack, { backgroundColor: `${theme.colors.onPrimary}30` }]}>
+                <View
+                    style={[
+                        styles.headerProgressTrack,
+                        {
+                            backgroundColor: `${theme.colors.onPrimary}30`
+                        }
+                    ]}
+                >
                     <View
                         style={[
                             styles.headerProgressFill,
@@ -234,11 +319,18 @@ function WorkoutHeader({
                         ]}
                     />
                 </View>
-                <Text style={[styles.headerProgressLabel, { color: `${theme.colors.onPrimary}CC` }]}>
+                <Text
+                    style={[
+                        styles.headerProgressLabel,
+                        {
+                            color: `${theme.colors.onPrimary}CC`
+                        }
+                    ]}
+                >
                     {completedCount}/{totalCount} exercises
                 </Text>
             </View>
-        </View>
+        </Card>
     );
 }
 
@@ -246,17 +338,44 @@ function WorkoutHeader({
 
 function MuscleGroupDivider({ muscleGroup }: { muscleGroup: MuscleGroup }) {
     const { theme } = useUnistyles();
-
     return (
         <View style={styles.sectionDivider}>
-            <View style={[styles.sectionDividerLine, { backgroundColor: theme.colors.outlineVariant }]} />
-            <View style={[styles.sectionDividerPill, { backgroundColor: theme.colors.surfaceContainer }]}>
+            <View
+                style={[
+                    styles.sectionDividerLine,
+                    {
+                        backgroundColor: theme.colors.outlineVariant
+                    }
+                ]}
+            />
+            <View
+                style={[
+                    styles.sectionDividerPill,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
                 <Ionicons name={MUSCLE_GROUP_ICONS[muscleGroup]} size={14} color={theme.colors.onSurfaceVariant} />
-                <Text style={[styles.sectionDividerText, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.sectionDividerText,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {MUSCLE_GROUP_LABELS[muscleGroup]}
                 </Text>
             </View>
-            <View style={[styles.sectionDividerLine, { backgroundColor: theme.colors.outlineVariant }]} />
+            <View
+                style={[
+                    styles.sectionDividerLine,
+                    {
+                        backgroundColor: theme.colors.outlineVariant
+                    }
+                ]}
+            />
         </View>
     );
 }
@@ -265,15 +384,12 @@ function MuscleGroupDivider({ muscleGroup }: { muscleGroup: MuscleGroup }) {
 
 function ExerciseCard({ exercise, onToggle }: { exercise: Exercise; onToggle: () => void }) {
     const { theme } = useUnistyles();
-
     const prevLabel =
         exercise.previousSession.weight > 0
             ? `${exercise.previousSession.reps} reps @ ${exercise.previousSession.weight} lbs`
             : `${exercise.previousSession.reps} reps (bodyweight)`;
-
     const weightDiff = exercise.weight - exercise.previousSession.weight;
     const repsDiff = exercise.reps - exercise.previousSession.reps;
-
     return (
         <Pressable
             onPress={onToggle}
@@ -316,18 +432,64 @@ function ExerciseCard({ exercise, onToggle }: { exercise: Exercise; onToggle: ()
 
             {/* Sets/Reps/Weight row */}
             <View style={styles.metricsRow}>
-                <View style={[styles.metricPill, { backgroundColor: theme.colors.surfaceContainerHighest }]}>
+                <View
+                    style={[
+                        styles.metricPill,
+                        {
+                            backgroundColor: theme.colors.surfaceContainerHighest
+                        }
+                    ]}
+                >
                     <Ionicons name="repeat-outline" size={13} color={theme.colors.onSurfaceVariant} />
-                    <Text style={[styles.metricValue, { color: theme.colors.onSurface }]}>{exercise.sets} sets</Text>
+                    <Text
+                        style={[
+                            styles.metricValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {exercise.sets} sets
+                    </Text>
                 </View>
-                <View style={[styles.metricPill, { backgroundColor: theme.colors.surfaceContainerHighest }]}>
+                <View
+                    style={[
+                        styles.metricPill,
+                        {
+                            backgroundColor: theme.colors.surfaceContainerHighest
+                        }
+                    ]}
+                >
                     <Ionicons name="sync-outline" size={13} color={theme.colors.onSurfaceVariant} />
-                    <Text style={[styles.metricValue, { color: theme.colors.onSurface }]}>{exercise.reps} reps</Text>
+                    <Text
+                        style={[
+                            styles.metricValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {exercise.reps} reps
+                    </Text>
                 </View>
                 {exercise.weight > 0 && (
-                    <View style={[styles.metricPill, { backgroundColor: theme.colors.surfaceContainerHighest }]}>
+                    <View
+                        style={[
+                            styles.metricPill,
+                            {
+                                backgroundColor: theme.colors.surfaceContainerHighest
+                            }
+                        ]}
+                    >
                         <Ionicons name="barbell-outline" size={13} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[styles.metricValue, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                styles.metricValue,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {exercise.weight} lbs
                         </Text>
                     </View>
@@ -337,13 +499,34 @@ function ExerciseCard({ exercise, onToggle }: { exercise: Exercise; onToggle: ()
             {/* Previous session subtitle */}
             <View style={styles.previousRow}>
                 <Ionicons name="arrow-undo-outline" size={12} color={theme.colors.onSurfaceVariant} />
-                <Text style={[styles.previousText, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.previousText,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     Previous: {prevLabel}
                 </Text>
                 {(weightDiff > 0 || repsDiff > 0) && (
-                    <View style={[styles.diffBadge, { backgroundColor: `${theme.colors.primary}18` }]}>
+                    <View
+                        style={[
+                            styles.diffBadge,
+                            {
+                                backgroundColor: `${theme.colors.primary}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name="arrow-up" size={10} color={theme.colors.primary} />
-                        <Text style={[styles.diffText, { color: theme.colors.primary }]}>
+                        <Text
+                            style={[
+                                styles.diffText,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
                             {weightDiff > 0 ? `+${weightDiff} lbs` : `+${repsDiff} reps`}
                         </Text>
                     </View>
@@ -365,64 +548,206 @@ function SummarySection({
     totalCount: number;
 }) {
     const { theme } = useUnistyles();
-
     return (
         <View style={styles.summaryContainer}>
-            <Text style={[styles.summaryTitle, { color: theme.colors.onSurface }]}>Workout Summary</Text>
+            <Text
+                style={[
+                    styles.summaryTitle,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                Workout Summary
+            </Text>
 
-            <View style={styles.summaryGrid}>
+            <Grid style={styles.summaryGrid}>
                 {/* Volume card */}
-                <View style={[styles.summaryCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-                    <View style={[styles.summaryIconCircle, { backgroundColor: `${theme.colors.primary}18` }]}>
+                <Card
+                    style={[
+                        styles.summaryCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
+                    <View
+                        style={[
+                            styles.summaryIconCircle,
+                            {
+                                backgroundColor: `${theme.colors.primary}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name="barbell-outline" size={20} color={theme.colors.primary} />
                     </View>
-                    <Text style={[styles.summaryCardValue, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            styles.summaryCardValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         {formatVolume(stats.totalVolume)}
                     </Text>
-                    <Text style={[styles.summaryCardLabel, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.summaryCardLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         Total Volume (lbs)
                     </Text>
-                </View>
+                </Card>
 
                 {/* Duration card */}
-                <View style={[styles.summaryCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-                    <View style={[styles.summaryIconCircle, { backgroundColor: `${theme.colors.secondary}18` }]}>
+                <Card
+                    style={[
+                        styles.summaryCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
+                    <View
+                        style={[
+                            styles.summaryIconCircle,
+                            {
+                                backgroundColor: `${theme.colors.secondary}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name="time-outline" size={20} color={theme.colors.secondary} />
                     </View>
-                    <Text style={[styles.summaryCardValue, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            styles.summaryCardValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         {stats.estimatedDuration}
                     </Text>
-                    <Text style={[styles.summaryCardLabel, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.summaryCardLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         Est. Minutes
                     </Text>
-                </View>
+                </Card>
 
                 {/* PRs card */}
-                <View style={[styles.summaryCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-                    <View style={[styles.summaryIconCircle, { backgroundColor: `${theme.colors.tertiary}18` }]}>
+                <Card
+                    style={[
+                        styles.summaryCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
+                    <View
+                        style={[
+                            styles.summaryIconCircle,
+                            {
+                                backgroundColor: `${theme.colors.tertiary}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name="trophy-outline" size={20} color={theme.colors.tertiary} />
                     </View>
-                    <Text style={[styles.summaryCardValue, { color: theme.colors.onSurface }]}>{stats.prsHit}</Text>
-                    <Text style={[styles.summaryCardLabel, { color: theme.colors.onSurfaceVariant }]}>PRs Hit</Text>
+                    <Text
+                        style={[
+                            styles.summaryCardValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {stats.prsHit}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.summaryCardLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        PRs Hit
+                    </Text>
                     {stats.prsHit > 0 && (
-                        <View style={[styles.prCountBadge, { backgroundColor: `${theme.colors.tertiary}18` }]}>
+                        <View
+                            style={[
+                                styles.prCountBadge,
+                                {
+                                    backgroundColor: `${theme.colors.tertiary}18`
+                                }
+                            ]}
+                        >
                             <Ionicons name="flame" size={10} color={theme.colors.tertiary} />
-                            <Text style={[styles.prCountText, { color: theme.colors.tertiary }]}>New!</Text>
+                            <Text
+                                style={[
+                                    styles.prCountText,
+                                    {
+                                        color: theme.colors.tertiary
+                                    }
+                                ]}
+                            >
+                                New!
+                            </Text>
                         </View>
                     )}
-                </View>
+                </Card>
 
                 {/* Completion card */}
-                <View style={[styles.summaryCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-                    <View style={[styles.summaryIconCircle, { backgroundColor: `${theme.colors.error}18` }]}>
+                <Card
+                    style={[
+                        styles.summaryCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
+                    <View
+                        style={[
+                            styles.summaryIconCircle,
+                            {
+                                backgroundColor: `${theme.colors.error}18`
+                            }
+                        ]}
+                    >
                         <Ionicons name="checkmark-done-outline" size={20} color={theme.colors.error} />
                     </View>
-                    <Text style={[styles.summaryCardValue, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            styles.summaryCardValue,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         {completedCount}/{totalCount}
                     </Text>
-                    <Text style={[styles.summaryCardLabel, { color: theme.colors.onSurfaceVariant }]}>Completed</Text>
-                </View>
-            </View>
+                    <Text
+                        style={[
+                            styles.summaryCardLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Completed
+                    </Text>
+                </Card>
+            </Grid>
         </View>
     );
 }
@@ -432,18 +757,30 @@ function SummarySection({
 export function GymWorkoutPage() {
     const { theme } = useUnistyles();
     const [exercises, setExercises] = React.useState(initialExercises);
-
     const toggleExercise = React.useCallback((id: string) => {
-        setExercises((prev) => prev.map((ex) => (ex.id === id ? { ...ex, completed: !ex.completed } : ex)));
+        setExercises((prev) =>
+            prev.map((ex) =>
+                ex.id === id
+                    ? {
+                          ...ex,
+                          completed: !ex.completed
+                      }
+                    : ex
+            )
+        );
     }, []);
-
     const completedCount = exercises.filter((ex) => ex.completed).length;
     const totalCount = exercises.length;
     const stats = React.useMemo(() => computeStats(exercises), [exercises]);
     const grouped = React.useMemo(() => groupByMuscle(exercises), [exercises]);
-
     return (
-        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} bottomInset={48}>
+        <ShowcasePage
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
+            bottomInset={48}
+        >
             {/* Workout header */}
             <WorkoutHeader completedCount={completedCount} totalCount={totalCount} duration={stats.estimatedDuration} />
 
@@ -473,7 +810,7 @@ export function GymWorkoutPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Header card
     headerCard: {
         borderRadius: 20,
@@ -534,7 +871,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
-
     // Exercise list
     exerciseList: {
         marginTop: 24,
@@ -546,7 +882,6 @@ const styles = StyleSheet.create((theme) => ({
     exerciseGroupCards: {
         gap: 10
     },
-
     // Section divider
     sectionDivider: {
         flexDirection: "row",
@@ -573,7 +908,6 @@ const styles = StyleSheet.create((theme) => ({
         letterSpacing: 0.5,
         textTransform: "uppercase"
     },
-
     // Exercise card
     exerciseCard: {
         borderRadius: 14,
@@ -599,7 +933,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 15,
         flex: 1
     },
-
     // PR Badge
     prBadge: {
         flexDirection: "row",
@@ -614,7 +947,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 10,
         letterSpacing: 0.5
     },
-
     // Metrics row
     metricsRow: {
         flexDirection: "row",
@@ -633,7 +965,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 12
     },
-
     // Previous session row
     previousRow: {
         flexDirection: "row",
@@ -657,7 +988,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 10
     },
-
     // Summary
     summaryContainer: {
         marginTop: 32,

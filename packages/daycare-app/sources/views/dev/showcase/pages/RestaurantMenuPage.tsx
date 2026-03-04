@@ -2,15 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type MealPeriod = "Breakfast" | "Lunch" | "Dinner" | "Drinks";
 type Course = "Starters" | "Mains" | "Sides" | "Desserts";
 type DietaryTag = "V" | "VG" | "GF" | "DF";
 type PopularityBadge = "bestseller" | "new" | "seasonal";
-
 interface MenuItem {
     id: string;
     name: string;
@@ -26,44 +25,54 @@ interface MenuItem {
 // --- Constants ---
 
 const MEAL_PERIODS: MealPeriod[] = ["Breakfast", "Lunch", "Dinner", "Drinks"];
-
 const MEAL_PERIOD_ICONS: Record<MealPeriod, keyof typeof Ionicons.glyphMap> = {
     Breakfast: "sunny-outline",
     Lunch: "restaurant-outline",
     Dinner: "moon-outline",
     Drinks: "wine-outline"
 };
-
 const COURSES: Course[] = ["Starters", "Mains", "Sides", "Desserts"];
-
 const COURSE_ICONS: Record<Course, keyof typeof Ionicons.glyphMap> = {
     Starters: "flame-outline",
     Mains: "fish-outline",
     Sides: "leaf-outline",
     Desserts: "ice-cream-outline"
 };
-
 const DIETARY_COLORS: Record<DietaryTag, string> = {
     V: "#16a34a",
     VG: "#059669",
     GF: "#7c3aed",
     DF: "#0891b2"
 };
-
 const DIETARY_LABELS: Record<DietaryTag, string> = {
     V: "Vegetarian",
     VG: "Vegan",
     GF: "Gluten Free",
     DF: "Dairy Free"
 };
-
 const POPULARITY_CONFIG: Record<
     PopularityBadge,
-    { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }
+    {
+        label: string;
+        color: string;
+        icon: keyof typeof Ionicons.glyphMap;
+    }
 > = {
-    bestseller: { label: "Bestseller", color: "#d97706", icon: "star" },
-    new: { label: "New", color: "#16a34a", icon: "sparkles" },
-    seasonal: { label: "Seasonal", color: "#ea580c", icon: "time-outline" }
+    bestseller: {
+        label: "Bestseller",
+        color: "#d97706",
+        icon: "star"
+    },
+    new: {
+        label: "New",
+        color: "#16a34a",
+        icon: "sparkles"
+    },
+    seasonal: {
+        label: "Seasonal",
+        color: "#ea580c",
+        icon: "time-outline"
+    }
 };
 
 // --- Mock Data ---
@@ -356,13 +365,21 @@ const MENU_ITEMS: MenuItem[] = [
 function formatPrice(amount: number): string {
     return `$${amount.toFixed(2)}`;
 }
-
-function groupByCourse(items: MenuItem[]): { course: Course; items: MenuItem[] }[] {
-    const groups: { course: Course; items: MenuItem[] }[] = [];
+function groupByCourse(items: MenuItem[]): {
+    course: Course;
+    items: MenuItem[];
+}[] {
+    const groups: {
+        course: Course;
+        items: MenuItem[];
+    }[] = [];
     for (const course of COURSES) {
         const courseItems = items.filter((item) => item.course === course);
         if (courseItems.length > 0) {
-            groups.push({ course, items: courseItems });
+            groups.push({
+                course,
+                items: courseItems
+            });
         }
     }
     return groups;
@@ -372,9 +389,15 @@ function groupByCourse(items: MenuItem[]): { course: Course; items: MenuItem[] }
 
 function MealPeriodTabs({ active, onSelect }: { active: MealPeriod; onSelect: (period: MealPeriod) => void }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={[styles.segmentedContainer, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <View
+            style={[
+                styles.segmentedContainer,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             {MEAL_PERIODS.map((period) => {
                 const isActive = active === period;
                 return (
@@ -409,7 +432,6 @@ function MealPeriodTabs({ active, onSelect }: { active: MealPeriod; onSelect: (p
         </View>
     );
 }
-
 function DietaryChip({ tag }: { tag: DietaryTag }) {
     const color = DIETARY_COLORS[tag];
     return (
@@ -436,7 +458,6 @@ function DietaryChip({ tag }: { tag: DietaryTag }) {
         </View>
     );
 }
-
 function PopularityTag({ badge }: { badge: PopularityBadge }) {
     const config = POPULARITY_CONFIG[badge];
     return (
@@ -465,21 +486,30 @@ function PopularityTag({ badge }: { badge: PopularityBadge }) {
         </View>
     );
 }
-
 function AvailabilityToggle({ available, onToggle }: { available: boolean; onToggle: () => void }) {
     const { theme } = useUnistyles();
     const trackColor = available ? theme.colors.primary : theme.colors.outlineVariant;
     const thumbColor = available ? theme.colors.onPrimary : theme.colors.onSurfaceVariant;
-
     return (
         <Pressable onPress={onToggle} hitSlop={6}>
-            <View style={[styles.toggleTrack, { backgroundColor: trackColor }]}>
+            <View
+                style={[
+                    styles.toggleTrack,
+                    {
+                        backgroundColor: trackColor
+                    }
+                ]}
+            >
                 <View
                     style={[
                         styles.toggleThumb,
                         {
                             backgroundColor: thumbColor,
-                            transform: [{ translateX: available ? 16 : 2 }]
+                            transform: [
+                                {
+                                    translateX: available ? 16 : 2
+                                }
+                            ]
                         }
                     ]}
                 />
@@ -487,30 +517,65 @@ function AvailabilityToggle({ available, onToggle }: { available: boolean; onTog
         </Pressable>
     );
 }
-
 function CourseHeader({ course, count }: { course: Course; count: number }) {
     const { theme } = useUnistyles();
     const icon = COURSE_ICONS[course];
-
     return (
         <View style={styles.courseHeader}>
-            <View style={[styles.courseIconCircle, { backgroundColor: `${theme.colors.primary}18` }]}>
+            <View
+                style={[
+                    styles.courseIconCircle,
+                    {
+                        backgroundColor: `${theme.colors.primary}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={16} color={theme.colors.primary} />
             </View>
-            <Text style={[styles.courseTitle, { color: theme.colors.onSurface }]}>{course}</Text>
-            <View style={[styles.courseCountBadge, { backgroundColor: `${theme.colors.primary}18` }]}>
-                <Text style={[styles.courseCountText, { color: theme.colors.primary }]}>{count}</Text>
+            <Text
+                style={[
+                    styles.courseTitle,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {course}
+            </Text>
+            <View
+                style={[
+                    styles.courseCountBadge,
+                    {
+                        backgroundColor: `${theme.colors.primary}18`
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.courseCountText,
+                        {
+                            color: theme.colors.primary
+                        }
+                    ]}
+                >
+                    {count}
+                </Text>
             </View>
-            <View style={[styles.courseLine, { backgroundColor: theme.colors.outlineVariant }]} />
+            <View
+                style={[
+                    styles.courseLine,
+                    {
+                        backgroundColor: theme.colors.outlineVariant
+                    }
+                ]}
+            />
         </View>
     );
 }
-
 function MenuItemCard({ item, onToggleAvailability }: { item: MenuItem; onToggleAvailability: () => void }) {
     const { theme } = useUnistyles();
-
     return (
-        <View
+        <Card
             style={[
                 styles.menuCard,
                 {
@@ -524,17 +589,42 @@ function MenuItemCard({ item, onToggleAvailability }: { item: MenuItem; onToggle
             <View style={styles.cardTopRow}>
                 <View style={styles.cardNameArea}>
                     <View style={styles.cardNameRow}>
-                        <Text style={[styles.itemName, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                styles.itemName,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {item.name}
                         </Text>
                         {item.popularity && <PopularityTag badge={item.popularity} />}
                     </View>
-                    <Text style={[styles.itemDescription, { color: theme.colors.onSurfaceVariant }]} numberOfLines={2}>
+                    <Text
+                        style={[
+                            styles.itemDescription,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                        numberOfLines={2}
+                    >
                         {item.description}
                     </Text>
                 </View>
                 <View style={styles.cardPriceCol}>
-                    <Text style={[styles.itemPrice, { color: theme.colors.onSurface }]}>{formatPrice(item.price)}</Text>
+                    <Text
+                        style={[
+                            styles.itemPrice,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {formatPrice(item.price)}
+                    </Text>
                 </View>
             </View>
 
@@ -560,7 +650,9 @@ function MenuItemCard({ item, onToggleAvailability }: { item: MenuItem; onToggle
                     <Text
                         style={[
                             styles.availabilityLabel,
-                            { color: item.available ? theme.colors.primary : theme.colors.outline }
+                            {
+                                color: item.available ? theme.colors.primary : theme.colors.outline
+                            }
                         ]}
                     >
                         {item.available ? "Available" : "Unavailable"}
@@ -568,7 +660,7 @@ function MenuItemCard({ item, onToggleAvailability }: { item: MenuItem; onToggle
                     <AvailabilityToggle available={item.available} onToggle={onToggleAvailability} />
                 </View>
             </View>
-        </View>
+        </Card>
     );
 }
 
@@ -584,70 +676,188 @@ export function RestaurantMenuPage() {
         }
         return map;
     });
-
     const handleToggleAvailability = React.useCallback((id: string) => {
-        setAvailability((prev) => ({ ...prev, [id]: !prev[id] }));
+        setAvailability((prev) => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
     }, []);
-
     const filteredItems = React.useMemo(() => {
         return MENU_ITEMS.filter((item) => item.mealPeriods.includes(activePeriod)).map((item) => ({
             ...item,
             available: availability[item.id] ?? item.available
         }));
     }, [activePeriod, availability]);
-
     const courseGroups = React.useMemo(() => groupByCourse(filteredItems), [filteredItems]);
-
     const totalItems = filteredItems.length;
     const availableCount = filteredItems.filter((i) => i.available).length;
     const avgPrice = totalItems > 0 ? filteredItems.reduce((sum, i) => sum + i.price, 0) / totalItems : 0;
-
     return (
-        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} bottomInset={48}>
+        <ShowcasePage
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
+            bottomInset={48}
+        >
             {/* Header */}
             <View style={styles.headerSection}>
                 <View style={styles.headerTitleRow}>
                     <Ionicons name="restaurant" size={24} color={theme.colors.primary} />
-                    <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>Menu Management</Text>
+                    <Text
+                        style={[
+                            styles.headerTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Menu Management
+                    </Text>
                 </View>
-                <Text style={[styles.headerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        styles.headerSubtitle,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     Manage items, availability, and pricing
                 </Text>
             </View>
 
             {/* Summary stats */}
             <View style={styles.statsRow}>
-                <View style={[styles.statCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <Card
+                    style={[
+                        styles.statCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <Ionicons name="fast-food-outline" size={18} color={theme.colors.primary} />
-                    <Text style={[styles.statValue, { color: theme.colors.primary }]}>{totalItems}</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>Items</Text>
-                </View>
-                <View style={[styles.statCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                    <Text
+                        style={[
+                            styles.statValue,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
+                        {totalItems}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.statLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Items
+                    </Text>
+                </Card>
+                <Card
+                    style={[
+                        styles.statCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <Ionicons name="checkmark-circle-outline" size={18} color="#16a34a" />
-                    <Text style={[styles.statValue, { color: "#16a34a" }]}>{availableCount}</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>Available</Text>
-                </View>
-                <View style={[styles.statCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+                    <Text
+                        style={[
+                            styles.statValue,
+                            {
+                                color: "#16a34a"
+                            }
+                        ]}
+                    >
+                        {availableCount}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.statLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Available
+                    </Text>
+                </Card>
+                <Card
+                    style={[
+                        styles.statCard,
+                        {
+                            backgroundColor: theme.colors.surfaceContainer
+                        }
+                    ]}
+                >
                     <Ionicons name="pricetag-outline" size={18} color="#d97706" />
-                    <Text style={[styles.statValue, { color: "#d97706" }]}>{formatPrice(avgPrice)}</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.onSurfaceVariant }]}>Avg Price</Text>
-                </View>
+                    <Text
+                        style={[
+                            styles.statValue,
+                            {
+                                color: "#d97706"
+                            }
+                        ]}
+                    >
+                        {formatPrice(avgPrice)}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.statLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        Avg Price
+                    </Text>
+                </Card>
             </View>
 
             {/* Dietary legend */}
-            <View style={[styles.legendCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-                <Text style={[styles.legendTitle, { color: theme.colors.onSurface }]}>Dietary Key</Text>
+            <Card
+                style={[
+                    styles.legendCard,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.legendTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Dietary Key
+                </Text>
                 <View style={styles.legendRow}>
                     {(["V", "VG", "GF", "DF"] as DietaryTag[]).map((tag) => (
                         <View key={tag} style={styles.legendItem}>
                             <DietaryChip tag={tag} />
-                            <Text style={[styles.legendText, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.legendText,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {DIETARY_LABELS[tag]}
                             </Text>
                         </View>
                     ))}
                 </View>
-            </View>
+            </Card>
 
             {/* Meal period tabs */}
             <MealPeriodTabs active={activePeriod} onSelect={setActivePeriod} />
@@ -674,7 +884,14 @@ export function RestaurantMenuPage() {
             {courseGroups.length === 0 && (
                 <View style={styles.emptyState}>
                     <Ionicons name="search-outline" size={40} color={theme.colors.outlineVariant} />
-                    <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.emptyText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         No menu items for this meal period
                     </Text>
                 </View>
@@ -685,7 +902,7 @@ export function RestaurantMenuPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Header
     headerSection: {
         paddingTop: 24,
@@ -706,7 +923,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         marginLeft: 34
     },
-
     // Stats row
     statsRow: {
         flexDirection: "row",
@@ -729,7 +945,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Dietary legend
     legendCard: {
         borderRadius: 12,
@@ -757,7 +972,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Segmented control
     segmentedContainer: {
         flexDirection: "row",
@@ -779,7 +993,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
-
     // Course header
     courseHeader: {
         flexDirection: "row",
@@ -813,7 +1026,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 1,
         marginLeft: 8
     },
-
     // Course groups
     groupsContainer: {
         gap: 22
@@ -824,7 +1036,6 @@ const styles = StyleSheet.create((theme) => ({
     itemsList: {
         gap: 10
     },
-
     // Menu item card
     menuCard: {
         borderRadius: 14,
@@ -886,7 +1097,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Toggle
     toggleTrack: {
         width: 36,
@@ -899,7 +1109,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 16,
         borderRadius: 8
     },
-
     // Empty state
     emptyState: {
         alignItems: "center",

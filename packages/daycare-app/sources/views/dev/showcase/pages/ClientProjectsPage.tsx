@@ -2,14 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type Phase = "discovery" | "design" | "development" | "testing" | "launch";
 type MilestoneStatus = "completed" | "in_progress" | "upcoming" | "overdue";
 type Priority = "high" | "medium" | "low";
-
 type Milestone = {
     id: string;
     title: string;
@@ -17,7 +16,6 @@ type Milestone = {
     status: MilestoneStatus;
     completed: boolean;
 };
-
 type TimelineEntry = {
     id: string;
     date: string;
@@ -25,7 +23,6 @@ type TimelineEntry = {
     author: string;
     initials: string;
 };
-
 type OpenQuestion = {
     id: string;
     text: string;
@@ -40,15 +37,37 @@ const PROJECT_NAME = "Meridian Platform Redesign";
 const CLIENT_NAME = "Meridian Health";
 const CURRENT_PHASE: Phase = "development";
 const OVERALL_PROGRESS = 62;
-
-const PHASES: { key: Phase; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-    { key: "discovery", label: "Discovery", icon: "search-outline" },
-    { key: "design", label: "Design", icon: "color-palette-outline" },
-    { key: "development", label: "Development", icon: "code-slash-outline" },
-    { key: "testing", label: "Testing", icon: "flask-outline" },
-    { key: "launch", label: "Launch", icon: "rocket-outline" }
+const PHASES: {
+    key: Phase;
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+    {
+        key: "discovery",
+        label: "Discovery",
+        icon: "search-outline"
+    },
+    {
+        key: "design",
+        label: "Design",
+        icon: "color-palette-outline"
+    },
+    {
+        key: "development",
+        label: "Development",
+        icon: "code-slash-outline"
+    },
+    {
+        key: "testing",
+        label: "Testing",
+        icon: "flask-outline"
+    },
+    {
+        key: "launch",
+        label: "Launch",
+        icon: "rocket-outline"
+    }
 ];
-
 const MILESTONES: Milestone[] = [
     {
         id: "m1",
@@ -71,14 +90,49 @@ const MILESTONES: Milestone[] = [
         status: "completed",
         completed: true
     },
-    { id: "m4", title: "Patient portal frontend build", dueDate: "Mar 10", status: "in_progress", completed: false },
-    { id: "m5", title: "Provider dashboard integration", dueDate: "Mar 18", status: "in_progress", completed: false },
-    { id: "m6", title: "API layer & data migration scripts", dueDate: "Mar 5", status: "overdue", completed: false },
-    { id: "m7", title: "End-to-end QA & accessibility audit", dueDate: "Apr 1", status: "upcoming", completed: false },
-    { id: "m8", title: "Staging deployment & UAT signoff", dueDate: "Apr 14", status: "upcoming", completed: false },
-    { id: "m9", title: "Production launch & monitoring", dueDate: "Apr 28", status: "upcoming", completed: false }
+    {
+        id: "m4",
+        title: "Patient portal frontend build",
+        dueDate: "Mar 10",
+        status: "in_progress",
+        completed: false
+    },
+    {
+        id: "m5",
+        title: "Provider dashboard integration",
+        dueDate: "Mar 18",
+        status: "in_progress",
+        completed: false
+    },
+    {
+        id: "m6",
+        title: "API layer & data migration scripts",
+        dueDate: "Mar 5",
+        status: "overdue",
+        completed: false
+    },
+    {
+        id: "m7",
+        title: "End-to-end QA & accessibility audit",
+        dueDate: "Apr 1",
+        status: "upcoming",
+        completed: false
+    },
+    {
+        id: "m8",
+        title: "Staging deployment & UAT signoff",
+        dueDate: "Apr 14",
+        status: "upcoming",
+        completed: false
+    },
+    {
+        id: "m9",
+        title: "Production launch & monitoring",
+        dueDate: "Apr 28",
+        status: "upcoming",
+        completed: false
+    }
 ];
-
 const TIMELINE: TimelineEntry[] = [
     {
         id: "t1",
@@ -116,7 +170,6 @@ const TIMELINE: TimelineEntry[] = [
         initials: "EV"
     }
 ];
-
 const OPEN_QUESTIONS: OpenQuestion[] = [
     {
         id: "q1",
@@ -154,24 +207,58 @@ const OPEN_QUESTIONS: OpenQuestion[] = [
         askedBy: "James Okafor"
     }
 ];
-
 const AVATAR_COLORS: Record<string, string> = {
     EV: "#6366F1",
     JO: "#EC4899",
     PS: "#14B8A6"
 };
-
-const PRIORITY_CONFIG: Record<Priority, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
-    high: { label: "High", color: "#EF4444", icon: "alert-circle" },
-    medium: { label: "Medium", color: "#F59E0B", icon: "warning" },
-    low: { label: "Low", color: "#3B82F6", icon: "information-circle-outline" }
+const PRIORITY_CONFIG: Record<
+    Priority,
+    {
+        label: string;
+        color: string;
+        icon: keyof typeof Ionicons.glyphMap;
+    }
+> = {
+    high: {
+        label: "High",
+        color: "#EF4444",
+        icon: "alert-circle"
+    },
+    medium: {
+        label: "Medium",
+        color: "#F59E0B",
+        icon: "warning"
+    },
+    low: {
+        label: "Low",
+        color: "#3B82F6",
+        icon: "information-circle-outline"
+    }
 };
-
-const MILESTONE_STATUS_CONFIG: Record<MilestoneStatus, { label: string; color: string }> = {
-    completed: { label: "Done", color: "#10B981" },
-    in_progress: { label: "In Progress", color: "#3B82F6" },
-    overdue: { label: "Overdue", color: "#EF4444" },
-    upcoming: { label: "Upcoming", color: "#9CA3AF" }
+const MILESTONE_STATUS_CONFIG: Record<
+    MilestoneStatus,
+    {
+        label: string;
+        color: string;
+    }
+> = {
+    completed: {
+        label: "Done",
+        color: "#10B981"
+    },
+    in_progress: {
+        label: "In Progress",
+        color: "#3B82F6"
+    },
+    overdue: {
+        label: "Overdue",
+        color: "#EF4444"
+    },
+    upcoming: {
+        label: "Upcoming",
+        color: "#9CA3AF"
+    }
 };
 
 // --- Phase Stepper ---
@@ -179,14 +266,12 @@ const MILESTONE_STATUS_CONFIG: Record<MilestoneStatus, { label: string; color: s
 function PhaseStepper({ currentPhase }: { currentPhase: Phase }) {
     const { theme } = useUnistyles();
     const currentIndex = PHASES.findIndex((p) => p.key === currentPhase);
-
     return (
         <View style={s.stepperContainer}>
             {PHASES.map((phase, index) => {
                 const isComplete = index < currentIndex;
                 const isCurrent = index === currentIndex;
                 const isLast = index === PHASES.length - 1;
-
                 const dotColor = isComplete
                     ? "#10B981"
                     : isCurrent
@@ -198,7 +283,6 @@ function PhaseStepper({ currentPhase }: { currentPhase: Phase }) {
                     : isComplete
                       ? "#10B981"
                       : theme.colors.onSurfaceVariant;
-
                 return (
                     <View key={phase.key} style={s.stepperStep}>
                         <View style={s.stepperDotRow}>
@@ -215,16 +299,34 @@ function PhaseStepper({ currentPhase }: { currentPhase: Phase }) {
                             >
                                 {isComplete && <Ionicons name="checkmark" size={10} color="#FFFFFF" />}
                                 {isCurrent && (
-                                    <View style={[s.stepperCurrentInner, { backgroundColor: theme.colors.primary }]} />
+                                    <View
+                                        style={[
+                                            s.stepperCurrentInner,
+                                            {
+                                                backgroundColor: theme.colors.primary
+                                            }
+                                        ]}
+                                    />
                                 )}
                             </View>
                             {/* Connecting line */}
-                            {!isLast && <View style={[s.stepperLine, { backgroundColor: lineColor }]} />}
+                            {!isLast && (
+                                <View
+                                    style={[
+                                        s.stepperLine,
+                                        {
+                                            backgroundColor: lineColor
+                                        }
+                                    ]}
+                                />
+                            )}
                         </View>
                         <Text
                             style={[
                                 s.stepperLabel,
-                                { color: labelColor },
+                                {
+                                    color: labelColor
+                                },
                                 (isCurrent || isComplete) && s.stepperLabelActive
                             ]}
                             numberOfLines={1}
@@ -243,8 +345,23 @@ function PhaseStepper({ currentPhase }: { currentPhase: Phase }) {
 function ProgressBar({ progress, color, trackColor }: { progress: number; color: string; trackColor: string }) {
     const clamped = Math.min(Math.max(progress, 0), 100);
     return (
-        <View style={[s.progressTrack, { backgroundColor: trackColor }]}>
-            <View style={[s.progressFill, { width: `${clamped}%`, backgroundColor: color }]} />
+        <View
+            style={[
+                s.progressTrack,
+                {
+                    backgroundColor: trackColor
+                }
+            ]}
+        >
+            <View
+                style={[
+                    s.progressFill,
+                    {
+                        width: `${clamped}%`,
+                        backgroundColor: color
+                    }
+                ]}
+            />
         </View>
     );
 }
@@ -254,9 +371,15 @@ function ProgressBar({ progress, color, trackColor }: { progress: number; color:
 function MilestoneCard({ milestone, onToggle }: { milestone: Milestone; onToggle: (id: string) => void }) {
     const { theme } = useUnistyles();
     const statusConfig = MILESTONE_STATUS_CONFIG[milestone.status];
-
     return (
-        <View style={[s.milestoneCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Card
+            style={[
+                s.milestoneCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             {/* Checkbox */}
             <Pressable onPress={() => onToggle(milestone.id)} style={s.milestoneCheckbox}>
                 <View
@@ -277,7 +400,9 @@ function MilestoneCard({ milestone, onToggle }: { milestone: Milestone; onToggle
                 <Text
                     style={[
                         s.milestoneTitle,
-                        { color: milestone.completed ? theme.colors.onSurfaceVariant : theme.colors.onSurface },
+                        {
+                            color: milestone.completed ? theme.colors.onSurfaceVariant : theme.colors.onSurface
+                        },
                         milestone.completed && s.milestoneTitleDone
                     ]}
                     numberOfLines={2}
@@ -287,16 +412,39 @@ function MilestoneCard({ milestone, onToggle }: { milestone: Milestone; onToggle
                 <View style={s.milestoneFooter}>
                     <View style={s.milestoneDateRow}>
                         <Ionicons name="calendar-outline" size={12} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[s.milestoneDateText, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                s.milestoneDateText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {milestone.dueDate}
                         </Text>
                     </View>
-                    <View style={[s.statusBadge, { backgroundColor: `${statusConfig.color}18` }]}>
-                        <Text style={[s.statusBadgeText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
+                    <View
+                        style={[
+                            s.statusBadge,
+                            {
+                                backgroundColor: `${statusConfig.color}18`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                s.statusBadgeText,
+                                {
+                                    color: statusConfig.color
+                                }
+                            ]}
+                        >
+                            {statusConfig.label}
+                        </Text>
                     </View>
                 </View>
             </View>
-        </View>
+        </Card>
     );
 }
 
@@ -306,22 +454,51 @@ function TimelineEntryRow({ entry, isLast }: { entry: TimelineEntry; isLast: boo
     const { theme } = useUnistyles();
     const [expanded, setExpanded] = React.useState(false);
     const avatarColor = AVATAR_COLORS[entry.initials] ?? theme.colors.primary;
-
     return (
         <View style={s.timelineRow}>
             {/* Vertical line and dot */}
             <View style={s.timelineSide}>
-                <View style={[s.timelineDot, { backgroundColor: avatarColor }]} />
-                {!isLast && <View style={[s.timelineVerticalLine, { backgroundColor: theme.colors.outlineVariant }]} />}
+                <View
+                    style={[
+                        s.timelineDot,
+                        {
+                            backgroundColor: avatarColor
+                        }
+                    ]}
+                />
+                {!isLast && (
+                    <View
+                        style={[
+                            s.timelineVerticalLine,
+                            {
+                                backgroundColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    />
+                )}
             </View>
 
             {/* Entry content */}
             <Pressable
                 onPress={() => setExpanded((prev) => !prev)}
-                style={[s.timelineCard, { backgroundColor: theme.colors.surfaceContainer }]}
+                style={[
+                    s.timelineCard,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
             >
                 <View style={s.timelineCardHeader}>
-                    <Text style={[s.timelineDate, { color: theme.colors.primary }]}>{entry.date}</Text>
+                    <Text
+                        style={[
+                            s.timelineDate,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
+                        {entry.date}
+                    </Text>
                     <Ionicons
                         name={expanded ? "chevron-up" : "chevron-down"}
                         size={14}
@@ -329,16 +506,46 @@ function TimelineEntryRow({ entry, isLast }: { entry: TimelineEntry; isLast: boo
                     />
                 </View>
                 <Text
-                    style={[s.timelineText, { color: theme.colors.onSurface }]}
+                    style={[
+                        s.timelineText,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
                     numberOfLines={expanded ? undefined : 2}
                 >
                     {entry.text}
                 </Text>
                 <View style={s.timelineAuthorRow}>
-                    <View style={[s.timelineAvatar, { backgroundColor: `${avatarColor}20` }]}>
-                        <Text style={[s.timelineAvatarText, { color: avatarColor }]}>{entry.initials}</Text>
+                    <View
+                        style={[
+                            s.timelineAvatar,
+                            {
+                                backgroundColor: `${avatarColor}20`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                s.timelineAvatarText,
+                                {
+                                    color: avatarColor
+                                }
+                            ]}
+                        >
+                            {entry.initials}
+                        </Text>
                     </View>
-                    <Text style={[s.timelineAuthorName, { color: theme.colors.onSurfaceVariant }]}>{entry.author}</Text>
+                    <Text
+                        style={[
+                            s.timelineAuthorName,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        {entry.author}
+                    </Text>
                 </View>
             </Pressable>
         </View>
@@ -350,9 +557,8 @@ function TimelineEntryRow({ entry, isLast }: { entry: TimelineEntry; isLast: boo
 function QuestionCard({ question }: { question: OpenQuestion }) {
     const { theme } = useUnistyles();
     const priorityConfig = PRIORITY_CONFIG[question.priority];
-
     return (
-        <View
+        <Card
             style={[
                 s.questionCard,
                 {
@@ -362,19 +568,58 @@ function QuestionCard({ question }: { question: OpenQuestion }) {
             ]}
         >
             <View style={s.questionHeader}>
-                <View style={[s.priorityChip, { backgroundColor: `${priorityConfig.color}18` }]}>
+                <View
+                    style={[
+                        s.priorityChip,
+                        {
+                            backgroundColor: `${priorityConfig.color}18`
+                        }
+                    ]}
+                >
                     <Ionicons name={priorityConfig.icon} size={12} color={priorityConfig.color} />
-                    <Text style={[s.priorityChipText, { color: priorityConfig.color }]}>{priorityConfig.label}</Text>
+                    <Text
+                        style={[
+                            s.priorityChipText,
+                            {
+                                color: priorityConfig.color
+                            }
+                        ]}
+                    >
+                        {priorityConfig.label}
+                    </Text>
                 </View>
-                <Text style={[s.questionDays, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        s.questionDays,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {question.daysOpen}d open
                 </Text>
             </View>
-            <Text style={[s.questionText, { color: theme.colors.onSurface }]}>{question.text}</Text>
-            <Text style={[s.questionAskedBy, { color: theme.colors.onSurfaceVariant }]}>
+            <Text
+                style={[
+                    s.questionText,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {question.text}
+            </Text>
+            <Text
+                style={[
+                    s.questionAskedBy,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
                 Asked by {question.askedBy}
             </Text>
-        </View>
+        </Card>
     );
 }
 
@@ -390,14 +635,38 @@ function SectionHeader({
     count?: number;
 }) {
     const { theme } = useUnistyles();
-
     return (
         <View style={s.sectionHeader}>
             <Ionicons name={icon} size={18} color={theme.colors.primary} />
-            <Text style={[s.sectionTitle, { color: theme.colors.onSurface }]}>{title}</Text>
+            <Text
+                style={[
+                    s.sectionTitle,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {title}
+            </Text>
             {count !== undefined && (
-                <View style={[s.sectionCount, { backgroundColor: `${theme.colors.primary}18` }]}>
-                    <Text style={[s.sectionCountText, { color: theme.colors.primary }]}>{count}</Text>
+                <View
+                    style={[
+                        s.sectionCount,
+                        {
+                            backgroundColor: `${theme.colors.primary}18`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            s.sectionCountText,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
+                        {count}
+                    </Text>
                 </View>
             )}
         </View>
@@ -409,7 +678,6 @@ function SectionHeader({
 export function ClientProjectsPage() {
     const { theme } = useUnistyles();
     const [milestones, setMilestones] = React.useState(MILESTONES);
-
     const toggleMilestone = React.useCallback((id: string) => {
         setMilestones((prev) =>
             prev.map((m) => {
@@ -427,36 +695,89 @@ export function ClientProjectsPage() {
             })
         );
     }, []);
-
     const completedCount = milestones.filter((m) => m.completed).length;
     const totalCount = milestones.length;
-
     return (
         <ShowcasePage topInset={16} bottomInset={48} contentGap={24}>
             {/* --- Project Header --- */}
-            <View style={[s.headerCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+            <Card
+                style={[
+                    s.headerCard,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
                 {/* Top accent bar */}
-                <View style={[s.headerAccent, { backgroundColor: theme.colors.primary }]} />
+                <View
+                    style={[
+                        s.headerAccent,
+                        {
+                            backgroundColor: theme.colors.primary
+                        }
+                    ]}
+                />
 
                 <View style={s.headerInner}>
                     {/* Project icon and name */}
                     <View style={s.headerTopRow}>
-                        <View style={[s.projectIconCircle, { backgroundColor: `${theme.colors.primary}18` }]}>
+                        <View
+                            style={[
+                                s.projectIconCircle,
+                                {
+                                    backgroundColor: `${theme.colors.primary}18`
+                                }
+                            ]}
+                        >
                             <Ionicons name="briefcase-outline" size={22} color={theme.colors.primary} />
                         </View>
                         <View style={s.headerTitleArea}>
-                            <Text style={[s.projectName, { color: theme.colors.onSurface }]}>{PROJECT_NAME}</Text>
-                            <Text style={[s.clientName, { color: theme.colors.onSurfaceVariant }]}>{CLIENT_NAME}</Text>
+                            <Text
+                                style={[
+                                    s.projectName,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
+                                {PROJECT_NAME}
+                            </Text>
+                            <Text
+                                style={[
+                                    s.clientName,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
+                                {CLIENT_NAME}
+                            </Text>
                         </View>
                     </View>
 
                     {/* Progress section */}
                     <View style={s.progressSection}>
                         <View style={s.progressLabelRow}>
-                            <Text style={[s.progressLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    s.progressLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Overall Progress
                             </Text>
-                            <Text style={[s.progressValue, { color: theme.colors.primary }]}>{OVERALL_PROGRESS}%</Text>
+                            <Text
+                                style={[
+                                    s.progressValue,
+                                    {
+                                        color: theme.colors.primary
+                                    }
+                                ]}
+                            >
+                                {OVERALL_PROGRESS}%
+                            </Text>
                         </View>
                         <ProgressBar
                             progress={OVERALL_PROGRESS}
@@ -467,32 +788,128 @@ export function ClientProjectsPage() {
 
                     {/* Stats row */}
                     <View style={s.statsRow}>
-                        <View style={[s.statCard, { backgroundColor: theme.colors.surface }]}>
-                            <Text style={[s.statValue, { color: "#10B981" }]}>{completedCount}</Text>
-                            <Text style={[s.statLabel, { color: theme.colors.onSurfaceVariant }]}>Completed</Text>
-                        </View>
-                        <View style={[s.statCard, { backgroundColor: theme.colors.surface }]}>
-                            <Text style={[s.statValue, { color: "#3B82F6" }]}>
+                        <Card
+                            style={[
+                                s.statCard,
+                                {
+                                    backgroundColor: theme.colors.surface
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    s.statValue,
+                                    {
+                                        color: "#10B981"
+                                    }
+                                ]}
+                            >
+                                {completedCount}
+                            </Text>
+                            <Text
+                                style={[
+                                    s.statLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
+                                Completed
+                            </Text>
+                        </Card>
+                        <Card
+                            style={[
+                                s.statCard,
+                                {
+                                    backgroundColor: theme.colors.surface
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    s.statValue,
+                                    {
+                                        color: "#3B82F6"
+                                    }
+                                ]}
+                            >
                                 {milestones.filter((m) => m.status === "in_progress").length}
                             </Text>
-                            <Text style={[s.statLabel, { color: theme.colors.onSurfaceVariant }]}>In Progress</Text>
-                        </View>
-                        <View style={[s.statCard, { backgroundColor: theme.colors.surface }]}>
-                            <Text style={[s.statValue, { color: "#EF4444" }]}>
+                            <Text
+                                style={[
+                                    s.statLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
+                                In Progress
+                            </Text>
+                        </Card>
+                        <Card
+                            style={[
+                                s.statCard,
+                                {
+                                    backgroundColor: theme.colors.surface
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    s.statValue,
+                                    {
+                                        color: "#EF4444"
+                                    }
+                                ]}
+                            >
                                 {milestones.filter((m) => m.status === "overdue").length}
                             </Text>
-                            <Text style={[s.statLabel, { color: theme.colors.onSurfaceVariant }]}>Overdue</Text>
-                        </View>
-                        <View style={[s.statCard, { backgroundColor: theme.colors.surface }]}>
-                            <Text style={[s.statValue, { color: theme.colors.onSurface }]}>{totalCount}</Text>
-                            <Text style={[s.statLabel, { color: theme.colors.onSurfaceVariant }]}>Total</Text>
-                        </View>
+                            <Text
+                                style={[
+                                    s.statLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
+                                Overdue
+                            </Text>
+                        </Card>
+                        <Card
+                            style={[
+                                s.statCard,
+                                {
+                                    backgroundColor: theme.colors.surface
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    s.statValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
+                                {totalCount}
+                            </Text>
+                            <Text
+                                style={[
+                                    s.statLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
+                                Total
+                            </Text>
+                        </Card>
                     </View>
 
                     {/* Phase Stepper */}
                     <PhaseStepper currentPhase={CURRENT_PHASE} />
                 </View>
-            </View>
+            </Card>
 
             {/* --- Milestones Section --- */}
             <View style={s.section}>
@@ -529,7 +946,7 @@ export function ClientProjectsPage() {
 
 // --- Styles ---
 
-const s = StyleSheet.create((theme) => ({
+const s = StyleSheet.create((_theme) => ({
     // Header card
     headerCard: {
         borderRadius: 16,
@@ -568,7 +985,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 13,
         lineHeight: 18
     },
-
     // Progress
     progressSection: {
         gap: 8
@@ -596,7 +1012,6 @@ const s = StyleSheet.create((theme) => ({
         height: "100%",
         borderRadius: 5
     },
-
     // Stats row
     statsRow: {
         flexDirection: "row",
@@ -619,7 +1034,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 10,
         lineHeight: 14
     },
-
     // Phase stepper
     stepperContainer: {
         flexDirection: "row",
@@ -666,7 +1080,6 @@ const s = StyleSheet.create((theme) => ({
     stepperLabelActive: {
         fontFamily: "IBMPlexSans-Medium"
     },
-
     // Section
     section: {
         gap: 12
@@ -693,7 +1106,6 @@ const s = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
-
     // Milestones
     milestoneList: {
         gap: 8
@@ -753,7 +1165,6 @@ const s = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
-
     // Timeline
     timelineContainer: {
         paddingLeft: 4
@@ -823,7 +1234,6 @@ const s = StyleSheet.create((theme) => ({
         fontSize: 12,
         lineHeight: 16
     },
-
     // Questions
     questionList: {
         gap: 8

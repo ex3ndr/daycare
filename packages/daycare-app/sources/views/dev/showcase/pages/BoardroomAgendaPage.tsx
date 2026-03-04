@@ -2,17 +2,16 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
+import { Grid } from "@/components/Grid";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type AgendaItemType = "decision" | "discussion" | "info" | "vote";
-
 type AgendaDocument = {
     id: string;
     name: string;
 };
-
 type AgendaItem = {
     id: string;
     topic: string;
@@ -22,7 +21,6 @@ type AgendaItem = {
     type: AgendaItemType;
     documents: AgendaDocument[];
 };
-
 type ActionItem = {
     id: string;
     description: string;
@@ -30,7 +28,6 @@ type ActionItem = {
     dueDate: string;
     done: boolean;
 };
-
 type PreReadMaterial = {
     id: string;
     title: string;
@@ -40,21 +37,59 @@ type PreReadMaterial = {
 
 // --- Config ---
 
-const ITEM_TYPE_CONFIG: Record<AgendaItemType, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> =
+const ITEM_TYPE_CONFIG: Record<
+    AgendaItemType,
     {
-        decision: { label: "Decision", color: "#EF4444", icon: "hammer-outline" },
-        discussion: { label: "Discussion", color: "#3B82F6", icon: "chatbubbles-outline" },
-        info: { label: "Info", color: "#10B981", icon: "information-circle-outline" },
-        vote: { label: "Vote", color: "#8B5CF6", icon: "hand-left-outline" }
-    };
-
-const FILE_TYPE_ICONS: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
-    pdf: { icon: "document-text-outline", color: "#EF4444" },
-    docx: { icon: "document-outline", color: "#3B82F6" },
-    xlsx: { icon: "grid-outline", color: "#10B981" },
-    pptx: { icon: "easel-outline", color: "#F59E0B" }
+        label: string;
+        color: string;
+        icon: keyof typeof Ionicons.glyphMap;
+    }
+> = {
+    decision: {
+        label: "Decision",
+        color: "#EF4444",
+        icon: "hammer-outline"
+    },
+    discussion: {
+        label: "Discussion",
+        color: "#3B82F6",
+        icon: "chatbubbles-outline"
+    },
+    info: {
+        label: "Info",
+        color: "#10B981",
+        icon: "information-circle-outline"
+    },
+    vote: {
+        label: "Vote",
+        color: "#8B5CF6",
+        icon: "hand-left-outline"
+    }
 };
-
+const FILE_TYPE_ICONS: Record<
+    string,
+    {
+        icon: keyof typeof Ionicons.glyphMap;
+        color: string;
+    }
+> = {
+    pdf: {
+        icon: "document-text-outline",
+        color: "#EF4444"
+    },
+    docx: {
+        icon: "document-outline",
+        color: "#3B82F6"
+    },
+    xlsx: {
+        icon: "grid-outline",
+        color: "#10B981"
+    },
+    pptx: {
+        icon: "easel-outline",
+        color: "#F59E0B"
+    }
+};
 const AVATAR_COLORS = [
     "#6366F1",
     "#EC4899",
@@ -85,7 +120,6 @@ const MEETING_LOCATION = "Conference Room A, 42nd Floor";
 const QUORUM_REQUIRED = 5;
 const QUORUM_PRESENT = 6;
 const TOTAL_MEMBERS = 8;
-
 const AGENDA_ITEMS: AgendaItem[] = [
     {
         id: "a1",
@@ -94,7 +128,12 @@ const AGENDA_ITEMS: AgendaItem[] = [
         presenterInitials: "MC",
         durationMinutes: 10,
         type: "decision",
-        documents: [{ id: "d1", name: "Q4 2025 Minutes Draft.pdf" }]
+        documents: [
+            {
+                id: "d1",
+                name: "Q4 2025 Minutes Draft.pdf"
+            }
+        ]
     },
     {
         id: "a2",
@@ -104,8 +143,14 @@ const AGENDA_ITEMS: AgendaItem[] = [
         durationMinutes: 25,
         type: "info",
         documents: [
-            { id: "d2", name: "CEO Report Q1.pptx" },
-            { id: "d3", name: "Financial Summary.xlsx" }
+            {
+                id: "d2",
+                name: "CEO Report Q1.pptx"
+            },
+            {
+                id: "d3",
+                name: "Financial Summary.xlsx"
+            }
         ]
     },
     {
@@ -116,9 +161,18 @@ const AGENDA_ITEMS: AgendaItem[] = [
         durationMinutes: 20,
         type: "discussion",
         documents: [
-            { id: "d4", name: "Budget Reforecast 2026.xlsx" },
-            { id: "d5", name: "Capital Plan.pdf" },
-            { id: "d6", name: "Variance Analysis.xlsx" }
+            {
+                id: "d4",
+                name: "Budget Reforecast 2026.xlsx"
+            },
+            {
+                id: "d5",
+                name: "Capital Plan.pdf"
+            },
+            {
+                id: "d6",
+                name: "Variance Analysis.xlsx"
+            }
         ]
     },
     {
@@ -129,10 +183,22 @@ const AGENDA_ITEMS: AgendaItem[] = [
         durationMinutes: 30,
         type: "vote",
         documents: [
-            { id: "d7", name: "Acquisition Proposal.pdf" },
-            { id: "d8", name: "Due Diligence Report.pdf" },
-            { id: "d9", name: "Valuation Model.xlsx" },
-            { id: "d10", name: "Legal Opinion.pdf" }
+            {
+                id: "d7",
+                name: "Acquisition Proposal.pdf"
+            },
+            {
+                id: "d8",
+                name: "Due Diligence Report.pdf"
+            },
+            {
+                id: "d9",
+                name: "Valuation Model.xlsx"
+            },
+            {
+                id: "d10",
+                name: "Legal Opinion.pdf"
+            }
         ]
     },
     {
@@ -142,7 +208,12 @@ const AGENDA_ITEMS: AgendaItem[] = [
         presenterInitials: "MC",
         durationMinutes: 15,
         type: "decision",
-        documents: [{ id: "d11", name: "Committee Roster 2026.docx" }]
+        documents: [
+            {
+                id: "d11",
+                name: "Committee Roster 2026.docx"
+            }
+        ]
     },
     {
         id: "a6",
@@ -152,8 +223,14 @@ const AGENDA_ITEMS: AgendaItem[] = [
         durationMinutes: 20,
         type: "discussion",
         documents: [
-            { id: "d12", name: "Risk Dashboard Q1.pdf" },
-            { id: "d13", name: "Compliance Report.pdf" }
+            {
+                id: "d12",
+                name: "Risk Dashboard Q1.pdf"
+            },
+            {
+                id: "d13",
+                name: "Compliance Report.pdf"
+            }
         ]
     },
     {
@@ -163,7 +240,12 @@ const AGENDA_ITEMS: AgendaItem[] = [
         presenterInitials: "EV",
         durationMinutes: 15,
         type: "info",
-        documents: [{ id: "d14", name: "ESG Report 2025.pdf" }]
+        documents: [
+            {
+                id: "d14",
+                name: "ESG Report 2025.pdf"
+            }
+        ]
     },
     {
         id: "a8",
@@ -173,12 +255,17 @@ const AGENDA_ITEMS: AgendaItem[] = [
         durationMinutes: 15,
         type: "vote",
         documents: [
-            { id: "d15", name: "Compensation Proposal.pdf" },
-            { id: "d16", name: "Benchmarking Study.xlsx" }
+            {
+                id: "d15",
+                name: "Compensation Proposal.pdf"
+            },
+            {
+                id: "d16",
+                name: "Benchmarking Study.xlsx"
+            }
         ]
     }
 ];
-
 const ACTION_ITEMS: ActionItem[] = [
     {
         id: "ai1",
@@ -216,14 +303,43 @@ const ACTION_ITEMS: ActionItem[] = [
         done: true
     }
 ];
-
 const PRE_READ_MATERIALS: PreReadMaterial[] = [
-    { id: "pr1", title: "Board Book - Q1 2026", fileType: "pdf", pages: 84 },
-    { id: "pr2", title: "Strategic Plan Update 2026-2028", fileType: "pptx", pages: 32 },
-    { id: "pr3", title: "Nextera Solutions - Due Diligence Package", fileType: "pdf", pages: 156 },
-    { id: "pr4", title: "Financial Statements - February 2026", fileType: "xlsx", pages: 12 },
-    { id: "pr5", title: "Executive Compensation Benchmarking Study", fileType: "pdf", pages: 28 },
-    { id: "pr6", title: "Board Governance Policy Amendments", fileType: "docx", pages: 18 }
+    {
+        id: "pr1",
+        title: "Board Book - Q1 2026",
+        fileType: "pdf",
+        pages: 84
+    },
+    {
+        id: "pr2",
+        title: "Strategic Plan Update 2026-2028",
+        fileType: "pptx",
+        pages: 32
+    },
+    {
+        id: "pr3",
+        title: "Nextera Solutions - Due Diligence Package",
+        fileType: "pdf",
+        pages: 156
+    },
+    {
+        id: "pr4",
+        title: "Financial Statements - February 2026",
+        fileType: "xlsx",
+        pages: 12
+    },
+    {
+        id: "pr5",
+        title: "Executive Compensation Benchmarking Study",
+        fileType: "pdf",
+        pages: 28
+    },
+    {
+        id: "pr6",
+        title: "Board Governance Policy Amendments",
+        fileType: "docx",
+        pages: 18
+    }
 ];
 
 // --- Components ---
@@ -231,100 +347,220 @@ const PRE_READ_MATERIALS: PreReadMaterial[] = [
 function MeetingHeader() {
     const { theme } = useUnistyles();
     const quorumMet = QUORUM_PRESENT >= QUORUM_REQUIRED;
-
     return (
-        <View
+        <Card
             style={[
                 styles.headerCard,
-                { backgroundColor: theme.colors.surfaceContainer, borderColor: theme.colors.outlineVariant }
+                {
+                    backgroundColor: theme.colors.surfaceContainer,
+                    borderColor: theme.colors.outlineVariant
+                }
             ]}
         >
             {/* Top accent bar */}
-            <View style={[styles.headerAccent, { backgroundColor: theme.colors.primary }]} />
+            <View
+                style={[
+                    styles.headerAccent,
+                    {
+                        backgroundColor: theme.colors.primary
+                    }
+                ]}
+            />
 
             <View style={styles.headerContent}>
                 <View style={styles.headerTitleRow}>
-                    <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            styles.headerTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         Board of Directors Meeting
                     </Text>
-                    <View style={[styles.quorumBadge, { backgroundColor: quorumMet ? "#10B98118" : "#EF444418" }]}>
+                    <View
+                        style={[
+                            styles.quorumBadge,
+                            {
+                                backgroundColor: quorumMet ? "#10B98118" : "#EF444418"
+                            }
+                        ]}
+                    >
                         <Ionicons
                             name={quorumMet ? "checkmark-circle" : "alert-circle"}
                             size={14}
                             color={quorumMet ? "#10B981" : "#EF4444"}
                         />
-                        <Text style={[styles.quorumBadgeText, { color: quorumMet ? "#10B981" : "#EF4444" }]}>
+                        <Text
+                            style={[
+                                styles.quorumBadgeText,
+                                {
+                                    color: quorumMet ? "#10B981" : "#EF4444"
+                                }
+                            ]}
+                        >
                             {quorumMet ? "Quorum Met" : "No Quorum"}
                         </Text>
                     </View>
                 </View>
 
-                <View style={styles.headerDetailsGrid}>
+                <Grid style={styles.headerDetailsGrid}>
                     <View style={styles.headerDetailRow}>
                         <Ionicons name="calendar-outline" size={16} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[styles.headerDetailText, { color: theme.colors.onSurface }]}>{MEETING_DATE}</Text>
+                        <Text
+                            style={[
+                                styles.headerDetailText,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            {MEETING_DATE}
+                        </Text>
                     </View>
                     <View style={styles.headerDetailRow}>
                         <Ionicons name="time-outline" size={16} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[styles.headerDetailText, { color: theme.colors.onSurface }]}>{MEETING_TIME}</Text>
+                        <Text
+                            style={[
+                                styles.headerDetailText,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            {MEETING_TIME}
+                        </Text>
                     </View>
                     <View style={styles.headerDetailRow}>
                         <Ionicons name="location-outline" size={16} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[styles.headerDetailText, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                styles.headerDetailText,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {MEETING_LOCATION}
                         </Text>
                     </View>
                     <View style={styles.headerDetailRow}>
                         <Ionicons name="people-outline" size={16} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[styles.headerDetailText, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                styles.headerDetailText,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {QUORUM_PRESENT} of {TOTAL_MEMBERS} members present ({QUORUM_REQUIRED} required)
                         </Text>
                     </View>
-                </View>
+                </Grid>
 
                 {/* Total duration */}
-                <View style={[styles.totalDurationBar, { backgroundColor: theme.colors.surface }]}>
+                <View
+                    style={[
+                        styles.totalDurationBar,
+                        {
+                            backgroundColor: theme.colors.surface
+                        }
+                    ]}
+                >
                     <Ionicons name="hourglass-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                    <Text style={[styles.totalDurationText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.totalDurationText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         Total Duration: {AGENDA_ITEMS.reduce((sum, i) => sum + i.durationMinutes, 0)} minutes
                     </Text>
                 </View>
             </View>
-        </View>
+        </Card>
     );
 }
-
 function ItemTypeChip({ type }: { type: AgendaItemType }) {
     const config = ITEM_TYPE_CONFIG[type];
     return (
-        <View style={[styles.typeChip, { backgroundColor: `${config.color}18` }]}>
+        <View
+            style={[
+                styles.typeChip,
+                {
+                    backgroundColor: `${config.color}18`
+                }
+            ]}
+        >
             <Ionicons name={config.icon} size={12} color={config.color} />
-            <Text style={[styles.typeChipText, { color: config.color }]}>{config.label}</Text>
+            <Text
+                style={[
+                    styles.typeChipText,
+                    {
+                        color: config.color
+                    }
+                ]}
+            >
+                {config.label}
+            </Text>
         </View>
     );
 }
-
 function PresenterAvatar({ initials, name }: { initials: string; name: string }) {
     const { theme } = useUnistyles();
     const bg = avatarColor(initials);
     return (
         <View style={styles.presenterRow}>
-            <View style={[styles.avatar, { backgroundColor: `${bg}20` }]}>
-                <Text style={[styles.avatarText, { color: bg }]}>{initials}</Text>
+            <View
+                style={[
+                    styles.avatar,
+                    {
+                        backgroundColor: `${bg}20`
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.avatarText,
+                        {
+                            color: bg
+                        }
+                    ]}
+                >
+                    {initials}
+                </Text>
             </View>
-            <Text style={[styles.presenterName, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
+            <Text
+                style={[
+                    styles.presenterName,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+                numberOfLines={1}
+            >
                 {name}
             </Text>
         </View>
     );
 }
-
 function TimeAllocationBar({ minutes, maxMinutes }: { minutes: number; maxMinutes: number }) {
     const { theme } = useUnistyles();
     const percentage = Math.min((minutes / maxMinutes) * 100, 100);
     return (
         <View style={styles.timeBarContainer}>
-            <View style={[styles.timeBarTrack, { backgroundColor: `${theme.colors.outlineVariant}40` }]}>
+            <View
+                style={[
+                    styles.timeBarTrack,
+                    {
+                        backgroundColor: `${theme.colors.outlineVariant}40`
+                    }
+                ]}
+            >
                 <View
                     style={[
                         styles.timeBarFill,
@@ -335,11 +571,19 @@ function TimeAllocationBar({ minutes, maxMinutes }: { minutes: number; maxMinute
                     ]}
                 />
             </View>
-            <Text style={[styles.timeBarLabel, { color: theme.colors.onSurfaceVariant }]}>{minutes} min</Text>
+            <Text
+                style={[
+                    styles.timeBarLabel,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {minutes} min
+            </Text>
         </View>
     );
 }
-
 function AgendaItemCard({
     item,
     index,
@@ -354,31 +598,67 @@ function AgendaItemCard({
     const { theme } = useUnistyles();
     const config = ITEM_TYPE_CONFIG[item.type];
     const maxDuration = Math.max(...AGENDA_ITEMS.map((a) => a.durationMinutes));
-
     return (
-        <View
+        <Card
             style={[
                 styles.agendaCard,
-                { backgroundColor: theme.colors.surfaceContainer, borderColor: theme.colors.outlineVariant }
+                {
+                    backgroundColor: theme.colors.surfaceContainer,
+                    borderColor: theme.colors.outlineVariant
+                }
             ]}
         >
             {/* Left accent strip colored by type */}
-            <View style={[styles.agendaAccent, { backgroundColor: config.color }]} />
+            <View
+                style={[
+                    styles.agendaAccent,
+                    {
+                        backgroundColor: config.color
+                    }
+                ]}
+            />
 
             <View style={styles.agendaCardInner}>
                 <Pressable
                     onPress={onToggle}
-                    style={({ pressed }) => [styles.agendaCardHeader, { opacity: pressed ? 0.7 : 1 }]}
+                    style={({ pressed }) => [
+                        styles.agendaCardHeader,
+                        {
+                            opacity: pressed ? 0.7 : 1
+                        }
+                    ]}
                 >
                     {/* Item number */}
-                    <View style={[styles.itemNumber, { backgroundColor: theme.colors.surface }]}>
-                        <Text style={[styles.itemNumberText, { color: theme.colors.onSurfaceVariant }]}>
+                    <View
+                        style={[
+                            styles.itemNumber,
+                            {
+                                backgroundColor: theme.colors.surface
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.itemNumberText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {index + 1}
                         </Text>
                     </View>
 
                     <View style={styles.agendaCardTitleArea}>
-                        <Text style={[styles.agendaCardTitle, { color: theme.colors.onSurface }]} numberOfLines={2}>
+                        <Text
+                            style={[
+                                styles.agendaCardTitle,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                            numberOfLines={2}
+                        >
                             {item.topic}
                         </Text>
                         <View style={styles.agendaCardMeta}>
@@ -386,7 +666,14 @@ function AgendaItemCard({
                             {item.documents.length > 0 && (
                                 <View style={styles.docCountRow}>
                                     <Ionicons name="attach-outline" size={13} color={theme.colors.onSurfaceVariant} />
-                                    <Text style={[styles.docCountText, { color: theme.colors.onSurfaceVariant }]}>
+                                    <Text
+                                        style={[
+                                            styles.docCountText,
+                                            {
+                                                color: theme.colors.onSurfaceVariant
+                                            }
+                                        ]}
+                                    >
                                         {item.documents.length}
                                     </Text>
                                 </View>
@@ -409,8 +696,22 @@ function AgendaItemCard({
 
                 {/* Expanded document list */}
                 {expanded && item.documents.length > 0 && (
-                    <View style={[styles.agendaDocsSection, { borderTopColor: theme.colors.outlineVariant }]}>
-                        <Text style={[styles.agendaDocsSectionTitle, { color: theme.colors.onSurfaceVariant }]}>
+                    <View
+                        style={[
+                            styles.agendaDocsSection,
+                            {
+                                borderTopColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.agendaDocsSectionTitle,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Attached Documents
                         </Text>
                         {item.documents.map((doc) => {
@@ -420,7 +721,12 @@ function AgendaItemCard({
                                 <View key={doc.id} style={styles.agendaDocRow}>
                                     <Ionicons name={fileConfig.icon} size={16} color={fileConfig.color} />
                                     <Text
-                                        style={[styles.agendaDocName, { color: theme.colors.onSurface }]}
+                                        style={[
+                                            styles.agendaDocName,
+                                            {
+                                                color: theme.colors.onSurface
+                                            }
+                                        ]}
                                         numberOfLines={1}
                                     >
                                         {doc.name}
@@ -431,10 +737,9 @@ function AgendaItemCard({
                     </View>
                 )}
             </View>
-        </View>
+        </Card>
     );
 }
-
 function PreviousMinutesSection() {
     const { theme } = useUnistyles();
     const [checkedItems, setCheckedItems] = React.useState<Record<string, boolean>>(() => {
@@ -444,32 +749,63 @@ function PreviousMinutesSection() {
         }
         return initial;
     });
-
     function toggleItem(id: string) {
-        setCheckedItems((prev) => ({ ...prev, [id]: !prev[id] }));
+        setCheckedItems((prev) => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
     }
-
     const completedCount = Object.values(checkedItems).filter(Boolean).length;
-
     return (
-        <View
+        <Card
             style={[
                 styles.sectionCard,
-                { backgroundColor: theme.colors.surfaceContainer, borderColor: theme.colors.outlineVariant }
+                {
+                    backgroundColor: theme.colors.surfaceContainer,
+                    borderColor: theme.colors.outlineVariant
+                }
             ]}
         >
             <View style={styles.sectionHeader}>
                 <Ionicons name="document-text-outline" size={20} color={theme.colors.primary} />
-                <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
+                <Text
+                    style={[
+                        styles.sectionTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
                     Previous Minutes - Action Items
                 </Text>
             </View>
 
-            <View style={[styles.completionBar, { backgroundColor: theme.colors.surface }]}>
-                <Text style={[styles.completionText, { color: theme.colors.onSurfaceVariant }]}>
+            <View
+                style={[
+                    styles.completionBar,
+                    {
+                        backgroundColor: theme.colors.surface
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.completionText,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {completedCount} of {ACTION_ITEMS.length} completed
                 </Text>
-                <View style={[styles.completionTrack, { backgroundColor: `${theme.colors.outlineVariant}40` }]}>
+                <View
+                    style={[
+                        styles.completionTrack,
+                        {
+                            backgroundColor: `${theme.colors.outlineVariant}40`
+                        }
+                    ]}
+                >
                     <View
                         style={[
                             styles.completionFill,
@@ -521,13 +857,34 @@ function PreviousMinutesSection() {
                                 {ai.description}
                             </Text>
                             <View style={styles.actionItemMeta}>
-                                <Text style={[styles.actionItemAssignee, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.actionItemAssignee,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     {ai.assignee}
                                 </Text>
-                                <Text style={[styles.actionItemDot, { color: theme.colors.outlineVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.actionItemDot,
+                                        {
+                                            color: theme.colors.outlineVariant
+                                        }
+                                    ]}
+                                >
                                     {"\u00B7"}
                                 </Text>
-                                <Text style={[styles.actionItemDue, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.actionItemDue,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Due {ai.dueDate}
                                 </Text>
                             </View>
@@ -535,41 +892,88 @@ function PreviousMinutesSection() {
                     </Pressable>
                 );
             })}
-        </View>
+        </Card>
     );
 }
-
 function PreReadMaterialsSection() {
     const { theme } = useUnistyles();
-
     return (
-        <View
+        <Card
             style={[
                 styles.sectionCard,
-                { backgroundColor: theme.colors.surfaceContainer, borderColor: theme.colors.outlineVariant }
+                {
+                    backgroundColor: theme.colors.surfaceContainer,
+                    borderColor: theme.colors.outlineVariant
+                }
             ]}
         >
             <View style={styles.sectionHeader}>
                 <Ionicons name="library-outline" size={20} color={theme.colors.primary} />
-                <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Pre-read Materials</Text>
+                <Text
+                    style={[
+                        styles.sectionTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Pre-read Materials
+                </Text>
             </View>
 
-            <Text style={[styles.preReadSubtext, { color: theme.colors.onSurfaceVariant }]}>
+            <Text
+                style={[
+                    styles.preReadSubtext,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
                 Please review all materials before the meeting
             </Text>
 
             {PRE_READ_MATERIALS.map((mat) => {
                 const fileConfig = FILE_TYPE_ICONS[mat.fileType] ?? FILE_TYPE_ICONS.pdf;
                 return (
-                    <View key={mat.id} style={[styles.preReadRow, { borderBottomColor: theme.colors.outlineVariant }]}>
-                        <View style={[styles.preReadIcon, { backgroundColor: `${fileConfig.color}15` }]}>
+                    <View
+                        key={mat.id}
+                        style={[
+                            styles.preReadRow,
+                            {
+                                borderBottomColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    >
+                        <View
+                            style={[
+                                styles.preReadIcon,
+                                {
+                                    backgroundColor: `${fileConfig.color}15`
+                                }
+                            ]}
+                        >
                             <Ionicons name={fileConfig.icon} size={20} color={fileConfig.color} />
                         </View>
                         <View style={styles.preReadInfo}>
-                            <Text style={[styles.preReadTitle, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                            <Text
+                                style={[
+                                    styles.preReadTitle,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                                numberOfLines={1}
+                            >
                                 {mat.title}
                             </Text>
-                            <Text style={[styles.preReadMeta, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.preReadMeta,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {mat.fileType.toUpperCase()} {"\u00B7"} {mat.pages} pages
                             </Text>
                         </View>
@@ -577,7 +981,7 @@ function PreReadMaterialsSection() {
                     </View>
                 );
             })}
-        </View>
+        </Card>
     );
 }
 
@@ -585,11 +989,12 @@ function PreReadMaterialsSection() {
 
 export function BoardroomAgendaPage() {
     const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
-
     function toggleExpand(id: string) {
-        setExpandedItems((prev) => ({ ...prev, [id]: !prev[id] }));
+        setExpandedItems((prev) => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
     }
-
     return (
         <ShowcasePage density="spacious">
             <MeetingHeader />
@@ -681,7 +1086,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 12
     },
-
     // Agenda section label
     agendaSectionLabel: {
         fontFamily: "IBMPlexSans-SemiBold",
@@ -690,7 +1094,6 @@ const styles = StyleSheet.create((theme) => ({
         marginTop: 24,
         marginBottom: 12
     },
-
     // Agenda card
     agendaCard: {
         borderRadius: 12,
@@ -746,7 +1149,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
-
     // Type chip
     typeChip: {
         flexDirection: "row" as const,
@@ -760,7 +1162,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
-
     // Presenter
     presenterRow: {
         flexDirection: "row" as const,
@@ -783,7 +1184,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 12,
         flexShrink: 1
     },
-
     // Sub row
     agendaCardSubRow: {
         flexDirection: "row" as const,
@@ -792,7 +1192,6 @@ const styles = StyleSheet.create((theme) => ({
         gap: 12,
         paddingLeft: 38
     },
-
     // Time bar
     timeBarContainer: {
         flexDirection: "row" as const,
@@ -817,7 +1216,6 @@ const styles = StyleSheet.create((theme) => ({
         minWidth: 42,
         textAlign: "right" as const
     },
-
     // Expanded docs
     agendaDocsSection: {
         borderTopWidth: 1,
@@ -842,7 +1240,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 12,
         flex: 1
     },
-
     // Section card (shared by Previous Minutes and Pre-read)
     sectionCard: {
         borderRadius: 14,
@@ -861,7 +1258,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 16
     },
-
     // Completion bar
     completionBar: {
         flexDirection: "row" as const,
@@ -888,7 +1284,6 @@ const styles = StyleSheet.create((theme) => ({
         height: "100%",
         borderRadius: 3
     },
-
     // Action item row
     actionItemRow: {
         flexDirection: "row" as const,
@@ -932,7 +1327,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Pre-read materials
     preReadSubtext: {
         fontFamily: "IBMPlexSans-Regular",
@@ -969,7 +1363,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Bottom spacer
     bottomSpacer: {
         height: 40

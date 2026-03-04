@@ -2,12 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type ContentType = "video" | "reading" | "quiz" | "assignment";
-
 type Lesson = {
     id: string;
     number: number;
@@ -16,7 +15,6 @@ type Lesson = {
     durationMinutes: number;
     completed: boolean;
 };
-
 type CourseModule = {
     id: string;
     title: string;
@@ -239,12 +237,29 @@ const initialModules: CourseModule[] = [
         ]
     }
 ];
-
-const CONTENT_TYPE_CONFIG: Record<ContentType, { icon: keyof typeof Ionicons.glyphMap; label: string }> = {
-    video: { icon: "videocam", label: "Video" },
-    reading: { icon: "book", label: "Reading" },
-    quiz: { icon: "help-circle", label: "Quiz" },
-    assignment: { icon: "code-slash", label: "Assignment" }
+const CONTENT_TYPE_CONFIG: Record<
+    ContentType,
+    {
+        icon: keyof typeof Ionicons.glyphMap;
+        label: string;
+    }
+> = {
+    video: {
+        icon: "videocam",
+        label: "Video"
+    },
+    reading: {
+        icon: "book",
+        label: "Reading"
+    },
+    quiz: {
+        icon: "help-circle",
+        label: "Quiz"
+    },
+    assignment: {
+        icon: "code-slash",
+        label: "Assignment"
+    }
 };
 
 // --- Helpers ---
@@ -257,19 +272,15 @@ function formatDuration(minutes: number): string {
     }
     return `${minutes}m`;
 }
-
 function totalLessons(modules: CourseModule[]): number {
     return modules.reduce((sum, mod) => sum + mod.lessons.length, 0);
 }
-
 function totalCompleted(modules: CourseModule[]): number {
     return modules.reduce((sum, mod) => sum + mod.lessons.filter((l) => l.completed).length, 0);
 }
-
 function totalDuration(modules: CourseModule[]): number {
     return modules.reduce((sum, mod) => sum + mod.lessons.reduce((s, l) => s + l.durationMinutes, 0), 0);
 }
-
 function moduleCompleted(mod: CourseModule): number {
     return mod.lessons.filter((l) => l.completed).length;
 }
@@ -297,14 +308,12 @@ function ProgressRing({
     const center = size / 2;
     const filledSegments = Math.round((percentage / 100) * segmentCount);
     const segmentSize = strokeWidth * 0.7;
-
     const segments = [];
     for (let i = 0; i < segmentCount; i++) {
         const angle = (i / segmentCount) * 2 * Math.PI - Math.PI / 2;
         const x = center + radius * Math.cos(angle) - segmentSize / 2;
         const y = center + radius * Math.sin(angle) - segmentSize / 2;
         const isFilled = i < filledSegments;
-
         segments.push(
             <View
                 key={i}
@@ -320,9 +329,13 @@ function ProgressRing({
             />
         );
     }
-
     return (
-        <View style={{ width: size, height: size }}>
+        <View
+            style={{
+                width: size,
+                height: size
+            }}
+        >
             {segments}
             <View
                 style={{
@@ -373,10 +386,20 @@ function ModuleProgressBar({
     trackColor: string;
 }) {
     const pct = total > 0 ? (completed / total) * 100 : 0;
-
     return (
-        <View style={{ gap: 4 }}>
-            <View style={[styles.progressTrack, { backgroundColor: trackColor }]}>
+        <View
+            style={{
+                gap: 4
+            }}
+        >
+            <View
+                style={[
+                    styles.progressTrack,
+                    {
+                        backgroundColor: trackColor
+                    }
+                ]}
+            >
                 <View
                     style={[
                         styles.progressFill,
@@ -403,11 +426,26 @@ function ContentTypeChip({
     chipColor: string;
 }) {
     const config = CONTENT_TYPE_CONFIG[contentType];
-
     return (
-        <View style={[styles.contentChip, { backgroundColor: chipBg }]}>
+        <View
+            style={[
+                styles.contentChip,
+                {
+                    backgroundColor: chipBg
+                }
+            ]}
+        >
             <Ionicons name={config.icon} size={11} color={chipColor} />
-            <Text style={[styles.contentChipText, { color: chipColor }]}>{config.label}</Text>
+            <Text
+                style={[
+                    styles.contentChipText,
+                    {
+                        color: chipColor
+                    }
+                ]}
+            >
+                {config.label}
+            </Text>
         </View>
     );
 }
@@ -416,16 +454,31 @@ function ContentTypeChip({
 
 function LessonRow({ lesson, onToggle, isLast }: { lesson: Lesson; onToggle: () => void; isLast: boolean }) {
     const { theme } = useUnistyles();
-
-    const chipColors: Record<ContentType, { bg: string; color: string }> = {
-        video: { bg: `${theme.colors.primary}18`, color: theme.colors.primary },
-        reading: { bg: `${theme.colors.tertiary}18`, color: theme.colors.tertiary },
-        quiz: { bg: `${theme.colors.secondary}18`, color: theme.colors.secondary },
-        assignment: { bg: `${theme.colors.error}18`, color: theme.colors.error }
+    const chipColors: Record<
+        ContentType,
+        {
+            bg: string;
+            color: string;
+        }
+    > = {
+        video: {
+            bg: `${theme.colors.primary}18`,
+            color: theme.colors.primary
+        },
+        reading: {
+            bg: `${theme.colors.tertiary}18`,
+            color: theme.colors.tertiary
+        },
+        quiz: {
+            bg: `${theme.colors.secondary}18`,
+            color: theme.colors.secondary
+        },
+        assignment: {
+            bg: `${theme.colors.error}18`,
+            color: theme.colors.error
+        }
     };
-
     const chip = chipColors[lesson.contentType];
-
     return (
         <Pressable
             onPress={onToggle}
@@ -451,7 +504,14 @@ function LessonRow({ lesson, onToggle, isLast }: { lesson: Lesson; onToggle: () 
                 {lesson.completed ? (
                     <Ionicons name="checkmark" size={12} color={theme.colors.onPrimary} />
                 ) : (
-                    <Text style={[styles.lessonNumberText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.lessonNumberText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {lesson.number}
                     </Text>
                 )}
@@ -476,7 +536,14 @@ function LessonRow({ lesson, onToggle, isLast }: { lesson: Lesson; onToggle: () 
                     <ContentTypeChip contentType={lesson.contentType} chipBg={chip.bg} chipColor={chip.color} />
                     <View style={styles.durationBadge}>
                         <Ionicons name="time-outline" size={11} color={theme.colors.onSurfaceVariant} />
-                        <Text style={[styles.durationText, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.durationText,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {formatDuration(lesson.durationMinutes)}
                         </Text>
                     </View>
@@ -519,9 +586,8 @@ function ModuleSection({
     const total = mod.lessons.length;
     const allDone = completed === total;
     const moduleDuration = mod.lessons.reduce((s, l) => s + l.durationMinutes, 0);
-
     return (
-        <View
+        <Card
             style={[
                 styles.moduleCard,
                 {
@@ -533,7 +599,12 @@ function ModuleSection({
             {/* Module header - pressable to collapse/expand */}
             <Pressable
                 onPress={onToggleExpand}
-                style={({ pressed }) => [styles.moduleHeader, { opacity: pressed ? 0.8 : 1 }]}
+                style={({ pressed }) => [
+                    styles.moduleHeader,
+                    {
+                        opacity: pressed ? 0.8 : 1
+                    }
+                ]}
             >
                 <View style={styles.moduleHeaderLeft}>
                     {/* Module index badge */}
@@ -548,16 +619,38 @@ function ModuleSection({
                         {allDone ? (
                             <Ionicons name="checkmark" size={14} color={theme.colors.onPrimary} />
                         ) : (
-                            <Text style={[styles.moduleIndexText, { color: theme.colors.primary }]}>{index + 1}</Text>
+                            <Text
+                                style={[
+                                    styles.moduleIndexText,
+                                    {
+                                        color: theme.colors.primary
+                                    }
+                                ]}
+                            >
+                                {index + 1}
+                            </Text>
                         )}
                     </View>
 
                     <View style={styles.moduleTitleBlock}>
-                        <Text style={[styles.moduleTitle, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                        <Text
+                            style={[
+                                styles.moduleTitle,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
                             {mod.title}
                         </Text>
                         <Text
-                            style={[styles.moduleDescription, { color: theme.colors.onSurfaceVariant }]}
+                            style={[
+                                styles.moduleDescription,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
                             numberOfLines={1}
                         >
                             {mod.description}
@@ -581,11 +674,25 @@ function ModuleSection({
                     trackColor={`${theme.colors.onSurface}12`}
                 />
                 <View style={styles.moduleStats}>
-                    <Text style={[styles.moduleStatText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.moduleStatText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {completed}/{total} lessons
                     </Text>
                     <View style={styles.moduleStatDot} />
-                    <Text style={[styles.moduleStatText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.moduleStatText,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {formatDuration(moduleDuration)}
                     </Text>
                 </View>
@@ -593,7 +700,14 @@ function ModuleSection({
 
             {/* Expanded lesson list */}
             {expanded && (
-                <View style={[styles.lessonsContainer, { borderTopColor: theme.colors.outlineVariant }]}>
+                <View
+                    style={[
+                        styles.lessonsContainer,
+                        {
+                            borderTopColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                >
                     {mod.lessons.map((lesson, i) => (
                         <LessonRow
                             key={lesson.id}
@@ -604,7 +718,7 @@ function ModuleSection({
                     ))}
                 </View>
             )}
-        </View>
+        </Card>
     );
 }
 
@@ -616,7 +730,6 @@ export function CourseCurriculumPage() {
     const [expandedModules, setExpandedModules] = React.useState<Set<string>>(
         () => new Set(["m2"]) // Start with the in-progress module expanded
     );
-
     const toggleExpand = React.useCallback((moduleId: string) => {
         setExpandedModules((prev) => {
             const next = new Set(prev);
@@ -628,16 +741,21 @@ export function CourseCurriculumPage() {
             return next;
         });
     }, []);
-
     const toggleLesson = React.useCallback((lessonId: string) => {
         setModules((prev) =>
             prev.map((mod) => ({
                 ...mod,
-                lessons: mod.lessons.map((l) => (l.id === lessonId ? { ...l, completed: !l.completed } : l))
+                lessons: mod.lessons.map((l) =>
+                    l.id === lessonId
+                        ? {
+                              ...l,
+                              completed: !l.completed
+                          }
+                        : l
+                )
             }))
         );
     }, []);
-
     const allLessons = totalLessons(modules);
     const allCompleted = totalCompleted(modules);
     const allDuration = totalDuration(modules);
@@ -645,7 +763,12 @@ export function CourseCurriculumPage() {
 
     // Count content types
     const contentCounts = React.useMemo(() => {
-        const counts: Record<ContentType, number> = { video: 0, reading: 0, quiz: 0, assignment: 0 };
+        const counts: Record<ContentType, number> = {
+            video: 0,
+            reading: 0,
+            quiz: 0,
+            assignment: 0
+        };
         for (const mod of modules) {
             for (const l of mod.lessons) {
                 counts[l.contentType]++;
@@ -653,23 +776,76 @@ export function CourseCurriculumPage() {
         }
         return counts;
     }, [modules]);
-
     return (
-        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} bottomInset={48}>
+        <ShowcasePage
+            style={{
+                flex: 1,
+                backgroundColor: theme.colors.surface
+            }}
+            bottomInset={48}
+        >
             {/* Course Header Card */}
-            <View style={[styles.headerCard, { backgroundColor: theme.colors.primary }]}>
+            <Card
+                style={[
+                    styles.headerCard,
+                    {
+                        backgroundColor: theme.colors.primary
+                    }
+                ]}
+            >
                 <View style={styles.headerTopRow}>
                     <View style={styles.headerBadge}>
-                        <Text style={[styles.headerBadgeText, { color: theme.colors.primary }]}>DESIGN SYSTEMS</Text>
+                        <Text
+                            style={[
+                                styles.headerBadgeText,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
+                            DESIGN SYSTEMS
+                        </Text>
                     </View>
-                    <View style={[styles.publishedBadge, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+                    <View
+                        style={[
+                            styles.publishedBadge,
+                            {
+                                backgroundColor: "rgba(255,255,255,0.2)"
+                            }
+                        ]}
+                    >
                         <View style={styles.publishedDot} />
-                        <Text style={[styles.publishedText, { color: theme.colors.onPrimary }]}>Published</Text>
+                        <Text
+                            style={[
+                                styles.publishedText,
+                                {
+                                    color: theme.colors.onPrimary
+                                }
+                            ]}
+                        >
+                            Published
+                        </Text>
                     </View>
                 </View>
 
-                <Text style={[styles.courseTitle, { color: theme.colors.onPrimary }]}>Design Systems Masterclass</Text>
-                <Text style={[styles.courseSubtitle, { color: `${theme.colors.onPrimary}BB` }]}>
+                <Text
+                    style={[
+                        styles.courseTitle,
+                        {
+                            color: theme.colors.onPrimary
+                        }
+                    ]}
+                >
+                    Design Systems Masterclass
+                </Text>
+                <Text
+                    style={[
+                        styles.courseSubtitle,
+                        {
+                            color: `${theme.colors.onPrimary}BB`
+                        }
+                    ]}
+                >
                     From foundations to production-ready component libraries
                 </Text>
 
@@ -689,32 +865,105 @@ export function CourseCurriculumPage() {
                 <View style={styles.headerStatsRow}>
                     <View style={styles.headerStat}>
                         <Ionicons name="layers-outline" size={16} color={theme.colors.onPrimary} />
-                        <Text style={[styles.headerStatValue, { color: theme.colors.onPrimary }]}>
+                        <Text
+                            style={[
+                                styles.headerStatValue,
+                                {
+                                    color: theme.colors.onPrimary
+                                }
+                            ]}
+                        >
                             {modules.length}
                         </Text>
-                        <Text style={[styles.headerStatLabel, { color: `${theme.colors.onPrimary}AA` }]}>Modules</Text>
+                        <Text
+                            style={[
+                                styles.headerStatLabel,
+                                {
+                                    color: `${theme.colors.onPrimary}AA`
+                                }
+                            ]}
+                        >
+                            Modules
+                        </Text>
                     </View>
-                    <View style={[styles.headerStatDivider, { backgroundColor: `${theme.colors.onPrimary}30` }]} />
+                    <View
+                        style={[
+                            styles.headerStatDivider,
+                            {
+                                backgroundColor: `${theme.colors.onPrimary}30`
+                            }
+                        ]}
+                    />
                     <View style={styles.headerStat}>
                         <Ionicons name="document-text-outline" size={16} color={theme.colors.onPrimary} />
-                        <Text style={[styles.headerStatValue, { color: theme.colors.onPrimary }]}>{allLessons}</Text>
-                        <Text style={[styles.headerStatLabel, { color: `${theme.colors.onPrimary}AA` }]}>Lessons</Text>
+                        <Text
+                            style={[
+                                styles.headerStatValue,
+                                {
+                                    color: theme.colors.onPrimary
+                                }
+                            ]}
+                        >
+                            {allLessons}
+                        </Text>
+                        <Text
+                            style={[
+                                styles.headerStatLabel,
+                                {
+                                    color: `${theme.colors.onPrimary}AA`
+                                }
+                            ]}
+                        >
+                            Lessons
+                        </Text>
                     </View>
-                    <View style={[styles.headerStatDivider, { backgroundColor: `${theme.colors.onPrimary}30` }]} />
+                    <View
+                        style={[
+                            styles.headerStatDivider,
+                            {
+                                backgroundColor: `${theme.colors.onPrimary}30`
+                            }
+                        ]}
+                    />
                     <View style={styles.headerStat}>
                         <Ionicons name="time-outline" size={16} color={theme.colors.onPrimary} />
-                        <Text style={[styles.headerStatValue, { color: theme.colors.onPrimary }]}>
+                        <Text
+                            style={[
+                                styles.headerStatValue,
+                                {
+                                    color: theme.colors.onPrimary
+                                }
+                            ]}
+                        >
                             {formatDuration(allDuration)}
                         </Text>
-                        <Text style={[styles.headerStatLabel, { color: `${theme.colors.onPrimary}AA` }]}>Total</Text>
+                        <Text
+                            style={[
+                                styles.headerStatLabel,
+                                {
+                                    color: `${theme.colors.onPrimary}AA`
+                                }
+                            ]}
+                        >
+                            Total
+                        </Text>
                     </View>
                 </View>
-            </View>
+            </Card>
 
             {/* Section label */}
             <View style={styles.sectionLabel}>
                 <Ionicons name="school-outline" size={18} color={theme.colors.onSurface} />
-                <Text style={[styles.sectionLabelText, { color: theme.colors.onSurface }]}>Course Modules</Text>
+                <Text
+                    style={[
+                        styles.sectionLabelText,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Course Modules
+                </Text>
             </View>
 
             {/* Module list */}
@@ -732,7 +981,7 @@ export function CourseCurriculumPage() {
             </View>
 
             {/* Summary Card */}
-            <View
+            <Card
                 style={[
                     styles.summaryCard,
                     {
@@ -743,7 +992,16 @@ export function CourseCurriculumPage() {
             >
                 <View style={styles.summaryHeader}>
                     <Ionicons name="stats-chart" size={18} color={theme.colors.tertiary} />
-                    <Text style={[styles.summaryTitle, { color: theme.colors.onSurface }]}>Course Summary</Text>
+                    <Text
+                        style={[
+                            styles.summaryTitle,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Course Summary
+                    </Text>
                 </View>
 
                 {/* Content type breakdown */}
@@ -757,17 +1015,37 @@ export function CourseCurriculumPage() {
                             assignment: theme.colors.error
                         };
                         const color = chipColors[type];
-
                         return (
                             <View key={type} style={styles.breakdownItem}>
-                                <View style={[styles.breakdownIconCircle, { backgroundColor: `${color}18` }]}>
+                                <View
+                                    style={[
+                                        styles.breakdownIconCircle,
+                                        {
+                                            backgroundColor: `${color}18`
+                                        }
+                                    ]}
+                                >
                                     <Ionicons name={config.icon} size={16} color={color} />
                                 </View>
                                 <View style={styles.breakdownText}>
-                                    <Text style={[styles.breakdownCount, { color: theme.colors.onSurface }]}>
+                                    <Text
+                                        style={[
+                                            styles.breakdownCount,
+                                            {
+                                                color: theme.colors.onSurface
+                                            }
+                                        ]}
+                                    >
                                         {contentCounts[type]}
                                     </Text>
-                                    <Text style={[styles.breakdownLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                    <Text
+                                        style={[
+                                            styles.breakdownLabel,
+                                            {
+                                                color: theme.colors.onSurfaceVariant
+                                            }
+                                        ]}
+                                    >
                                         {config.label}s
                                     </Text>
                                 </View>
@@ -777,54 +1055,149 @@ export function CourseCurriculumPage() {
                 </View>
 
                 {/* Completion overview */}
-                <View style={[styles.completionRow, { borderTopColor: theme.colors.outlineVariant }]}>
+                <View
+                    style={[
+                        styles.completionRow,
+                        {
+                            borderTopColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                >
                     <View style={styles.completionItem}>
                         <Ionicons name="checkmark-done" size={16} color={theme.colors.primary} />
-                        <Text style={[styles.completionValue, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                styles.completionValue,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {allCompleted}/{allLessons}
                         </Text>
-                        <Text style={[styles.completionLabel, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.completionLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Completed
                         </Text>
                     </View>
-                    <View style={[styles.completionDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                    <View
+                        style={[
+                            styles.completionDivider,
+                            {
+                                backgroundColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    />
                     <View style={styles.completionItem}>
                         <Ionicons name="time" size={16} color={theme.colors.tertiary} />
-                        <Text style={[styles.completionValue, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                styles.completionValue,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {formatDuration(allDuration)}
                         </Text>
-                        <Text style={[styles.completionLabel, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.completionLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Total Time
                         </Text>
                     </View>
-                    <View style={[styles.completionDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                    <View
+                        style={[
+                            styles.completionDivider,
+                            {
+                                backgroundColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    />
                     <View style={styles.completionItem}>
                         <Ionicons name="rocket" size={16} color={theme.colors.secondary} />
-                        <Text style={[styles.completionValue, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                styles.completionValue,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {Math.round(overallPct)}%
                         </Text>
-                        <Text style={[styles.completionLabel, { color: theme.colors.onSurfaceVariant }]}>Progress</Text>
+                        <Text
+                            style={[
+                                styles.completionLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
+                            Progress
+                        </Text>
                     </View>
                 </View>
 
                 {/* Published status pill */}
                 <View style={styles.statusRow}>
-                    <View style={[styles.statusPill, { backgroundColor: `${theme.colors.primary}14` }]}>
-                        <View style={[styles.statusDotSmall, { backgroundColor: theme.colors.primary }]} />
-                        <Text style={[styles.statusPillText, { color: theme.colors.primary }]}>Published</Text>
+                    <View
+                        style={[
+                            styles.statusPill,
+                            {
+                                backgroundColor: `${theme.colors.primary}14`
+                            }
+                        ]}
+                    >
+                        <View
+                            style={[
+                                styles.statusDotSmall,
+                                {
+                                    backgroundColor: theme.colors.primary
+                                }
+                            ]}
+                        />
+                        <Text
+                            style={[
+                                styles.statusPillText,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
+                            Published
+                        </Text>
                     </View>
-                    <Text style={[styles.lastUpdated, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.lastUpdated,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         Last updated Mar 1, 2026
                     </Text>
                 </View>
-            </View>
+            </Card>
         </ShowcasePage>
     );
 }
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Header card
     headerCard: {
         borderRadius: 20,
@@ -906,7 +1279,6 @@ const styles = StyleSheet.create((theme) => ({
         width: 1,
         height: 36
     },
-
     // Section label
     sectionLabel: {
         flexDirection: "row",
@@ -920,12 +1292,10 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 18
     },
-
     // Module list
     moduleList: {
         gap: 12
     },
-
     // Module card
     moduleCard: {
         borderRadius: 16,
@@ -989,7 +1359,6 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 2,
         backgroundColor: "#999"
     },
-
     // Progress bar
     progressTrack: {
         height: 6,
@@ -1000,13 +1369,11 @@ const styles = StyleSheet.create((theme) => ({
         height: "100%",
         borderRadius: 3
     },
-
     // Lessons container
     lessonsContainer: {
         borderTopWidth: 1,
         marginHorizontal: 0
     },
-
     // Lesson row
     lessonRow: {
         flexDirection: "row",
@@ -1040,7 +1407,6 @@ const styles = StyleSheet.create((theme) => ({
         alignItems: "center",
         gap: 8
     },
-
     // Content type chip
     contentChip: {
         flexDirection: "row",
@@ -1055,7 +1421,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 10,
         letterSpacing: 0.3
     },
-
     // Duration badge
     durationBadge: {
         flexDirection: "row",
@@ -1066,7 +1431,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 11
     },
-
     // Checkbox
     checkbox: {
         width: 22,
@@ -1076,7 +1440,6 @@ const styles = StyleSheet.create((theme) => ({
         alignItems: "center",
         justifyContent: "center"
     },
-
     // Summary card
     summaryCard: {
         marginTop: 28,
@@ -1094,7 +1457,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 16
     },
-
     // Content breakdown
     contentBreakdown: {
         flexDirection: "row",
@@ -1123,7 +1485,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Completion row
     completionRow: {
         flexDirection: "row",
@@ -1149,7 +1510,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 44,
         alignSelf: "center"
     },
-
     // Status row
     statusRow: {
         flexDirection: "row",

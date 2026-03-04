@@ -2,25 +2,22 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type FileFormat = "SVG" | "PNG" | "PDF" | "AI";
-
 type AssetCategory =
     | "Brand Logos"
     | "Marketing Materials"
     | "Social Templates"
     | "Product Photos"
     | "Icons & Illustrations";
-
 type UsageRecord = {
     date: string;
     project: string;
     user: string;
 };
-
 type Asset = {
     id: string;
     name: string;
@@ -35,7 +32,6 @@ type Asset = {
     downloadFormats: FileFormat[];
     usageHistory: UsageRecord[];
 };
-
 type AssetTypeCount = {
     type: string;
     count: number;
@@ -61,9 +57,21 @@ const mockAssets: Asset[] = [
             "Use on white or light backgrounds only. Maintain minimum clear space of 2x the logo mark height on all sides.",
         downloadFormats: ["SVG", "PNG", "PDF", "AI"],
         usageHistory: [
-            { date: "Feb 27, 2026", project: "Website Redesign", user: "Sarah Chen" },
-            { date: "Feb 20, 2026", project: "Annual Report 2025", user: "Mike Torres" },
-            { date: "Feb 14, 2026", project: "Email Campaign Q1", user: "Lisa Park" }
+            {
+                date: "Feb 27, 2026",
+                project: "Website Redesign",
+                user: "Sarah Chen"
+            },
+            {
+                date: "Feb 20, 2026",
+                project: "Annual Report 2025",
+                user: "Mike Torres"
+            },
+            {
+                date: "Feb 14, 2026",
+                project: "Email Campaign Q1",
+                user: "Lisa Park"
+            }
         ]
     },
     {
@@ -79,8 +87,16 @@ const mockAssets: Asset[] = [
         guidelinesNotes: "For dark backgrounds and print on dark stock. Do not modify opacity or add effects.",
         downloadFormats: ["SVG", "PNG", "PDF"],
         usageHistory: [
-            { date: "Feb 10, 2026", project: "Dark Mode UI", user: "Alex Kim" },
-            { date: "Jan 30, 2026", project: "Merch Printing", user: "Tom Nguyen" }
+            {
+                date: "Feb 10, 2026",
+                project: "Dark Mode UI",
+                user: "Alex Kim"
+            },
+            {
+                date: "Jan 30, 2026",
+                project: "Merch Printing",
+                user: "Tom Nguyen"
+            }
         ]
     },
     {
@@ -95,7 +111,13 @@ const mockAssets: Asset[] = [
         usageCount: 42,
         guidelinesNotes: "Square format only. Includes 1024px, 512px, 192px, and 32px variants in the package.",
         downloadFormats: ["PNG", "SVG"],
-        usageHistory: [{ date: "Feb 04, 2026", project: "Mobile App v3", user: "Sarah Chen" }]
+        usageHistory: [
+            {
+                date: "Feb 04, 2026",
+                project: "Mobile App v3",
+                user: "Sarah Chen"
+            }
+        ]
     },
     // Marketing Materials
     {
@@ -111,8 +133,16 @@ const mockAssets: Asset[] = [
         guidelinesNotes: "Editable layers for copy changes. Keep gradient overlay intact. Use brand typeface only.",
         downloadFormats: ["AI", "PDF", "PNG"],
         usageHistory: [
-            { date: "Mar 01, 2026", project: "Spring Launch 2026", user: "Mike Torres" },
-            { date: "Feb 22, 2026", project: "Partner Co-brand", user: "Lisa Park" }
+            {
+                date: "Mar 01, 2026",
+                project: "Spring Launch 2026",
+                user: "Mike Torres"
+            },
+            {
+                date: "Feb 22, 2026",
+                project: "Partner Co-brand",
+                user: "Lisa Park"
+            }
         ]
     },
     {
@@ -127,7 +157,13 @@ const mockAssets: Asset[] = [
         usageCount: 8,
         guidelinesNotes: "Print-ready at 300 DPI. CMYK color profile. Bleed marks included.",
         downloadFormats: ["PDF", "AI"],
-        usageHistory: [{ date: "Feb 18, 2026", project: "CES 2026", user: "Tom Nguyen" }]
+        usageHistory: [
+            {
+                date: "Feb 18, 2026",
+                project: "CES 2026",
+                user: "Tom Nguyen"
+            }
+        ]
     },
     {
         id: "a6",
@@ -142,9 +178,21 @@ const mockAssets: Asset[] = [
         guidelinesNotes: "Optimized for email clients. Max file size 150KB. Test in Outlook and Gmail before sending.",
         downloadFormats: ["PNG", "SVG"],
         usageHistory: [
-            { date: "Feb 28, 2026", project: "Weekly Newsletter", user: "Lisa Park" },
-            { date: "Feb 21, 2026", project: "Promo Blast", user: "Lisa Park" },
-            { date: "Feb 14, 2026", project: "Valentine Campaign", user: "Sarah Chen" }
+            {
+                date: "Feb 28, 2026",
+                project: "Weekly Newsletter",
+                user: "Lisa Park"
+            },
+            {
+                date: "Feb 21, 2026",
+                project: "Promo Blast",
+                user: "Lisa Park"
+            },
+            {
+                date: "Feb 14, 2026",
+                project: "Valentine Campaign",
+                user: "Sarah Chen"
+            }
         ]
     },
     // Social Templates
@@ -161,9 +209,21 @@ const mockAssets: Asset[] = [
         guidelinesNotes: "Swap hero image layer. Keep text within safe zone overlay. Use approved color palette only.",
         downloadFormats: ["AI", "PNG", "PDF"],
         usageHistory: [
-            { date: "Mar 02, 2026", project: "Daily Social", user: "Alex Kim" },
-            { date: "Mar 01, 2026", project: "Product Feature", user: "Alex Kim" },
-            { date: "Feb 28, 2026", project: "Customer Story", user: "Lisa Park" }
+            {
+                date: "Mar 02, 2026",
+                project: "Daily Social",
+                user: "Alex Kim"
+            },
+            {
+                date: "Mar 01, 2026",
+                project: "Product Feature",
+                user: "Alex Kim"
+            },
+            {
+                date: "Feb 28, 2026",
+                project: "Customer Story",
+                user: "Lisa Park"
+            }
         ]
     },
     {
@@ -178,7 +238,13 @@ const mockAssets: Asset[] = [
         usageCount: 14,
         guidelinesNotes: "Account for profile photo overlap in lower-left. Central text area preferred.",
         downloadFormats: ["PNG", "AI"],
-        usageHistory: [{ date: "Jan 20, 2026", project: "Brand Refresh", user: "Mike Torres" }]
+        usageHistory: [
+            {
+                date: "Jan 20, 2026",
+                project: "Brand Refresh",
+                user: "Mike Torres"
+            }
+        ]
     },
     {
         id: "a9",
@@ -192,7 +258,13 @@ const mockAssets: Asset[] = [
         usageCount: 7,
         guidelinesNotes: "Minimal text due to small render size on mobile. Focus on brand imagery.",
         downloadFormats: ["PNG", "SVG"],
-        usageHistory: [{ date: "Feb 10, 2026", project: "Q1 Hiring Push", user: "Tom Nguyen" }]
+        usageHistory: [
+            {
+                date: "Feb 10, 2026",
+                project: "Q1 Hiring Push",
+                user: "Tom Nguyen"
+            }
+        ]
     },
     // Product Photos
     {
@@ -208,8 +280,16 @@ const mockAssets: Asset[] = [
         guidelinesNotes: "Studio-lit, white seamless background. Do not crop below product base shadow.",
         downloadFormats: ["PNG"],
         usageHistory: [
-            { date: "Feb 28, 2026", project: "Website PDP", user: "Sarah Chen" },
-            { date: "Feb 22, 2026", project: "Amazon Listing", user: "Mike Torres" }
+            {
+                date: "Feb 28, 2026",
+                project: "Website PDP",
+                user: "Sarah Chen"
+            },
+            {
+                date: "Feb 22, 2026",
+                project: "Amazon Listing",
+                user: "Mike Torres"
+            }
         ]
     },
     {
@@ -225,8 +305,16 @@ const mockAssets: Asset[] = [
         guidelinesNotes: "Editorial style. Model release on file. Credit photographer in editorial placements.",
         downloadFormats: ["PNG"],
         usageHistory: [
-            { date: "Feb 26, 2026", project: "Blog Post", user: "Lisa Park" },
-            { date: "Feb 20, 2026", project: "Social Campaign", user: "Alex Kim" }
+            {
+                date: "Feb 26, 2026",
+                project: "Blog Post",
+                user: "Lisa Park"
+            },
+            {
+                date: "Feb 20, 2026",
+                project: "Social Campaign",
+                user: "Alex Kim"
+            }
         ]
     },
     {
@@ -241,7 +329,13 @@ const mockAssets: Asset[] = [
         usageCount: 29,
         guidelinesNotes: "Macro lens detail shot. Suitable for zoom feature on product pages.",
         downloadFormats: ["PNG"],
-        usageHistory: [{ date: "Feb 24, 2026", project: "Website PDP", user: "Sarah Chen" }]
+        usageHistory: [
+            {
+                date: "Feb 24, 2026",
+                project: "Website PDP",
+                user: "Sarah Chen"
+            }
+        ]
     },
     // Icons & Illustrations
     {
@@ -257,9 +351,21 @@ const mockAssets: Asset[] = [
         guidelinesNotes: "Stroke-based at 2px. Align to 24px grid. Use currentColor for theming support.",
         downloadFormats: ["SVG", "PNG"],
         usageHistory: [
-            { date: "Mar 02, 2026", project: "App UI v3", user: "Alex Kim" },
-            { date: "Feb 28, 2026", project: "Marketing Site", user: "Sarah Chen" },
-            { date: "Feb 25, 2026", project: "Help Center", user: "Tom Nguyen" }
+            {
+                date: "Mar 02, 2026",
+                project: "App UI v3",
+                user: "Alex Kim"
+            },
+            {
+                date: "Feb 28, 2026",
+                project: "Marketing Site",
+                user: "Sarah Chen"
+            },
+            {
+                date: "Feb 25, 2026",
+                project: "Help Center",
+                user: "Tom Nguyen"
+            }
         ]
     },
     {
@@ -274,7 +380,13 @@ const mockAssets: Asset[] = [
         usageCount: 18,
         guidelinesNotes: "Flat style with brand palette. Maintain consistent character proportions across set.",
         downloadFormats: ["SVG", "PNG", "PDF"],
-        usageHistory: [{ date: "Feb 08, 2026", project: "Mobile Onboarding", user: "Alex Kim" }]
+        usageHistory: [
+            {
+                date: "Feb 08, 2026",
+                project: "Mobile Onboarding",
+                user: "Alex Kim"
+            }
+        ]
     },
     {
         id: "a15",
@@ -289,20 +401,51 @@ const mockAssets: Asset[] = [
         guidelinesNotes: "Muted palette variant for less visual weight. Match empty state copy tone.",
         downloadFormats: ["SVG", "PNG"],
         usageHistory: [
-            { date: "Feb 15, 2026", project: "Dashboard Redesign", user: "Sarah Chen" },
-            { date: "Feb 01, 2026", project: "App UI v3", user: "Alex Kim" }
+            {
+                date: "Feb 15, 2026",
+                project: "Dashboard Redesign",
+                user: "Sarah Chen"
+            },
+            {
+                date: "Feb 01, 2026",
+                project: "App UI v3",
+                user: "Alex Kim"
+            }
         ]
     }
 ];
-
 const assetTypeCounts: AssetTypeCount[] = [
-    { type: "Logos", count: 3, icon: "ribbon-outline", color: "#6366F1" },
-    { type: "Icons", count: 3, icon: "grid-outline", color: "#3B82F6" },
-    { type: "Photos", count: 3, icon: "image-outline", color: "#10B981" },
-    { type: "Templates", count: 3, icon: "layers-outline", color: "#F59E0B" },
-    { type: "Fonts", count: 4, icon: "text-outline", color: "#EC4899" }
+    {
+        type: "Logos",
+        count: 3,
+        icon: "ribbon-outline",
+        color: "#6366F1"
+    },
+    {
+        type: "Icons",
+        count: 3,
+        icon: "grid-outline",
+        color: "#3B82F6"
+    },
+    {
+        type: "Photos",
+        count: 3,
+        icon: "image-outline",
+        color: "#10B981"
+    },
+    {
+        type: "Templates",
+        count: 3,
+        icon: "layers-outline",
+        color: "#F59E0B"
+    },
+    {
+        type: "Fonts",
+        count: 4,
+        icon: "text-outline",
+        color: "#EC4899"
+    }
 ];
-
 const categoryIcons: Record<AssetCategory, keyof typeof Ionicons.glyphMap> = {
     "Brand Logos": "ribbon-outline",
     "Marketing Materials": "megaphone-outline",
@@ -310,7 +453,6 @@ const categoryIcons: Record<AssetCategory, keyof typeof Ionicons.glyphMap> = {
     "Product Photos": "camera-outline",
     "Icons & Illustrations": "color-palette-outline"
 };
-
 const categoryColors: Record<AssetCategory, string> = {
     "Brand Logos": "#6366F1",
     "Marketing Materials": "#EF4444",
@@ -318,7 +460,6 @@ const categoryColors: Record<AssetCategory, string> = {
     "Product Photos": "#10B981",
     "Icons & Illustrations": "#F59E0B"
 };
-
 const formatColors: Record<FileFormat, string> = {
     SVG: "#6366F1",
     PNG: "#10B981",
@@ -338,13 +479,45 @@ function formatDimensions(width: number, height: number): string {
 function AssetTypeCard({ item }: { item: AssetTypeCount }) {
     const { theme } = useUnistyles();
     return (
-        <View style={[styles.typeCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-            <View style={[styles.typeCardIcon, { backgroundColor: `${item.color}18` }]}>
+        <Card
+            style={[
+                styles.typeCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.typeCardIcon,
+                    {
+                        backgroundColor: `${item.color}18`
+                    }
+                ]}
+            >
                 <Ionicons name={item.icon} size={18} color={item.color} />
             </View>
-            <Text style={[styles.typeCardCount, { color: theme.colors.onSurface }]}>{item.count}</Text>
-            <Text style={[styles.typeCardLabel, { color: theme.colors.onSurfaceVariant }]}>{item.type}</Text>
-        </View>
+            <Text
+                style={[
+                    styles.typeCardCount,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {item.count}
+            </Text>
+            <Text
+                style={[
+                    styles.typeCardLabel,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {item.type}
+            </Text>
+        </Card>
     );
 }
 
@@ -352,8 +525,24 @@ function AssetTypeCard({ item }: { item: AssetTypeCount }) {
 function FormatChip({ format, small }: { format: FileFormat; small?: boolean }) {
     const color = formatColors[format];
     return (
-        <View style={[small ? styles.formatChipSmall : styles.formatChip, { backgroundColor: `${color}18` }]}>
-            <Text style={[small ? styles.formatChipTextSmall : styles.formatChipText, { color }]}>{format}</Text>
+        <View
+            style={[
+                small ? styles.formatChipSmall : styles.formatChip,
+                {
+                    backgroundColor: `${color}18`
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    small ? styles.formatChipTextSmall : styles.formatChipText,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {format}
+            </Text>
         </View>
     );
 }
@@ -362,8 +551,24 @@ function FormatChip({ format, small }: { format: FileFormat; small?: boolean }) 
 function VersionBadge({ version }: { version: number }) {
     const { theme } = useUnistyles();
     return (
-        <View style={[styles.versionBadge, { backgroundColor: `${theme.colors.primary}18` }]}>
-            <Text style={[styles.versionBadgeText, { color: theme.colors.primary }]}>v{version}</Text>
+        <View
+            style={[
+                styles.versionBadge,
+                {
+                    backgroundColor: `${theme.colors.primary}18`
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    styles.versionBadgeText,
+                    {
+                        color: theme.colors.primary
+                    }
+                ]}
+            >
+                v{version}
+            </Text>
         </View>
     );
 }
@@ -373,15 +578,53 @@ function CategorySectionHeader({ category, count }: { category: AssetCategory; c
     const { theme } = useUnistyles();
     const icon = categoryIcons[category];
     const color = categoryColors[category];
-
     return (
-        <View style={[styles.catHeader, { borderBottomColor: theme.colors.outlineVariant }]}>
-            <View style={[styles.catHeaderIcon, { backgroundColor: `${color}18` }]}>
+        <View
+            style={[
+                styles.catHeader,
+                {
+                    borderBottomColor: theme.colors.outlineVariant
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.catHeaderIcon,
+                    {
+                        backgroundColor: `${color}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={16} color={color} />
             </View>
-            <Text style={[styles.catHeaderTitle, { color: theme.colors.onSurface }]}>{category}</Text>
-            <View style={[styles.catHeaderCount, { backgroundColor: `${color}18` }]}>
-                <Text style={[styles.catHeaderCountText, { color }]}>{count}</Text>
+            <Text
+                style={[
+                    styles.catHeaderTitle,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {category}
+            </Text>
+            <View
+                style={[
+                    styles.catHeaderCount,
+                    {
+                        backgroundColor: `${color}18`
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.catHeaderCountText,
+                        {
+                            color
+                        }
+                    ]}
+                >
+                    {count}
+                </Text>
             </View>
         </View>
     );
@@ -391,9 +634,15 @@ function CategorySectionHeader({ category, count }: { category: AssetCategory; c
 function AssetRow({ asset, isExpanded, onToggle }: { asset: Asset; isExpanded: boolean; onToggle: () => void }) {
     const { theme } = useUnistyles();
     const catColor = categoryColors[asset.category];
-
     return (
-        <Pressable onPress={onToggle} style={({ pressed }) => [pressed && { opacity: 0.92 }]}>
+        <Pressable
+            onPress={onToggle}
+            style={({ pressed }) => [
+                pressed && {
+                    opacity: 0.92
+                }
+            ]}
+        >
             <View
                 style={[
                     styles.assetRow,
@@ -404,13 +653,28 @@ function AssetRow({ asset, isExpanded, onToggle }: { asset: Asset; isExpanded: b
                 ]}
             >
                 {/* Color accent stripe */}
-                <View style={[styles.assetStripe, { backgroundColor: catColor }]} />
+                <View
+                    style={[
+                        styles.assetStripe,
+                        {
+                            backgroundColor: catColor
+                        }
+                    ]}
+                />
 
                 <View style={styles.assetRowContent}>
                     {/* Top: Name, format chip, version */}
                     <View style={styles.assetTopRow}>
                         <View style={styles.assetNameCol}>
-                            <Text style={[styles.assetName, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                            <Text
+                                style={[
+                                    styles.assetName,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                                numberOfLines={1}
+                            >
                                 {asset.name}
                             </Text>
                             <View style={styles.assetMetaRow}>
@@ -424,19 +688,40 @@ function AssetRow({ asset, isExpanded, onToggle }: { asset: Asset; isExpanded: b
                     <View style={styles.assetInfoRow}>
                         <View style={styles.assetInfoItem}>
                             <Ionicons name="resize-outline" size={12} color={theme.colors.onSurfaceVariant} />
-                            <Text style={[styles.assetDimensions, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.assetDimensions,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {formatDimensions(asset.width, asset.height)}
                             </Text>
                         </View>
                         <View style={styles.assetInfoItem}>
                             <Ionicons name="calendar-outline" size={12} color={theme.colors.onSurfaceVariant} />
-                            <Text style={[styles.assetInfoText, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.assetInfoText,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {asset.lastModified}
                             </Text>
                         </View>
                         <View style={styles.assetInfoItem}>
                             <Ionicons name="analytics-outline" size={12} color={theme.colors.onSurfaceVariant} />
-                            <Text style={[styles.assetInfoText, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.assetInfoText,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {asset.usageCount} uses
                             </Text>
                         </View>
@@ -444,7 +729,11 @@ function AssetRow({ asset, isExpanded, onToggle }: { asset: Asset; isExpanded: b
 
                     {/* Bottom: Expand indicator */}
                     <View style={styles.assetBottomRow}>
-                        <View style={{ flex: 1 }} />
+                        <View
+                            style={{
+                                flex: 1
+                            }}
+                        />
                         <Ionicons
                             name={isExpanded ? "chevron-up" : "chevron-down"}
                             size={16}
@@ -454,24 +743,57 @@ function AssetRow({ asset, isExpanded, onToggle }: { asset: Asset; isExpanded: b
 
                     {/* Expanded detail panel */}
                     {isExpanded && (
-                        <View style={[styles.detailPanel, { borderTopColor: theme.colors.outlineVariant }]}>
+                        <View
+                            style={[
+                                styles.detailPanel,
+                                {
+                                    borderTopColor: theme.colors.outlineVariant
+                                }
+                            ]}
+                        >
                             {/* Preview placeholder */}
                             <View
                                 style={[
                                     styles.previewBox,
-                                    { backgroundColor: `${catColor}08`, borderColor: `${catColor}30` }
+                                    {
+                                        backgroundColor: `${catColor}08`,
+                                        borderColor: `${catColor}30`
+                                    }
                                 ]}
                             >
                                 <Ionicons name="image-outline" size={32} color={`${catColor}60`} />
-                                <Text style={[styles.previewText, { color: `${catColor}80` }]}>Preview</Text>
-                                <Text style={[styles.previewDimText, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.previewText,
+                                        {
+                                            color: `${catColor}80`
+                                        }
+                                    ]}
+                                >
+                                    Preview
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.previewDimText,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     {formatDimensions(asset.width, asset.height)}px
                                 </Text>
                             </View>
 
                             {/* Download formats */}
                             <View style={styles.detailSection}>
-                                <Text style={[styles.detailSectionTitle, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        styles.detailSectionTitle,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     Download Formats
                                 </Text>
                                 <View style={styles.downloadFormatsRow}>
@@ -483,7 +805,14 @@ function AssetRow({ asset, isExpanded, onToggle }: { asset: Asset; isExpanded: b
 
                             {/* Brand guidelines notes */}
                             <View style={styles.detailSection}>
-                                <Text style={[styles.detailSectionTitle, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        styles.detailSectionTitle,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     Brand Guidelines
                                 </Text>
                                 <View
@@ -500,7 +829,14 @@ function AssetRow({ asset, isExpanded, onToggle }: { asset: Asset; isExpanded: b
                                         size={14}
                                         color={theme.colors.primary}
                                     />
-                                    <Text style={[styles.guidelinesText, { color: theme.colors.onSurfaceVariant }]}>
+                                    <Text
+                                        style={[
+                                            styles.guidelinesText,
+                                            {
+                                                color: theme.colors.onSurfaceVariant
+                                            }
+                                        ]}
+                                    >
                                         {asset.guidelinesNotes}
                                     </Text>
                                 </View>
@@ -508,7 +844,14 @@ function AssetRow({ asset, isExpanded, onToggle }: { asset: Asset; isExpanded: b
 
                             {/* Usage history */}
                             <View style={styles.detailSection}>
-                                <Text style={[styles.detailSectionTitle, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        styles.detailSectionTitle,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     Recent Usage
                                 </Text>
                                 <View style={styles.usageHistoryList}>
@@ -525,18 +868,35 @@ function AssetRow({ asset, isExpanded, onToggle }: { asset: Asset; isExpanded: b
                                         >
                                             <View style={styles.usageRowLeft}>
                                                 <Text
-                                                    style={[styles.usageProject, { color: theme.colors.onSurface }]}
+                                                    style={[
+                                                        styles.usageProject,
+                                                        {
+                                                            color: theme.colors.onSurface
+                                                        }
+                                                    ]}
                                                     numberOfLines={1}
                                                 >
                                                     {record.project}
                                                 </Text>
                                                 <Text
-                                                    style={[styles.usageUser, { color: theme.colors.onSurfaceVariant }]}
+                                                    style={[
+                                                        styles.usageUser,
+                                                        {
+                                                            color: theme.colors.onSurfaceVariant
+                                                        }
+                                                    ]}
                                                 >
                                                     {record.user}
                                                 </Text>
                                             </View>
-                                            <Text style={[styles.usageDate, { color: theme.colors.onSurfaceVariant }]}>
+                                            <Text
+                                                style={[
+                                                    styles.usageDate,
+                                                    {
+                                                        color: theme.colors.onSurfaceVariant
+                                                    }
+                                                ]}
+                                            >
                                                 {record.date}
                                             </Text>
                                         </View>
@@ -555,7 +915,6 @@ function AssetRow({ asset, isExpanded, onToggle }: { asset: Asset; isExpanded: b
 function DownloadFormatButton({ format }: { format: FileFormat }) {
     const color = formatColors[format];
     const [pressed, setPressed] = React.useState(false);
-
     return (
         <Pressable
             onPressIn={() => setPressed(true)}
@@ -569,7 +928,16 @@ function DownloadFormatButton({ format }: { format: FileFormat }) {
             ]}
         >
             <Ionicons name="download-outline" size={14} color={color} />
-            <Text style={[styles.downloadBtnText, { color }]}>{format}</Text>
+            <Text
+                style={[
+                    styles.downloadBtnText,
+                    {
+                        color
+                    }
+                ]}
+            >
+                {format}
+            </Text>
         </Pressable>
     );
 }
@@ -610,42 +978,107 @@ export function DigitalAssetsPage() {
     // Total stats
     const totalAssets = mockAssets.length;
     const totalUsages = mockAssets.reduce((sum, a) => sum + a.usageCount, 0);
-
     const handleToggleAsset = React.useCallback((assetId: string) => {
         setExpandedAssetId((prev) => (prev === assetId ? null : assetId));
     }, []);
-
     return (
         <ShowcasePage density="spacious" horizontalInset={16} topInset={20}>
             {/* Total stats banner */}
-            <View style={[styles.statsBanner, { backgroundColor: theme.colors.surfaceContainer }]}>
+            <View
+                style={[
+                    styles.statsBanner,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
                 <View style={styles.statsBannerItem}>
                     <Ionicons name="folder-outline" size={18} color={theme.colors.primary} />
                     <View>
-                        <Text style={[styles.statsBannerValue, { color: theme.colors.onSurface }]}>{totalAssets}</Text>
-                        <Text style={[styles.statsBannerLabel, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.statsBannerValue,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            {totalAssets}
+                        </Text>
+                        <Text
+                            style={[
+                                styles.statsBannerLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Total Assets
                         </Text>
                     </View>
                 </View>
-                <View style={[styles.statsBannerDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                <View
+                    style={[
+                        styles.statsBannerDivider,
+                        {
+                            backgroundColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                />
                 <View style={styles.statsBannerItem}>
                     <Ionicons name="analytics-outline" size={18} color="#10B981" />
                     <View>
-                        <Text style={[styles.statsBannerValue, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                styles.statsBannerValue,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {totalUsages.toLocaleString()}
                         </Text>
-                        <Text style={[styles.statsBannerLabel, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.statsBannerLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Total Uses
                         </Text>
                     </View>
                 </View>
-                <View style={[styles.statsBannerDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                <View
+                    style={[
+                        styles.statsBannerDivider,
+                        {
+                            backgroundColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                />
                 <View style={styles.statsBannerItem}>
                     <Ionicons name="people-outline" size={18} color="#6366F1" />
                     <View>
-                        <Text style={[styles.statsBannerValue, { color: theme.colors.onSurface }]}>5</Text>
-                        <Text style={[styles.statsBannerLabel, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.statsBannerValue,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            5
+                        </Text>
+                        <Text
+                            style={[
+                                styles.statsBannerLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Contributors
                         </Text>
                     </View>
@@ -653,7 +1086,16 @@ export function DigitalAssetsPage() {
             </View>
 
             {/* Asset type count cards */}
-            <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Assets by Type</Text>
+            <Text
+                style={[
+                    styles.sectionTitle,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                Assets by Type
+            </Text>
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -665,7 +1107,17 @@ export function DigitalAssetsPage() {
             </ScrollView>
 
             {/* Asset categories */}
-            <Text style={[styles.sectionTitle, { color: theme.colors.onSurface, marginTop: 24 }]}>Asset Library</Text>
+            <Text
+                style={[
+                    styles.sectionTitle,
+                    {
+                        color: theme.colors.onSurface,
+                        marginTop: 24
+                    }
+                ]}
+            >
+                Asset Library
+            </Text>
 
             <View style={styles.categoriesContainer}>
                 {Array.from(groupedAssets.entries()).map(([category, assets]) => (
@@ -690,7 +1142,7 @@ export function DigitalAssetsPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Stats banner
     statsBanner: {
         flexDirection: "row",
@@ -720,7 +1172,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 32,
         marginHorizontal: 8
     },
-
     // Section title
     sectionTitle: {
         fontFamily: "IBMPlexSans-SemiBold",
@@ -728,7 +1179,6 @@ const styles = StyleSheet.create((theme) => ({
         letterSpacing: -0.2,
         marginBottom: 12
     },
-
     // Type cards
     typeCardsScroll: {
         gap: 10,
@@ -759,7 +1209,6 @@ const styles = StyleSheet.create((theme) => ({
         letterSpacing: 0.3,
         textTransform: "uppercase"
     },
-
     // Categories
     categoriesContainer: {
         gap: 20
@@ -767,7 +1216,6 @@ const styles = StyleSheet.create((theme) => ({
     categoryGroup: {
         gap: 8
     },
-
     // Category header
     catHeader: {
         flexDirection: "row",
@@ -799,12 +1247,10 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 12
     },
-
     // Asset list
     assetsList: {
         gap: 8
     },
-
     // Asset row
     assetRow: {
         borderRadius: 12,
@@ -821,7 +1267,6 @@ const styles = StyleSheet.create((theme) => ({
         paddingLeft: 12,
         gap: 8
     },
-
     // Asset top row
     assetTopRow: {
         flexDirection: "row",
@@ -840,7 +1285,6 @@ const styles = StyleSheet.create((theme) => ({
         alignItems: "center",
         gap: 6
     },
-
     // Format chip
     formatChip: {
         paddingHorizontal: 8,
@@ -862,7 +1306,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 9,
         letterSpacing: 0.4
     },
-
     // Version badge
     versionBadge: {
         paddingHorizontal: 7,
@@ -874,7 +1317,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 10,
         letterSpacing: 0.3
     },
-
     // Asset info row
     assetInfoRow: {
         flexDirection: "row",
@@ -895,13 +1337,11 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Asset bottom row
     assetBottomRow: {
         flexDirection: "row",
         alignItems: "center"
     },
-
     // Detail panel
     detailPanel: {
         borderTopWidth: 1,
@@ -909,7 +1349,6 @@ const styles = StyleSheet.create((theme) => ({
         gap: 16,
         marginTop: 4
     },
-
     // Preview box
     previewBox: {
         borderRadius: 10,
@@ -928,7 +1367,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 11
     },
-
     // Detail sections
     detailSection: {
         gap: 8
@@ -938,7 +1376,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         letterSpacing: -0.1
     },
-
     // Download formats row
     downloadFormatsRow: {
         flexDirection: "row",
@@ -958,7 +1395,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 12
     },
-
     // Guidelines box
     guidelinesBox: {
         flexDirection: "row",
@@ -974,7 +1410,6 @@ const styles = StyleSheet.create((theme) => ({
         lineHeight: 18,
         flex: 1
     },
-
     // Usage history
     usageHistoryList: {
         gap: 0

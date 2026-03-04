@@ -2,9 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 interface Product {
     id: string;
@@ -187,19 +187,19 @@ const mockProducts: Product[] = [
 // --- Helpers ---
 
 function formatCurrency(amount: number): string {
-    return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `$${amount.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    })}`;
 }
-
 function isLowStock(product: Product): boolean {
     return product.currentStock < product.reorderPoint;
 }
-
 function stockRatio(product: Product): number {
     // Ratio relative to twice the reorder point as a reasonable "full" stock level
     const fullLevel = product.reorderPoint * 3;
     return Math.min(product.currentStock / fullLevel, 1);
 }
-
 function categoryIcon(category: string): keyof typeof Ionicons.glyphMap {
     switch (category) {
         case "Electronics":
@@ -214,7 +214,6 @@ function categoryIcon(category: string): keyof typeof Ionicons.glyphMap {
             return "cube-outline";
     }
 }
-
 const supplierColors: Record<string, string> = {
     "SoundTech Co.": "#6366F1",
     "ConnectPro Ltd.": "#3B82F6",
@@ -225,7 +224,6 @@ const supplierColors: Record<string, string> = {
     "GreenLeaf Supply": "#14B8A6",
     "FitPro Wholesale": "#EF4444"
 };
-
 function getSupplierColor(supplier: string): string {
     return supplierColors[supplier] ?? "#6B7280";
 }
@@ -244,35 +242,90 @@ function ReorderBanner({
 }) {
     const { theme } = useUnistyles();
     const visibleItems = items.filter((p) => !dismissedIds.has(p.id));
-
     if (visibleItems.length === 0) return null;
-
     return (
-        <View style={[styles.bannerContainer, { backgroundColor: `${theme.colors.error}10` }]}>
+        <View
+            style={[
+                styles.bannerContainer,
+                {
+                    backgroundColor: `${theme.colors.error}10`
+                }
+            ]}
+        >
             <View style={styles.bannerHeader}>
-                <View style={[styles.bannerIconCircle, { backgroundColor: `${theme.colors.error}20` }]}>
+                <View
+                    style={[
+                        styles.bannerIconCircle,
+                        {
+                            backgroundColor: `${theme.colors.error}20`
+                        }
+                    ]}
+                >
                     <Ionicons name="warning-outline" size={20} color={theme.colors.error} />
                 </View>
                 <View style={styles.bannerHeaderText}>
-                    <Text style={[styles.bannerTitle, { color: theme.colors.error }]}>Reorder Required</Text>
-                    <Text style={[styles.bannerSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            styles.bannerTitle,
+                            {
+                                color: theme.colors.error
+                            }
+                        ]}
+                    >
+                        Reorder Required
+                    </Text>
+                    <Text
+                        style={[
+                            styles.bannerSubtitle,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {visibleItems.length} item{visibleItems.length !== 1 ? "s" : ""} below reorder point
                     </Text>
                 </View>
             </View>
             <View style={styles.bannerItemsList}>
                 {visibleItems.map((product) => (
-                    <View key={product.id} style={[styles.bannerItem, { borderColor: `${theme.colors.error}30` }]}>
+                    <View
+                        key={product.id}
+                        style={[
+                            styles.bannerItem,
+                            {
+                                borderColor: `${theme.colors.error}30`
+                            }
+                        ]}
+                    >
                         <View style={styles.bannerItemInfo}>
-                            <View style={[styles.bannerStockDot, { backgroundColor: theme.colors.error }]} />
+                            <View
+                                style={[
+                                    styles.bannerStockDot,
+                                    {
+                                        backgroundColor: theme.colors.error
+                                    }
+                                ]}
+                            />
                             <View style={styles.bannerItemTextCol}>
                                 <Text
-                                    style={[styles.bannerItemName, { color: theme.colors.onSurface }]}
+                                    style={[
+                                        styles.bannerItemName,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
                                     numberOfLines={1}
                                 >
                                     {product.name}
                                 </Text>
-                                <Text style={[styles.bannerItemDetail, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.bannerItemDetail,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     {product.currentStock} left / reorder at {product.reorderPoint}
                                 </Text>
                             </View>
@@ -280,7 +333,11 @@ function ReorderBanner({
                         <Pressable
                             onPress={() => onDismiss(product.id)}
                             hitSlop={8}
-                            style={({ pressed }) => [pressed && { opacity: 0.6 }]}
+                            style={({ pressed }) => [
+                                pressed && {
+                                    opacity: 0.6
+                                }
+                            ]}
                         >
                             <Ionicons name="close-circle" size={20} color={`${theme.colors.error}80`} />
                         </Pressable>
@@ -303,24 +360,75 @@ function MetricCard({
     iconColor: string;
     label: string;
     value: string;
-    badge?: { text: string; color: string };
+    badge?: {
+        text: string;
+        color: string;
+    };
 }) {
     const { theme } = useUnistyles();
     return (
-        <View style={[styles.metricCard, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Card
+            style={[
+                styles.metricCard,
+                {
+                    backgroundColor: theme.colors.surfaceContainer
+                }
+            ]}
+        >
             <View style={styles.metricCardTop}>
-                <View style={[styles.metricIconCircle, { backgroundColor: `${iconColor}18` }]}>
+                <View
+                    style={[
+                        styles.metricIconCircle,
+                        {
+                            backgroundColor: `${iconColor}18`
+                        }
+                    ]}
+                >
                     <Ionicons name={icon} size={18} color={iconColor} />
                 </View>
                 {badge && (
-                    <View style={[styles.metricBadge, { backgroundColor: `${badge.color}18` }]}>
-                        <Text style={[styles.metricBadgeText, { color: badge.color }]}>{badge.text}</Text>
+                    <View
+                        style={[
+                            styles.metricBadge,
+                            {
+                                backgroundColor: `${badge.color}18`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.metricBadgeText,
+                                {
+                                    color: badge.color
+                                }
+                            ]}
+                        >
+                            {badge.text}
+                        </Text>
                     </View>
                 )}
             </View>
-            <Text style={[styles.metricValue, { color: theme.colors.onSurface }]}>{value}</Text>
-            <Text style={[styles.metricLabel, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
-        </View>
+            <Text
+                style={[
+                    styles.metricValue,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            <Text
+                style={[
+                    styles.metricLabel,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {label}
+            </Text>
+        </Card>
     );
 }
 
@@ -331,10 +439,16 @@ function StockBar({ product, errorColor }: { product: Product; errorColor: strin
     const low = isLowStock(product);
     const barColor = low ? errorColor : theme.colors.primary;
     const reorderRatio = product.reorderPoint / (product.reorderPoint * 3);
-
     return (
         <View style={styles.stockBarContainer}>
-            <View style={[styles.stockBarTrack, { backgroundColor: theme.colors.outlineVariant }]}>
+            <View
+                style={[
+                    styles.stockBarTrack,
+                    {
+                        backgroundColor: theme.colors.outlineVariant
+                    }
+                ]}
+            >
                 <View
                     style={[
                         styles.stockBarFill,
@@ -372,9 +486,15 @@ function ProductRow({
     const { theme } = useUnistyles();
     const low = isLowStock(product);
     const supplierColor = getSupplierColor(product.supplier);
-
     return (
-        <Pressable onPress={onToggle} style={({ pressed }) => [pressed && { opacity: 0.92 }]}>
+        <Pressable
+            onPress={onToggle}
+            style={({ pressed }) => [
+                pressed && {
+                    opacity: 0.92
+                }
+            ]}
+        >
             <View
                 style={[
                     styles.productRow,
@@ -385,20 +505,58 @@ function ProductRow({
                 ]}
             >
                 {/* Left accent for low stock */}
-                {low && <View style={[styles.productLowStripe, { backgroundColor: theme.colors.error }]} />}
+                {low && (
+                    <View
+                        style={[
+                            styles.productLowStripe,
+                            {
+                                backgroundColor: theme.colors.error
+                            }
+                        ]}
+                    />
+                )}
 
-                <View style={[styles.productRowContent, !low && { paddingLeft: 14 }]}>
+                <View
+                    style={[
+                        styles.productRowContent,
+                        !low && {
+                            paddingLeft: 14
+                        }
+                    ]}
+                >
                     {/* Top: Name and Price */}
                     <View style={styles.productTopRow}>
                         <View style={styles.productNameCol}>
-                            <Text style={[styles.productName, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                            <Text
+                                style={[
+                                    styles.productName,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                                numberOfLines={1}
+                            >
                                 {product.name}
                             </Text>
-                            <Text style={[styles.productSku, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.productSku,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {product.sku}
                             </Text>
                         </View>
-                        <Text style={[styles.productPrice, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                styles.productPrice,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {formatCurrency(product.unitPrice)}
                         </Text>
                     </View>
@@ -409,13 +567,31 @@ function ProductRow({
                             <Text
                                 style={[
                                     styles.productStockValue,
-                                    { color: low ? theme.colors.error : theme.colors.onSurface }
+                                    {
+                                        color: low ? theme.colors.error : theme.colors.onSurface
+                                    }
                                 ]}
                             >
                                 {product.currentStock}
                             </Text>
-                            <Text style={[styles.productStockSep, { color: theme.colors.outline }]}>/</Text>
-                            <Text style={[styles.productReorderValue, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.productStockSep,
+                                    {
+                                        color: theme.colors.outline
+                                    }
+                                ]}
+                            >
+                                /
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.productReorderValue,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {product.reorderPoint}
                             </Text>
                             {low && (
@@ -423,7 +599,9 @@ function ProductRow({
                                     name="arrow-down"
                                     size={12}
                                     color={theme.colors.error}
-                                    style={{ marginLeft: 2 }}
+                                    style={{
+                                        marginLeft: 2
+                                    }}
                                 />
                             )}
                         </View>
@@ -432,9 +610,32 @@ function ProductRow({
 
                     {/* Bottom: Supplier badge */}
                     <View style={styles.productBottomRow}>
-                        <View style={[styles.supplierBadge, { backgroundColor: `${supplierColor}14` }]}>
-                            <View style={[styles.supplierDot, { backgroundColor: supplierColor }]} />
-                            <Text style={[styles.supplierText, { color: supplierColor }]}>{product.supplier}</Text>
+                        <View
+                            style={[
+                                styles.supplierBadge,
+                                {
+                                    backgroundColor: `${supplierColor}14`
+                                }
+                            ]}
+                        >
+                            <View
+                                style={[
+                                    styles.supplierDot,
+                                    {
+                                        backgroundColor: supplierColor
+                                    }
+                                ]}
+                            />
+                            <Text
+                                style={[
+                                    styles.supplierText,
+                                    {
+                                        color: supplierColor
+                                    }
+                                ]}
+                            >
+                                {product.supplier}
+                            </Text>
                         </View>
                         <Ionicons
                             name={isExpanded ? "chevron-up" : "chevron-down"}
@@ -445,40 +646,101 @@ function ProductRow({
 
                     {/* Expanded details */}
                     {isExpanded && (
-                        <View style={[styles.productExpanded, { borderTopColor: theme.colors.outlineVariant }]}>
+                        <View
+                            style={[
+                                styles.productExpanded,
+                                {
+                                    borderTopColor: theme.colors.outlineVariant
+                                }
+                            ]}
+                        >
                             <View style={styles.expandedRow}>
                                 <Ionicons name="location-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                                <Text style={[styles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Location
                                 </Text>
-                                <Text style={[styles.expandedValue, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedValue,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {product.location}
                                 </Text>
                             </View>
                             <View style={styles.expandedRow}>
                                 <Ionicons name="refresh-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                                <Text style={[styles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Last Restocked
                                 </Text>
-                                <Text style={[styles.expandedValue, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedValue,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {product.lastRestocked}
                                 </Text>
                             </View>
                             <View style={styles.expandedRow}>
                                 <Ionicons name="cash-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                                <Text style={[styles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Stock Value
                                 </Text>
-                                <Text style={[styles.expandedValue, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedValue,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {formatCurrency(product.currentStock * product.unitPrice)}
                                 </Text>
                             </View>
                             {low && (
                                 <View
-                                    style={[styles.expandedReorderNote, { backgroundColor: `${theme.colors.error}10` }]}
+                                    style={[
+                                        styles.expandedReorderNote,
+                                        {
+                                            backgroundColor: `${theme.colors.error}10`
+                                        }
+                                    ]}
                                 >
                                     <Ionicons name="alert-circle" size={14} color={theme.colors.error} />
-                                    <Text style={[styles.expandedReorderText, { color: theme.colors.error }]}>
+                                    <Text
+                                        style={[
+                                            styles.expandedReorderText,
+                                            {
+                                                color: theme.colors.error
+                                            }
+                                        ]}
+                                    >
                                         Need to order {product.reorderPoint - product.currentStock} more units to reach
                                         reorder point
                                     </Text>
@@ -496,18 +758,60 @@ function ProductRow({
 function CategoryHeader({ category, count, totalValue }: { category: string; count: number; totalValue: number }) {
     const { theme } = useUnistyles();
     const icon = categoryIcon(category);
-
     return (
         <View style={styles.categoryHeader}>
-            <View style={[styles.categoryIconCircle, { backgroundColor: `${theme.colors.primary}18` }]}>
+            <View
+                style={[
+                    styles.categoryIconCircle,
+                    {
+                        backgroundColor: `${theme.colors.primary}18`
+                    }
+                ]}
+            >
                 <Ionicons name={icon} size={16} color={theme.colors.primary} />
             </View>
-            <Text style={[styles.categoryName, { color: theme.colors.onSurface }]}>{category}</Text>
-            <View style={[styles.categoryCountBadge, { backgroundColor: `${theme.colors.primary}18` }]}>
-                <Text style={[styles.categoryCountText, { color: theme.colors.primary }]}>{count}</Text>
+            <Text
+                style={[
+                    styles.categoryName,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {category}
+            </Text>
+            <View
+                style={[
+                    styles.categoryCountBadge,
+                    {
+                        backgroundColor: `${theme.colors.primary}18`
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.categoryCountText,
+                        {
+                            color: theme.colors.primary
+                        }
+                    ]}
+                >
+                    {count}
+                </Text>
             </View>
-            <View style={{ flex: 1 }} />
-            <Text style={[styles.categoryValue, { color: theme.colors.onSurfaceVariant }]}>
+            <View
+                style={{
+                    flex: 1
+                }}
+            />
+            <Text
+                style={[
+                    styles.categoryValue,
+                    {
+                        color: theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
                 {formatCurrency(totalValue)}
             </Text>
         </View>
@@ -541,11 +845,9 @@ export function InventoryManagementPage() {
         }
         return map;
     }, []);
-
     const handleToggleProduct = React.useCallback((productId: string) => {
         setExpandedProductId((prev) => (prev === productId ? null : productId));
     }, []);
-
     const handleDismissAlert = React.useCallback((productId: string) => {
         setDismissedAlerts((prev) => {
             const next = new Set(prev);
@@ -553,7 +855,6 @@ export function InventoryManagementPage() {
             return next;
         });
     }, []);
-
     return (
         <ShowcasePage topInset={20} bottomInset={48}>
             {/* Reorder Alert Banner */}
@@ -572,7 +873,10 @@ export function InventoryManagementPage() {
                     iconColor={theme.colors.error}
                     label="Low Stock"
                     value={String(lowStockItems.length)}
-                    badge={{ text: "ALERT", color: theme.colors.error }}
+                    badge={{
+                        text: "ALERT",
+                        color: theme.colors.error
+                    }}
                 />
                 <MetricCard
                     icon="wallet-outline"
@@ -583,50 +887,152 @@ export function InventoryManagementPage() {
             </View>
 
             {/* Stock Overview Mini Stats */}
-            <View style={[styles.overviewCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-                <Text style={[styles.overviewTitle, { color: theme.colors.onSurface }]}>Stock Overview</Text>
+            <Card
+                style={[
+                    styles.overviewCard,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.overviewTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Stock Overview
+                </Text>
                 <View style={styles.overviewStatsRow}>
                     <View style={styles.overviewStat}>
-                        <Text style={[styles.overviewStatValue, { color: theme.colors.primary }]}>
+                        <Text
+                            style={[
+                                styles.overviewStatValue,
+                                {
+                                    color: theme.colors.primary
+                                }
+                            ]}
+                        >
                             {mockProducts.filter((p) => p.currentStock >= p.reorderPoint * 2).length}
                         </Text>
-                        <Text style={[styles.overviewStatLabel, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.overviewStatLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Well Stocked
                         </Text>
                     </View>
-                    <View style={[styles.overviewDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                    <View
+                        style={[
+                            styles.overviewDivider,
+                            {
+                                backgroundColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    />
                     <View style={styles.overviewStat}>
-                        <Text style={[styles.overviewStatValue, { color: "#F59E0B" }]}>
+                        <Text
+                            style={[
+                                styles.overviewStatValue,
+                                {
+                                    color: "#F59E0B"
+                                }
+                            ]}
+                        >
                             {mockProducts.filter((p) => !isLowStock(p) && p.currentStock < p.reorderPoint * 2).length}
                         </Text>
-                        <Text style={[styles.overviewStatLabel, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.overviewStatLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Adequate
                         </Text>
                     </View>
-                    <View style={[styles.overviewDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                    <View
+                        style={[
+                            styles.overviewDivider,
+                            {
+                                backgroundColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    />
                     <View style={styles.overviewStat}>
-                        <Text style={[styles.overviewStatValue, { color: theme.colors.error }]}>
+                        <Text
+                            style={[
+                                styles.overviewStatValue,
+                                {
+                                    color: theme.colors.error
+                                }
+                            ]}
+                        >
                             {lowStockItems.length}
                         </Text>
-                        <Text style={[styles.overviewStatLabel, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.overviewStatLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Low Stock
                         </Text>
                     </View>
-                    <View style={[styles.overviewDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                    <View
+                        style={[
+                            styles.overviewDivider,
+                            {
+                                backgroundColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                    />
                     <View style={styles.overviewStat}>
-                        <Text style={[styles.overviewStatValue, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                styles.overviewStatValue,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {new Set(mockProducts.map((p) => p.supplier)).size}
                         </Text>
-                        <Text style={[styles.overviewStatLabel, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                styles.overviewStatLabel,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             Suppliers
                         </Text>
                     </View>
                 </View>
-            </View>
+            </Card>
 
             {/* Products grouped by category */}
             <View style={styles.categoriesContainer}>
-                <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Products by Category</Text>
+                <Text
+                    style={[
+                        styles.sectionTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Products by Category
+                </Text>
                 {Array.from(categories.entries()).map(([category, products]) => {
                     const categoryValue = products.reduce((sum, p) => sum + p.currentStock * p.unitPrice, 0);
                     return (
@@ -652,7 +1058,7 @@ export function InventoryManagementPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Reorder banner
     bannerContainer: {
         borderRadius: 14,
@@ -720,7 +1126,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 11
     },
-
     // Metrics row
     metricsRow: {
         flexDirection: "row",
@@ -766,7 +1171,6 @@ const styles = StyleSheet.create((theme) => ({
         letterSpacing: 0.3,
         textTransform: "uppercase"
     },
-
     // Overview card
     overviewCard: {
         borderRadius: 14,
@@ -803,7 +1207,6 @@ const styles = StyleSheet.create((theme) => ({
         width: 1,
         height: 30
     },
-
     // Categories container
     categoriesContainer: {
         gap: 20
@@ -816,7 +1219,6 @@ const styles = StyleSheet.create((theme) => ({
     categoryGroup: {
         gap: 8
     },
-
     // Category header
     categoryHeader: {
         flexDirection: "row",
@@ -850,12 +1252,10 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 12
     },
-
     // Product list
     productsList: {
         gap: 8
     },
-
     // Product row
     productRow: {
         borderRadius: 12,
@@ -872,7 +1272,6 @@ const styles = StyleSheet.create((theme) => ({
         paddingLeft: 10,
         gap: 10
     },
-
     // Product top row
     productTopRow: {
         flexDirection: "row",
@@ -897,7 +1296,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 15,
         letterSpacing: -0.3
     },
-
     // Stock section
     productStockSection: {
         gap: 6
@@ -919,7 +1317,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
-
     // Stock bar
     stockBarContainer: {
         width: "100%"
@@ -941,7 +1338,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 8,
         borderRadius: 1
     },
-
     // Product bottom row
     productBottomRow: {
         flexDirection: "row",
@@ -965,7 +1361,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
-
     // Expanded product details
     productExpanded: {
         borderTopWidth: 1,

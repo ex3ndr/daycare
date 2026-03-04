@@ -1,18 +1,17 @@
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
+import { Grid } from "@/components/Grid";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type InvoiceStatus = "overdue" | "pending" | "paid";
-
 interface LineItem {
     description: string;
     hours: number;
     rate: number;
 }
-
 interface Invoice {
     id: string;
     invoiceNumber: string;
@@ -35,9 +34,21 @@ const mockInvoices: Invoice[] = [
         dueDate: "Feb 12, 2026",
         status: "overdue",
         lineItems: [
-            { description: "Brand identity redesign", hours: 20, rate: 150 },
-            { description: "Stationery design", hours: 10, rate: 125 },
-            { description: "Brand guidelines document", hours: 5, rate: 100 }
+            {
+                description: "Brand identity redesign",
+                hours: 20,
+                rate: 150
+            },
+            {
+                description: "Stationery design",
+                hours: 10,
+                rate: 125
+            },
+            {
+                description: "Brand guidelines document",
+                hours: 5,
+                rate: 100
+            }
         ],
         notes: "Net 30. Second follow-up sent Feb 20."
     },
@@ -48,7 +59,13 @@ const mockInvoices: Invoice[] = [
         amount: 1800.0,
         dueDate: "Feb 5, 2026",
         status: "overdue",
-        lineItems: [{ description: "Website copywriting", hours: 12, rate: 150 }],
+        lineItems: [
+            {
+                description: "Website copywriting",
+                hours: 12,
+                rate: 150
+            }
+        ],
         notes: "Client requested extension previously. Follow up ASAP."
     },
     {
@@ -59,8 +76,16 @@ const mockInvoices: Invoice[] = [
         dueDate: "Feb 18, 2026",
         status: "overdue",
         lineItems: [
-            { description: "Dashboard UI design", hours: 32, rate: 175 },
-            { description: "Design system tokens", hours: 8, rate: 150 }
+            {
+                description: "Dashboard UI design",
+                hours: 32,
+                rate: 175
+            },
+            {
+                description: "Design system tokens",
+                hours: 8,
+                rate: 150
+            }
         ],
         notes: "Sent reminder on Feb 25. Awaiting AP department response."
     },
@@ -72,8 +97,16 @@ const mockInvoices: Invoice[] = [
         dueDate: "Mar 15, 2026",
         status: "pending",
         lineItems: [
-            { description: "Mobile app wireframes", hours: 16, rate: 150 },
-            { description: "Usability review", hours: 8, rate: 150 }
+            {
+                description: "Mobile app wireframes",
+                hours: 16,
+                rate: 150
+            },
+            {
+                description: "Usability review",
+                hours: 8,
+                rate: 150
+            }
         ],
         notes: "Due on delivery of final wireframes."
     },
@@ -84,7 +117,13 @@ const mockInvoices: Invoice[] = [
         amount: 2100.0,
         dueDate: "Mar 20, 2026",
         status: "pending",
-        lineItems: [{ description: "Packaging illustration", hours: 14, rate: 150 }],
+        lineItems: [
+            {
+                description: "Packaging illustration",
+                hours: 14,
+                rate: 150
+            }
+        ],
         notes: "Net 30 from invoice date."
     },
     {
@@ -95,8 +134,16 @@ const mockInvoices: Invoice[] = [
         dueDate: "Mar 28, 2026",
         status: "pending",
         lineItems: [
-            { description: "Pitch deck design", hours: 25, rate: 175 },
-            { description: "Financial charts", hours: 10, rate: 150 }
+            {
+                description: "Pitch deck design",
+                hours: 25,
+                rate: 175
+            },
+            {
+                description: "Financial charts",
+                hours: 10,
+                rate: 150
+            }
         ],
         notes: "Half upfront received. Remainder on completion."
     },
@@ -107,7 +154,13 @@ const mockInvoices: Invoice[] = [
         amount: 900.0,
         dueDate: "Mar 31, 2026",
         status: "pending",
-        lineItems: [{ description: "Data visualization consulting", hours: 6, rate: 150 }],
+        lineItems: [
+            {
+                description: "Data visualization consulting",
+                hours: 6,
+                rate: 150
+            }
+        ],
         notes: ""
     },
     {
@@ -118,8 +171,16 @@ const mockInvoices: Invoice[] = [
         dueDate: "Jan 25, 2026",
         status: "paid",
         lineItems: [
-            { description: "Patient portal UX audit", hours: 30, rate: 175 },
-            { description: "Redesign mockups", hours: 20, rate: 150 }
+            {
+                description: "Patient portal UX audit",
+                hours: 30,
+                rate: 175
+            },
+            {
+                description: "Redesign mockups",
+                hours: 20,
+                rate: 150
+            }
         ],
         notes: "Paid via wire transfer Feb 28."
     },
@@ -130,7 +191,13 @@ const mockInvoices: Invoice[] = [
         amount: 2400.0,
         dueDate: "Feb 1, 2026",
         status: "paid",
-        lineItems: [{ description: "Property listing page redesign", hours: 16, rate: 150 }],
+        lineItems: [
+            {
+                description: "Property listing page redesign",
+                hours: 16,
+                rate: 150
+            }
+        ],
         notes: "Paid Mar 1 via check."
     },
     {
@@ -141,8 +208,16 @@ const mockInvoices: Invoice[] = [
         dueDate: "Feb 10, 2026",
         status: "paid",
         lineItems: [
-            { description: "Game UI concept art", hours: 18, rate: 150 },
-            { description: "Icon set (48 icons)", hours: 12, rate: 100 }
+            {
+                description: "Game UI concept art",
+                hours: 18,
+                rate: 150
+            },
+            {
+                description: "Icon set (48 icons)",
+                hours: 12,
+                rate: 100
+            }
         ],
         notes: "Paid Feb 28. Repeat client."
     },
@@ -154,8 +229,16 @@ const mockInvoices: Invoice[] = [
         dueDate: "Feb 15, 2026",
         status: "paid",
         lineItems: [
-            { description: "Menu board design", hours: 6, rate: 125 },
-            { description: "Social media templates", hours: 4, rate: 100 }
+            {
+                description: "Menu board design",
+                hours: 6,
+                rate: 125
+            },
+            {
+                description: "Social media templates",
+                hours: 4,
+                rate: 100
+            }
         ],
         notes: "Paid early. Great client."
     }
@@ -164,15 +247,21 @@ const mockInvoices: Invoice[] = [
 // --- Helpers ---
 
 function formatCurrency(amount: number): string {
-    return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `$${amount.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    })}`;
 }
-
-function statusColorForTheme(status: InvoiceStatus, theme: { colors: Record<string, string> }): string {
+function statusColorForTheme(
+    status: InvoiceStatus,
+    theme: {
+        colors: Record<string, string>;
+    }
+): string {
     if (status === "overdue") return theme.colors.error;
     if (status === "pending") return theme.colors.primary;
     return theme.colors.tertiary;
 }
-
 function statusLabel(status: InvoiceStatus): string {
     if (status === "overdue") return "OVERDUE";
     if (status === "pending") return "PENDING";
@@ -193,15 +282,55 @@ function StatusCard({
     tintColor: string;
 }) {
     return (
-        <View style={[styles.statusCard, { backgroundColor: `${tintColor}14` }]}>
-            <View style={[styles.statusCardStripe, { backgroundColor: tintColor }]} />
-            <Text style={[styles.statusCardLabel, { color: tintColor }]}>{label}</Text>
-            <Text style={[styles.statusCardCount, { color: tintColor }]}>{count}</Text>
-            <Text style={[styles.statusCardTotal, { color: `${tintColor}BB` }]}>{formatCurrency(total)}</Text>
-        </View>
+        <Card
+            style={[
+                styles.statusCard,
+                {
+                    backgroundColor: `${tintColor}14`
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.statusCardStripe,
+                    {
+                        backgroundColor: tintColor
+                    }
+                ]}
+            />
+            <Text
+                style={[
+                    styles.statusCardLabel,
+                    {
+                        color: tintColor
+                    }
+                ]}
+            >
+                {label}
+            </Text>
+            <Text
+                style={[
+                    styles.statusCardCount,
+                    {
+                        color: tintColor
+                    }
+                ]}
+            >
+                {count}
+            </Text>
+            <Text
+                style={[
+                    styles.statusCardTotal,
+                    {
+                        color: `${tintColor}BB`
+                    }
+                ]}
+            >
+                {formatCurrency(total)}
+            </Text>
+        </Card>
     );
 }
-
 function InvoiceCard({
     invoice,
     onPress,
@@ -211,23 +340,58 @@ function InvoiceCard({
     onPress: () => void;
     statusColor: string;
 }) {
-    const { theme } = useUnistyles();
     return (
-        <Pressable onPress={onPress} style={({ pressed }) => [styles.invoiceCard, pressed && { opacity: 0.85 }]}>
-            <View style={[styles.invoiceCardBar, { backgroundColor: statusColor }]} />
+        <Pressable
+            onPress={onPress}
+            style={({ pressed }) => [
+                styles.invoiceCard,
+                pressed && {
+                    opacity: 0.85
+                }
+            ]}
+        >
+            <View
+                style={[
+                    styles.invoiceCardBar,
+                    {
+                        backgroundColor: statusColor
+                    }
+                ]}
+            />
             <View style={styles.invoiceCardContent}>
                 <View style={styles.invoiceCardTopRow}>
                     <Text style={styles.invoiceCardClient} numberOfLines={1}>
                         {invoice.clientName}
                     </Text>
-                    <Text style={[styles.invoiceCardAmount, { color: statusColor }]}>
+                    <Text
+                        style={[
+                            styles.invoiceCardAmount,
+                            {
+                                color: statusColor
+                            }
+                        ]}
+                    >
                         {formatCurrency(invoice.amount)}
                     </Text>
                 </View>
                 <View style={styles.invoiceCardBottomRow}>
                     <Text style={styles.invoiceCardMeta}>{invoice.invoiceNumber}</Text>
-                    <View style={[styles.invoiceCardBadge, { backgroundColor: `${statusColor}18` }]}>
-                        <Text style={[styles.invoiceCardBadgeText, { color: statusColor }]}>
+                    <View
+                        style={[
+                            styles.invoiceCardBadge,
+                            {
+                                backgroundColor: `${statusColor}18`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.invoiceCardBadgeText,
+                                {
+                                    color: statusColor
+                                }
+                            ]}
+                        >
                             {statusLabel(invoice.status)}
                         </Text>
                     </View>
@@ -237,7 +401,6 @@ function InvoiceCard({
         </Pressable>
     );
 }
-
 function DetailOverlay({
     invoice,
     onClose,
@@ -249,17 +412,36 @@ function DetailOverlay({
 }) {
     const { theme } = useUnistyles();
     const color = statusColorForTheme(invoice.status, theme);
-
     return (
         <View style={styles.detailOverlay}>
             {/* Header */}
             <View style={styles.detailHeader}>
-                <View style={{ flex: 1 }}>
+                <View
+                    style={{
+                        flex: 1
+                    }}
+                >
                     <Text style={styles.detailInvoiceNumber}>{invoice.invoiceNumber}</Text>
                     <Text style={styles.detailClient}>{invoice.clientName}</Text>
                 </View>
-                <View style={[styles.detailStatusChip, { backgroundColor: `${color}18` }]}>
-                    <Text style={[styles.detailStatusChipText, { color }]}>{statusLabel(invoice.status)}</Text>
+                <View
+                    style={[
+                        styles.detailStatusChip,
+                        {
+                            backgroundColor: `${color}18`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.detailStatusChipText,
+                            {
+                                color
+                            }
+                        ]}
+                    >
+                        {statusLabel(invoice.status)}
+                    </Text>
                 </View>
             </View>
 
@@ -267,9 +449,25 @@ function DetailOverlay({
             <View style={styles.detailSummaryRow}>
                 <View style={styles.detailSummaryItem}>
                     <Text style={styles.detailSummaryLabel}>TOTAL AMOUNT</Text>
-                    <Text style={[styles.detailSummaryValue, { color }]}>{formatCurrency(invoice.amount)}</Text>
+                    <Text
+                        style={[
+                            styles.detailSummaryValue,
+                            {
+                                color
+                            }
+                        ]}
+                    >
+                        {formatCurrency(invoice.amount)}
+                    </Text>
                 </View>
-                <View style={[styles.detailSummaryDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                <View
+                    style={[
+                        styles.detailSummaryDivider,
+                        {
+                            backgroundColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                />
                 <View style={styles.detailSummaryItem}>
                     <Text style={styles.detailSummaryLabel}>DUE DATE</Text>
                     <Text style={styles.detailSummaryDateValue}>{invoice.dueDate}</Text>
@@ -280,12 +478,21 @@ function DetailOverlay({
             <View style={styles.detailTableSection}>
                 <Text style={styles.detailSectionTitle}>Line Items</Text>
                 {/* Table header */}
-                <View style={[styles.detailTableHeaderRow, { borderBottomColor: theme.colors.outlineVariant }]}>
+                <View
+                    style={[
+                        styles.detailTableHeaderRow,
+                        {
+                            borderBottomColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                >
                     <Text
                         style={[
                             styles.detailTableHeaderCell,
                             styles.detailTableDescCol,
-                            { color: theme.colors.onSurfaceVariant }
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
                         ]}
                     >
                         Description
@@ -294,7 +501,9 @@ function DetailOverlay({
                         style={[
                             styles.detailTableHeaderCell,
                             styles.detailTableNumCol,
-                            { color: theme.colors.onSurfaceVariant }
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
                         ]}
                     >
                         Hours
@@ -303,7 +512,9 @@ function DetailOverlay({
                         style={[
                             styles.detailTableHeaderCell,
                             styles.detailTableNumCol,
-                            { color: theme.colors.onSurfaceVariant }
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
                         ]}
                     >
                         Rate
@@ -312,7 +523,9 @@ function DetailOverlay({
                         style={[
                             styles.detailTableHeaderCell,
                             styles.detailTableNumCol,
-                            { color: theme.colors.onSurfaceVariant }
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
                         ]}
                     >
                         Total
@@ -334,7 +547,9 @@ function DetailOverlay({
                             style={[
                                 styles.detailTableCell,
                                 styles.detailTableDescCol,
-                                { color: theme.colors.onSurface }
+                                {
+                                    color: theme.colors.onSurface
+                                }
                             ]}
                         >
                             {li.description}
@@ -343,7 +558,9 @@ function DetailOverlay({
                             style={[
                                 styles.detailTableCell,
                                 styles.detailTableNumCol,
-                                { color: theme.colors.onSurfaceVariant }
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
                             ]}
                         >
                             {li.hours}h
@@ -352,7 +569,9 @@ function DetailOverlay({
                             style={[
                                 styles.detailTableCell,
                                 styles.detailTableNumCol,
-                                { color: theme.colors.onSurfaceVariant }
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
                             ]}
                         >
                             {formatCurrency(li.rate)}
@@ -361,7 +580,9 @@ function DetailOverlay({
                             style={[
                                 styles.detailTableCell,
                                 styles.detailTableNumCol,
-                                { color: theme.colors.onSurface }
+                                {
+                                    color: theme.colors.onSurface
+                                }
                             ]}
                         >
                             {formatCurrency(li.hours * li.rate)}
@@ -385,8 +606,12 @@ function DetailOverlay({
                         onPress={() => onMarkPaid(invoice.id)}
                         style={({ pressed }) => [
                             styles.actionButton,
-                            { backgroundColor: theme.colors.primary },
-                            pressed && { opacity: 0.85 }
+                            {
+                                backgroundColor: theme.colors.primary
+                            },
+                            pressed && {
+                                opacity: 0.85
+                            }
                         ]}
                     >
                         <Text style={styles.actionButtonText}>Mark as Paid</Text>
@@ -396,11 +621,24 @@ function DetailOverlay({
                     onPress={onClose}
                     style={({ pressed }) => [
                         styles.actionButtonSecondary,
-                        { borderColor: theme.colors.outlineVariant },
-                        pressed && { opacity: 0.85 }
+                        {
+                            borderColor: theme.colors.outlineVariant
+                        },
+                        pressed && {
+                            opacity: 0.85
+                        }
                     ]}
                 >
-                    <Text style={[styles.actionButtonSecondaryText, { color: theme.colors.onSurface }]}>Close</Text>
+                    <Text
+                        style={[
+                            styles.actionButtonSecondaryText,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        Close
+                    </Text>
                 </Pressable>
             </View>
         </View>
@@ -417,23 +655,28 @@ export function InvoiceTrackerPage() {
     const { theme } = useUnistyles();
     const [selectedInvoice, setSelectedInvoice] = React.useState<Invoice | null>(null);
     const [invoices, setInvoices] = React.useState<Invoice[]>(mockInvoices);
-
     const overdue = invoices.filter((inv) => inv.status === "overdue");
     const pending = invoices.filter((inv) => inv.status === "pending");
     const paid = invoices.filter((inv) => inv.status === "paid");
-
     const totalOutstanding = [...overdue, ...pending].reduce((sum, inv) => sum + inv.amount, 0);
     const totalPaid = paid.reduce((sum, inv) => sum + inv.amount, 0);
     const invoiceCount = invoices.length;
-
     const handleMarkPaid = React.useCallback((id: string) => {
-        setInvoices((prev) => prev.map((inv) => (inv.id === id ? { ...inv, status: "paid" as InvoiceStatus } : inv)));
+        setInvoices((prev) =>
+            prev.map((inv) =>
+                inv.id === id
+                    ? {
+                          ...inv,
+                          status: "paid" as InvoiceStatus
+                      }
+                    : inv
+            )
+        );
         setSelectedInvoice(null);
     }, []);
 
     // Resolve the current state of the selected invoice (in case status changed)
     const currentSelected = selectedInvoice ? (invoices.find((inv) => inv.id === selectedInvoice.id) ?? null) : null;
-
     return (
         <ShowcasePage style={styles.root} topInset={20}>
             {/* Detail overlay replaces content when an invoice is selected */}
@@ -454,14 +697,35 @@ export function InvoiceTrackerPage() {
                                 <Text style={styles.heroSubValue}>{formatCurrency(totalPaid)}</Text>
                                 <Text style={styles.heroSubLabel}>Collected</Text>
                             </View>
-                            <View style={[styles.heroSubDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                            <View
+                                style={[
+                                    styles.heroSubDivider,
+                                    {
+                                        backgroundColor: theme.colors.outlineVariant
+                                    }
+                                ]}
+                            />
                             <View style={styles.heroSubMetric}>
                                 <Text style={styles.heroSubValue}>{invoiceCount}</Text>
                                 <Text style={styles.heroSubLabel}>Invoices</Text>
                             </View>
-                            <View style={[styles.heroSubDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                            <View
+                                style={[
+                                    styles.heroSubDivider,
+                                    {
+                                        backgroundColor: theme.colors.outlineVariant
+                                    }
+                                ]}
+                            />
                             <View style={styles.heroSubMetric}>
-                                <Text style={[styles.heroSubValue, { color: theme.colors.error }]}>
+                                <Text
+                                    style={[
+                                        styles.heroSubValue,
+                                        {
+                                            color: theme.colors.error
+                                        }
+                                    ]}
+                                >
                                     {overdue.length}
                                 </Text>
                                 <Text style={styles.heroSubLabel}>Overdue</Text>
@@ -494,7 +758,7 @@ export function InvoiceTrackerPage() {
                     {/* Recent Activity Section */}
                     <View style={styles.activitySection}>
                         <Text style={styles.sectionTitle}>Recent Activity</Text>
-                        <View style={styles.activityGrid}>
+                        <Grid style={styles.activityGrid}>
                             {invoices.map((inv) => (
                                 <InvoiceCard
                                     key={inv.id}
@@ -503,7 +767,7 @@ export function InvoiceTrackerPage() {
                                     statusColor={statusColorForTheme(inv.status, theme)}
                                 />
                             ))}
-                        </View>
+                        </Grid>
                     </View>
                 </>
             )}
@@ -567,7 +831,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 28,
         backgroundColor: theme.colors.outlineVariant
     },
-
     // Status cards row
     statusCardsRow: {
         flexDirection: "row",
@@ -608,7 +871,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 12,
         letterSpacing: -0.2
     },
-
     // Activity section
     activitySection: {
         gap: 12
@@ -622,7 +884,6 @@ const styles = StyleSheet.create((theme) => ({
     activityGrid: {
         gap: 8
     },
-
     // Invoice card
     invoiceCard: {
         flexDirection: "row",
@@ -681,7 +942,6 @@ const styles = StyleSheet.create((theme) => ({
         color: theme.colors.outline,
         marginTop: 2
     },
-
     // Detail overlay
     detailOverlay: {
         backgroundColor: theme.colors.surfaceContainer,
@@ -716,7 +976,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 11,
         letterSpacing: 0.5
     },
-
     // Detail summary row
     detailSummaryRow: {
         flexDirection: "row",
@@ -750,7 +1009,6 @@ const styles = StyleSheet.create((theme) => ({
         width: 1,
         height: 36
     },
-
     // Detail table
     detailTableSection: {
         gap: 8
@@ -787,7 +1045,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
-
     // Detail notes
     detailNotesSection: {
         gap: 6
@@ -798,7 +1055,6 @@ const styles = StyleSheet.create((theme) => ({
         color: theme.colors.onSurfaceVariant,
         lineHeight: 20
     },
-
     // Detail actions
     detailActions: {
         flexDirection: "row",

@@ -2,14 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type RenewalStatus = "active" | "trial" | "cancelling";
 type PaymentMethod = "Visa" | "Mastercard" | "PayPal";
 type Category = "Streaming" | "Software" | "News" | "Fitness" | "Cloud Storage";
-
 type Subscription = {
     id: string;
     name: string;
@@ -31,7 +30,6 @@ const CATEGORY_COLORS: Record<Category, string> = {
     Fitness: "#10b981",
     "Cloud Storage": "#06b6d4"
 };
-
 const CATEGORY_ICONS: Record<Category, keyof typeof Ionicons.glyphMap> = {
     Streaming: "play-circle-outline",
     Software: "code-slash-outline",
@@ -39,19 +37,31 @@ const CATEGORY_ICONS: Record<Category, keyof typeof Ionicons.glyphMap> = {
     Fitness: "barbell-outline",
     "Cloud Storage": "cloud-outline"
 };
-
-const STATUS_COLORS: Record<RenewalStatus, { bg: string; text: string }> = {
-    active: { bg: "#10b98120", text: "#10b981" },
-    trial: { bg: "#f59e0b20", text: "#f59e0b" },
-    cancelling: { bg: "#ef444420", text: "#ef4444" }
+const STATUS_COLORS: Record<
+    RenewalStatus,
+    {
+        bg: string;
+        text: string;
+    }
+> = {
+    active: {
+        bg: "#10b98120",
+        text: "#10b981"
+    },
+    trial: {
+        bg: "#f59e0b20",
+        text: "#f59e0b"
+    },
+    cancelling: {
+        bg: "#ef444420",
+        text: "#ef4444"
+    }
 };
-
 const STATUS_LABELS: Record<RenewalStatus, string> = {
     active: "Active",
     trial: "Trial",
     cancelling: "Cancelling"
 };
-
 const PAYMENT_ICONS: Record<PaymentMethod, keyof typeof Ionicons.glyphMap> = {
     Visa: "card-outline",
     Mastercard: "card-outline",
@@ -207,7 +217,6 @@ const subscriptions: Subscription[] = [
         description: "Plus plan, cancels Apr 5"
     }
 ];
-
 const CATEGORIES: Category[] = ["Streaming", "Software", "News", "Fitness", "Cloud Storage"];
 
 // Today is March 3, 2026 -- subscriptions renewing this week: billing dates 3-9
@@ -217,19 +226,19 @@ const RENEWAL_WEEK_END = 9;
 // --- Helpers ---
 
 function formatCurrency(n: number): string {
-    return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `$${n.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    })}`;
 }
-
 function getCategoryTotal(category: Category): number {
     return subscriptions.filter((s) => s.category === category).reduce((sum, s) => sum + s.monthlyCost, 0);
 }
-
 function getRenewingThisWeek(): Subscription[] {
     return subscriptions.filter(
         (s) => s.billingDate >= RENEWAL_WEEK_START && s.billingDate <= RENEWAL_WEEK_END && s.status !== "cancelling"
     );
 }
-
 const MONTHLY_TOTAL = subscriptions.reduce((sum, s) => sum + s.monthlyCost, 0);
 const ANNUAL_PROJECTION = MONTHLY_TOTAL * 12;
 const RENEWING_THIS_WEEK = getRenewingThisWeek();
@@ -239,24 +248,47 @@ const MAX_CATEGORY_TOTAL = Math.max(...CATEGORIES.map(getCategoryTotal));
 
 function RenewalBanner() {
     const { theme } = useUnistyles();
-
     if (RENEWING_THIS_WEEK.length === 0) return null;
-
     const renewalTotal = RENEWING_THIS_WEEK.reduce((sum, s) => sum + s.monthlyCost, 0);
-
     return (
         <View
             style={[
                 bannerStyles.container,
-                { backgroundColor: `${theme.colors.primary}12`, borderColor: `${theme.colors.primary}30` }
+                {
+                    backgroundColor: `${theme.colors.primary}12`,
+                    borderColor: `${theme.colors.primary}30`
+                }
             ]}
         >
-            <View style={[bannerStyles.iconWrap, { backgroundColor: `${theme.colors.primary}20` }]}>
+            <View
+                style={[
+                    bannerStyles.iconWrap,
+                    {
+                        backgroundColor: `${theme.colors.primary}20`
+                    }
+                ]}
+            >
                 <Ionicons name="calendar" size={20} color={theme.colors.primary} />
             </View>
             <View style={bannerStyles.textWrap}>
-                <Text style={[bannerStyles.title, { color: theme.colors.primary }]}>Renewing This Week</Text>
-                <Text style={[bannerStyles.body, { color: theme.colors.onSurfaceVariant }]}>
+                <Text
+                    style={[
+                        bannerStyles.title,
+                        {
+                            color: theme.colors.primary
+                        }
+                    ]}
+                >
+                    Renewing This Week
+                </Text>
+                <Text
+                    style={[
+                        bannerStyles.body,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
                     {RENEWING_THIS_WEEK.length} subscription{RENEWING_THIS_WEEK.length > 1 ? "s" : ""} renewing for{" "}
                     {formatCurrency(renewalTotal)} total
                 </Text>
@@ -264,10 +296,31 @@ function RenewalBanner() {
                     {RENEWING_THIS_WEEK.map((s) => (
                         <View
                             key={s.id}
-                            style={[bannerStyles.chip, { backgroundColor: theme.colors.surfaceContainer }]}
+                            style={[
+                                bannerStyles.chip,
+                                {
+                                    backgroundColor: theme.colors.surfaceContainer
+                                }
+                            ]}
                         >
-                            <Text style={[bannerStyles.chipText, { color: theme.colors.onSurface }]}>{s.name}</Text>
-                            <Text style={[bannerStyles.chipDate, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    bannerStyles.chipText,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
+                                {s.name}
+                            </Text>
+                            <Text
+                                style={[
+                                    bannerStyles.chipDate,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Mar {s.billingDate}
                             </Text>
                         </View>
@@ -277,8 +330,7 @@ function RenewalBanner() {
         </View>
     );
 }
-
-const bannerStyles = StyleSheet.create((theme) => ({
+const bannerStyles = StyleSheet.create((_theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "flex-start",
@@ -339,22 +391,53 @@ function CategoryBreakdownBar({ category }: { category: Category }) {
     const total = getCategoryTotal(category);
     const fraction = total / MAX_CATEGORY_TOTAL;
     const color = CATEGORY_COLORS[category];
-
     return (
         <View style={breakdownStyles.row}>
             <View style={breakdownStyles.labelWrap}>
                 <Ionicons name={CATEGORY_ICONS[category]} size={14} color={color} />
-                <Text style={[breakdownStyles.label, { color: theme.colors.onSurface }]}>{category}</Text>
+                <Text
+                    style={[
+                        breakdownStyles.label,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    {category}
+                </Text>
             </View>
-            <View style={[breakdownStyles.track, { backgroundColor: `${color}14` }]}>
-                <View style={[breakdownStyles.fill, { width: `${fraction * 100}%`, backgroundColor: color }]} />
+            <View
+                style={[
+                    breakdownStyles.track,
+                    {
+                        backgroundColor: `${color}14`
+                    }
+                ]}
+            >
+                <View
+                    style={[
+                        breakdownStyles.fill,
+                        {
+                            width: `${fraction * 100}%`,
+                            backgroundColor: color
+                        }
+                    ]}
+                />
             </View>
-            <Text style={[breakdownStyles.amount, { color: theme.colors.onSurface }]}>{formatCurrency(total)}</Text>
+            <Text
+                style={[
+                    breakdownStyles.amount,
+                    {
+                        color: theme.colors.onSurface
+                    }
+                ]}
+            >
+                {formatCurrency(total)}
+            </Text>
         </View>
     );
 }
-
-const breakdownStyles = StyleSheet.create((theme) => ({
+const breakdownStyles = StyleSheet.create((_theme) => ({
     row: {
         flexDirection: "row",
         alignItems: "center",
@@ -395,42 +478,100 @@ function SubscriptionCard({ sub, expanded, onToggle }: { sub: Subscription; expa
     const { theme } = useUnistyles();
     const statusColor = STATUS_COLORS[sub.status];
     const catColor = CATEGORY_COLORS[sub.category];
-
     return (
-        <Pressable onPress={onToggle} style={[cardStyles.container, { backgroundColor: theme.colors.surface }]}>
+        <Pressable
+            onPress={onToggle}
+            style={[
+                cardStyles.container,
+                {
+                    backgroundColor: theme.colors.surface
+                }
+            ]}
+        >
             <View style={cardStyles.mainRow}>
                 {/* Icon */}
-                <View style={[cardStyles.iconWrap, { backgroundColor: `${catColor}14` }]}>
+                <View
+                    style={[
+                        cardStyles.iconWrap,
+                        {
+                            backgroundColor: `${catColor}14`
+                        }
+                    ]}
+                >
                     <Ionicons name={sub.icon} size={22} color={catColor} />
                 </View>
 
                 {/* Info */}
                 <View style={cardStyles.info}>
-                    <Text style={[cardStyles.name, { color: theme.colors.onSurface }]}>{sub.name}</Text>
+                    <Text
+                        style={[
+                            cardStyles.name,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {sub.name}
+                    </Text>
                     <View style={cardStyles.metaRow}>
                         {/* Billing date */}
                         <View style={cardStyles.dateChip}>
                             <Ionicons name="calendar-outline" size={12} color={theme.colors.onSurfaceVariant} />
-                            <Text style={[cardStyles.dateText, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    cardStyles.dateText,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Mar {sub.billingDate}
                             </Text>
                         </View>
 
                         {/* Payment method */}
-                        <View style={[cardStyles.paymentChip, { backgroundColor: theme.colors.surfaceContainer }]}>
+                        <View
+                            style={[
+                                cardStyles.paymentChip,
+                                {
+                                    backgroundColor: theme.colors.surfaceContainer
+                                }
+                            ]}
+                        >
                             <Ionicons
                                 name={PAYMENT_ICONS[sub.paymentMethod]}
                                 size={12}
                                 color={theme.colors.onSurfaceVariant}
                             />
-                            <Text style={[cardStyles.paymentText, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    cardStyles.paymentText,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {sub.paymentMethod}
                             </Text>
                         </View>
 
                         {/* Status badge */}
-                        <View style={[cardStyles.statusBadge, { backgroundColor: statusColor.bg }]}>
-                            <Text style={[cardStyles.statusText, { color: statusColor.text }]}>
+                        <View
+                            style={[
+                                cardStyles.statusBadge,
+                                {
+                                    backgroundColor: statusColor.bg
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    cardStyles.statusText,
+                                    {
+                                        color: statusColor.text
+                                    }
+                                ]}
+                            >
                                 {STATUS_LABELS[sub.status]}
                             </Text>
                         </View>
@@ -439,59 +580,159 @@ function SubscriptionCard({ sub, expanded, onToggle }: { sub: Subscription; expa
 
                 {/* Cost */}
                 <View style={cardStyles.costWrap}>
-                    <Text style={[cardStyles.cost, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            cardStyles.cost,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         {formatCurrency(sub.monthlyCost)}
                     </Text>
-                    <Text style={[cardStyles.costLabel, { color: theme.colors.onSurfaceVariant }]}>/mo</Text>
+                    <Text
+                        style={[
+                            cardStyles.costLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
+                        /mo
+                    </Text>
                 </View>
             </View>
 
             {/* Expanded detail */}
             {expanded && (
-                <View style={[cardStyles.expandedSection, { borderTopColor: theme.colors.outlineVariant }]}>
+                <View
+                    style={[
+                        cardStyles.expandedSection,
+                        {
+                            borderTopColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                >
                     {sub.description && (
-                        <Text style={[cardStyles.description, { color: theme.colors.onSurfaceVariant }]}>
+                        <Text
+                            style={[
+                                cardStyles.description,
+                                {
+                                    color: theme.colors.onSurfaceVariant
+                                }
+                            ]}
+                        >
                             {sub.description}
                         </Text>
                     )}
                     <View style={cardStyles.expandedRow}>
                         <View style={cardStyles.expandedItem}>
-                            <Text style={[cardStyles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    cardStyles.expandedLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Annual Cost
                             </Text>
-                            <Text style={[cardStyles.expandedValue, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    cardStyles.expandedValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {formatCurrency(sub.monthlyCost * 12)}
                             </Text>
                         </View>
                         <View style={cardStyles.expandedItem}>
-                            <Text style={[cardStyles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    cardStyles.expandedLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Next Billing
                             </Text>
-                            <Text style={[cardStyles.expandedValue, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    cardStyles.expandedValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 Mar {sub.billingDate}, 2026
                             </Text>
                         </View>
                         <View style={cardStyles.expandedItem}>
-                            <Text style={[cardStyles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    cardStyles.expandedLabel,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 Payment
                             </Text>
-                            <Text style={[cardStyles.expandedValue, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    cardStyles.expandedValue,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 {sub.paymentMethod}
                             </Text>
                         </View>
                     </View>
 
                     {sub.status !== "cancelling" ? (
-                        <View style={[cardStyles.cancelButton, { borderColor: theme.colors.error }]}>
+                        <View
+                            style={[
+                                cardStyles.cancelButton,
+                                {
+                                    borderColor: theme.colors.error
+                                }
+                            ]}
+                        >
                             <Ionicons name="close-circle-outline" size={16} color={theme.colors.error} />
-                            <Text style={[cardStyles.cancelText, { color: theme.colors.error }]}>
+                            <Text
+                                style={[
+                                    cardStyles.cancelText,
+                                    {
+                                        color: theme.colors.error
+                                    }
+                                ]}
+                            >
                                 Cancel Subscription
                             </Text>
                         </View>
                     ) : (
-                        <View style={[cardStyles.cancelledNotice, { backgroundColor: `${theme.colors.error}10` }]}>
+                        <View
+                            style={[
+                                cardStyles.cancelledNotice,
+                                {
+                                    backgroundColor: `${theme.colors.error}10`
+                                }
+                            ]}
+                        >
                             <Ionicons name="information-circle-outline" size={16} color={theme.colors.error} />
-                            <Text style={[cardStyles.cancelledText, { color: theme.colors.error }]}>
+                            <Text
+                                style={[
+                                    cardStyles.cancelledText,
+                                    {
+                                        color: theme.colors.error
+                                    }
+                                ]}
+                            >
                                 Cancellation scheduled
                             </Text>
                         </View>
@@ -501,8 +742,7 @@ function SubscriptionCard({ sub, expanded, onToggle }: { sub: Subscription; expa
         </Pressable>
     );
 }
-
-const cardStyles = StyleSheet.create((theme) => ({
+const cardStyles = StyleSheet.create((_theme) => ({
     container: {
         borderRadius: 12,
         overflow: "hidden",
@@ -578,7 +818,6 @@ const cardStyles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
-
     // Expanded
     expandedSection: {
         borderTopWidth: 1,
@@ -654,19 +893,57 @@ function CategorySection({
     const { theme } = useUnistyles();
     const color = CATEGORY_COLORS[category];
     const total = items.reduce((sum, s) => sum + s.monthlyCost, 0);
-
     return (
         <View style={sectionStyles.container}>
             <Pressable onPress={onToggleCollapse} style={sectionStyles.header}>
                 <View style={sectionStyles.headerLeft}>
-                    <View style={[sectionStyles.catDot, { backgroundColor: color }]} />
-                    <Text style={[sectionStyles.catName, { color: theme.colors.onSurface }]}>{category}</Text>
-                    <View style={[sectionStyles.countBadge, { backgroundColor: `${color}18` }]}>
-                        <Text style={[sectionStyles.countText, { color }]}>{items.length}</Text>
+                    <View
+                        style={[
+                            sectionStyles.catDot,
+                            {
+                                backgroundColor: color
+                            }
+                        ]}
+                    />
+                    <Text
+                        style={[
+                            sectionStyles.catName,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
+                        {category}
+                    </Text>
+                    <View
+                        style={[
+                            sectionStyles.countBadge,
+                            {
+                                backgroundColor: `${color}18`
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                sectionStyles.countText,
+                                {
+                                    color
+                                }
+                            ]}
+                        >
+                            {items.length}
+                        </Text>
                     </View>
                 </View>
                 <View style={sectionStyles.headerRight}>
-                    <Text style={[sectionStyles.subtotal, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            sectionStyles.subtotal,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         {formatCurrency(total)}
                     </Text>
                     <Ionicons
@@ -689,8 +966,7 @@ function CategorySection({
         </View>
     );
 }
-
-const sectionStyles = StyleSheet.create((theme) => ({
+const sectionStyles = StyleSheet.create((_theme) => ({
     container: {
         marginBottom: 20
     },
@@ -741,11 +1017,9 @@ export function SubscriptionManagerPage() {
     const { theme } = useUnistyles();
     const [expandedId, setExpandedId] = React.useState<string | null>(null);
     const [collapsedCategories, setCollapsedCategories] = React.useState<Set<Category>>(new Set());
-
     const toggleExpand = React.useCallback((id: string) => {
         setExpandedId((prev) => (prev === id ? null : id));
     }, []);
-
     const toggleCategory = React.useCallback((category: Category) => {
         setCollapsedCategories((prev) => {
             const next = new Set(prev);
@@ -769,22 +1043,43 @@ export function SubscriptionManagerPage() {
         }
         return map;
     }, []);
-
     const activeCount = subscriptions.filter((s) => s.status === "active").length;
     const trialCount = subscriptions.filter((s) => s.status === "trial").length;
     const cancellingCount = subscriptions.filter((s) => s.status === "cancelling").length;
-
     return (
         <ShowcasePage topInset={24} bottomInset={60}>
             {/* --- Hero: Monthly Spend --- */}
             <View style={pageStyles.hero}>
-                <Text style={[pageStyles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>Monthly Spend</Text>
-                <Text style={[pageStyles.heroValue, { color: theme.colors.onSurface }]}>
+                <Text
+                    style={[
+                        pageStyles.heroLabel,
+                        {
+                            color: theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    Monthly Spend
+                </Text>
+                <Text
+                    style={[
+                        pageStyles.heroValue,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
                     {formatCurrency(MONTHLY_TOTAL)}
                 </Text>
                 <View style={pageStyles.annualRow}>
                     <Ionicons name="trending-up" size={14} color={theme.colors.primary} />
-                    <Text style={[pageStyles.annualText, { color: theme.colors.primary }]}>
+                    <Text
+                        style={[
+                            pageStyles.annualText,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
                         {formatCurrency(ANNUAL_PROJECTION)}/yr projected
                     </Text>
                 </View>
@@ -792,21 +1087,84 @@ export function SubscriptionManagerPage() {
 
             {/* --- Status Summary Chips --- */}
             <View style={pageStyles.statusRow}>
-                <View style={[pageStyles.statusChip, { backgroundColor: STATUS_COLORS.active.bg }]}>
-                    <View style={[pageStyles.statusDot, { backgroundColor: STATUS_COLORS.active.text }]} />
-                    <Text style={[pageStyles.statusChipText, { color: STATUS_COLORS.active.text }]}>
+                <View
+                    style={[
+                        pageStyles.statusChip,
+                        {
+                            backgroundColor: STATUS_COLORS.active.bg
+                        }
+                    ]}
+                >
+                    <View
+                        style={[
+                            pageStyles.statusDot,
+                            {
+                                backgroundColor: STATUS_COLORS.active.text
+                            }
+                        ]}
+                    />
+                    <Text
+                        style={[
+                            pageStyles.statusChipText,
+                            {
+                                color: STATUS_COLORS.active.text
+                            }
+                        ]}
+                    >
                         {activeCount} Active
                     </Text>
                 </View>
-                <View style={[pageStyles.statusChip, { backgroundColor: STATUS_COLORS.trial.bg }]}>
-                    <View style={[pageStyles.statusDot, { backgroundColor: STATUS_COLORS.trial.text }]} />
-                    <Text style={[pageStyles.statusChipText, { color: STATUS_COLORS.trial.text }]}>
+                <View
+                    style={[
+                        pageStyles.statusChip,
+                        {
+                            backgroundColor: STATUS_COLORS.trial.bg
+                        }
+                    ]}
+                >
+                    <View
+                        style={[
+                            pageStyles.statusDot,
+                            {
+                                backgroundColor: STATUS_COLORS.trial.text
+                            }
+                        ]}
+                    />
+                    <Text
+                        style={[
+                            pageStyles.statusChipText,
+                            {
+                                color: STATUS_COLORS.trial.text
+                            }
+                        ]}
+                    >
                         {trialCount} Trial
                     </Text>
                 </View>
-                <View style={[pageStyles.statusChip, { backgroundColor: STATUS_COLORS.cancelling.bg }]}>
-                    <View style={[pageStyles.statusDot, { backgroundColor: STATUS_COLORS.cancelling.text }]} />
-                    <Text style={[pageStyles.statusChipText, { color: STATUS_COLORS.cancelling.text }]}>
+                <View
+                    style={[
+                        pageStyles.statusChip,
+                        {
+                            backgroundColor: STATUS_COLORS.cancelling.bg
+                        }
+                    ]}
+                >
+                    <View
+                        style={[
+                            pageStyles.statusDot,
+                            {
+                                backgroundColor: STATUS_COLORS.cancelling.text
+                            }
+                        ]}
+                    />
+                    <Text
+                        style={[
+                            pageStyles.statusChipText,
+                            {
+                                color: STATUS_COLORS.cancelling.text
+                            }
+                        ]}
+                    >
                         {cancellingCount} Cancelling
                     </Text>
                 </View>
@@ -816,12 +1174,28 @@ export function SubscriptionManagerPage() {
             <RenewalBanner />
 
             {/* --- Category Spend Breakdown --- */}
-            <View style={[pageStyles.breakdownCard, { backgroundColor: theme.colors.surfaceContainer }]}>
-                <Text style={[pageStyles.breakdownTitle, { color: theme.colors.onSurface }]}>Spend by Category</Text>
+            <Card
+                style={[
+                    pageStyles.breakdownCard,
+                    {
+                        backgroundColor: theme.colors.surfaceContainer
+                    }
+                ]}
+            >
+                <Text
+                    style={[
+                        pageStyles.breakdownTitle,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    Spend by Category
+                </Text>
                 {CATEGORIES.map((cat) => (
                     <CategoryBreakdownBar key={cat} category={cat} />
                 ))}
-            </View>
+            </Card>
 
             {/* --- Category Sections --- */}
             {CATEGORIES.map((cat) => {
@@ -841,18 +1215,46 @@ export function SubscriptionManagerPage() {
             })}
 
             {/* --- Footer Summary --- */}
-            <View style={[pageStyles.footerRule, { borderColor: theme.colors.outlineVariant }]} />
+            <View
+                style={[
+                    pageStyles.footerRule,
+                    {
+                        borderColor: theme.colors.outlineVariant
+                    }
+                ]}
+            />
             <View style={pageStyles.footerRow}>
                 <View style={pageStyles.footerLeft}>
-                    <Text style={[pageStyles.footerLabel, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            pageStyles.footerLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         {subscriptions.length} subscriptions
                     </Text>
                 </View>
                 <View style={pageStyles.footerRight}>
-                    <Text style={[pageStyles.footerTotalLabel, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text
+                        style={[
+                            pageStyles.footerTotalLabel,
+                            {
+                                color: theme.colors.onSurfaceVariant
+                            }
+                        ]}
+                    >
                         Monthly Total
                     </Text>
-                    <Text style={[pageStyles.footerTotal, { color: theme.colors.onSurface }]}>
+                    <Text
+                        style={[
+                            pageStyles.footerTotal,
+                            {
+                                color: theme.colors.onSurface
+                            }
+                        ]}
+                    >
                         {formatCurrency(MONTHLY_TOTAL)}
                     </Text>
                 </View>
@@ -863,7 +1265,7 @@ export function SubscriptionManagerPage() {
 
 // --- Page Styles ---
 
-const pageStyles = StyleSheet.create((theme) => ({
+const pageStyles = StyleSheet.create((_theme) => ({
     // Hero
     hero: {
         alignItems: "center",
@@ -890,7 +1292,6 @@ const pageStyles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 14
     },
-
     // Status summary
     statusRow: {
         flexDirection: "row",
@@ -916,7 +1317,6 @@ const pageStyles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 12
     },
-
     // Breakdown card
     breakdownCard: {
         borderRadius: 14,
@@ -930,7 +1330,6 @@ const pageStyles = StyleSheet.create((theme) => ({
         fontSize: 15,
         marginBottom: 8
     },
-
     // Footer
     footerRule: {
         borderTopWidth: 1,

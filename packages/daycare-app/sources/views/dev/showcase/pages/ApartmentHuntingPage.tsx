@@ -2,12 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+// --- Types ---
+import { Card } from "@/components/Card";
+import { Grid } from "@/components/Grid";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
-// --- Types ---
-
 type ApplicationStatus = "not_applied" | "applied" | "approved" | "rejected";
-
 type Apartment = {
     id: number;
     address: string;
@@ -28,7 +28,6 @@ type Apartment = {
     petFriendly: boolean;
     laundry: "in-unit" | "building" | "none";
 };
-
 type SearchCriteria = {
     budgetMin: number;
     budgetMax: number;
@@ -46,7 +45,6 @@ const SEARCH_CRITERIA: SearchCriteria = {
     minBedrooms: 1,
     maxBedrooms: 3
 };
-
 const APARTMENTS: Apartment[] = [
     {
         id: 1,
@@ -178,16 +176,41 @@ function formatRent(amount: number): string {
 }
 
 /** Returns display label and color for an application status. */
-function statusDisplay(status: ApplicationStatus): { label: string; color: string; bg: string; icon: string } {
+function statusDisplay(status: ApplicationStatus): {
+    label: string;
+    color: string;
+    bg: string;
+    icon: string;
+} {
     switch (status) {
         case "not_applied":
-            return { label: "Not Applied", color: "#6b7280", bg: "#6b728018", icon: "remove-circle-outline" };
+            return {
+                label: "Not Applied",
+                color: "#6b7280",
+                bg: "#6b728018",
+                icon: "remove-circle-outline"
+            };
         case "applied":
-            return { label: "Applied", color: "#3b82f6", bg: "#3b82f618", icon: "time-outline" };
+            return {
+                label: "Applied",
+                color: "#3b82f6",
+                bg: "#3b82f618",
+                icon: "time-outline"
+            };
         case "approved":
-            return { label: "Approved", color: "#10b981", bg: "#10b98118", icon: "checkmark-circle" };
+            return {
+                label: "Approved",
+                color: "#10b981",
+                bg: "#10b98118",
+                icon: "checkmark-circle"
+            };
         case "rejected":
-            return { label: "Rejected", color: "#ef4444", bg: "#ef444418", icon: "close-circle" };
+            return {
+                label: "Rejected",
+                color: "#ef4444",
+                bg: "#ef444418",
+                icon: "close-circle"
+            };
     }
 }
 
@@ -216,15 +239,14 @@ function laundryLabel(laundry: "in-unit" | "building" | "none"): string {
 /** Search criteria summary card at the top. */
 function CriteriaSummary({ criteria }: { criteria: SearchCriteria }) {
     const { theme } = useUnistyles();
-
     return (
-        <View style={styles.criteriaCard}>
+        <Card style={styles.criteriaCard}>
             <View style={styles.criteriaHeader}>
                 <Ionicons name="search" size={18} color={theme.colors.primary} />
                 <Text style={styles.criteriaTitle}>Search Criteria</Text>
             </View>
 
-            <View style={styles.criteriaGrid}>
+            <Grid style={styles.criteriaGrid}>
                 <View style={styles.criteriaItem}>
                     <Ionicons name="cash-outline" size={16} color={theme.colors.onSurfaceVariant} />
                     <Text style={styles.criteriaLabel}>Budget</Text>
@@ -240,7 +262,7 @@ function CriteriaSummary({ criteria }: { criteria: SearchCriteria }) {
                         {criteria.minBedrooms} - {criteria.maxBedrooms} BR
                     </Text>
                 </View>
-            </View>
+            </Grid>
 
             <View style={styles.neighborhoodRow}>
                 <Ionicons name="location-outline" size={16} color={theme.colors.onSurfaceVariant} />
@@ -248,14 +270,28 @@ function CriteriaSummary({ criteria }: { criteria: SearchCriteria }) {
                     {criteria.neighborhoods.map((n) => (
                         <View
                             key={n}
-                            style={[styles.neighborhoodChip, { backgroundColor: `${theme.colors.primary}14` }]}
+                            style={[
+                                styles.neighborhoodChip,
+                                {
+                                    backgroundColor: `${theme.colors.primary}14`
+                                }
+                            ]}
                         >
-                            <Text style={[styles.neighborhoodChipText, { color: theme.colors.primary }]}>{n}</Text>
+                            <Text
+                                style={[
+                                    styles.neighborhoodChipText,
+                                    {
+                                        color: theme.colors.primary
+                                    }
+                                ]}
+                            >
+                                {n}
+                            </Text>
                         </View>
                     ))}
                 </View>
             </View>
-        </View>
+        </Card>
     );
 }
 
@@ -266,26 +302,61 @@ function StatsBar({ apartments }: { apartments: Apartment[] }) {
     const applied = apartments.filter((a) => a.status === "applied").length;
     const approved = apartments.filter((a) => a.status === "approved").length;
     const avgRent = Math.round(apartments.reduce((sum, a) => sum + a.rent, 0) / total);
-
     return (
         <View style={styles.statsBar}>
             <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: theme.colors.onSurface }]}>{total}</Text>
+                <Text
+                    style={[
+                        styles.statValue,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    {total}
+                </Text>
                 <Text style={styles.statLabel}>Listings</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: "#3b82f6" }]}>{applied}</Text>
+                <Text
+                    style={[
+                        styles.statValue,
+                        {
+                            color: "#3b82f6"
+                        }
+                    ]}
+                >
+                    {applied}
+                </Text>
                 <Text style={styles.statLabel}>Applied</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: "#10b981" }]}>{approved}</Text>
+                <Text
+                    style={[
+                        styles.statValue,
+                        {
+                            color: "#10b981"
+                        }
+                    ]}
+                >
+                    {approved}
+                </Text>
                 <Text style={styles.statLabel}>Approved</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: theme.colors.onSurface }]}>{formatRent(avgRent)}</Text>
+                <Text
+                    style={[
+                        styles.statValue,
+                        {
+                            color: theme.colors.onSurface
+                        }
+                    ]}
+                >
+                    {formatRent(avgRent)}
+                </Text>
                 <Text style={styles.statLabel}>Avg Rent</Text>
             </View>
         </View>
@@ -295,7 +366,6 @@ function StatsBar({ apartments }: { apartments: Apartment[] }) {
 /** Star rating display with interactive tapping. */
 function StarRating({ rating, onRate }: { rating: number; onRate: (value: number) => void }) {
     const { theme } = useUnistyles();
-
     return (
         <View style={styles.starRow}>
             {[1, 2, 3, 4, 5].map((star) => (
@@ -314,11 +384,26 @@ function StarRating({ rating, onRate }: { rating: number; onRate: (value: number
 /** Application status badge. */
 function StatusBadge({ status }: { status: ApplicationStatus }) {
     const display = statusDisplay(status);
-
     return (
-        <View style={[styles.statusBadge, { backgroundColor: display.bg }]}>
+        <View
+            style={[
+                styles.statusBadge,
+                {
+                    backgroundColor: display.bg
+                }
+            ]}
+        >
             <Ionicons name={display.icon as keyof typeof Ionicons.glyphMap} size={14} color={display.color} />
-            <Text style={[styles.statusBadgeText, { color: display.color }]}>{display.label}</Text>
+            <Text
+                style={[
+                    styles.statusBadgeText,
+                    {
+                        color: display.color
+                    }
+                ]}
+            >
+                {display.label}
+            </Text>
         </View>
     );
 }
@@ -326,24 +411,59 @@ function StatusBadge({ status }: { status: ApplicationStatus }) {
 /** Pros/cons detail list. */
 function ProsConsList({ pros, cons }: { pros: string[]; cons: string[] }) {
     const { theme } = useUnistyles();
-
     return (
         <View style={styles.prosConsContainer}>
             <View style={styles.prosConsColumn}>
-                <Text style={[styles.prosConsTitle, { color: "#10b981" }]}>Pros</Text>
+                <Text
+                    style={[
+                        styles.prosConsTitle,
+                        {
+                            color: "#10b981"
+                        }
+                    ]}
+                >
+                    Pros
+                </Text>
                 {pros.map((pro) => (
                     <View key={pro} style={styles.prosConsRow}>
                         <Ionicons name="checkmark-circle" size={14} color="#10b981" />
-                        <Text style={[styles.prosConsText, { color: theme.colors.onSurface }]}>{pro}</Text>
+                        <Text
+                            style={[
+                                styles.prosConsText,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            {pro}
+                        </Text>
                     </View>
                 ))}
             </View>
             <View style={styles.prosConsColumn}>
-                <Text style={[styles.prosConsTitle, { color: "#ef4444" }]}>Cons</Text>
+                <Text
+                    style={[
+                        styles.prosConsTitle,
+                        {
+                            color: "#ef4444"
+                        }
+                    ]}
+                >
+                    Cons
+                </Text>
                 {cons.map((con) => (
                     <View key={con} style={styles.prosConsRow}>
                         <Ionicons name="close-circle" size={14} color="#ef4444" />
-                        <Text style={[styles.prosConsText, { color: theme.colors.onSurface }]}>{con}</Text>
+                        <Text
+                            style={[
+                                styles.prosConsText,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
+                            {con}
+                        </Text>
                     </View>
                 ))}
             </View>
@@ -354,13 +474,12 @@ function ProsConsList({ pros, cons }: { pros: string[]; cons: string[] }) {
 /** Expandable detail panel for an apartment. */
 function DetailPanel({ apartment }: { apartment: Apartment }) {
     const { theme } = useUnistyles();
-
     return (
         <View style={styles.detailPanel}>
             <View style={styles.detailDivider} />
 
             {/* Detail info grid */}
-            <View style={styles.detailGrid}>
+            <Grid style={styles.detailGrid}>
                 <View style={styles.detailGridItem}>
                     <Ionicons name="resize-outline" size={14} color={theme.colors.onSurfaceVariant} />
                     <Text style={styles.detailGridLabel}>{apartment.sqft} sqft</Text>
@@ -381,7 +500,7 @@ function DetailPanel({ apartment }: { apartment: Apartment }) {
                     <Ionicons name="water-outline" size={14} color={theme.colors.onSurfaceVariant} />
                     <Text style={styles.detailGridLabel}>{laundryLabel(apartment.laundry)}</Text>
                 </View>
-            </View>
+            </Grid>
 
             {/* Pros and cons */}
             <ProsConsList pros={apartment.pros} cons={apartment.cons} />
@@ -395,9 +514,25 @@ function DetailPanel({ apartment }: { apartment: Apartment }) {
                         <Text style={styles.brokerPhone}>{apartment.brokerPhone}</Text>
                     </View>
                 </View>
-                <View style={[styles.photosLink, { backgroundColor: `${theme.colors.primary}14` }]}>
+                <View
+                    style={[
+                        styles.photosLink,
+                        {
+                            backgroundColor: `${theme.colors.primary}14`
+                        }
+                    ]}
+                >
                     <Ionicons name="images-outline" size={14} color={theme.colors.primary} />
-                    <Text style={[styles.photosLinkText, { color: theme.colors.primary }]}>Photos</Text>
+                    <Text
+                        style={[
+                            styles.photosLinkText,
+                            {
+                                color: theme.colors.primary
+                            }
+                        ]}
+                    >
+                        Photos
+                    </Text>
                 </View>
             </View>
 
@@ -430,11 +565,17 @@ function ApartmentCard({
 }) {
     const { theme } = useUnistyles();
     const display = statusDisplay(apartment.status);
-
     return (
-        <View style={styles.apartmentCard}>
+        <Card style={styles.apartmentCard}>
             {/* Status accent bar at top */}
-            <View style={[styles.accentBar, { backgroundColor: display.color }]} />
+            <View
+                style={[
+                    styles.accentBar,
+                    {
+                        backgroundColor: display.color
+                    }
+                ]}
+            />
 
             <Pressable onPress={onToggleExpand} style={styles.cardContent}>
                 {/* Top row: address + favorite */}
@@ -460,7 +601,14 @@ function ApartmentCard({
                 {/* Rent + bed/bath row */}
                 <View style={styles.metricsRow}>
                     <View style={styles.rentBlock}>
-                        <Text style={[styles.rentAmount, { color: rentColor(apartment.rent) }]}>
+                        <Text
+                            style={[
+                                styles.rentAmount,
+                                {
+                                    color: rentColor(apartment.rent)
+                                }
+                            ]}
+                        >
                             {formatRent(apartment.rent)}
                         </Text>
                         <Text style={styles.rentPeriod}>/mo</Text>
@@ -498,7 +646,7 @@ function ApartmentCard({
 
             {/* Expandable detail panel */}
             {expanded && <DetailPanel apartment={apartment} />}
-        </View>
+        </Card>
     );
 }
 
@@ -517,7 +665,6 @@ export function ApartmentHuntingPage() {
         return initial;
     });
     const [sortBy, setSortBy] = React.useState<"rent" | "rating" | "commute">("rent");
-
     const sorted = React.useMemo(() => {
         const copy = [...APARTMENTS];
         switch (sortBy) {
@@ -533,11 +680,9 @@ export function ApartmentHuntingPage() {
         }
         return copy;
     }, [sortBy, ratings]);
-
     const toggleExpand = (id: number) => {
         setExpandedId((prev) => (prev === id ? null : id));
     };
-
     const toggleFavorite = (id: number) => {
         setFavorites((prev) => {
             const next = new Set(prev);
@@ -549,11 +694,12 @@ export function ApartmentHuntingPage() {
             return next;
         });
     };
-
     const handleRate = (id: number, value: number) => {
-        setRatings((prev) => ({ ...prev, [id]: value }));
+        setRatings((prev) => ({
+            ...prev,
+            [id]: value
+        }));
     };
-
     return (
         <ShowcasePage edgeToEdge bottomInset={24}>
             {/* Search criteria summary */}
@@ -568,7 +714,11 @@ export function ApartmentHuntingPage() {
                 <View style={styles.sortOptions}>
                     {(["rent", "rating", "commute"] as const).map((option) => {
                         const isActive = sortBy === option;
-                        const labels = { rent: "Rent", rating: "Rating", commute: "Commute" };
+                        const labels = {
+                            rent: "Rent",
+                            rating: "Rating",
+                            commute: "Commute"
+                        };
                         const icons = {
                             rent: "cash-outline",
                             rating: "star-outline",
@@ -593,7 +743,9 @@ export function ApartmentHuntingPage() {
                                 <Text
                                     style={[
                                         styles.sortPillText,
-                                        { color: isActive ? "#ffffff" : theme.colors.onSurfaceVariant }
+                                        {
+                                            color: isActive ? "#ffffff" : theme.colors.onSurfaceVariant
+                                        }
                                     ]}
                                 >
                                     {labels[option]}
@@ -621,7 +773,11 @@ export function ApartmentHuntingPage() {
             </View>
 
             {/* Bottom spacer */}
-            <View style={{ height: 40 }} />
+            <View
+                style={{
+                    height: 40
+                }}
+            />
         </ShowcasePage>
     );
 }
@@ -692,7 +848,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
-
     // Stats bar
     statsBar: {
         flexDirection: "row" as const,
@@ -724,7 +879,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 28,
         backgroundColor: theme.colors.outlineVariant
     },
-
     // Sort row
     sortRow: {
         flexDirection: "row" as const,
@@ -755,7 +909,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
-
     // Apartment card
     listingsContainer: {
         paddingHorizontal: 16,
@@ -769,7 +922,10 @@ const styles = StyleSheet.create((theme) => ({
         borderColor: theme.colors.outlineVariant,
         overflow: "hidden" as const,
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: {
+            width: 0,
+            height: 2
+        },
         shadowOpacity: 0.06,
         shadowRadius: 8,
         elevation: 2
@@ -781,7 +937,6 @@ const styles = StyleSheet.create((theme) => ({
     cardContent: {
         padding: 14
     },
-
     // Card top row
     cardTopRow: {
         flexDirection: "row" as const,
@@ -810,7 +965,6 @@ const styles = StyleSheet.create((theme) => ({
         marginLeft: 22,
         marginTop: 2
     },
-
     // Metrics row
     metricsRow: {
         flexDirection: "row" as const,
@@ -853,7 +1007,6 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 1.5,
         backgroundColor: theme.colors.outlineVariant
     },
-
     // Bottom row
     cardBottomRow: {
         flexDirection: "row" as const,
@@ -875,7 +1028,6 @@ const styles = StyleSheet.create((theme) => ({
         flexDirection: "row" as const,
         gap: 3
     },
-
     // Detail panel
     detailPanel: {
         paddingHorizontal: 14,
@@ -906,7 +1058,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 12,
         color: theme.colors.onSurfaceVariant
     },
-
     // Pros/cons
     prosConsContainer: {
         flexDirection: "row" as const,
@@ -933,7 +1084,6 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1,
         lineHeight: 17
     },
-
     // Detail footer
     detailFooter: {
         flexDirection: "row" as const,
@@ -969,7 +1119,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
-
     // Status badge
     statusRow: {
         flexDirection: "row" as const,

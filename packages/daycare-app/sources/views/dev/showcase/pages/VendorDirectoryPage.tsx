@@ -2,20 +2,18 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
-
 // --- Types ---
+import { Card } from "@/components/Card";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 type ContractStatus = "active" | "expiring" | "expired";
 type StatusFilter = "all" | ContractStatus;
 type VendorCategory = "Technology" | "Office Supplies" | "Professional Services" | "Marketing" | "Facilities";
-
 interface Transaction {
     date: string;
     description: string;
     amount: number;
 }
-
 interface Vendor {
     id: string;
     name: string;
@@ -51,9 +49,21 @@ const mockVendors: Vendor[] = [
         slaTerms: "99.9% uptime, 4h response time, 24/7 support",
         pendingApproval: false,
         transactions: [
-            { date: "Feb 1, 2026", description: "Monthly SaaS license", amount: 7000 },
-            { date: "Jan 1, 2026", description: "Monthly SaaS license", amount: 7000 },
-            { date: "Dec 1, 2025", description: "Monthly SaaS license", amount: 7000 }
+            {
+                date: "Feb 1, 2026",
+                description: "Monthly SaaS license",
+                amount: 7000
+            },
+            {
+                date: "Jan 1, 2026",
+                description: "Monthly SaaS license",
+                amount: 7000
+            },
+            {
+                date: "Dec 1, 2025",
+                description: "Monthly SaaS license",
+                amount: 7000
+            }
         ]
     },
     {
@@ -71,9 +81,21 @@ const mockVendors: Vendor[] = [
         slaTerms: "99.5% uptime, 1h incident response, quarterly audits",
         pendingApproval: false,
         transactions: [
-            { date: "Feb 15, 2026", description: "Quarterly security audit", amount: 5000 },
-            { date: "Jan 1, 2026", description: "Monthly monitoring fee", amount: 3500 },
-            { date: "Dec 1, 2025", description: "Monthly monitoring fee", amount: 3500 }
+            {
+                date: "Feb 15, 2026",
+                description: "Quarterly security audit",
+                amount: 5000
+            },
+            {
+                date: "Jan 1, 2026",
+                description: "Monthly monitoring fee",
+                amount: 3500
+            },
+            {
+                date: "Dec 1, 2025",
+                description: "Monthly monitoring fee",
+                amount: 3500
+            }
         ]
     },
     {
@@ -91,8 +113,16 @@ const mockVendors: Vendor[] = [
         slaTerms: "99% uptime, 8h response time",
         pendingApproval: true,
         transactions: [
-            { date: "Dec 1, 2025", description: "Backup storage - final", amount: 2333 },
-            { date: "Nov 1, 2025", description: "Backup storage", amount: 2333 }
+            {
+                date: "Dec 1, 2025",
+                description: "Backup storage - final",
+                amount: 2333
+            },
+            {
+                date: "Nov 1, 2025",
+                description: "Backup storage",
+                amount: 2333
+            }
         ]
     },
     {
@@ -110,8 +140,16 @@ const mockVendors: Vendor[] = [
         slaTerms: "Next-day delivery, free returns within 30 days",
         pendingApproval: false,
         transactions: [
-            { date: "Feb 20, 2026", description: "Q1 bulk order - paper, toner", amount: 3200 },
-            { date: "Jan 10, 2026", description: "Ergonomic supplies", amount: 1800 }
+            {
+                date: "Feb 20, 2026",
+                description: "Q1 bulk order - paper, toner",
+                amount: 3200
+            },
+            {
+                date: "Jan 10, 2026",
+                description: "Ergonomic supplies",
+                amount: 1800
+            }
         ]
     },
     {
@@ -129,8 +167,16 @@ const mockVendors: Vendor[] = [
         slaTerms: "2-week delivery, 5-year warranty on furniture",
         pendingApproval: false,
         transactions: [
-            { date: "Feb 5, 2026", description: "Standing desks x12", amount: 9600 },
-            { date: "Jan 15, 2026", description: "Conference chairs x20", amount: 6000 }
+            {
+                date: "Feb 5, 2026",
+                description: "Standing desks x12",
+                amount: 9600
+            },
+            {
+                date: "Jan 15, 2026",
+                description: "Conference chairs x20",
+                amount: 6000
+            }
         ]
     },
     {
@@ -148,9 +194,21 @@ const mockVendors: Vendor[] = [
         slaTerms: "48h document review, dedicated partner, monthly retainer",
         pendingApproval: false,
         transactions: [
-            { date: "Mar 1, 2026", description: "Monthly legal retainer", amount: 8000 },
-            { date: "Feb 1, 2026", description: "Monthly legal retainer", amount: 8000 },
-            { date: "Jan 15, 2026", description: "Contract review - Meridian deal", amount: 3500 }
+            {
+                date: "Mar 1, 2026",
+                description: "Monthly legal retainer",
+                amount: 8000
+            },
+            {
+                date: "Feb 1, 2026",
+                description: "Monthly legal retainer",
+                amount: 8000
+            },
+            {
+                date: "Jan 15, 2026",
+                description: "Contract review - Meridian deal",
+                amount: 3500
+            }
         ]
     },
     {
@@ -168,8 +226,16 @@ const mockVendors: Vendor[] = [
         slaTerms: "3 candidate shortlist within 2 weeks, 90-day replacement guarantee",
         pendingApproval: true,
         transactions: [
-            { date: "Feb 10, 2026", description: "Sr. Engineer placement fee", amount: 22000 },
-            { date: "Jan 5, 2026", description: "Product Manager placement fee", amount: 18000 }
+            {
+                date: "Feb 10, 2026",
+                description: "Sr. Engineer placement fee",
+                amount: 22000
+            },
+            {
+                date: "Jan 5, 2026",
+                description: "Product Manager placement fee",
+                amount: 18000
+            }
         ]
     },
     {
@@ -187,8 +253,16 @@ const mockVendors: Vendor[] = [
         slaTerms: "2 revision rounds per deliverable, 5-day turnaround",
         pendingApproval: false,
         transactions: [
-            { date: "Feb 25, 2026", description: "Q1 campaign assets", amount: 12000 },
-            { date: "Jan 20, 2026", description: "Brand refresh consultation", amount: 4500 }
+            {
+                date: "Feb 25, 2026",
+                description: "Q1 campaign assets",
+                amount: 12000
+            },
+            {
+                date: "Jan 20, 2026",
+                description: "Brand refresh consultation",
+                amount: 4500
+            }
         ]
     },
     {
@@ -206,8 +280,16 @@ const mockVendors: Vendor[] = [
         slaTerms: "Weekly content calendar, 3 posts/week, monthly analytics report",
         pendingApproval: false,
         transactions: [
-            { date: "Dec 15, 2025", description: "December content package", amount: 2500 },
-            { date: "Nov 15, 2025", description: "November content package", amount: 2500 }
+            {
+                date: "Dec 15, 2025",
+                description: "December content package",
+                amount: 2500
+            },
+            {
+                date: "Nov 15, 2025",
+                description: "November content package",
+                amount: 2500
+            }
         ]
     },
     {
@@ -225,9 +307,21 @@ const mockVendors: Vendor[] = [
         slaTerms: "Bi-weekly grounds maintenance, same-day emergency response",
         pendingApproval: false,
         transactions: [
-            { date: "Feb 28, 2026", description: "February maintenance", amount: 1500 },
-            { date: "Jan 31, 2026", description: "January maintenance", amount: 1500 },
-            { date: "Jan 10, 2026", description: "Emergency snow removal", amount: 800 }
+            {
+                date: "Feb 28, 2026",
+                description: "February maintenance",
+                amount: 1500
+            },
+            {
+                date: "Jan 31, 2026",
+                description: "January maintenance",
+                amount: 1500
+            },
+            {
+                date: "Jan 10, 2026",
+                description: "Emergency snow removal",
+                amount: 800
+            }
         ]
     },
     {
@@ -245,38 +339,68 @@ const mockVendors: Vendor[] = [
         slaTerms: "Quarterly inspections, 24h emergency repair, parts warranty",
         pendingApproval: true,
         transactions: [
-            { date: "Feb 1, 2026", description: "Q1 inspection", amount: 3000 },
-            { date: "Jan 18, 2026", description: "Filter replacement - all units", amount: 2200 }
+            {
+                date: "Feb 1, 2026",
+                description: "Q1 inspection",
+                amount: 3000
+            },
+            {
+                date: "Jan 18, 2026",
+                description: "Filter replacement - all units",
+                amount: 2200
+            }
         ]
     }
 ];
-
-const categories: { name: VendorCategory; icon: keyof typeof Ionicons.glyphMap }[] = [
-    { name: "Technology", icon: "hardware-chip-outline" },
-    { name: "Office Supplies", icon: "cube-outline" },
-    { name: "Professional Services", icon: "briefcase-outline" },
-    { name: "Marketing", icon: "megaphone-outline" },
-    { name: "Facilities", icon: "business-outline" }
+const categories: {
+    name: VendorCategory;
+    icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+    {
+        name: "Technology",
+        icon: "hardware-chip-outline"
+    },
+    {
+        name: "Office Supplies",
+        icon: "cube-outline"
+    },
+    {
+        name: "Professional Services",
+        icon: "briefcase-outline"
+    },
+    {
+        name: "Marketing",
+        icon: "megaphone-outline"
+    },
+    {
+        name: "Facilities",
+        icon: "business-outline"
+    }
 ];
 
 // --- Helpers ---
 
 function formatCurrency(amount: number): string {
-    return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return `$${amount.toLocaleString("en-US", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    })}`;
 }
-
 function statusLabel(status: ContractStatus): string {
     if (status === "active") return "ACTIVE";
     if (status === "expiring") return "EXPIRING";
     return "EXPIRED";
 }
-
-function statusColor(status: ContractStatus, theme: { colors: Record<string, string> }): string {
+function statusColor(
+    status: ContractStatus,
+    theme: {
+        colors: Record<string, string>;
+    }
+): string {
     if (status === "active") return theme.colors.tertiary;
     if (status === "expiring") return "#F59E0B";
     return theme.colors.error;
 }
-
 function renderStars(rating: number, filledColor: string, emptyColor: string) {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -312,14 +436,38 @@ function MetricCard({
     subtextColor: string;
 }) {
     return (
-        <View style={[styles.metricCard, { backgroundColor: bgColor }]}>
+        <Card
+            style={[
+                styles.metricCard,
+                {
+                    backgroundColor: bgColor
+                }
+            ]}
+        >
             <Ionicons name={icon} size={22} color={iconColor} />
-            <Text style={[styles.metricValue, { color: textColor }]}>{value}</Text>
-            <Text style={[styles.metricLabel, { color: subtextColor }]}>{label}</Text>
-        </View>
+            <Text
+                style={[
+                    styles.metricValue,
+                    {
+                        color: textColor
+                    }
+                ]}
+            >
+                {value}
+            </Text>
+            <Text
+                style={[
+                    styles.metricLabel,
+                    {
+                        color: subtextColor
+                    }
+                ]}
+            >
+                {label}
+            </Text>
+        </Card>
     );
 }
-
 function StatusFilterPills({
     active,
     onSelect,
@@ -335,13 +483,27 @@ function StatusFilterPills({
     surfaceColor: string;
     textColor: string;
 }) {
-    const filters: { key: StatusFilter; label: string }[] = [
-        { key: "all", label: "All" },
-        { key: "active", label: "Active" },
-        { key: "expiring", label: "Expiring" },
-        { key: "expired", label: "Expired" }
+    const filters: {
+        key: StatusFilter;
+        label: string;
+    }[] = [
+        {
+            key: "all",
+            label: "All"
+        },
+        {
+            key: "active",
+            label: "Active"
+        },
+        {
+            key: "expiring",
+            label: "Expiring"
+        },
+        {
+            key: "expired",
+            label: "Expired"
+        }
     ];
-
     return (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsScroll}>
             {filters.map((f) => {
@@ -350,16 +512,39 @@ function StatusFilterPills({
                     <Pressable
                         key={f.key}
                         onPress={() => onSelect(f.key)}
-                        style={[styles.pill, { backgroundColor: isActive ? primaryColor : surfaceColor }]}
+                        style={[
+                            styles.pill,
+                            {
+                                backgroundColor: isActive ? primaryColor : surfaceColor
+                            }
+                        ]}
                     >
-                        <Text style={[styles.pillText, { color: isActive ? "#FFFFFF" : textColor }]}>{f.label}</Text>
+                        <Text
+                            style={[
+                                styles.pillText,
+                                {
+                                    color: isActive ? "#FFFFFF" : textColor
+                                }
+                            ]}
+                        >
+                            {f.label}
+                        </Text>
                         <View
                             style={[
                                 styles.pillBadge,
-                                { backgroundColor: isActive ? "rgba(255,255,255,0.25)" : `${primaryColor}20` }
+                                {
+                                    backgroundColor: isActive ? "rgba(255,255,255,0.25)" : `${primaryColor}20`
+                                }
                             ]}
                         >
-                            <Text style={[styles.pillBadgeText, { color: isActive ? "#FFFFFF" : primaryColor }]}>
+                            <Text
+                                style={[
+                                    styles.pillBadgeText,
+                                    {
+                                        color: isActive ? "#FFFFFF" : primaryColor
+                                    }
+                                ]}
+                            >
                                 {counts[f.key]}
                             </Text>
                         </View>
@@ -369,15 +554,20 @@ function StatusFilterPills({
         </ScrollView>
     );
 }
-
 function VendorCard({ vendor, isExpanded, onToggle }: { vendor: Vendor; isExpanded: boolean; onToggle: () => void }) {
     const { theme } = useUnistyles();
     const color = statusColor(vendor.contractStatus, theme);
     const starColor = "#F59E0B";
-
     return (
-        <Pressable onPress={onToggle} style={({ pressed }) => [pressed && { opacity: 0.92 }]}>
-            <View
+        <Pressable
+            onPress={onToggle}
+            style={({ pressed }) => [
+                pressed && {
+                    opacity: 0.92
+                }
+            ]}
+        >
+            <Card
                 style={[
                     styles.vendorCard,
                     {
@@ -387,35 +577,101 @@ function VendorCard({ vendor, isExpanded, onToggle }: { vendor: Vendor; isExpand
                 ]}
             >
                 {/* Left accent stripe */}
-                <View style={[styles.vendorStripe, { backgroundColor: color }]} />
+                <View
+                    style={[
+                        styles.vendorStripe,
+                        {
+                            backgroundColor: color
+                        }
+                    ]}
+                />
 
                 <View style={styles.vendorCardContent}>
                     {/* Top row: name + status chip */}
                     <View style={styles.vendorTopRow}>
                         <View style={styles.vendorNameCol}>
-                            <Text style={[styles.vendorName, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                            <Text
+                                style={[
+                                    styles.vendorName,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                                numberOfLines={1}
+                            >
                                 {vendor.name}
                             </Text>
-                            <Text style={[styles.vendorContact, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text
+                                style={[
+                                    styles.vendorContact,
+                                    {
+                                        color: theme.colors.onSurfaceVariant
+                                    }
+                                ]}
+                            >
                                 {vendor.primaryContact}
                             </Text>
                         </View>
-                        <View style={[styles.statusChip, { backgroundColor: `${color}18` }]}>
-                            <View style={[styles.statusDot, { backgroundColor: color }]} />
-                            <Text style={[styles.statusChipText, { color }]}>{statusLabel(vendor.contractStatus)}</Text>
+                        <View
+                            style={[
+                                styles.statusChip,
+                                {
+                                    backgroundColor: `${color}18`
+                                }
+                            ]}
+                        >
+                            <View
+                                style={[
+                                    styles.statusDot,
+                                    {
+                                        backgroundColor: color
+                                    }
+                                ]}
+                            />
+                            <Text
+                                style={[
+                                    styles.statusChipText,
+                                    {
+                                        color
+                                    }
+                                ]}
+                            >
+                                {statusLabel(vendor.contractStatus)}
+                            </Text>
                         </View>
                     </View>
 
                     {/* Bottom row: annual spend, rating, payment terms */}
                     <View style={styles.vendorBottomRow}>
-                        <Text style={[styles.vendorSpend, { color: theme.colors.onSurface }]}>
+                        <Text
+                            style={[
+                                styles.vendorSpend,
+                                {
+                                    color: theme.colors.onSurface
+                                }
+                            ]}
+                        >
                             {formatCurrency(vendor.annualSpend)}
                         </Text>
                         <View style={styles.starsRow}>
                             {renderStars(vendor.rating, starColor, theme.colors.outlineVariant)}
                         </View>
-                        <View style={[styles.paymentBadge, { backgroundColor: `${theme.colors.primary}14` }]}>
-                            <Text style={[styles.paymentBadgeText, { color: theme.colors.primary }]}>
+                        <View
+                            style={[
+                                styles.paymentBadge,
+                                {
+                                    backgroundColor: `${theme.colors.primary}14`
+                                }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.paymentBadgeText,
+                                    {
+                                        color: theme.colors.primary
+                                    }
+                                ]}
+                            >
                                 {vendor.paymentTerms}
                             </Text>
                         </View>
@@ -423,33 +679,81 @@ function VendorCard({ vendor, isExpanded, onToggle }: { vendor: Vendor; isExpand
 
                     {/* Expanded detail panel */}
                     {isExpanded && (
-                        <View style={[styles.expandedPanel, { borderTopColor: theme.colors.outlineVariant }]}>
+                        <View
+                            style={[
+                                styles.expandedPanel,
+                                {
+                                    borderTopColor: theme.colors.outlineVariant
+                                }
+                            ]}
+                        >
                             {/* Contract dates */}
-                            <Text style={[styles.expandedSectionTitle, { color: theme.colors.onSurface }]}>
+                            <Text
+                                style={[
+                                    styles.expandedSectionTitle,
+                                    {
+                                        color: theme.colors.onSurface
+                                    }
+                                ]}
+                            >
                                 Contract Details
                             </Text>
                             <View style={styles.expandedRow}>
                                 <Ionicons name="calendar-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                                <Text style={[styles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Period
                                 </Text>
-                                <Text style={[styles.expandedValue, { color: theme.colors.onSurface }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedValue,
+                                        {
+                                            color: theme.colors.onSurface
+                                        }
+                                    ]}
+                                >
                                     {vendor.contractStart} - {vendor.contractEnd}
                                 </Text>
                             </View>
                             <View style={styles.expandedRow}>
                                 <Ionicons name="mail-outline" size={14} color={theme.colors.onSurfaceVariant} />
-                                <Text style={[styles.expandedLabel, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedLabel,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     Email
                                 </Text>
-                                <Text style={[styles.expandedValue, { color: theme.colors.primary }]}>
+                                <Text
+                                    style={[
+                                        styles.expandedValue,
+                                        {
+                                            color: theme.colors.primary
+                                        }
+                                    ]}
+                                >
                                     {vendor.contactEmail}
                                 </Text>
                             </View>
 
                             {/* SLA terms */}
                             <Text
-                                style={[styles.expandedSectionTitle, { color: theme.colors.onSurface, marginTop: 12 }]}
+                                style={[
+                                    styles.expandedSectionTitle,
+                                    {
+                                        color: theme.colors.onSurface,
+                                        marginTop: 12
+                                    }
+                                ]}
                             >
                                 SLA Terms
                             </Text>
@@ -463,14 +767,27 @@ function VendorCard({ vendor, isExpanded, onToggle }: { vendor: Vendor; isExpand
                                 ]}
                             >
                                 <Ionicons name="shield-checkmark-outline" size={14} color={theme.colors.primary} />
-                                <Text style={[styles.slaText, { color: theme.colors.onSurfaceVariant }]}>
+                                <Text
+                                    style={[
+                                        styles.slaText,
+                                        {
+                                            color: theme.colors.onSurfaceVariant
+                                        }
+                                    ]}
+                                >
                                     {vendor.slaTerms}
                                 </Text>
                             </View>
 
                             {/* Transaction history */}
                             <Text
-                                style={[styles.expandedSectionTitle, { color: theme.colors.onSurface, marginTop: 12 }]}
+                                style={[
+                                    styles.expandedSectionTitle,
+                                    {
+                                        color: theme.colors.onSurface,
+                                        marginTop: 12
+                                    }
+                                ]}
                             >
                                 Recent Transactions
                             </Text>
@@ -489,13 +806,20 @@ function VendorCard({ vendor, isExpanded, onToggle }: { vendor: Vendor; isExpand
                                         {/* Timeline dot and line */}
                                         <View style={styles.timelineDotCol}>
                                             <View
-                                                style={[styles.timelineDot, { backgroundColor: theme.colors.primary }]}
+                                                style={[
+                                                    styles.timelineDot,
+                                                    {
+                                                        backgroundColor: theme.colors.primary
+                                                    }
+                                                ]}
                                             />
                                             {idx < vendor.transactions.length - 1 && (
                                                 <View
                                                     style={[
                                                         styles.timelineLine,
-                                                        { backgroundColor: theme.colors.outlineVariant }
+                                                        {
+                                                            backgroundColor: theme.colors.outlineVariant
+                                                        }
                                                     ]}
                                                 />
                                             )}
@@ -504,19 +828,33 @@ function VendorCard({ vendor, isExpanded, onToggle }: { vendor: Vendor; isExpand
                                             <Text
                                                 style={[
                                                     styles.transactionDate,
-                                                    { color: theme.colors.onSurfaceVariant }
+                                                    {
+                                                        color: theme.colors.onSurfaceVariant
+                                                    }
                                                 ]}
                                             >
                                                 {txn.date}
                                             </Text>
                                             <Text
-                                                style={[styles.transactionDesc, { color: theme.colors.onSurface }]}
+                                                style={[
+                                                    styles.transactionDesc,
+                                                    {
+                                                        color: theme.colors.onSurface
+                                                    }
+                                                ]}
                                                 numberOfLines={1}
                                             >
                                                 {txn.description}
                                             </Text>
                                         </View>
-                                        <Text style={[styles.transactionAmount, { color: theme.colors.onSurface }]}>
+                                        <Text
+                                            style={[
+                                                styles.transactionAmount,
+                                                {
+                                                    color: theme.colors.onSurface
+                                                }
+                                            ]}
+                                        >
                                             {formatCurrency(txn.amount)}
                                         </Text>
                                     </View>
@@ -525,11 +863,10 @@ function VendorCard({ vendor, isExpanded, onToggle }: { vendor: Vendor; isExpand
                         </View>
                     )}
                 </View>
-            </View>
+            </Card>
         </Pressable>
     );
 }
-
 function CategorySection({
     category,
     icon,
@@ -550,18 +887,55 @@ function CategorySection({
     primaryColor: string;
 }) {
     const totalSpend = vendors.reduce((sum, v) => sum + v.annualSpend, 0);
-
     return (
         <View style={styles.categorySection}>
             {/* Category header */}
             <View style={styles.categoryHeader}>
                 <Ionicons name={icon} size={18} color={primaryColor} />
-                <Text style={[styles.categoryTitle, { color: textColor }]}>{category}</Text>
-                <View style={[styles.categoryCountBadge, { backgroundColor: `${primaryColor}18` }]}>
-                    <Text style={[styles.categoryCountText, { color: primaryColor }]}>{vendors.length}</Text>
+                <Text
+                    style={[
+                        styles.categoryTitle,
+                        {
+                            color: textColor
+                        }
+                    ]}
+                >
+                    {category}
+                </Text>
+                <View
+                    style={[
+                        styles.categoryCountBadge,
+                        {
+                            backgroundColor: `${primaryColor}18`
+                        }
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.categoryCountText,
+                            {
+                                color: primaryColor
+                            }
+                        ]}
+                    >
+                        {vendors.length}
+                    </Text>
                 </View>
-                <View style={{ flex: 1 }} />
-                <Text style={[styles.categorySpend, { color: subtextColor }]}>{formatCurrency(totalSpend)}</Text>
+                <View
+                    style={{
+                        flex: 1
+                    }}
+                />
+                <Text
+                    style={[
+                        styles.categorySpend,
+                        {
+                            color: subtextColor
+                        }
+                    ]}
+                >
+                    {formatCurrency(totalSpend)}
+                </Text>
             </View>
 
             {/* Vendor cards */}
@@ -622,11 +996,9 @@ export function VendorDirectoryPage() {
         }
         return map;
     }, [filteredVendors]);
-
     const handleToggleVendor = React.useCallback((id: string) => {
         setExpandedVendorId((prev) => (prev === id ? null : id));
     }, []);
-
     return (
         <ShowcasePage bottomInset={48}>
             {/* Metric cards row */}
@@ -709,7 +1081,7 @@ export function VendorDirectoryPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     // Metric cards
     metricsRow: {
         flexDirection: "row",
@@ -735,7 +1107,6 @@ const styles = StyleSheet.create((theme) => ({
         letterSpacing: 0.3,
         textTransform: "uppercase"
     },
-
     // Filter pills
     pillsScroll: {
         paddingHorizontal: 16,
@@ -766,7 +1137,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 10
     },
-
     // Categories
     categoriesContainer: {
         paddingHorizontal: 16,
@@ -801,12 +1171,10 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 13
     },
-
     // Vendor list
     vendorList: {
         gap: 8
     },
-
     // Vendor card
     vendorCard: {
         borderRadius: 12,
@@ -880,7 +1248,6 @@ const styles = StyleSheet.create((theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
-
     // Expanded detail panel
     expandedPanel: {
         borderTopWidth: 1,
@@ -909,7 +1276,6 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1,
         lineHeight: 18
     },
-
     // SLA box
     slaBox: {
         flexDirection: "row",
@@ -925,7 +1291,6 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1,
         lineHeight: 18
     },
-
     // Transaction history timeline
     transactionList: {
         gap: 0
