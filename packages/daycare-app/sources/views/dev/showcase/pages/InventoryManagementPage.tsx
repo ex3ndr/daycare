@@ -367,14 +367,7 @@ function MetricCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <Card
-            style={[
-                styles.metricCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={styles.metricCard}>
             <View style={styles.metricCardTop}>
                 <View
                     style={[
@@ -887,14 +880,7 @@ export function InventoryManagementPage() {
             </View>
 
             {/* Stock Overview Mini Stats */}
-            <Card
-                style={[
-                    styles.overviewCard,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <Card style={styles.overviewCard}>
                 <Text
                     style={[
                         styles.overviewTitle,

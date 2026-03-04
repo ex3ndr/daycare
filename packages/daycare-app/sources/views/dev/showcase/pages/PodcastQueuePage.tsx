@@ -221,14 +221,7 @@ function StatCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <Card
-            style={[
-                styles.statCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={styles.statCard}>
             <View
                 style={[
                     styles.statIconCircle,
@@ -359,14 +352,7 @@ function QueueItem({
     const isPartiallyPlayed = episode.progress > 0;
     const remainingMinutes = Math.round(episode.duration * (1 - episode.progress / 100));
     return (
-        <Card
-            style={[
-                styles.queueCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={styles.queueCard}>
             <View style={styles.queueCardContent}>
                 {/* Order number */}
                 <View
@@ -505,14 +491,7 @@ function NewEpisodeItem({ episode }: { episode: NewEpisode }) {
     const { theme } = useUnistyles();
     const isToday = episode.publishDate === "Today";
     return (
-        <Card
-            style={[
-                styles.newEpisodeCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={styles.newEpisodeCard}>
             <PodcastArtwork name={episode.podcastName} color={episode.color} size={44} />
             <View style={styles.newEpisodeInfo}>
                 <View style={styles.newEpisodeTitleRow}>
@@ -608,14 +587,7 @@ function SubscriptionItem({ subscription }: { subscription: Subscription }) {
     };
     const freqColor = frequencyColors[subscription.frequency] || theme.colors.primary;
     return (
-        <Card
-            style={[
-                styles.subscriptionCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={styles.subscriptionCard}>
             <PodcastArtwork name={subscription.name} color={subscription.color} size={44} />
             <View style={styles.subscriptionInfo}>
                 <Text

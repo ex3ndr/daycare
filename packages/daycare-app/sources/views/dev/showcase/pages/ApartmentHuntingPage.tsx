@@ -246,7 +246,7 @@ function CriteriaSummary({ criteria }: { criteria: SearchCriteria }) {
                 <Text style={styles.criteriaTitle}>Search Criteria</Text>
             </View>
 
-            <Grid style={styles.criteriaGrid}>
+            <Grid gap={16} style={{ marginBottom: 12 }}>
                 <View style={styles.criteriaItem}>
                     <Ionicons name="cash-outline" size={16} color={theme.colors.onSurfaceVariant} />
                     <Text style={styles.criteriaLabel}>Budget</Text>
@@ -479,7 +479,7 @@ function DetailPanel({ apartment }: { apartment: Apartment }) {
             <View style={styles.detailDivider} />
 
             {/* Detail info grid */}
-            <Grid style={styles.detailGrid}>
+            <Grid gap={8} style={{ marginBottom: 14 }}>
                 <View style={styles.detailGridItem}>
                     <Ionicons name="resize-outline" size={14} color={theme.colors.onSurfaceVariant} />
                     <Text style={styles.detailGridLabel}>{apartment.sqft} sqft</Text>
@@ -806,11 +806,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 15,
         color: theme.colors.onSurface
     },
-    criteriaGrid: {
-        flexDirection: "row" as const,
-        gap: 16,
-        marginBottom: 12
-    },
     criteriaItem: {
         flex: 1,
         flexDirection: "row" as const,
@@ -1037,12 +1032,6 @@ const styles = StyleSheet.create((theme) => ({
         height: 1,
         backgroundColor: theme.colors.outlineVariant,
         marginBottom: 12
-    },
-    detailGrid: {
-        flexDirection: "row" as const,
-        flexWrap: "wrap" as const,
-        gap: 8,
-        marginBottom: 14
     },
     detailGridItem: {
         flexDirection: "row" as const,

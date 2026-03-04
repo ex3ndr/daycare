@@ -799,14 +799,7 @@ function MetricCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <Card
-            style={[
-                s.metricCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={s.metricCard}>
             <View
                 style={[
                     s.metricIconCircle,

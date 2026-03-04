@@ -730,14 +730,7 @@ export function LanguageLearningPage() {
     return (
         <ShowcasePage density="spacious" horizontalInset={16}>
             {/* Language Selector Tabs */}
-            <View
-                style={[
-                    styles.segmentedControl,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <View style={styles.segmentedControl}>
                 {LANGUAGES.map((l) => {
                     const isActive = l.key === selectedLang;
                     return (
@@ -1021,7 +1014,6 @@ export function LanguageLearningPage() {
                                 style={[
                                     styles.resourceCard,
                                     {
-                                        backgroundColor: theme.colors.surfaceContainer,
                                         borderColor: theme.colors.outlineVariant
                                     }
                                 ]}

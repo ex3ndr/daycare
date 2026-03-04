@@ -347,14 +347,7 @@ function SummaryCards({
     const { theme } = useUnistyles();
     return (
         <View style={styles.summaryRow}>
-            <Card
-                style={[
-                    styles.summaryCard,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <Card style={styles.summaryCard}>
                 <View
                     style={[
                         styles.summaryIconCircle,
@@ -387,14 +380,7 @@ function SummaryCards({
                 </Text>
             </Card>
 
-            <Card
-                style={[
-                    styles.summaryCard,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <Card style={styles.summaryCard}>
                 <View style={styles.summaryIconRow}>
                     <View
                         style={[
@@ -441,14 +427,7 @@ function SummaryCards({
                 </Text>
             </Card>
 
-            <Card
-                style={[
-                    styles.summaryCard,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <Card style={styles.summaryCard}>
                 <View
                     style={[
                         styles.summaryIconCircle,

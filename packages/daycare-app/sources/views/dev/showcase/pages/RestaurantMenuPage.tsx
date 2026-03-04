@@ -390,14 +390,7 @@ function groupByCourse(items: MenuItem[]): {
 function MealPeriodTabs({ active, onSelect }: { active: MealPeriod; onSelect: (period: MealPeriod) => void }) {
     const { theme } = useUnistyles();
     return (
-        <View
-            style={[
-                styles.segmentedContainer,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <View style={styles.segmentedContainer}>
             {MEAL_PERIODS.map((period) => {
                 const isActive = active === period;
                 return (
@@ -579,7 +572,6 @@ function MenuItemCard({ item, onToggleAvailability }: { item: MenuItem; onToggle
             style={[
                 styles.menuCard,
                 {
-                    backgroundColor: theme.colors.surfaceContainer,
                     borderColor: theme.colors.outlineVariant,
                     opacity: item.available ? 1 : 0.6
                 }
@@ -729,14 +721,7 @@ export function RestaurantMenuPage() {
 
             {/* Summary stats */}
             <View style={styles.statsRow}>
-                <Card
-                    style={[
-                        styles.statCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.statCard}>
                     <Ionicons name="fast-food-outline" size={18} color={theme.colors.primary} />
                     <Text
                         style={[
@@ -759,14 +744,7 @@ export function RestaurantMenuPage() {
                         Items
                     </Text>
                 </Card>
-                <Card
-                    style={[
-                        styles.statCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.statCard}>
                     <Ionicons name="checkmark-circle-outline" size={18} color="#16a34a" />
                     <Text
                         style={[
@@ -789,14 +767,7 @@ export function RestaurantMenuPage() {
                         Available
                     </Text>
                 </Card>
-                <Card
-                    style={[
-                        styles.statCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.statCard}>
                     <Ionicons name="pricetag-outline" size={18} color="#d97706" />
                     <Text
                         style={[
@@ -822,14 +793,7 @@ export function RestaurantMenuPage() {
             </View>
 
             {/* Dietary legend */}
-            <Card
-                style={[
-                    styles.legendCard,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <Card style={styles.legendCard}>
                 <Text
                     style={[
                         styles.legendTitle,

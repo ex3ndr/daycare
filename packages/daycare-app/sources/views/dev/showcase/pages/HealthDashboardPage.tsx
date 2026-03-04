@@ -442,16 +442,9 @@ export function HealthDashboardPage() {
             </View>
 
             {/* --- Quick Metric Cards --- */}
-            <Grid style={styles.metricsGrid}>
+            <Grid gap={10} style={{ marginBottom: 8 }}>
                 {/* Sleep */}
-                <Card
-                    style={[
-                        styles.metricCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.metricCard}>
                     <View
                         style={[
                             styles.metricIconCircle,
@@ -485,14 +478,7 @@ export function HealthDashboardPage() {
                 </Card>
 
                 {/* Water */}
-                <Card
-                    style={[
-                        styles.metricCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.metricCard}>
                     <View
                         style={[
                             styles.metricIconCircle,
@@ -538,14 +524,7 @@ export function HealthDashboardPage() {
                 </Card>
 
                 {/* Calories */}
-                <Card
-                    style={[
-                        styles.metricCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.metricCard}>
                     <View
                         style={[
                             styles.metricIconCircle,
@@ -591,14 +570,7 @@ export function HealthDashboardPage() {
                 </Card>
 
                 {/* Medications summary */}
-                <Card
-                    style={[
-                        styles.metricCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.metricCard}>
                     <View
                         style={[
                             styles.metricIconCircle,
@@ -779,7 +751,6 @@ export function HealthDashboardPage() {
                                 style={[
                                     styles.appointmentCard,
                                     {
-                                        backgroundColor: theme.colors.surfaceContainer,
                                         borderColor: theme.colors.outlineVariant
                                     }
                                 ]}
@@ -897,7 +868,6 @@ export function HealthDashboardPage() {
                                 style={[
                                     styles.labCard,
                                     {
-                                        backgroundColor: theme.colors.surfaceContainer,
                                         borderColor: theme.colors.outlineVariant
                                     }
                                 ]}
@@ -1029,7 +999,6 @@ export function HealthDashboardPage() {
                                 style={[
                                     styles.symptomCard,
                                     {
-                                        backgroundColor: theme.colors.surfaceContainer,
                                         borderColor: theme.colors.outlineVariant
                                     }
                                 ]}
@@ -1132,13 +1101,6 @@ const styles = StyleSheet.create((_theme) => ({
     heroSubtitle: {
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 14
-    },
-    // Metrics grid
-    metricsGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 10,
-        marginBottom: 8
     },
     metricCard: {
         flexBasis: "47%",

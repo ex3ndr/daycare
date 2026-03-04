@@ -345,14 +345,7 @@ function ProjectHeader({
 }) {
     const { theme } = useUnistyles();
     return (
-        <View
-            style={[
-                styles.projectHeader,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <View style={styles.projectHeader}>
             <View style={styles.projectTitleRow}>
                 <Ionicons name="construct-outline" size={22} color={theme.colors.primary} />
                 <View style={styles.projectTitleText}>
@@ -530,7 +523,6 @@ function BidCard({
                 style={[
                     styles.bidCard,
                     {
-                        backgroundColor: theme.colors.surfaceContainer,
                         borderColor: isExpanded ? theme.colors.primary : theme.colors.outlineVariant
                     }
                 ]}
@@ -972,14 +964,7 @@ export function ContractorBidsPage() {
             </View>
 
             {/* Budget summary footer */}
-            <View
-                style={[
-                    styles.summaryFooter,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <View style={styles.summaryFooter}>
                 <View style={styles.summaryRow}>
                     <Text
                         style={[

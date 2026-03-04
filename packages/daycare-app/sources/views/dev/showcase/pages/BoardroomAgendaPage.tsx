@@ -352,7 +352,6 @@ function MeetingHeader() {
             style={[
                 styles.headerCard,
                 {
-                    backgroundColor: theme.colors.surfaceContainer,
                     borderColor: theme.colors.outlineVariant
                 }
             ]}
@@ -405,7 +404,7 @@ function MeetingHeader() {
                     </View>
                 </View>
 
-                <Grid style={styles.headerDetailsGrid}>
+                <Grid gap={8}>
                     <View style={styles.headerDetailRow}>
                         <Ionicons name="calendar-outline" size={16} color={theme.colors.onSurfaceVariant} />
                         <Text
@@ -603,7 +602,6 @@ function AgendaItemCard({
             style={[
                 styles.agendaCard,
                 {
-                    backgroundColor: theme.colors.surfaceContainer,
                     borderColor: theme.colors.outlineVariant
                 }
             ]}
@@ -761,7 +759,6 @@ function PreviousMinutesSection() {
             style={[
                 styles.sectionCard,
                 {
-                    backgroundColor: theme.colors.surfaceContainer,
                     borderColor: theme.colors.outlineVariant
                 }
             ]}
@@ -902,7 +899,6 @@ function PreReadMaterialsSection() {
             style={[
                 styles.sectionCard,
                 {
-                    backgroundColor: theme.colors.surfaceContainer,
                     borderColor: theme.colors.outlineVariant
                 }
             ]}
@@ -1060,9 +1056,6 @@ const styles = StyleSheet.create((theme) => ({
     quorumBadgeText: {
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 11
-    },
-    headerDetailsGrid: {
-        gap: 8
     },
     headerDetailRow: {
         flexDirection: "row" as const,

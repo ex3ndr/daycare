@@ -160,14 +160,7 @@ function CategoryBar({ category, total }: { category: Expense["category"]; total
             >
                 {category}
             </Text>
-            <View
-                style={[
-                    barStyles.track,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <View style={barStyles.track}>
                 <View
                     style={[
                         barStyles.fill,
@@ -429,14 +422,7 @@ export function ExpenseReportPage() {
                 >
                     Category Breakdown
                 </Text>
-                <Card
-                    style={[
-                        pageStyles.breakdownCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={pageStyles.breakdownCard}>
                     {categoryTotals.map((ct) => (
                         <CategoryBar key={ct.category} category={ct.category} total={ct.total} />
                     ))}

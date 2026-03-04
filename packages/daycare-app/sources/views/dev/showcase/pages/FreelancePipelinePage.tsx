@@ -263,14 +263,7 @@ function MetricCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <Card
-            style={[
-                s.metricCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={s.metricCard}>
             <View
                 style={[
                     s.metricIconCircle,
@@ -309,14 +302,7 @@ function UtilizationBar({ rate }: { rate: number }) {
     const clamped = Math.min(Math.max(rate, 0), 100);
     const barColor = clamped >= 90 ? "#10B981" : clamped >= 70 ? theme.colors.primary : "#F59E0B";
     return (
-        <Card
-            style={[
-                s.utilizationCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={s.utilizationCard}>
             <View style={s.utilizationHeader}>
                 <View style={s.utilizationLabelRow}>
                     <Ionicons name="speedometer-outline" size={18} color={barColor} />
@@ -382,14 +368,7 @@ function WeeklyTimeSummary({ days }: { days: DayTime[] }) {
     const totalHours = days.reduce((sum, d) => sum + d.hours, 0);
     const maxHours = Math.max(...days.map((d) => d.hours), 1);
     return (
-        <Card
-            style={[
-                s.weeklyCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={s.weeklyCard}>
             <View style={s.weeklyHeader}>
                 <View style={s.weeklyLabelRow}>
                     <Ionicons name="time-outline" size={18} color={theme.colors.primary} />
@@ -799,14 +778,7 @@ export function FreelancePipelinePage() {
 
             {/* --- Project Detail Overlay --- */}
             {currentSelected && (
-                <Card
-                    style={[
-                        s.detailCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={s.detailCard}>
                     <View style={s.detailHeader}>
                         <View style={s.detailTitleArea}>
                             <Text

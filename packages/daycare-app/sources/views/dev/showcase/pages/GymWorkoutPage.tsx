@@ -348,14 +348,7 @@ function MuscleGroupDivider({ muscleGroup }: { muscleGroup: MuscleGroup }) {
                     }
                 ]}
             />
-            <View
-                style={[
-                    styles.sectionDividerPill,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <View style={styles.sectionDividerPill}>
                 <Ionicons name={MUSCLE_GROUP_ICONS[muscleGroup]} size={14} color={theme.colors.onSurfaceVariant} />
                 <Text
                     style={[
@@ -561,16 +554,9 @@ function SummarySection({
                 Workout Summary
             </Text>
 
-            <Grid style={styles.summaryGrid}>
+            <Grid gap={10}>
                 {/* Volume card */}
-                <Card
-                    style={[
-                        styles.summaryCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.summaryCard}>
                     <View
                         style={[
                             styles.summaryIconCircle,
@@ -604,14 +590,7 @@ function SummarySection({
                 </Card>
 
                 {/* Duration card */}
-                <Card
-                    style={[
-                        styles.summaryCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.summaryCard}>
                     <View
                         style={[
                             styles.summaryIconCircle,
@@ -645,14 +624,7 @@ function SummarySection({
                 </Card>
 
                 {/* PRs card */}
-                <Card
-                    style={[
-                        styles.summaryCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.summaryCard}>
                     <View
                         style={[
                             styles.summaryIconCircle,
@@ -708,14 +680,7 @@ function SummarySection({
                 </Card>
 
                 {/* Completion card */}
-                <Card
-                    style={[
-                        styles.summaryCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.summaryCard}>
                     <View
                         style={[
                             styles.summaryIconCircle,
@@ -996,11 +961,6 @@ const styles = StyleSheet.create((_theme) => ({
     summaryTitle: {
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 18
-    },
-    summaryGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 10
     },
     summaryCard: {
         flexBasis: "47%",

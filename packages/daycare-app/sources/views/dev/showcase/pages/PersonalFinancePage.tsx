@@ -307,14 +307,7 @@ function MetricCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <Card
-            style={[
-                metricStyles.card,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={metricStyles.card}>
             <View
                 style={[
                     metricStyles.iconBadge,
@@ -364,8 +357,6 @@ const metricStyles = StyleSheet.create((_theme) => ({
     card: {
         flex: 1,
         minWidth: 140,
-        borderRadius: 16,
-        padding: 16,
         gap: 6
     },
     iconBadge: {
@@ -766,7 +757,7 @@ export function PersonalFinancePage() {
             </View>
 
             {/* --- Metric Cards Grid --- */}
-            <Grid style={pageStyles.metricsGrid}>
+            <Grid style={{ marginBottom: 20 }}>
                 <MetricCard
                     title="Net Worth"
                     value={formatCompact(NET_WORTH)}
@@ -802,14 +793,7 @@ export function PersonalFinancePage() {
             </Grid>
 
             {/* --- Cashflow Mini Bar --- */}
-            <Card
-                style={[
-                    pageStyles.cashflowCard,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <Card style={pageStyles.cashflowCard}>
                 <Text
                     style={[
                         pageStyles.cashflowTitle,
@@ -916,14 +900,7 @@ export function PersonalFinancePage() {
             </Pressable>
 
             {transactionsExpanded && (
-                <Card
-                    style={[
-                        pageStyles.sectionCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={pageStyles.sectionCard}>
                     {grouped.map((group, groupIdx) => (
                         <React.Fragment key={group.group}>
                             {groupIdx > 0 && (
@@ -995,14 +972,7 @@ export function PersonalFinancePage() {
             </Pressable>
 
             {budgetExpanded && (
-                <Card
-                    style={[
-                        pageStyles.sectionCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={pageStyles.sectionCard}>
                     {/* Overall summary bar */}
                     <View style={pageStyles.budgetSummary}>
                         <View style={pageStyles.budgetSummaryTop}>
@@ -1109,17 +1079,8 @@ const pageStyles = StyleSheet.create((_theme) => ({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
-    // Metrics grid
-    metricsGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 12,
-        marginBottom: 20
-    },
     // Cashflow
     cashflowCard: {
-        borderRadius: 16,
-        padding: 16,
         marginBottom: 24,
         gap: 12
     },
@@ -1175,7 +1136,6 @@ const pageStyles = StyleSheet.create((_theme) => ({
         fontSize: 17
     },
     sectionCard: {
-        borderRadius: 16,
         overflow: "hidden",
         paddingVertical: 4
     },

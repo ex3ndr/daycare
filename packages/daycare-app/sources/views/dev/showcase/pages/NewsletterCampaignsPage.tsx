@@ -342,7 +342,7 @@ function MetricsRow({
         }
     ];
     return (
-        <Grid style={styles.metricsGrid}>
+        <Grid gap={10} style={{ marginBottom: 8 }}>
             {metrics.map((m) => (
                 <Card
                     key={m.label}
@@ -1061,14 +1061,7 @@ export function NewsletterCampaignsPage() {
                             count={campaigns.length}
                         />
                         {isExpanded && (
-                            <Card
-                                style={[
-                                    styles.sectionCard,
-                                    {
-                                        backgroundColor: theme.colors.surfaceContainer
-                                    }
-                                ]}
-                            >
+                            <Card style={styles.sectionCard}>
                                 {campaigns.map((campaign) => (
                                     <React.Fragment key={campaign.id}>
                                         <CampaignRow
@@ -1137,13 +1130,6 @@ const styles = StyleSheet.create((_theme) => ({
     heroBadgeText: {
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
-    },
-    // Metrics grid
-    metricsGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 10,
-        marginBottom: 8
     },
     metricCard: {
         flexGrow: 1,

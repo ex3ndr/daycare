@@ -418,14 +418,7 @@ function SegmentedProgressBar() {
 function MetricCard({ value, label, color }: { value: string; label: string; color: string }) {
     const { theme } = useUnistyles();
     return (
-        <Card
-            style={[
-                s.metricCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={s.metricCard}>
             <Text
                 style={[
                     s.metricValue,
@@ -592,14 +585,7 @@ function KanbanColumn({ column, index }: { column: SprintColumn; index: number }
     const columnPoints = column.tasks.reduce((sum, t) => sum + t.points, 0);
     const isDone = column.status === "done";
     return (
-        <View
-            style={[
-                s.kanbanColumn,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <View style={s.kanbanColumn}>
             {/* Colored top border */}
             <View
                 style={[
@@ -730,14 +716,7 @@ export function SprintBoardPage() {
                 </View>
 
                 {/* Story points with segmented bar */}
-                <View
-                    style={[
-                        s.pointsSection,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <View style={s.pointsSection}>
                     <View style={s.pointsHeader}>
                         <Text
                             style={[
@@ -799,14 +778,7 @@ export function SprintBoardPage() {
                 </View>
 
                 {/* Burndown chart */}
-                <View
-                    style={[
-                        s.burndownSection,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <View style={s.burndownSection}>
                     <BurndownChart />
                 </View>
             </View>

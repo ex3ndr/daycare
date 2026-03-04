@@ -294,15 +294,7 @@ function RenewalBanner() {
                 </Text>
                 <View style={bannerStyles.chipRow}>
                     {RENEWING_THIS_WEEK.map((s) => (
-                        <View
-                            key={s.id}
-                            style={[
-                                bannerStyles.chip,
-                                {
-                                    backgroundColor: theme.colors.surfaceContainer
-                                }
-                            ]}
-                        >
+                        <View key={s.id} style={bannerStyles.chip}>
                             <Text
                                 style={[
                                     bannerStyles.chipText,
@@ -530,14 +522,7 @@ function SubscriptionCard({ sub, expanded, onToggle }: { sub: Subscription; expa
                         </View>
 
                         {/* Payment method */}
-                        <View
-                            style={[
-                                cardStyles.paymentChip,
-                                {
-                                    backgroundColor: theme.colors.surfaceContainer
-                                }
-                            ]}
-                        >
+                        <View style={cardStyles.paymentChip}>
                             <Ionicons
                                 name={PAYMENT_ICONS[sub.paymentMethod]}
                                 size={12}
@@ -1174,14 +1159,7 @@ export function SubscriptionManagerPage() {
             <RenewalBanner />
 
             {/* --- Category Spend Breakdown --- */}
-            <Card
-                style={[
-                    pageStyles.breakdownCard,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <Card style={pageStyles.breakdownCard}>
                 <Text
                     style={[
                         pageStyles.breakdownTitle,

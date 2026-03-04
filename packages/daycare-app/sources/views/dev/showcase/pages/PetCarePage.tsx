@@ -406,14 +406,7 @@ function PetHeroCard({ pet }: { pet: Pet }) {
     const { theme } = useUnistyles();
     const initials = pet.name.slice(0, 2).toUpperCase();
     return (
-        <Card
-            style={[
-                styles.heroCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={styles.heroCard}>
             {/* Large avatar with initials */}
             <View
                 style={[
@@ -552,14 +545,7 @@ function AppointmentRow({
     const typeColor = APPOINTMENT_COLORS[appointment.type];
     const typeIcon = APPOINTMENT_ICONS[appointment.type];
     return (
-        <View
-            style={[
-                styles.appointmentRow,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <View style={styles.appointmentRow}>
             {/* Calendar-style date badge */}
             <View
                 style={[

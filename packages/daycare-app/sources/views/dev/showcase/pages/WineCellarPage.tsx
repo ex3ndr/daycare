@@ -333,14 +333,7 @@ function MetricCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <Card
-            style={[
-                styles.metricCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={styles.metricCard}>
             <View
                 style={[
                     styles.metricIconCircle,
@@ -546,7 +539,7 @@ function WineDetailPanel({ wine }: { wine: Wine }) {
                         Valuation
                     </Text>
                 </View>
-                <Grid style={styles.priceGrid}>
+                <Grid>
                     <View style={styles.priceItem}>
                         <Text
                             style={[
@@ -677,7 +670,6 @@ function WineCard({ wine, expanded, onToggle }: { wine: Wine; expanded: boolean;
             style={[
                 styles.wineCard,
                 {
-                    backgroundColor: theme.colors.surfaceContainer,
                     borderColor: theme.colors.outlineVariant
                 }
             ]}
@@ -1141,10 +1133,6 @@ const styles = StyleSheet.create((_theme) => ({
         fontSize: 13,
         lineHeight: 20,
         fontStyle: "italic"
-    },
-    priceGrid: {
-        flexDirection: "row",
-        gap: 12
     },
     priceItem: {
         flex: 1,

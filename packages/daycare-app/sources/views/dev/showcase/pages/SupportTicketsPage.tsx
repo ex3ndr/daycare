@@ -269,14 +269,7 @@ function MetricCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <Card
-            style={[
-                metricStyles.card,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={metricStyles.card}>
             <View
                 style={[
                     metricStyles.iconWrap,

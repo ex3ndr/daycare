@@ -479,14 +479,7 @@ function formatDimensions(width: number, height: number): string {
 function AssetTypeCard({ item }: { item: AssetTypeCount }) {
     const { theme } = useUnistyles();
     return (
-        <Card
-            style={[
-                styles.typeCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={styles.typeCard}>
             <View
                 style={[
                     styles.typeCardIcon,

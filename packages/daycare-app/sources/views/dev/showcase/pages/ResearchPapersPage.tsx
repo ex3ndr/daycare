@@ -471,14 +471,7 @@ function SegmentedControl({
 }) {
     const { theme } = useUnistyles();
     return (
-        <View
-            style={[
-                styles.segmentedRow,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <View style={styles.segmentedRow}>
             {STATUS_TABS.map(({ key, label, icon }) => {
                 const isActive = activeTab === key;
                 return (
@@ -544,14 +537,7 @@ function PaperCard({ paper, isExpanded, onToggle }: { paper: Paper; isExpanded: 
     const relatedPapers = paper.relatedPaperIds.map(paperById).filter(Boolean) as Paper[];
     return (
         <Pressable onPress={onToggle}>
-            <Card
-                style={[
-                    styles.paperCard,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <Card style={styles.paperCard}>
                 {/* Field color accent stripe on the left */}
                 <View
                     style={[
@@ -837,15 +823,7 @@ function StatsBar({ papers }: { papers: Paper[] }) {
     return (
         <View style={styles.statsRow}>
             {stats.map((stat) => (
-                <Card
-                    key={stat.label}
-                    style={[
-                        styles.statCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card key={stat.label} style={styles.statCard}>
                     <Ionicons name={stat.icon} size={18} color={stat.color} />
                     <Text
                         style={[

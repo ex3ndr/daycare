@@ -571,7 +571,6 @@ function VendorCard({ vendor, isExpanded, onToggle }: { vendor: Vendor; isExpand
                 style={[
                     styles.vendorCard,
                     {
-                        backgroundColor: theme.colors.surfaceContainer,
                         borderColor: isExpanded ? theme.colors.primary : theme.colors.outlineVariant
                     }
                 ]}

@@ -385,14 +385,7 @@ function MetricCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <Card
-            style={[
-                styles.metricCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={styles.metricCard}>
             <View
                 style={[
                     styles.metricIconCircle,
@@ -593,7 +586,6 @@ function VehicleCard({
                 style={[
                     styles.vehicleCard,
                     {
-                        backgroundColor: theme.colors.surfaceContainer,
                         borderColor: isExpanded ? theme.colors.primary : theme.colors.outlineVariant
                     }
                 ]}
@@ -949,7 +941,7 @@ export function FleetManagementPage() {
             />
 
             {/* Fleet Metrics */}
-            <Grid style={styles.metricsGrid}>
+            <Grid gap={10} style={{ marginBottom: 16 }}>
                 <View style={styles.metricsRow}>
                     <MetricCard
                         icon="car-outline"
@@ -985,14 +977,7 @@ export function FleetManagementPage() {
             </Grid>
 
             {/* Fleet Overview Summary Bar */}
-            <View
-                style={[
-                    styles.overviewBar,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <View style={styles.overviewBar}>
                 <Text
                     style={[
                         styles.overviewBarTitle,
@@ -1224,10 +1209,6 @@ const styles = StyleSheet.create((_theme) => ({
         fontSize: 11
     },
     // Metrics grid
-    metricsGrid: {
-        gap: 10,
-        marginBottom: 16
-    },
     metricsRow: {
         flexDirection: "row",
         gap: 10

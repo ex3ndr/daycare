@@ -402,14 +402,7 @@ function TaskRow({ task, categoryColor, onToggle }: { task: Task; categoryColor:
                     <View style={taskStyles.metaSpacer} />
 
                     {/* Deadline badge */}
-                    <View
-                        style={[
-                            taskStyles.deadlineBadge,
-                            {
-                                backgroundColor: theme.colors.surfaceContainer
-                            }
-                        ]}
-                    >
+                    <View style={taskStyles.deadlineBadge}>
                         <Ionicons name="calendar-outline" size={11} color={theme.colors.onSurfaceVariant} />
                         <Text
                             style={[
@@ -524,14 +517,7 @@ function CategorySection({
     const totalCount = category.tasks.length;
     const progress = totalCount > 0 ? completedCount / totalCount : 0;
     return (
-        <View
-            style={[
-                sectionStyles.container,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <View style={sectionStyles.container}>
             {/* Section header */}
             <Pressable onPress={() => setCollapsed((c) => !c)} style={sectionStyles.header}>
                 <View
@@ -680,14 +666,7 @@ function BudgetMetric({
 }) {
     const { theme } = useUnistyles();
     return (
-        <Card
-            style={[
-                metricStyles.card,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={metricStyles.card}>
             <View
                 style={[
                     metricStyles.iconDot,
@@ -962,14 +941,7 @@ export function EventPlanningPage() {
                 </View>
 
                 {/* Budget progress bar */}
-                <Card
-                    style={[
-                        budgetStyles.barCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={budgetStyles.barCard}>
                     <View style={budgetStyles.barHeader}>
                         <Text
                             style={[

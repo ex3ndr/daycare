@@ -298,7 +298,7 @@ function MetricsRow({
         }
     ];
     return (
-        <Grid style={styles.metricsGrid}>
+        <Grid gap={10} style={{ marginBottom: 16 }}>
             {metrics.map((m) => (
                 <Card
                     key={m.label}
@@ -633,7 +633,7 @@ function PostRow({
                         }
                     ]}
                 >
-                    <Grid style={styles.postDetailGrid}>
+                    <Grid gap={16} style={{ paddingTop: 4 }}>
                         <View style={styles.postDetailItem}>
                             <Text
                                 style={[
@@ -1024,14 +1024,7 @@ export function SocialMediaPage() {
                             subtextColor={theme.colors.onSurfaceVariant}
                         />
                         {isExpanded && (
-                            <Card
-                                style={[
-                                    styles.sectionCard,
-                                    {
-                                        backgroundColor: theme.colors.surfaceContainer
-                                    }
-                                ]}
-                            >
+                            <Card style={styles.sectionCard}>
                                 {posts.map((post) => (
                                     <PostRow
                                         key={post.id}
@@ -1061,14 +1054,7 @@ export function SocialMediaPage() {
                 count={SCHEDULED_POSTS.length}
             />
             {scheduledExpanded && (
-                <Card
-                    style={[
-                        styles.sectionCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.sectionCard}>
                     {SCHEDULED_POSTS.map((post) => (
                         <ScheduledRow
                             key={post.id}
@@ -1147,13 +1133,6 @@ const styles = StyleSheet.create((_theme) => ({
     breakdownLegendText: {
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
-    },
-    // Metrics grid
-    metricsGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 10,
-        marginBottom: 16
     },
     metricCard: {
         flexGrow: 1,
@@ -1344,11 +1323,6 @@ const styles = StyleSheet.create((_theme) => ({
         paddingHorizontal: 14,
         paddingBottom: 12,
         borderBottomWidth: 0.5
-    },
-    postDetailGrid: {
-        flexDirection: "row",
-        gap: 16,
-        paddingTop: 4
     },
     postDetailItem: {
         flex: 1,

@@ -509,14 +509,7 @@ function HeroCard({ episode }: { episode: Episode }) {
     const publishDays = daysUntil(episode.publishDate);
     const checkedCount = episode.talkingPoints.filter((tp) => tp.checked).length;
     return (
-        <Card
-            style={[
-                styles.heroCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={styles.heroCard}>
             {/* Gradient-like accent bar */}
             <View style={styles.heroAccentBar}>
                 <View
@@ -1037,7 +1030,6 @@ function EpisodeRow({
             style={[
                 styles.episodeCard,
                 {
-                    backgroundColor: theme.colors.surfaceContainer,
                     borderColor: expanded ? `${statusColor}40` : theme.colors.outlineVariant
                 }
             ]}
@@ -1199,14 +1191,7 @@ export function PodcastPlannerPage() {
 
             {/* Quick Stats */}
             <View style={styles.statsRow}>
-                <Card
-                    style={[
-                        styles.statCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.statCard}>
                     <Ionicons name="albums-outline" size={18} color={theme.colors.primary} />
                     <Text
                         style={[
@@ -1229,14 +1214,7 @@ export function PodcastPlannerPage() {
                         Episodes
                     </Text>
                 </Card>
-                <Card
-                    style={[
-                        styles.statCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.statCard}>
                     <Ionicons name="checkmark-circle-outline" size={18} color="#16a34a" />
                     <Text
                         style={[
@@ -1259,14 +1237,7 @@ export function PodcastPlannerPage() {
                         Published
                     </Text>
                 </Card>
-                <Card
-                    style={[
-                        styles.statCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.statCard}>
                     <Ionicons name="pulse-outline" size={18} color="#d97706" />
                     <Text
                         style={[

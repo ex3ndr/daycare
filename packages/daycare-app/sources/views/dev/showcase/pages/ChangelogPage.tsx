@@ -377,7 +377,7 @@ function ReleaseSection({
     return (
         <View style={sectionStyles.container}>
             {/* Version header */}
-            <View style={[sectionStyles.header, { backgroundColor: theme.colors.surfaceContainer }]}>
+            <View style={sectionStyles.header}>
                 <View style={[sectionStyles.versionAccent, { backgroundColor: releaseColor }]} />
                 <View style={sectionStyles.headerContent}>
                     <View style={sectionStyles.headerTop}>
@@ -502,7 +502,7 @@ function SummaryStats() {
     return (
         <View style={statsStyles.row}>
             {stats.map(({ value, label, color }) => (
-                <View key={label} style={[statsStyles.tile, { backgroundColor: theme.colors.surfaceContainer }]}>
+                <View key={label} style={statsStyles.tile}>
                     <Text style={[statsStyles.value, { color }]}>{value}</Text>
                     <Text style={[statsStyles.label, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
                 </View>

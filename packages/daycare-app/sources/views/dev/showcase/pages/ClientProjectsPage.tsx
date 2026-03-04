@@ -372,14 +372,7 @@ function MilestoneCard({ milestone, onToggle }: { milestone: Milestone; onToggle
     const { theme } = useUnistyles();
     const statusConfig = MILESTONE_STATUS_CONFIG[milestone.status];
     return (
-        <Card
-            style={[
-                s.milestoneCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={s.milestoneCard}>
             {/* Checkbox */}
             <Pressable onPress={() => onToggle(milestone.id)} style={s.milestoneCheckbox}>
                 <View
@@ -479,15 +472,7 @@ function TimelineEntryRow({ entry, isLast }: { entry: TimelineEntry; isLast: boo
             </View>
 
             {/* Entry content */}
-            <Pressable
-                onPress={() => setExpanded((prev) => !prev)}
-                style={[
-                    s.timelineCard,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <Pressable onPress={() => setExpanded((prev) => !prev)} style={s.timelineCard}>
                 <View style={s.timelineCardHeader}>
                     <Text
                         style={[
@@ -562,7 +547,6 @@ function QuestionCard({ question }: { question: OpenQuestion }) {
             style={[
                 s.questionCard,
                 {
-                    backgroundColor: theme.colors.surfaceContainer,
                     borderLeftColor: priorityConfig.color
                 }
             ]}
@@ -700,14 +684,7 @@ export function ClientProjectsPage() {
     return (
         <ShowcasePage topInset={16} bottomInset={48} contentGap={24}>
             {/* --- Project Header --- */}
-            <Card
-                style={[
-                    s.headerCard,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <Card style={s.headerCard}>
                 {/* Top accent bar */}
                 <View
                     style={[

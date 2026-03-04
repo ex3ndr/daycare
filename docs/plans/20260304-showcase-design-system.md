@@ -32,6 +32,7 @@ Build 6 reusable layout primitives (`Grid`, `Card`, `Section`, `Badge`, `IconCir
 
 ### Implementation Notes
 - Migration was executed with a scripted JSX transform for `*Card`/`*Grid` containers across showcase pages, followed by targeted manual edits for remaining pages and primitive-specific usage (`Section`, `Badge`, `Row`).
+- **Post-migration fix (2026-03-04):** Grid component was wrapping children in `<View>` wrappers that broke `flex: 1` layout. Fixed by removing child wrapping — Grid is now a container-only component. All 19 Grid usages across 15 pages updated to use Grid's `gap` prop instead of style overrides. Card redundant `backgroundColor: surfaceContainer` removed from 37+ pages (~870 lines deleted).
 
 ## Testing Strategy
 - **Unit tests**: Each component gets a `*.spec.ts` file testing props, variants, edge cases

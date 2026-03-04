@@ -591,7 +591,6 @@ function ModuleSection({
             style={[
                 styles.moduleCard,
                 {
-                    backgroundColor: theme.colors.surfaceContainer,
                     borderColor: allDone ? theme.colors.primary : theme.colors.outlineVariant
                 }
             ]}
@@ -985,7 +984,6 @@ export function CourseCurriculumPage() {
                 style={[
                     styles.summaryCard,
                     {
-                        backgroundColor: theme.colors.surfaceContainer,
                         borderColor: theme.colors.outlineVariant
                     }
                 ]}

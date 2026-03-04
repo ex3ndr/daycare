@@ -857,14 +857,7 @@ export function SalesPipelinePage() {
     return (
         <ShowcasePage edgeToEdge bottomInset={48} contentBackgroundColor={theme.colors.surface}>
             {/* Revenue Metrics Hero */}
-            <View
-                style={[
-                    styles.metricsHero,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <View style={styles.metricsHero}>
                 <Text
                     style={[
                         styles.metricsLabel,
@@ -895,14 +888,7 @@ export function SalesPipelinePage() {
 
             {/* KPI Cards Row */}
             <View style={styles.kpiRow}>
-                <Card
-                    style={[
-                        styles.kpiCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.kpiCard}>
                     <Ionicons name="checkmark-done-outline" size={20} color="#10B981" />
                     <Text
                         style={[
@@ -925,14 +911,7 @@ export function SalesPipelinePage() {
                         Closed
                     </Text>
                 </Card>
-                <Card
-                    style={[
-                        styles.kpiCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.kpiCard}>
                     <Ionicons name="layers-outline" size={20} color={theme.colors.primary} />
                     <Text
                         style={[
@@ -955,14 +934,7 @@ export function SalesPipelinePage() {
                         Pipeline
                     </Text>
                 </Card>
-                <Card
-                    style={[
-                        styles.kpiCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.kpiCard}>
                     <Ionicons name="trending-up-outline" size={20} color="#F59E0B" />
                     <Text
                         style={[

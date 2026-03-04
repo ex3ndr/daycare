@@ -193,7 +193,7 @@ function MetricTile({ value, label, color, pulse }: { value: string; label: stri
     const { theme } = useUnistyles();
 
     return (
-        <Card style={[tileStyles.container, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Card style={tileStyles.container}>
             <View style={tileStyles.valueRow}>
                 {pulse && (
                     <View style={tileStyles.pulseOuter(color)}>
@@ -254,7 +254,7 @@ function SeverityBar() {
     const counts = SEVERITY_ORDER.map((s) => ({ severity: s, count: countBySeverity(s) }));
 
     return (
-        <Card style={[barStyles.container, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <Card style={barStyles.container}>
             <Text style={[barStyles.title, { color: theme.colors.onSurface }]}>Severity Distribution</Text>
             <View style={barStyles.bar}>
                 {counts.map(({ severity, count }) => {
@@ -426,7 +426,7 @@ function BugCard({ bug }: { bug: Bug }) {
     const initials = getInitials(bug.reporter);
 
     return (
-        <View style={[cardStyles.outer, { backgroundColor: theme.colors.surfaceContainer }]}>
+        <View style={cardStyles.outer}>
             {/* Colored top border */}
             <View style={cardStyles.topBorder(color)} />
 

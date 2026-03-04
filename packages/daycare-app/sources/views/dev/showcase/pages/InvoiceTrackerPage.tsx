@@ -758,7 +758,7 @@ export function InvoiceTrackerPage() {
                     {/* Recent Activity Section */}
                     <View style={styles.activitySection}>
                         <Text style={styles.sectionTitle}>Recent Activity</Text>
-                        <Grid style={styles.activityGrid}>
+                        <Grid gap={8}>
                             {invoices.map((inv) => (
                                 <InvoiceCard
                                     key={inv.id}
@@ -880,9 +880,6 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 15,
         color: theme.colors.onSurface,
         letterSpacing: -0.2
-    },
-    activityGrid: {
-        gap: 8
     },
     // Invoice card
     invoiceCard: {

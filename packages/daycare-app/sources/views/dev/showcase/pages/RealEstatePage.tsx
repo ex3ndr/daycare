@@ -492,14 +492,7 @@ function MetricCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <Card
-            style={[
-                metricStyles.card,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={metricStyles.card}>
             <View
                 style={[
                     metricStyles.iconBadge,
@@ -772,14 +765,7 @@ function PropertyCard({
     const appreciationPct = ((appreciation / property.purchasePrice) * 100).toFixed(1);
     const occupancyStyle = OCCUPANCY_COLORS[property.occupancy];
     return (
-        <Card
-            style={[
-                cardStyles.card,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={cardStyles.card}>
             <Pressable onPress={onToggle} style={cardStyles.cardHeader}>
                 <View style={cardStyles.cardMainInfo}>
                     <View style={cardStyles.addressRow}>
@@ -968,7 +954,7 @@ function PropertyCard({
                                 Mortgage
                             </Text>
                         </View>
-                        <Grid style={cardStyles.detailGrid}>
+                        <Grid>
                             <View style={cardStyles.detailGridItem}>
                                 <Text
                                     style={[
@@ -1101,7 +1087,7 @@ function PropertyCard({
                             </Text>
                         </View>
                         {property.tenant ? (
-                            <Grid style={cardStyles.detailGrid}>
+                            <Grid>
                                 <View style={cardStyles.detailGridItem}>
                                     <Text
                                         style={[
@@ -1322,11 +1308,6 @@ const cardStyles = StyleSheet.create((_theme) => ({
     detailSectionTitle: {
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 13
-    },
-    detailGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 12
     },
     detailGridItem: {
         minWidth: 100,
@@ -1612,7 +1593,7 @@ export function RealEstatePage() {
             </View>
 
             {/* Metric Cards */}
-            <Grid style={pageStyles.metricsGrid}>
+            <Grid style={{ marginBottom: 20 }}>
                 <MetricCard
                     title="Properties"
                     value={`${TOTAL_PROPERTIES}`}
@@ -1716,12 +1697,6 @@ const pageStyles = StyleSheet.create((_theme) => ({
     heroBadgeText: {
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
-    },
-    metricsGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 12,
-        marginBottom: 20
     },
     propertyList: {
         gap: 10

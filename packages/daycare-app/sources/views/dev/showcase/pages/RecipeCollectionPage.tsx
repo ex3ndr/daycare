@@ -779,14 +779,7 @@ function CuisineHeader({ cuisine }: { cuisine: Cuisine; count: number }) {
 function SegmentedControl({ active, onSelect }: { active: MealType; onSelect: (tab: MealType) => void }) {
     const { theme } = useUnistyles();
     return (
-        <View
-            style={[
-                styles.segmentedContainer,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <View style={styles.segmentedContainer}>
             {MEAL_TYPES.map((type) => {
                 const isActive = active === type;
                 return (
@@ -1014,7 +1007,6 @@ function RecipeCard({
             style={[
                 styles.recipeCard,
                 {
-                    backgroundColor: theme.colors.surfaceContainer,
                     borderColor: theme.colors.outlineVariant
                 }
             ]}
@@ -1176,14 +1168,7 @@ export function RecipeCollectionPage() {
 
             {/* Quick stats row */}
             <View style={styles.statsRow}>
-                <Card
-                    style={[
-                        styles.statCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.statCard}>
                     <Ionicons name="book-outline" size={18} color={theme.colors.primary} />
                     <Text
                         style={[
@@ -1206,14 +1191,7 @@ export function RecipeCollectionPage() {
                         Recipes
                     </Text>
                 </Card>
-                <Card
-                    style={[
-                        styles.statCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.statCard}>
                     <Ionicons name="flash-outline" size={18} color={DIFFICULTY_COLORS.easy} />
                     <Text
                         style={[
@@ -1236,14 +1214,7 @@ export function RecipeCollectionPage() {
                         Quick & Easy
                     </Text>
                 </Card>
-                <Card
-                    style={[
-                        styles.statCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.statCard}>
                     <Ionicons name="leaf-outline" size={18} color={DIETARY_COLORS.vegetarian} />
                     <Text
                         style={[

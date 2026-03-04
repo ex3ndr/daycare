@@ -485,7 +485,7 @@ export function ContentCalendarPage() {
             </View>
 
             {/* Calendar grid: 5 day columns */}
-            <Grid style={styles.calendarGrid(theme.colors.surfaceContainer)}>
+            <Grid gap={6} style={{ backgroundColor: theme.colors.surfaceContainer, borderRadius: 12, padding: 10 }}>
                 {filteredDays.map((day, idx) => (
                     <React.Fragment key={day.dayName}>
                         {idx > 0 && <View style={styles.columnDivider(theme.colors.outlineVariant)} />}
@@ -528,13 +528,6 @@ const styles = StyleSheet.create((_theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 16,
         color: color
-    }),
-    calendarGrid: (bg: string) => ({
-        flexDirection: "row" as const,
-        backgroundColor: bg,
-        borderRadius: 12,
-        padding: 10,
-        gap: 6
     }),
     columnDivider: (color: string) => ({
         width: 1,

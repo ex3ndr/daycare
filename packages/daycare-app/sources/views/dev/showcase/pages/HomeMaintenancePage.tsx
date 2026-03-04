@@ -284,14 +284,7 @@ function MetricCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <Card
-            style={[
-                styles.metricCard,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Card style={styles.metricCard}>
             <View style={styles.metricIconRow}>
                 <View
                     style={[
@@ -709,14 +702,7 @@ function CostSummaryBar({ tasks }: { tasks: MaintenanceTask[] }) {
     const overdueCost = activeTasks.filter((t) => t.status === "overdue").reduce((sum, t) => sum + t.estimatedCost, 0);
     const dueCost = activeTasks.filter((t) => t.status === "due").reduce((sum, t) => sum + t.estimatedCost, 0);
     return (
-        <View
-            style={[
-                styles.costBar,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <View style={styles.costBar}>
             <View style={styles.costBarHeader}>
                 <Ionicons name="wallet-outline" size={16} color={theme.colors.onSurface} />
                 <Text
@@ -938,14 +924,7 @@ export function HomeMaintenancePage() {
             </View>
 
             {/* Overall progress */}
-            <View
-                style={[
-                    styles.overallProgress,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <View style={styles.overallProgress}>
                 <View style={styles.overallProgressHeader}>
                     <Text
                         style={[

@@ -486,7 +486,6 @@ function ObjectiveSection({ objective }: { objective: Objective }) {
             style={[
                 styles.objectiveCard,
                 {
-                    backgroundColor: theme.colors.surfaceContainer,
                     borderColor: theme.colors.outlineVariant
                 }
             ]}
@@ -663,14 +662,7 @@ export function OkrTrackerPage() {
         <ShowcasePage bottomInset={48}>
             {/* --- Quarter Selector --- */}
             <View style={styles.quarterSelectorContainer}>
-                <View
-                    style={[
-                        styles.quarterSelector,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <View style={styles.quarterSelector}>
                     {QUARTERS.map((q) => {
                         const isSelected = q === selectedQuarter;
                         return (

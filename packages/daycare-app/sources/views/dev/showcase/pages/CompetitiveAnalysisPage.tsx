@@ -435,14 +435,7 @@ function CompetitorTabs({ selected, onSelect }: { selected: CompetitorKey; onSel
     const { theme } = useUnistyles();
     return (
         <View style={s.tabsContainer}>
-            <View
-                style={[
-                    s.tabsTrack,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <View style={s.tabsTrack}>
                 {COMPETITOR_KEYS.map((key) => {
                     const competitor = COMPETITORS[key];
                     const isActive = selected === key;
@@ -524,14 +517,7 @@ function OverviewSection({ competitor }: { competitor: Competitor }) {
             </View>
 
             {/* Competitor banner */}
-            <View
-                style={[
-                    s.banner,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <View style={s.banner}>
                 <View
                     style={[
                         s.bannerIconCircle,
@@ -569,15 +555,7 @@ function OverviewSection({ competitor }: { competitor: Competitor }) {
             {/* Metric cards */}
             <View style={s.metricsRow}>
                 {metrics.map((m) => (
-                    <Card
-                        key={m.label}
-                        style={[
-                            s.metricCard,
-                            {
-                                backgroundColor: theme.colors.surfaceContainer
-                            }
-                        ]}
-                    >
+                    <Card key={m.label} style={s.metricCard}>
                         <View
                             style={[
                                 s.metricIconCircle,
@@ -645,14 +623,7 @@ function TimelineSection({ events }: { events: TimelineEvent[] }) {
                 </Text>
             </View>
 
-            <View
-                style={[
-                    s.timelineContainer,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <View style={s.timelineContainer}>
                 {events.map((event, index) => {
                     const color = EVENT_TYPE_COLORS[event.type];
                     const isLast = index === events.length - 1;
@@ -773,14 +744,7 @@ function ComparisonSection({ selected }: { selected: CompetitorKey }) {
                 </Text>
             </View>
 
-            <Card
-                style={[
-                    s.comparisonCard,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <Card style={s.comparisonCard}>
                 {/* Table header */}
                 <View
                     style={[
@@ -966,7 +930,7 @@ function SwotSection({ data }: { data: SwotData }) {
                 </Text>
             </View>
 
-            <Grid style={s.swotGrid}>
+            <Grid gap={10}>
                 {SWOT_CONFIG.map((config) => {
                     const items = data[config.key];
                     return (
@@ -1360,12 +1324,6 @@ const s = StyleSheet.create((_theme) => ({
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 14,
         lineHeight: 20
-    },
-    // SWOT grid
-    swotGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 10
     },
     swotQuadrant: {
         width: "48%" as unknown as number,

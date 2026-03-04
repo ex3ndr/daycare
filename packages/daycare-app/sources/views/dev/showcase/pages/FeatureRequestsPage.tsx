@@ -479,15 +479,7 @@ function SummaryMetrics({ requests }: { requests: FeatureRequest[] }) {
     return (
         <View style={metricStyles.row}>
             {metrics.map(({ value, label, color }) => (
-                <View
-                    key={label}
-                    style={[
-                        metricStyles.tile,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <View key={label} style={metricStyles.tile}>
                     <Text
                         style={[
                             metricStyles.value,
@@ -702,15 +694,7 @@ function FeatureRequestCard({
 }) {
     const { theme } = useUnistyles();
     return (
-        <Pressable
-            onPress={onPress}
-            style={[
-                cardStyles.container,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <Pressable onPress={onPress} style={cardStyles.container}>
             {/* Left: Vote button */}
             <VoteButton votes={request.votes} voted={voted} onPress={onVote} />
 
@@ -930,14 +914,7 @@ function DetailPanel({
                         </Text>
 
                         {/* Vote bar */}
-                        <View
-                            style={[
-                                detailStyles.voteBar,
-                                {
-                                    backgroundColor: theme.colors.surfaceContainer
-                                }
-                            ]}
-                        >
+                        <View style={detailStyles.voteBar}>
                             <Pressable
                                 onPress={onVote}
                                 style={[
@@ -1088,14 +1065,7 @@ function DetailPanel({
                                 >
                                     Roadmap
                                 </Text>
-                                <Card
-                                    style={[
-                                        detailStyles.roadmapCard,
-                                        {
-                                            backgroundColor: theme.colors.surfaceContainer
-                                        }
-                                    ]}
-                                >
+                                <Card style={detailStyles.roadmapCard}>
                                     <Ionicons name="map-outline" size={18} color={theme.colors.primary} />
                                     <Text
                                         style={[
@@ -1272,14 +1242,7 @@ function StatusDistributionBar() {
         count: REQUESTS.filter((r) => r.status === s).length
     }));
     return (
-        <View
-            style={[
-                distStyles.container,
-                {
-                    backgroundColor: theme.colors.surfaceContainer
-                }
-            ]}
-        >
+        <View style={distStyles.container}>
             <Text
                 style={[
                     distStyles.title,

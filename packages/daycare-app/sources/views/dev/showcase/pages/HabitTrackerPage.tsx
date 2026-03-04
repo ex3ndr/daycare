@@ -347,7 +347,7 @@ export function HabitTrackerPage() {
             </View>
 
             {/* --- Habit grid --- */}
-            <Grid style={styles.grid}>
+            <Grid>
                 {habits.map((habit) => {
                     const dotColor = TIME_DOT_COLORS[habit.timeOfDay];
                     return (
@@ -442,7 +442,6 @@ export function HabitTrackerPage() {
                     style={[
                         styles.leadersCard,
                         {
-                            backgroundColor: theme.colors.surfaceContainer,
                             borderColor: theme.colors.outlineVariant
                         }
                     ]}
@@ -527,11 +526,6 @@ const styles = StyleSheet.create((_theme) => ({
     dateSubLabel: {
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 14
-    },
-    grid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 12
     },
     card: {
         width: "48%",

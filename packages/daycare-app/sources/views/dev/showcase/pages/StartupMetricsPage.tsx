@@ -962,7 +962,7 @@ export function StartupMetricsPage() {
             </View>
 
             {/* 2x3 Metric Card Grid */}
-            <Grid style={styles.metricsGrid}>
+            <Grid gap={10} style={{ marginBottom: 12 }}>
                 {keyMetrics.map((metric) => (
                     <MetricCard
                         key={metric.id}
@@ -999,14 +999,7 @@ export function StartupMetricsPage() {
                 subtextColor={theme.colors.onSurfaceVariant}
             />
             {revenueExpanded && (
-                <Card
-                    style={[
-                        styles.sectionCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.sectionCard}>
                     {/* Revenue summary row */}
                     <View style={styles.revenueSummaryRow}>
                         <View style={styles.revenueSumItem}>
@@ -1129,14 +1122,7 @@ export function StartupMetricsPage() {
                 count={recentSignups.length}
             />
             {signupsExpanded && (
-                <Card
-                    style={[
-                        styles.sectionCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.sectionCard}>
                     {recentSignups.map((signup, idx) => (
                         <React.Fragment key={signup.id}>
                             {idx > 0 && (
@@ -1172,14 +1158,7 @@ export function StartupMetricsPage() {
                 count={churnLog.length}
             />
             {churnExpanded && (
-                <Card
-                    style={[
-                        styles.sectionCard,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <Card style={styles.sectionCard}>
                     {/* Churn summary */}
                     <View style={styles.churnSummary}>
                         <View
@@ -1277,13 +1256,6 @@ const styles = StyleSheet.create((_theme) => ({
     heroBadgeText: {
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
-    },
-    // 2x3 metric card grid
-    metricsGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 10,
-        marginBottom: 12
     },
     metricCard: {
         width: "48%",

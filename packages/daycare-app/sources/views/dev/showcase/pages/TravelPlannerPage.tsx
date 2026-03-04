@@ -1104,14 +1104,7 @@ export function TravelPlannerPage() {
                 </View>
 
                 {/* Progress bar */}
-                <View
-                    style={[
-                        styles.progressTrack,
-                        {
-                            backgroundColor: theme.colors.surfaceContainer
-                        }
-                    ]}
-                >
+                <View style={styles.progressTrack}>
                     <View
                         style={[
                             styles.progressFill,
@@ -1136,14 +1129,7 @@ export function TravelPlannerPage() {
                         >
                             {category}
                         </Text>
-                        <Card
-                            style={[
-                                styles.packingGroupCard,
-                                {
-                                    backgroundColor: theme.colors.surfaceContainer
-                                }
-                            ]}
-                        >
+                        <Card style={styles.packingGroupCard}>
                             {items.map((item) => (
                                 <PackingCheckbox key={item.id} item={item} onToggle={() => togglePacked(item.id)} />
                             ))}

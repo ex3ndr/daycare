@@ -5,45 +5,36 @@ import { testRender } from "./_testRender";
 import { Grid } from "./Grid";
 
 describe("Grid", () => {
-    it("applies column-based item sizing", () => {
+    it("renders children directly without wrapper Views", () => {
         const tree = testRender(
-            React.createElement(
-                Grid,
-                { columns: 2 },
-                React.createElement(Text, null, "A"),
-                React.createElement(Text, null, "B")
-            )
+            React.createElement(Grid, null, React.createElement(Text, null, "A"), React.createElement(Text, null, "B"))
         );
 
-        const views = tree.root.findAllByType(View);
-        const itemStyle = StyleSheet.flatten(views[1].props.style);
+        const container = tree.root.findByType(View);
+        const containerStyle = StyleSheet.flatten(container.props.style);
 
-        expect(itemStyle.flexBasis).toBe("50%");
-        expect(itemStyle.maxWidth).toBe("50%");
+        expect(containerStyle.flexDirection).toBe("row");
+        expect(containerStyle.flexWrap).toBe("wrap");
+        expect(containerStyle.gap).toBe(12);
+
+        // Children are rendered (not lost)
+        const texts = container.findAllByType(Text);
+        expect(texts).toHaveLength(2);
     });
 
-    it("supports fixed column width", () => {
-        const tree = testRender(
-            React.createElement(
-                Grid,
-                { columnWidth: 220 },
-                React.createElement(Text, null, "A"),
-                React.createElement(Text, null, "B")
-            )
-        );
+    it("applies custom gap", () => {
+        const tree = testRender(React.createElement(Grid, { gap: 8 }, React.createElement(Text, null, "A")));
 
-        const views = tree.root.findAllByType(View);
-        const itemStyle = StyleSheet.flatten(views[1].props.style);
-
-        expect(itemStyle.width).toBe(220);
-        expect(itemStyle.maxWidth).toBe(220);
+        const container = tree.root.findByType(View);
+        const containerStyle = StyleSheet.flatten(container.props.style);
+        expect(containerStyle.gap).toBe(8);
     });
 
     it("renders horizontal scroll container", () => {
         const tree = testRender(
             React.createElement(
                 Grid,
-                { horizontal: true, columnWidth: 180, gap: 18 },
+                { horizontal: true, gap: 18 },
                 React.createElement(Text, null, "A"),
                 React.createElement(Text, null, "B")
             )
@@ -54,5 +45,14 @@ describe("Grid", () => {
 
         const contentStyle = StyleSheet.flatten(scroll.props.contentContainerStyle);
         expect(contentStyle.gap).toBe(18);
+        expect(contentStyle.flexWrap).toBeUndefined();
+    });
+
+    it("does not add flexWrap in horizontal mode", () => {
+        const tree = testRender(React.createElement(Grid, { horizontal: true }, React.createElement(Text, null, "A")));
+
+        const scroll = tree.root.findByType(ScrollView);
+        const contentStyle = StyleSheet.flatten(scroll.props.contentContainerStyle);
+        expect(contentStyle.flexWrap).toBeUndefined();
     });
 });

@@ -803,14 +803,7 @@ export function RetrospectiveBoardPage() {
             contentGap={16}
         >
             {/* Sprint header */}
-            <Card
-                style={[
-                    s.headerCard,
-                    {
-                        backgroundColor: theme.colors.surfaceContainer
-                    }
-                ]}
-            >
+            <Card style={s.headerCard}>
                 <View style={s.headerTop}>
                     <View>
                         <Text
@@ -1018,7 +1011,6 @@ export function RetrospectiveBoardPage() {
                 style={[
                     s.sectionCard,
                     {
-                        backgroundColor: theme.colors.surfaceContainer,
                         borderColor: theme.colors.outlineVariant
                     }
                 ]}
@@ -1119,7 +1111,6 @@ export function RetrospectiveBoardPage() {
                 style={[
                     s.sectionCard,
                     {
-                        backgroundColor: theme.colors.surfaceContainer,
                         borderColor: theme.colors.outlineVariant
                     }
                 ]}
