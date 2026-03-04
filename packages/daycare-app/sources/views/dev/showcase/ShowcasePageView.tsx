@@ -3,18 +3,23 @@ import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { showcasePagesMap } from "@/views/dev/showcase/_showcasePages";
 import { ApartmentHuntingPage } from "@/views/dev/showcase/pages/ApartmentHuntingPage";
+import { BoardroomAgendaPage } from "@/views/dev/showcase/pages/BoardroomAgendaPage";
 import { BugTrackerPage } from "@/views/dev/showcase/pages/BugTrackerPage";
 import { ChangelogPage } from "@/views/dev/showcase/pages/ChangelogPage";
 import { ClientProjectsPage } from "@/views/dev/showcase/pages/ClientProjectsPage";
 import { CompetitiveAnalysisPage } from "@/views/dev/showcase/pages/CompetitiveAnalysisPage";
 import { ContentCalendarPage } from "@/views/dev/showcase/pages/ContentCalendarPage";
+import { ContractorBidsPage } from "@/views/dev/showcase/pages/ContractorBidsPage";
 import { CourseCurriculumPage } from "@/views/dev/showcase/pages/CourseCurriculumPage";
+import { DigitalAssetsPage } from "@/views/dev/showcase/pages/DigitalAssetsPage";
 import { EventPlanningPage } from "@/views/dev/showcase/pages/EventPlanningPage";
 import { ExpenseReportPage } from "@/views/dev/showcase/pages/ExpenseReportPage";
 import { FeatureRequestsPage } from "@/views/dev/showcase/pages/FeatureRequestsPage";
 import { FleetManagementPage } from "@/views/dev/showcase/pages/FleetManagementPage";
+import { FreelancePipelinePage } from "@/views/dev/showcase/pages/FreelancePipelinePage";
 import { GymWorkoutPage } from "@/views/dev/showcase/pages/GymWorkoutPage";
 import { HabitTrackerPage } from "@/views/dev/showcase/pages/HabitTrackerPage";
+import { HealthDashboardPage } from "@/views/dev/showcase/pages/HealthDashboardPage";
 import { HomeMaintenancePage } from "@/views/dev/showcase/pages/HomeMaintenancePage";
 import { InventoryManagementPage } from "@/views/dev/showcase/pages/InventoryManagementPage";
 import { InvoiceTrackerPage } from "@/views/dev/showcase/pages/InvoiceTrackerPage";
@@ -23,17 +28,21 @@ import { KnowledgeBasePage } from "@/views/dev/showcase/pages/KnowledgeBasePage"
 import { LanguageLearningPage } from "@/views/dev/showcase/pages/LanguageLearningPage";
 import { LegalCasesPage } from "@/views/dev/showcase/pages/LegalCasesPage";
 import { MeetingNotesPage } from "@/views/dev/showcase/pages/MeetingNotesPage";
+import { NewsletterCampaignsPage } from "@/views/dev/showcase/pages/NewsletterCampaignsPage";
 import { OkrTrackerPage } from "@/views/dev/showcase/pages/OkrTrackerPage";
 import { PersonalCrmPage } from "@/views/dev/showcase/pages/PersonalCrmPage";
 import { PersonalFinancePage } from "@/views/dev/showcase/pages/PersonalFinancePage";
+import { PetCarePage } from "@/views/dev/showcase/pages/PetCarePage";
 import { PlantCarePage } from "@/views/dev/showcase/pages/PlantCarePage";
 import { PodcastPlannerPage } from "@/views/dev/showcase/pages/PodcastPlannerPage";
+import { PodcastQueuePage } from "@/views/dev/showcase/pages/PodcastQueuePage";
 import { ReadingListPage } from "@/views/dev/showcase/pages/ReadingListPage";
 import { RealEstatePage } from "@/views/dev/showcase/pages/RealEstatePage";
 import { RecipeCollectionPage } from "@/views/dev/showcase/pages/RecipeCollectionPage";
 import { RecruitmentPipelinePage } from "@/views/dev/showcase/pages/RecruitmentPipelinePage";
 import { ResearchPapersPage } from "@/views/dev/showcase/pages/ResearchPapersPage";
 import { RestaurantMenuPage } from "@/views/dev/showcase/pages/RestaurantMenuPage";
+import { RetrospectiveBoardPage } from "@/views/dev/showcase/pages/RetrospectiveBoardPage";
 import { SalesPipelinePage } from "@/views/dev/showcase/pages/SalesPipelinePage";
 import { SocialMediaPage } from "@/views/dev/showcase/pages/SocialMediaPage";
 import { SprintBoardPage } from "@/views/dev/showcase/pages/SprintBoardPage";
@@ -42,6 +51,7 @@ import { SubscriptionManagerPage } from "@/views/dev/showcase/pages/Subscription
 import { SupportTicketsPage } from "@/views/dev/showcase/pages/SupportTicketsPage";
 import { TravelPlannerPage } from "@/views/dev/showcase/pages/TravelPlannerPage";
 import { VendorDirectoryPage } from "@/views/dev/showcase/pages/VendorDirectoryPage";
+import { WineCellarPage } from "@/views/dev/showcase/pages/WineCellarPage";
 
 /** Maps showcase page IDs to their React component implementations. */
 const showcaseComponents: Record<string, React.ComponentType> = {
@@ -84,7 +94,17 @@ const showcaseComponents: Record<string, React.ComponentType> = {
     "plant-care": PlantCarePage,
     "legal-cases": LegalCasesPage,
     "language-learning": LanguageLearningPage,
-    "real-estate": RealEstatePage
+    "real-estate": RealEstatePage,
+    "newsletter-campaigns": NewsletterCampaignsPage,
+    "pet-care": PetCarePage,
+    "wine-cellar": WineCellarPage,
+    "freelance-pipeline": FreelancePipelinePage,
+    "boardroom-agenda": BoardroomAgendaPage,
+    "health-dashboard": HealthDashboardPage,
+    "podcast-queue": PodcastQueuePage,
+    "contractor-bids": ContractorBidsPage,
+    "digital-assets": DigitalAssetsPage,
+    "retrospective-board": RetrospectiveBoardPage
 };
 
 /**
