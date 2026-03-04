@@ -2,16 +2,26 @@ import { usePathname } from "expo-router";
 import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { showcasePagesMap } from "@/views/dev/showcase/_showcasePages";
+import { ApartmentHuntingPage } from "@/views/dev/showcase/pages/ApartmentHuntingPage";
 import { BugTrackerPage } from "@/views/dev/showcase/pages/BugTrackerPage";
+import { CompetitiveAnalysisPage } from "@/views/dev/showcase/pages/CompetitiveAnalysisPage";
 import { ContentCalendarPage } from "@/views/dev/showcase/pages/ContentCalendarPage";
 import { ExpenseReportPage } from "@/views/dev/showcase/pages/ExpenseReportPage";
+import { FeatureRequestsPage } from "@/views/dev/showcase/pages/FeatureRequestsPage";
+import { GymWorkoutPage } from "@/views/dev/showcase/pages/GymWorkoutPage";
 import { HabitTrackerPage } from "@/views/dev/showcase/pages/HabitTrackerPage";
 import { InvoiceTrackerPage } from "@/views/dev/showcase/pages/InvoiceTrackerPage";
 import { MeetingNotesPage } from "@/views/dev/showcase/pages/MeetingNotesPage";
+import { OkrTrackerPage } from "@/views/dev/showcase/pages/OkrTrackerPage";
 import { PersonalCrmPage } from "@/views/dev/showcase/pages/PersonalCrmPage";
+import { PersonalFinancePage } from "@/views/dev/showcase/pages/PersonalFinancePage";
 import { ReadingListPage } from "@/views/dev/showcase/pages/ReadingListPage";
+import { RecipeCollectionPage } from "@/views/dev/showcase/pages/RecipeCollectionPage";
 import { RecruitmentPipelinePage } from "@/views/dev/showcase/pages/RecruitmentPipelinePage";
+import { SalesPipelinePage } from "@/views/dev/showcase/pages/SalesPipelinePage";
 import { SprintBoardPage } from "@/views/dev/showcase/pages/SprintBoardPage";
+import { SupportTicketsPage } from "@/views/dev/showcase/pages/SupportTicketsPage";
+import { TravelPlannerPage } from "@/views/dev/showcase/pages/TravelPlannerPage";
 
 /** Maps showcase page IDs to their React component implementations. */
 const showcaseComponents: Record<string, React.ComponentType> = {
@@ -24,7 +34,17 @@ const showcaseComponents: Record<string, React.ComponentType> = {
     "expense-report": ExpenseReportPage,
     "content-calendar": ContentCalendarPage,
     "bug-tracker": BugTrackerPage,
-    "meeting-notes": MeetingNotesPage
+    "meeting-notes": MeetingNotesPage,
+    "feature-requests": FeatureRequestsPage,
+    "personal-finance": PersonalFinancePage,
+    "gym-workout": GymWorkoutPage,
+    "sales-pipeline": SalesPipelinePage,
+    "recipe-collection": RecipeCollectionPage,
+    "okr-tracker": OkrTrackerPage,
+    "support-tickets": SupportTicketsPage,
+    "travel-planner": TravelPlannerPage,
+    "apartment-hunting": ApartmentHuntingPage,
+    "competitive-analysis": CompetitiveAnalysisPage
 };
 
 /**
