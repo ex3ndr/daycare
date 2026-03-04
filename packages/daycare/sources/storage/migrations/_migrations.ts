@@ -8,5 +8,9 @@ export const migrations: Migration[] = [
     {
         name: "20260303101000_user_key_values",
         fileName: "20260303101000_user_key_values.sql"
+    },
+    {
+        name: "20260303120000_model_role_rules",
+        fileName: "20260303120000_model_role_rules.sql"
     }
 ];

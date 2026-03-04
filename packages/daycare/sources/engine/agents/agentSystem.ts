@@ -14,6 +14,7 @@ import type {
 } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import { getLogger } from "../../log.js";
+import type { ModelRoles } from "../../providers/modelRoles.js";
 import type { AgentDbRecord } from "../../storage/databaseTypes.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageResolve } from "../../storage/storageResolve.js";
@@ -87,6 +88,7 @@ export type AgentSystemOptions = {
     authStore: AuthStore;
     secrets?: Secrets;
     delayedSignals?: DelayedSignalsFacade;
+    modelRoles?: ModelRoles;
     extraMountsForUserId?: (userId: string) => Array<{ hostPath: string; mappedPath: string }>;
 };
 
@@ -102,6 +104,7 @@ export class AgentSystem {
     readonly inferenceRouter: InferenceRouter;
     readonly authStore: AuthStore;
     readonly secrets: Secrets;
+    readonly modelRoles: ModelRoles | null;
     private readonly delayedSignals: DelayedSignalsFacade | null;
     private extraMountsForUserIdProvider: ((userId: string) => Array<{ hostPath: string; mappedPath: string }>) | null;
     private _crons: Crons | null = null;
@@ -130,6 +133,7 @@ export class AgentSystem {
                 observationLog: this.storage.observationLog
             });
         this.delayedSignals = options.delayedSignals ?? null;
+        this.modelRoles = options.modelRoles ?? null;
         this.extraMountsForUserIdProvider = options.extraMountsForUserId ?? null;
         this.eventBus.onEvent((event) => {
             if (event.type !== "signal.generated") {

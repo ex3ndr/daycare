@@ -122,6 +122,20 @@ const systemPromptUpdateSchema = z.object({
     prompt: z.string().min(1).optional(),
     enabled: z.boolean().optional()
 });
+const modelRoleRuleSetSchema = z.object({
+    id: z.string().min(1).optional(),
+    role: z.enum(["user", "memory", "memorySearch", "subagent", "task"]).nullable().optional(),
+    kind: z
+        .enum(["connector", "agent", "app", "swarm", "cron", "task", "subuser", "sub", "memory", "search"])
+        .nullable()
+        .optional(),
+    userId: z.string().min(1).nullable().optional(),
+    agentId: z.string().min(1).nullable().optional(),
+    model: z.string().min(1)
+});
+const modelRoleRuleDeleteSchema = z.object({
+    id: z.string().min(1)
+});
 const agentPathSchema = z.string().min(1);
 const messageContextSchema = z.object({
     messageId: z.string().min(1).optional(),
@@ -725,6 +739,56 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
             return;
         }
         reply.send({ ok: true });
+    });
+
+    app.get("/v1/engine/model-roles", async (_request, reply) => {
+        logger.debug("event: GET /v1/engine/model-roles");
+        const rules = options.runtime.modelRoles.list();
+        return reply.send({ ok: true, rules });
+    });
+
+    app.post("/v1/engine/model-roles/set", async (request, reply) => {
+        logger.debug("event: POST /v1/engine/model-roles/set");
+        const payload = parseBody(modelRoleRuleSetSchema, request.body, reply);
+        if (!payload) {
+            return;
+        }
+        try {
+            const rule = payload.id
+                ? await options.runtime.modelRoles.update(payload.id, {
+                      role: payload.role,
+                      kind: payload.kind,
+                      userId: payload.userId,
+                      agentId: payload.agentId,
+                      model: payload.model
+                  })
+                : null;
+            if (rule) {
+                return reply.send({ ok: true, rule });
+            }
+            const created = await options.runtime.modelRoles.set({
+                id: payload.id,
+                role: payload.role,
+                kind: payload.kind,
+                userId: payload.userId,
+                agentId: payload.agentId,
+                model: payload.model
+            });
+            return reply.send({ ok: true, rule: created });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to set model role rule.";
+            return reply.status(400).send({ ok: false, error: message });
+        }
+    });
+
+    app.post("/v1/engine/model-roles/delete", async (request, reply) => {
+        logger.debug("event: POST /v1/engine/model-roles/delete");
+        const payload = parseBody(modelRoleRuleDeleteSchema, request.body, reply);
+        if (!payload) {
+            return;
+        }
+        const deleted = await options.runtime.modelRoles.delete(payload.id);
+        return reply.send({ ok: true, deleted });
     });
 
     app.post("/v1/engine/events", async (request, reply) => {

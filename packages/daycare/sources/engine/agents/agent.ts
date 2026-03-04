@@ -1376,7 +1376,15 @@ export class Agent {
     } {
         const rawProviders = listActiveInferenceProviders(this.agentSystem.config.current.settings);
         const roleKey = this.config.modelRole ?? null;
-        const roleConfig = roleKey ? this.agentSystem.config.current.settings.models?.[roleKey] : undefined;
+        // Resolve model via rule-based matching first, then fall back to settings config
+        const ruleModel = this.agentSystem.modelRoles?.resolve({
+            role: roleKey,
+            kind: this.config.kind ?? null,
+            userId: this.ctx.userId,
+            agentId: this.id
+        });
+        const roleConfig =
+            ruleModel ?? (roleKey ? this.agentSystem.config.current.settings.models?.[roleKey] : undefined);
         const roleApplied = modelRoleApply(rawProviders, roleConfig);
         const roleProviders = roleApplied.providers;
         const providerId = roleApplied.providerId ?? this.resolveAgentProvider(roleProviders);

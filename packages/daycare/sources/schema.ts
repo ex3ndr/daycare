@@ -570,6 +570,26 @@ export const observationLogTable = pgTable(
     ]
 );
 
+export const modelRoleRulesTable = pgTable(
+    "model_role_rules",
+    {
+        id: text("id").primaryKey(),
+        role: text("role"),
+        kind: text("kind"),
+        userId: text("user_id"),
+        agentId: text("agent_id"),
+        model: text("model").notNull(),
+        createdAt: bigint("created_at", { mode: "number" }).notNull(),
+        updatedAt: bigint("updated_at", { mode: "number" }).notNull()
+    },
+    (table) => [
+        index("idx_model_role_rules_role").on(table.role),
+        index("idx_model_role_rules_kind").on(table.kind),
+        index("idx_model_role_rules_user_id").on(table.userId),
+        index("idx_model_role_rules_agent_id").on(table.agentId)
+    ]
+);
+
 export const schema = {
     migrationsTable,
     usersTable,
@@ -596,7 +616,8 @@ export const schema = {
     swarmContactsTable,
     tokenStatsHourlyTable,
     keyValuesTable,
-    observationLogTable
+    observationLogTable,
+    modelRoleRulesTable
 };
 
 /**

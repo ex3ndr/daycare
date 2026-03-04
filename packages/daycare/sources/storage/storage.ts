@@ -16,6 +16,7 @@ import { ExposeEndpointsRepository } from "./exposeEndpointsRepository.js";
 import { HistoryRepository } from "./historyRepository.js";
 import { InboxRepository } from "./inboxRepository.js";
 import { KeyValuesRepository } from "./keyValuesRepository.js";
+import { ModelRoleRulesRepository } from "./modelRoleRulesRepository.js";
 import { ObservationLogRepository } from "./observationLogRepository.js";
 import { ProcessesRepository } from "./processesRepository.js";
 import { SessionsRepository } from "./sessionsRepository.js";
@@ -54,6 +55,7 @@ export class Storage {
     readonly swarmContacts: SwarmContactsRepository;
     readonly tokenStats: TokenStatsRepository;
     readonly keyValues: KeyValuesRepository;
+    readonly modelRoleRules: ModelRoleRulesRepository;
     readonly observationLog: ObservationLogRepository;
 
     readonly db: DaycareDb;
@@ -85,6 +87,7 @@ export class Storage {
         this.swarmContacts = new SwarmContactsRepository(db);
         this.tokenStats = new TokenStatsRepository(db);
         this.keyValues = new KeyValuesRepository(db);
+        this.modelRoleRules = new ModelRoleRulesRepository(db);
         this.observationLog = new ObservationLogRepository(db);
     }
 

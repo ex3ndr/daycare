@@ -10,6 +10,7 @@ import { configLoad } from "../config/configLoad.js";
 import { getLogger } from "../log.js";
 import { getProviderDefinition } from "../providers/catalog.js";
 import { ProviderManager } from "../providers/manager.js";
+import { ModelRoles } from "../providers/modelRoles.js";
 import { dockerContainersStaleRemove } from "../sandbox/docker/dockerContainersStaleRemove.js";
 import { databaseClose } from "../storage/databaseClose.js";
 import { databaseMigrate } from "../storage/databaseMigrate.js";
@@ -141,6 +142,7 @@ export class Engine {
     readonly channels: Channels;
     readonly processes: Processes;
     readonly inferenceRouter: InferenceRouter;
+    readonly modelRoles: ModelRoles;
     readonly eventBus: EngineEventBus;
     readonly swarms: Swarms;
     readonly secrets: Secrets;
@@ -337,6 +339,9 @@ export class Engine {
             usersDir: this.config.current.usersDir,
             observationLog: this.storage.observationLog
         });
+        this.modelRoles = new ModelRoles({
+            repository: this.storage.modelRoleRules
+        });
 
         this.agentSystem = new AgentSystem({
             config: this.config,
@@ -350,7 +355,8 @@ export class Engine {
             inferenceRouter: this.inferenceRouter,
             authStore: this.authStore,
             secrets: this.secrets,
-            delayedSignals: this.delayedSignals
+            delayedSignals: this.delayedSignals,
+            modelRoles: this.modelRoles
         });
         this.friends = new Friends({
             storage: this.storage,
@@ -665,6 +671,10 @@ export class Engine {
             }
         }
         await this.swarms.discover(ownerCtx.userId);
+
+        logger.debug("load: Loading model role rules");
+        await this.modelRoles.load();
+        logger.debug("load: Model role rules loaded");
 
         logger.debug("load: Loading agents");
         await this.agentSystem.load();
