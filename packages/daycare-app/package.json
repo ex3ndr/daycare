@@ -34,6 +34,7 @@
         "expo-splash-screen": "~55.0.9",
         "expo-system-ui": "~55.0.9",
         "handlebars": "^4.7.8",
+        "lottie-react-native": "~7.3.1",
         "react": "19.2.0",
         "react-dom": "19.2.0",
         "react-native": "0.83.2",
