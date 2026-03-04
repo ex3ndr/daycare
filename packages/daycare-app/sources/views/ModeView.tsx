@@ -15,12 +15,8 @@ import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 import { DocumentMetadataPanel } from "@/views/documents/DocumentMetadataPanel";
 import { DocumentsView } from "@/views/documents/DocumentsView";
 import { DocumentTreePanel } from "@/views/documents/DocumentTreePanel";
-import { EmailView } from "@/views/EmailView";
-import { ExperimentsView } from "@/views/ExperimentsView";
 import { FragmentsView } from "@/views/FragmentsView";
 import { HomeView } from "@/views/HomeView";
-import { InboxView } from "@/views/InboxView";
-import { PeopleView } from "@/views/PeopleView";
 import { RoutinesView } from "@/views/RoutinesView";
 import { SettingsView } from "@/views/SettingsView";
 import { SkillsView } from "@/views/SkillsView";
@@ -36,26 +32,12 @@ const leftItems: Record<
         { id: "a2", title: "Builder", subtitle: "Code specialist" },
         { id: "a3", title: "Operator", subtitle: "Runtime ops" }
     ],
-    people: [
-        { id: "p1", title: "Team", subtitle: "4 members" },
-        { id: "p2", title: "External", subtitle: "3 contacts" }
-    ],
-    email: [
-        { id: "e1", title: "Inbox", subtitle: "3 unread" },
-        { id: "e2", title: "Sent", subtitle: "12 messages" },
-        { id: "e3", title: "Archive", subtitle: "Older mail" }
-    ],
-    inbox: [
-        { id: "i1", title: "Action Required", subtitle: "3 items" },
-        { id: "i2", title: "Notifications", subtitle: "4 items" }
-    ],
     todos: [
         { id: "t1", title: "Today", subtitle: "3 tasks" },
         { id: "t2", title: "This Week", subtitle: "2 tasks" },
         { id: "t3", title: "Completed", subtitle: "3 done" }
     ],
     fragments: [],
-    experiments: [],
     routines: [
         { id: "r1", title: "Active", subtitle: "4 routines" },
         { id: "r2", title: "Disabled", subtitle: "2 routines" }
@@ -76,11 +58,7 @@ const viewComponents: Record<AppMode, React.ComponentType> = {
     home: HomeView,
     agents: AgentsView,
     fragments: FragmentsView,
-    people: PeopleView,
-    email: EmailView,
-    inbox: InboxView,
     todos: TodosView,
-    experiments: ExperimentsView,
     routines: RoutinesView,
     costs: CostsView,
     documents: DocumentsView,

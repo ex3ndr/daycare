@@ -10,11 +10,7 @@ export type AppMode =
     | "home"
     | "agents"
     | "fragments"
-    | "people"
-    | "email"
-    | "inbox"
     | "todos"
-    | "experiments"
     | "routines"
     | "costs"
     | "documents"
@@ -27,11 +23,7 @@ export const appModes: AppMode[] = [
     "home",
     "agents",
     "fragments",
-    "people",
-    "email",
-    "inbox",
     "todos",
-    "experiments",
     "routines",
     "costs",
     "documents",
@@ -44,11 +36,7 @@ export const appModes: AppMode[] = [
 const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicons>["name"]; label: string }> = [
     { mode: "agents", icon: "device-desktop", label: "Agents" },
     { mode: "fragments", icon: "note", label: "Fragments" },
-    { mode: "people", icon: "people", label: "People" },
-    { mode: "email", icon: "mail", label: "Email" },
-    { mode: "inbox", icon: "inbox", label: "Inbox" },
     { mode: "todos", icon: "checklist", label: "Todos" },
-    { mode: "experiments", icon: "beaker", label: "Experiments" },
     { mode: "routines", icon: "clock", label: "Routines" },
     { mode: "costs", icon: "credit-card", label: "Costs" },
     { mode: "documents", icon: "file", label: "Documents" },
