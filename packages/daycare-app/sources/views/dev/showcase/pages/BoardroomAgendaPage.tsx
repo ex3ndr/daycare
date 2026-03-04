@@ -591,7 +591,7 @@ export function BoardroomAgendaPage() {
     }
 
     return (
-        <ShowcasePage contentContainerStyle={styles.contentContainer} density="spacious">
+        <ShowcasePage density="spacious">
             <MeetingHeader />
 
             {/* Section: Agenda */}
@@ -618,10 +618,6 @@ export function BoardroomAgendaPage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    contentContainer: {
-        paddingBottom: 48
-    },
-
     // Meeting header
     headerCard: {
         borderRadius: 14,

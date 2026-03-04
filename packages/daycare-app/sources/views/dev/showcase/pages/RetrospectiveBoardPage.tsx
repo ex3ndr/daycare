@@ -439,7 +439,7 @@ export function RetrospectiveBoardPage() {
     const prevCompleted = PREVIOUS_ACTIONS.filter((a) => a.completed).length;
 
     return (
-        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} contentContainerStyle={s.root}>
+        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} topInset={16} contentGap={16}>
             {/* Sprint header */}
             <View style={[s.headerCard, { backgroundColor: theme.colors.surfaceContainer }]}>
                 <View style={s.headerTop}>
@@ -601,12 +601,6 @@ export function RetrospectiveBoardPage() {
 // --- Styles ---
 
 const s = StyleSheet.create((theme) => ({
-    root: {
-        padding: 16,
-        gap: 16,
-        paddingBottom: 40
-    },
-
     // Header card
     headerCard: {
         borderRadius: 16,

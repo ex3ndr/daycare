@@ -435,7 +435,7 @@ export function InvoiceTrackerPage() {
     const currentSelected = selectedInvoice ? (invoices.find((inv) => inv.id === selectedInvoice.id) ?? null) : null;
 
     return (
-        <ShowcasePage style={styles.root} contentContainerStyle={styles.scrollContent}>
+        <ShowcasePage style={styles.root} topInset={20}>
             {/* Detail overlay replaces content when an invoice is selected */}
             {currentSelected ? (
                 <DetailOverlay
@@ -517,11 +517,6 @@ const styles = StyleSheet.create((theme) => ({
     root: {
         flex: 1
     },
-    scrollContent: {
-        paddingTop: 20,
-        paddingBottom: 40
-    },
-
     // Hero section
     heroSection: {
         backgroundColor: theme.colors.surfaceContainer,

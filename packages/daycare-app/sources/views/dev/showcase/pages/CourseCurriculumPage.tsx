@@ -655,10 +655,7 @@ export function CourseCurriculumPage() {
     }, [modules]);
 
     return (
-        <ShowcasePage
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={styles.scrollContent}
-        >
+        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} bottomInset={48}>
             {/* Course Header Card */}
             <View style={[styles.headerCard, { backgroundColor: theme.colors.primary }]}>
                 <View style={styles.headerTopRow}>
@@ -828,10 +825,6 @@ export function CourseCurriculumPage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingBottom: 48
-    },
-
     // Header card
     headerCard: {
         borderRadius: 20,

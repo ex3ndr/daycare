@@ -884,7 +884,9 @@ export function SupportTicketsPage() {
     return (
         <ShowcasePage
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={pageStyles.scrollContent}
+            topInset={16}
+            bottomInset={16}
+            contentGap={16}
         >
             {/* Metrics Row */}
             <View style={pageStyles.metricsRow}>
@@ -953,10 +955,6 @@ export function SupportTicketsPage() {
 }
 
 const pageStyles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        padding: 16,
-        gap: 16
-    },
     metricsRow: {
         flexDirection: "row",
         gap: 8

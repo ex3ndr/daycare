@@ -554,7 +554,7 @@ export function StartupMetricsPage() {
     }, []);
 
     return (
-        <ShowcasePage contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.surface }]}>
+        <ShowcasePage bottomInset={60} contentContainerStyle={{ backgroundColor: theme.colors.surface }}>
             {/* Hero summary */}
             <View style={styles.heroSection}>
                 <Text style={[styles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>TOTAL MRR</Text>
@@ -728,10 +728,6 @@ export function StartupMetricsPage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingBottom: 60
-    },
-
     // Hero
     heroSection: {
         alignItems: "center",

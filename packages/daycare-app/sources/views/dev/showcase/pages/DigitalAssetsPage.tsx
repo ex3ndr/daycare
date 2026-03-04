@@ -616,7 +616,7 @@ export function DigitalAssetsPage() {
     }, []);
 
     return (
-        <ShowcasePage contentContainerStyle={styles.scrollContent} density="spacious">
+        <ShowcasePage density="spacious" horizontalInset={16} topInset={20}>
             {/* Total stats banner */}
             <View style={[styles.statsBanner, { backgroundColor: theme.colors.surfaceContainer }]}>
                 <View style={styles.statsBannerItem}>
@@ -691,12 +691,6 @@ export function DigitalAssetsPage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingHorizontal: 16,
-        paddingTop: 20,
-        paddingBottom: 48
-    },
-
     // Stats banner
     statsBanner: {
         flexDirection: "row",

@@ -688,7 +688,9 @@ export function ResearchPapersPage() {
     return (
         <ShowcasePage
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={styles.scrollContent}
+            topInset={20}
+            bottomInset={20}
+            contentGap={20}
         >
             {/* Header */}
             <View style={styles.headerBlock}>
@@ -739,11 +741,6 @@ export function ResearchPapersPage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingVertical: 20,
-        gap: 20
-    },
-
     // Header
     headerBlock: {
         gap: 4

@@ -572,7 +572,7 @@ export function JobApplicationsPage() {
     }, []);
 
     return (
-        <ShowcasePage contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.surface }]}>
+        <ShowcasePage edgeToEdge bottomInset={48} contentContainerStyle={{ backgroundColor: theme.colors.surface }}>
             {/* Header */}
             <View style={styles.headerContainer}>
                 <View style={styles.headerTitleRow}>
@@ -744,11 +744,6 @@ export function JobApplicationsPage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingHorizontal: 0,
-        paddingBottom: 48
-    },
-
     // Header
     headerContainer: {
         paddingHorizontal: 16,

@@ -580,10 +580,7 @@ export function ChangelogPage() {
     }, [activeFilter]);
 
     return (
-        <ShowcasePage
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={pageStyles.scrollContent}
-        >
+        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} topInset={16} contentGap={16}>
             {/* Page header */}
             <View style={pageStyles.titleRow}>
                 <View style={[pageStyles.titleIcon, { backgroundColor: `${theme.colors.primary}15` }]}>
@@ -627,11 +624,6 @@ export function ChangelogPage() {
 }
 
 const pageStyles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        padding: 16,
-        gap: 16,
-        paddingBottom: 40
-    },
     titleRow: {
         flexDirection: "row",
         alignItems: "center",

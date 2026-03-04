@@ -495,7 +495,9 @@ export function PodcastQueuePage() {
     return (
         <ShowcasePage
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={styles.scrollContent}
+            topInset={20}
+            bottomInset={48}
+            contentGap={28}
         >
             {/* Listening Stats */}
             <View style={styles.statsRow}>
@@ -558,13 +560,6 @@ export function PodcastQueuePage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingHorizontal: 16,
-        paddingVertical: 20,
-        paddingBottom: 48,
-        gap: 28
-    },
-
     // Stats
     statsRow: {
         flexDirection: "row",

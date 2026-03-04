@@ -612,7 +612,7 @@ export function NewsletterCampaignsPage() {
     const statusOrder: CampaignStatus[] = ["draft", "scheduled", "sent"];
 
     return (
-        <ShowcasePage contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.surface }]}>
+        <ShowcasePage bottomInset={60} contentContainerStyle={{ backgroundColor: theme.colors.surface }}>
             {/* Hero: subscriber count with trend */}
             <View style={styles.heroSection}>
                 <Text style={[styles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>NEWSLETTER</Text>
@@ -687,11 +687,6 @@ export function NewsletterCampaignsPage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingHorizontal: 16,
-        paddingBottom: 60
-    },
-
     // Hero
     heroSection: {
         alignItems: "center",

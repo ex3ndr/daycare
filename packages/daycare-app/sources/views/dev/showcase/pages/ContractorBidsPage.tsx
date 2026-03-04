@@ -649,7 +649,7 @@ export function ContractorBidsPage() {
     }, []);
 
     return (
-        <ShowcasePage contentContainerStyle={styles.scrollContent} density="spacious">
+        <ShowcasePage density="spacious">
             {/* Project header */}
             <ProjectHeader totalBudget={totalBudget} totalBids={totalBids} categoriesCount={mockCategories.length} />
 
@@ -762,10 +762,6 @@ export function ContractorBidsPage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingBottom: 48
-    },
-
     // Project header
     projectHeader: {
         borderRadius: 16,

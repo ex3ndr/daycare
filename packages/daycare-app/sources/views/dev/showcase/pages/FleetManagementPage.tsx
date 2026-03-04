@@ -647,7 +647,7 @@ export function FleetManagementPage() {
     };
 
     return (
-        <ShowcasePage contentContainerStyle={styles.scrollContent} density="spacious">
+        <ShowcasePage density="spacious" horizontalInset={16} topInset={20}>
             {/* Overdue Service Banner */}
             <OverdueBanner
                 vehicles={overdueVehicles}
@@ -791,12 +791,6 @@ export function FleetManagementPage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingHorizontal: 16,
-        paddingTop: 20,
-        paddingBottom: 48
-    },
-
     // Overdue banner
     bannerContainer: {
         borderRadius: 14,

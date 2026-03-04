@@ -608,7 +608,9 @@ export function HomeMaintenancePage() {
     return (
         <ShowcasePage
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={styles.scrollContent}
+            topInset={16}
+            bottomInset={48}
+            contentGap={16}
         >
             {/* Header area with title and date */}
             <View style={styles.pageHeader}>
@@ -711,12 +713,6 @@ export function HomeMaintenancePage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        padding: 16,
-        gap: 16,
-        paddingBottom: 48
-    },
-
     // Page header
     pageHeader: {
         gap: 4,

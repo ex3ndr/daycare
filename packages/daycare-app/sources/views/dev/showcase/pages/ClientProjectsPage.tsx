@@ -432,7 +432,7 @@ export function ClientProjectsPage() {
     const totalCount = milestones.length;
 
     return (
-        <ShowcasePage contentContainerStyle={s.root}>
+        <ShowcasePage topInset={16} bottomInset={48} contentGap={24}>
             {/* --- Project Header --- */}
             <View style={[s.headerCard, { backgroundColor: theme.colors.surfaceContainer }]}>
                 {/* Top accent bar */}
@@ -530,13 +530,6 @@ export function ClientProjectsPage() {
 // --- Styles ---
 
 const s = StyleSheet.create((theme) => ({
-    root: {
-        paddingHorizontal: 16,
-        paddingTop: 16,
-        paddingBottom: 48,
-        gap: 24
-    },
-
     // Header card
     headerCard: {
         borderRadius: 16,

@@ -628,7 +628,7 @@ export function VendorDirectoryPage() {
     }, []);
 
     return (
-        <ShowcasePage contentContainerStyle={styles.scrollContent}>
+        <ShowcasePage bottomInset={48}>
             {/* Metric cards row */}
             <View style={styles.metricsRow}>
                 <MetricCard
@@ -710,10 +710,6 @@ export function VendorDirectoryPage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingBottom: 48
-    },
-
     // Metric cards
     metricsRow: {
         flexDirection: "row",

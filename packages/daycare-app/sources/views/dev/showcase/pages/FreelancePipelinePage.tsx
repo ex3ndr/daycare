@@ -467,7 +467,7 @@ export function FreelancePipelinePage() {
     const currentSelected = selectedProject ? (projects.find((p) => p.id === selectedProject.id) ?? null) : null;
 
     return (
-        <ShowcasePage contentContainerStyle={s.root}>
+        <ShowcasePage topInset={16} bottomInset={48} contentGap={12}>
             {/* --- Metrics Row --- */}
             <View style={s.metricsRow}>
                 <MetricCard
@@ -648,13 +648,6 @@ export function FreelancePipelinePage() {
 // --- Styles ---
 
 const s = StyleSheet.create((theme) => ({
-    root: {
-        paddingHorizontal: 16,
-        paddingTop: 16,
-        paddingBottom: 48,
-        gap: 12
-    },
-
     // Metrics
     metricsRow: {
         flexDirection: "row",

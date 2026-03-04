@@ -555,7 +555,7 @@ export function ApartmentHuntingPage() {
     };
 
     return (
-        <ShowcasePage contentContainerStyle={styles.scrollContent}>
+        <ShowcasePage edgeToEdge bottomInset={24}>
             {/* Search criteria summary */}
             <CriteriaSummary criteria={SEARCH_CRITERIA} />
 
@@ -629,11 +629,6 @@ export function ApartmentHuntingPage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingHorizontal: 0,
-        paddingBottom: 24
-    },
-
     // Criteria summary card
     criteriaCard: {
         marginHorizontal: 16,

@@ -695,7 +695,7 @@ export function LegalCasesPage() {
     }, []);
 
     return (
-        <ShowcasePage contentContainerStyle={s.root} density="spacious">
+        <ShowcasePage density="spacious" topInset={16} contentGap={20}>
             {/* Page Title */}
             <View style={s.pageTitleRow}>
                 <View style={[s.pageTitleIcon, { backgroundColor: `${theme.colors.primary}18` }]}>
@@ -781,12 +781,6 @@ export function LegalCasesPage() {
 // --- Styles ---
 
 const s = StyleSheet.create((theme) => ({
-    root: {
-        paddingTop: 16,
-        paddingBottom: 48,
-        gap: 20
-    },
-
     // Page title
     pageTitleRow: {
         flexDirection: "row",

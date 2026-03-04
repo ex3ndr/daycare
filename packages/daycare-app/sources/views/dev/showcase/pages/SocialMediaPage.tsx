@@ -586,7 +586,7 @@ export function SocialMediaPage() {
     }, []);
 
     return (
-        <ShowcasePage contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.surface }]}>
+        <ShowcasePage bottomInset={60} contentContainerStyle={{ backgroundColor: theme.colors.surface }}>
             {/* Hero: total followers */}
             <View style={styles.heroSection}>
                 <Text style={[styles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>
@@ -702,11 +702,6 @@ export function SocialMediaPage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingHorizontal: 16,
-        paddingBottom: 60
-    },
-
     // Hero
     heroSection: {
         alignItems: "center",

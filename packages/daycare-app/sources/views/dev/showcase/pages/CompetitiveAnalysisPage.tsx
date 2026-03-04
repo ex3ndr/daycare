@@ -663,7 +663,12 @@ export function CompetitiveAnalysisPage() {
     const swot = SWOT_DATA[selected];
 
     return (
-        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} contentContainerStyle={s.root}>
+        <ShowcasePage
+            style={{ flex: 1, backgroundColor: theme.colors.surface }}
+            topInset={16}
+            bottomInset={16}
+            contentGap={20}
+        >
             {/* Page title */}
             <View style={s.pageHeader}>
                 <View style={[s.pageIconCircle, { backgroundColor: `${theme.colors.primary}18` }]}>
@@ -698,11 +703,6 @@ export function CompetitiveAnalysisPage() {
 // --- Styles ---
 
 const s = StyleSheet.create((theme) => ({
-    root: {
-        padding: 16,
-        gap: 20
-    },
-
     // Page header
     pageHeader: {
         flexDirection: "row",

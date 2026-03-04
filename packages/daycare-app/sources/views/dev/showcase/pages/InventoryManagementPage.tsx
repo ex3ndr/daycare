@@ -555,7 +555,7 @@ export function InventoryManagementPage() {
     }, []);
 
     return (
-        <ShowcasePage contentContainerStyle={styles.scrollContent}>
+        <ShowcasePage topInset={20} bottomInset={48}>
             {/* Reorder Alert Banner */}
             <ReorderBanner items={lowStockItems} onDismiss={handleDismissAlert} dismissedIds={dismissedAlerts} />
 
@@ -653,11 +653,6 @@ export function InventoryManagementPage() {
 // --- Styles ---
 
 const styles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        paddingTop: 20,
-        paddingBottom: 48
-    },
-
     // Reorder banner
     bannerContainer: {
         borderRadius: 14,

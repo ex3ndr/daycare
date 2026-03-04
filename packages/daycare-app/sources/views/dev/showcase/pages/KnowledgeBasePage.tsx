@@ -1042,7 +1042,8 @@ export function KnowledgeBasePage() {
     return (
         <ShowcasePage
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={pageStyles.scrollContent}
+            topInset={16}
+            contentGap={12}
             keyboardShouldPersistTaps="handled"
         >
             {/* Search */}
@@ -1099,11 +1100,6 @@ export function KnowledgeBasePage() {
 }
 
 const pageStyles = StyleSheet.create((theme) => ({
-    scrollContent: {
-        padding: 16,
-        gap: 12,
-        paddingBottom: 40
-    },
     resultsInfo: {
         flexDirection: "row",
         alignItems: "center",
