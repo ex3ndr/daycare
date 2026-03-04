@@ -175,6 +175,72 @@ export async function sendEngineAgentMessage(
     };
 }
 
+export type ModelRoleRuleResponse = {
+    id: string;
+    role: string | null;
+    kind: string | null;
+    userId: string | null;
+    agentId: string | null;
+    model: string;
+    createdAt: number;
+    updatedAt: number;
+};
+
+export async function listModelRoleRules(socketPathOverride?: string): Promise<{ rules: ModelRoleRuleResponse[] }> {
+    const socketPath = resolveEngineSocketPath(socketPathOverride);
+    const response = await requestSocket({ socketPath, path: "/v1/engine/model-roles" });
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw new Error(response.body || "Failed to list model role rules.");
+    }
+    const payload = JSON.parse(response.body) as { rules?: ModelRoleRuleResponse[] };
+    return { rules: payload.rules ?? [] };
+}
+
+export async function setModelRoleRule(
+    input: {
+        id?: string;
+        role?: string | null;
+        kind?: string | null;
+        userId?: string | null;
+        agentId?: string | null;
+        model: string;
+    },
+    socketPathOverride?: string
+): Promise<ModelRoleRuleResponse> {
+    const socketPath = resolveEngineSocketPath(socketPathOverride);
+    const response = await requestSocket({
+        socketPath,
+        path: "/v1/engine/model-roles/set",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input)
+    });
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw new Error(response.body || "Failed to set model role rule.");
+    }
+    const payload = JSON.parse(response.body) as { rule?: ModelRoleRuleResponse };
+    if (!payload.rule) {
+        throw new Error("Failed to set model role rule.");
+    }
+    return payload.rule;
+}
+
+export async function deleteModelRoleRule(id: string, socketPathOverride?: string): Promise<boolean> {
+    const socketPath = resolveEngineSocketPath(socketPathOverride);
+    const response = await requestSocket({
+        socketPath,
+        path: "/v1/engine/model-roles/delete",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+    });
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw new Error(response.body || "Failed to delete model role rule.");
+    }
+    const payload = JSON.parse(response.body) as { deleted?: boolean };
+    return payload.deleted === true;
+}
+
 export async function triggerEngineCronTask(triggerId: string, socketPathOverride?: string): Promise<void> {
     const socketPath = resolveEngineSocketPath(socketPathOverride);
     const response = await requestSocket({

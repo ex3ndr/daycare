@@ -10,6 +10,7 @@ import { channelRemoveMemberCommand } from "./commands/channelRemoveMember.js";
 import { channelSendCommand } from "./commands/channelSend.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { eventCommand } from "./commands/event.js";
+import { modelRulesCommand } from "./commands/modelRules.js";
 import { modelsCommand } from "./commands/models.js";
 import { loadPluginCommand, unloadPluginCommand } from "./commands/plugins.js";
 import { setDefaultProviderCommand } from "./commands/providers.js";
@@ -100,6 +101,20 @@ program
     .option("-s, --settings <path>", "Path to settings file", DEFAULT_SETTINGS_PATH)
     .option("-l, --list", "List current model assignments without prompting")
     .action(modelsCommand);
+
+program
+    .command("model-rules")
+    .description("Manage model role override rules (requires running engine)")
+    .option("-l, --list", "List all rules")
+    .option("--set", "Create or update a rule (requires --model)")
+    .option("--delete <id>", "Delete a rule by id")
+    .option("--id <id>", "Rule id (for update)")
+    .option("--role <role>", "Match role (user, memory, memorySearch, subagent, task)")
+    .option("--kind <kind>", "Match kind (connector, agent, app, sub, memory, search, ...)")
+    .option("--user-id <userId>", "Match user id")
+    .option("--agent-id <agentId>", "Match agent id")
+    .option("--model <model>", "Model to assign (provider/model format)")
+    .action(modelRulesCommand);
 
 program
     .command("doctor")
