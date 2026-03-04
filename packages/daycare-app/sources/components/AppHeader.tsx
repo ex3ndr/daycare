@@ -19,6 +19,7 @@ export type AppMode =
     | "documents"
     | "skills"
     | "tools"
+    | "dev"
     | "settings";
 
 export const appModes: AppMode[] = [
@@ -34,6 +35,7 @@ export const appModes: AppMode[] = [
     "documents",
     "skills",
     "tools",
+    "dev",
     "settings"
 ];
 
@@ -49,6 +51,7 @@ const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicon
     { mode: "documents", icon: "file", label: "Documents" },
     { mode: "skills", icon: "zap", label: "Skills" },
     { mode: "tools", icon: "tools", label: "Tools" },
+    { mode: "dev", icon: "code-square", label: "Dev" },
     { mode: "settings", icon: "gear", label: "Settings" }
 ];
 

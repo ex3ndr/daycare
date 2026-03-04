@@ -9,6 +9,7 @@ import { type AppMode, appModes } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
+import { showcasePages } from "@/views/dev/showcase/_showcasePages";
 import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 
 export const SIDEBAR_WIDTH = 240;
@@ -37,7 +38,10 @@ const segmentGroups: Segment[][] = [
         { mode: "tools", icon: "tools", label: "Tools" },
         { mode: "costs", icon: "credit-card", label: "Costs" }
     ],
-    [{ mode: "settings", icon: "gear", label: "Settings" }]
+    [
+        { mode: "dev", icon: "code-square", label: "Dev" },
+        { mode: "settings", icon: "gear", label: "Settings" }
+    ]
 ];
 
 /** Sub-items for each mode that expand when the mode is active. */
@@ -54,6 +58,11 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     documents: [],
     skills: [],
     tools: [],
+    dev: [
+        { id: "widgets", title: "Widgets" },
+        { id: "examples", title: "Examples" },
+        ...showcasePages.map((p) => ({ id: p.id, title: p.title }))
+    ],
     settings: []
 };
 
