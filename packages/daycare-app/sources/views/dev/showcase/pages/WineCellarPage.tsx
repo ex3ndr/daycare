@@ -556,7 +556,7 @@ export function WineCellarPage() {
         <ScrollView
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
             contentContainerStyle={{
-                maxWidth: 600,
+                maxWidth: theme.layout.maxWidth,
                 width: "100%",
                 alignSelf: "center",
                 paddingHorizontal: 16,
@@ -626,7 +626,7 @@ export function WineCellarPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((_theme) => ({
+const styles = StyleSheet.create((theme) => ({
     // Header
     headerSection: {
         paddingTop: 24,

@@ -526,7 +526,7 @@ export function OkrTrackerPage() {
     return (
         <ScrollView
             contentContainerStyle={{
-                maxWidth: 600,
+                maxWidth: theme.layout.maxWidth,
                 width: "100%",
                 alignSelf: "center",
                 paddingHorizontal: 16,
@@ -604,7 +604,7 @@ export function OkrTrackerPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((_theme) => ({
+const styles = StyleSheet.create((theme) => ({
     // Quarter selector
     quarterSelectorContainer: {
         alignItems: "center",

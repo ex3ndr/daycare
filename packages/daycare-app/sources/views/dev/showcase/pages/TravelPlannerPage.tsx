@@ -233,7 +233,7 @@ function CategoryChip({ category }: { category: Category }) {
     );
 }
 
-const chipStyles = StyleSheet.create({
+const chipStyles = StyleSheet.create((theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "center",
@@ -246,7 +246,7 @@ const chipStyles = StyleSheet.create({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     }
-});
+}));
 
 // --- Status Badge ---
 
@@ -262,7 +262,7 @@ function StatusBadge({ status }: { status: ConfirmationStatus }) {
     );
 }
 
-const badgeStyles = StyleSheet.create({
+const badgeStyles = StyleSheet.create((theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "center",
@@ -275,7 +275,7 @@ const badgeStyles = StyleSheet.create({
         fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     }
-});
+}));
 
 // --- Itinerary Card ---
 
@@ -374,7 +374,7 @@ function ItineraryCard({
     );
 }
 
-const itinStyles = StyleSheet.create((_theme) => ({
+const itinStyles = StyleSheet.create((theme) => ({
     card: {
         borderRadius: 12,
         borderWidth: 1,
@@ -491,7 +491,7 @@ function DayDivider({ day, itemCount }: { day: number; itemCount: number }) {
     );
 }
 
-const dividerStyles = StyleSheet.create((_theme) => ({
+const dividerStyles = StyleSheet.create((theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "center",
@@ -560,7 +560,7 @@ function PackingCheckbox({ item, onToggle }: { item: PackingItem; onToggle: () =
     );
 }
 
-const packStyles = StyleSheet.create((_theme) => ({
+const packStyles = StyleSheet.create((theme) => ({
     row: {
         flexDirection: "row",
         alignItems: "center",
@@ -617,7 +617,7 @@ export function TravelPlannerPage() {
     return (
         <ScrollView
             contentContainerStyle={{
-                maxWidth: 600,
+                maxWidth: theme.layout.maxWidth,
                 width: "100%",
                 alignSelf: "center",
                 paddingHorizontal: 16,
@@ -747,7 +747,7 @@ export function TravelPlannerPage() {
 
 // --- Page Styles ---
 
-const styles = StyleSheet.create((_theme) => ({
+const styles = StyleSheet.create((theme) => ({
     // Hero card
     heroCard: {
         borderRadius: 20,

@@ -419,10 +419,10 @@ export function RecruitmentPipelinePage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create((theme) => ({
     scrollContent: {
         paddingBottom: 40,
-        maxWidth: 600,
+        maxWidth: theme.layout.maxWidth,
         width: "100%",
         alignSelf: "center"
     },
@@ -582,4 +582,4 @@ const styles = StyleSheet.create({
         fontFamily: "IBMPlexSans-Regular",
         fontSize: 14
     }
-});
+}));

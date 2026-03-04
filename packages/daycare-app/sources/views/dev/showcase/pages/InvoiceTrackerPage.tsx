@@ -523,7 +523,7 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1
     },
     scrollContent: {
-        maxWidth: 600,
+        maxWidth: theme.layout.maxWidth,
         width: "100%",
         alignSelf: "center",
         paddingHorizontal: 16,

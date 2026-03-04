@@ -217,7 +217,7 @@ function SegmentedControl({ active, onSelect }: { active: FilterTab; onSelect: (
     );
 }
 
-const segStyles = StyleSheet.create((_theme) => ({
+const segStyles = StyleSheet.create((theme) => ({
     container: {
         flexDirection: "row",
         borderRadius: 12,
@@ -251,7 +251,7 @@ function ReleaseTypeChip({ releaseType }: { releaseType: ReleaseType }) {
     );
 }
 
-const chipStyles = StyleSheet.create((_theme) => ({
+const chipStyles = StyleSheet.create((theme) => ({
     container: {
         paddingHorizontal: 10,
         paddingVertical: 3,
@@ -276,7 +276,7 @@ function IssueBadge({ issueNumber }: { issueNumber: number }) {
     );
 }
 
-const issueStyles = StyleSheet.create((_theme) => ({
+const issueStyles = StyleSheet.create((theme) => ({
     container: {
         paddingHorizontal: 8,
         paddingVertical: 2,
@@ -322,7 +322,7 @@ function ChangeRow({ change, isLast }: { change: Change; isLast: boolean }) {
     );
 }
 
-const changeStyles = StyleSheet.create((_theme) => ({
+const changeStyles = StyleSheet.create((theme) => ({
     wrapper: {
         flexDirection: "row",
         gap: 12,
@@ -434,7 +434,7 @@ function ReleaseSection({
     );
 }
 
-const sectionStyles = StyleSheet.create((_theme) => ({
+const sectionStyles = StyleSheet.create((theme) => ({
     container: {
         gap: 0
     },
@@ -528,7 +528,7 @@ function SummaryStats() {
     );
 }
 
-const statsStyles = StyleSheet.create((_theme) => ({
+const statsStyles = StyleSheet.create((theme) => ({
     row: {
         flexDirection: "row",
         gap: 8
@@ -626,9 +626,9 @@ export function ChangelogPage() {
     );
 }
 
-const pageStyles = StyleSheet.create((_theme) => ({
+const pageStyles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: 600,
+        maxWidth: theme.layout.maxWidth,
         width: "100%",
         alignSelf: "center",
         padding: 16,

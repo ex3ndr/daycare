@@ -287,7 +287,7 @@ function MetricCard({
     );
 }
 
-const metricStyles = StyleSheet.create((_theme) => ({
+const metricStyles = StyleSheet.create((theme) => ({
     card: {
         flex: 1,
         borderRadius: 12,
@@ -335,7 +335,7 @@ function SlaBadge({ status }: { status: SlaStatus }) {
     );
 }
 
-const slaStyles = StyleSheet.create((_theme) => ({
+const slaStyles = StyleSheet.create((theme) => ({
     badge: {
         flexDirection: "row",
         alignItems: "center",
@@ -372,7 +372,7 @@ function ChannelChip({ channel }: { channel: Channel }) {
     );
 }
 
-const channelStyles = StyleSheet.create((_theme) => ({
+const channelStyles = StyleSheet.create((theme) => ({
     chip: {
         flexDirection: "row",
         alignItems: "center",
@@ -410,7 +410,7 @@ function PriorityGroupHeader({ priority, count }: { priority: Priority; count: n
     );
 }
 
-const groupStyles = StyleSheet.create((_theme) => ({
+const groupStyles = StyleSheet.create((theme) => ({
     header: {
         flexDirection: "row",
         alignItems: "center",
@@ -564,7 +564,7 @@ function TicketRow({
     );
 }
 
-const rowStyles = StyleSheet.create((_theme) => ({
+const rowStyles = StyleSheet.create((theme) => ({
     container: {
         borderRadius: 12,
         overflow: "hidden",
@@ -746,7 +746,7 @@ function FilterPills({ active, onSelect }: { active: Priority | "all"; onSelect:
     );
 }
 
-const filterStyles = StyleSheet.create((_theme) => ({
+const filterStyles = StyleSheet.create((theme) => ({
     row: {
         flexDirection: "row",
         gap: 6,
@@ -813,7 +813,7 @@ function SummaryBar({ tickets }: { tickets: Ticket[] }) {
     );
 }
 
-const summaryStyles = StyleSheet.create((_theme) => ({
+const summaryStyles = StyleSheet.create((theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "center",
@@ -952,9 +952,9 @@ export function SupportTicketsPage() {
     );
 }
 
-const pageStyles = StyleSheet.create((_theme) => ({
+const pageStyles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: 600,
+        maxWidth: theme.layout.maxWidth,
         width: "100%",
         alignSelf: "center",
         padding: 16,

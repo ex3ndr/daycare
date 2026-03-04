@@ -297,7 +297,7 @@ function SegmentedControl({ active, onSelect }: { active: SortTab; onSelect: (ta
     );
 }
 
-const segStyles = StyleSheet.create((_theme) => ({
+const segStyles = StyleSheet.create((theme) => ({
     container: {
         flexDirection: "row",
         borderRadius: 12,
@@ -344,7 +344,7 @@ function SummaryMetrics({ requests }: { requests: FeatureRequest[] }) {
     );
 }
 
-const metricStyles = StyleSheet.create((_theme) => ({
+const metricStyles = StyleSheet.create((theme) => ({
     row: {
         flexDirection: "row",
         gap: 8
@@ -397,7 +397,7 @@ function VoteButton({ votes, voted, onPress }: { votes: number; voted: boolean; 
     );
 }
 
-const voteStyles = StyleSheet.create((_theme) => ({
+const voteStyles = StyleSheet.create((theme) => ({
     container: {
         alignItems: "center",
         justifyContent: "center",
@@ -427,7 +427,7 @@ function StatusChip({ status }: { status: RequestStatus }) {
     );
 }
 
-const chipStyles = StyleSheet.create((_theme) => ({
+const chipStyles = StyleSheet.create((theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "center",
@@ -456,7 +456,7 @@ function CategoryBadge({ category }: { category: Category }) {
     );
 }
 
-const badgeStyles = StyleSheet.create((_theme) => ({
+const badgeStyles = StyleSheet.create((theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "center",
@@ -537,7 +537,7 @@ function FeatureRequestCard({
     );
 }
 
-const cardStyles = StyleSheet.create((_theme) => ({
+const cardStyles = StyleSheet.create((theme) => ({
     container: {
         flexDirection: "row",
         borderRadius: 14,
@@ -754,7 +754,7 @@ function DetailPanel({
     );
 }
 
-const detailStyles = StyleSheet.create((_theme) => ({
+const detailStyles = StyleSheet.create((theme) => ({
     overlay: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.4)",
@@ -935,7 +935,7 @@ function StatusDistributionBar() {
     );
 }
 
-const distStyles = StyleSheet.create((_theme) => ({
+const distStyles = StyleSheet.create((theme) => ({
     container: {
         borderRadius: 12,
         padding: 14,
@@ -1063,12 +1063,12 @@ export function FeatureRequestsPage() {
     );
 }
 
-const pageStyles = StyleSheet.create((_theme) => ({
+const pageStyles = StyleSheet.create((theme) => ({
     root: {
         flex: 1
     },
     scrollContent: {
-        maxWidth: 600,
+        maxWidth: theme.layout.maxWidth,
         width: "100%",
         alignSelf: "center",
         padding: 16,

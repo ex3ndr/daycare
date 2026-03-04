@@ -396,7 +396,7 @@ function SearchBar({ query, onChangeQuery }: { query: string; onChangeQuery: (te
     );
 }
 
-const searchStyles = StyleSheet.create((_theme) => ({
+const searchStyles = StyleSheet.create((theme) => ({
     container: {
         paddingBottom: 4
     },
@@ -441,7 +441,7 @@ function CategoryHeader({ category, count }: { category: Category; count: number
     );
 }
 
-const catStyles = StyleSheet.create((_theme) => ({
+const catStyles = StyleSheet.create((theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "stretch",
@@ -495,7 +495,7 @@ function TagChip({ tag, color }: { tag: string; color: string }) {
     );
 }
 
-const tagStyles = StyleSheet.create((_theme) => ({
+const tagStyles = StyleSheet.create((theme) => ({
     chip: {
         paddingHorizontal: 8,
         paddingVertical: 3,
@@ -751,7 +751,7 @@ function ArticleCard({
     );
 }
 
-const cardStyles = StyleSheet.create((_theme) => ({
+const cardStyles = StyleSheet.create((theme) => ({
     container: {
         borderRadius: 12,
         overflow: "hidden",
@@ -990,7 +990,7 @@ function StatsBar({ articles }: { articles: Article[] }) {
     );
 }
 
-const statsStyles = StyleSheet.create((_theme) => ({
+const statsStyles = StyleSheet.create((theme) => ({
     row: {
         flexDirection: "row",
         gap: 8
@@ -1097,9 +1097,9 @@ export function KnowledgeBasePage() {
     );
 }
 
-const pageStyles = StyleSheet.create((_theme) => ({
+const pageStyles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: 600,
+        maxWidth: theme.layout.maxWidth,
         width: "100%",
         alignSelf: "center",
         padding: 16,

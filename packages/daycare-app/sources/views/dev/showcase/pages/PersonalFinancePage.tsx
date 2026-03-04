@@ -249,7 +249,7 @@ function MetricCard({
     );
 }
 
-const metricStyles = StyleSheet.create((_theme) => ({
+const metricStyles = StyleSheet.create((theme) => ({
     card: {
         flex: 1,
         minWidth: 140,
@@ -317,7 +317,7 @@ function TransactionRow({ txn }: { txn: Transaction }) {
     );
 }
 
-const txnStyles = StyleSheet.create((_theme) => ({
+const txnStyles = StyleSheet.create((theme) => ({
     row: {
         flexDirection: "row",
         alignItems: "center",
@@ -423,7 +423,7 @@ function BudgetRow({ item }: { item: BudgetCategory }) {
     );
 }
 
-const budgetStyles = StyleSheet.create((_theme) => ({
+const budgetStyles = StyleSheet.create((theme) => ({
     row: {
         gap: 6,
         paddingVertical: 10
@@ -497,7 +497,7 @@ export function PersonalFinancePage() {
     return (
         <ScrollView
             contentContainerStyle={{
-                maxWidth: 600,
+                maxWidth: theme.layout.maxWidth,
                 width: "100%",
                 alignSelf: "center",
                 paddingHorizontal: 16,
@@ -681,7 +681,7 @@ export function PersonalFinancePage() {
 
 // --- Page Styles ---
 
-const pageStyles = StyleSheet.create((_theme) => ({
+const pageStyles = StyleSheet.create((theme) => ({
     // Hero
     hero: {
         alignItems: "center",

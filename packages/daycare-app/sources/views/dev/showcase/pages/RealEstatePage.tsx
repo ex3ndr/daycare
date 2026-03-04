@@ -335,7 +335,7 @@ function MetricCard({
     );
 }
 
-const metricStyles = StyleSheet.create((_theme) => ({
+const metricStyles = StyleSheet.create((theme) => ({
     card: {
         flex: 1,
         minWidth: 140,
@@ -416,7 +416,7 @@ function ExpenseBreakdown({ expenses }: { expenses: Expense[] }) {
     );
 }
 
-const expenseStyles = StyleSheet.create((_theme) => ({
+const expenseStyles = StyleSheet.create((theme) => ({
     container: {
         gap: 10,
         paddingTop: 8
@@ -706,7 +706,7 @@ function PropertyCard({
     );
 }
 
-const cardStyles = StyleSheet.create((_theme) => ({
+const cardStyles = StyleSheet.create((theme) => ({
     card: {
         borderRadius: 14,
         overflow: "hidden"
@@ -873,7 +873,7 @@ function SectionHeader({
     );
 }
 
-const sectionStyles = StyleSheet.create((_theme) => ({
+const sectionStyles = StyleSheet.create((theme) => ({
     header: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -960,7 +960,7 @@ function FilterChips({
     );
 }
 
-const filterStyles = StyleSheet.create((_theme) => ({
+const filterStyles = StyleSheet.create((theme) => ({
     row: {
         flexDirection: "row",
         flexWrap: "wrap",
@@ -1015,7 +1015,7 @@ export function RealEstatePage() {
     return (
         <ScrollView
             contentContainerStyle={{
-                maxWidth: 600,
+                maxWidth: theme.layout.maxWidth,
                 width: "100%",
                 alignSelf: "center",
                 paddingHorizontal: 16,
@@ -1112,7 +1112,7 @@ export function RealEstatePage() {
 
 // --- Page Styles ---
 
-const pageStyles = StyleSheet.create((_theme) => ({
+const pageStyles = StyleSheet.create((theme) => ({
     hero: {
         alignItems: "center",
         paddingTop: 8,

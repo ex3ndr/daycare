@@ -651,9 +651,9 @@ export function InventoryManagementPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((_theme) => ({
+const styles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: 600,
+        maxWidth: theme.layout.maxWidth,
         width: "100%",
         alignSelf: "center",
         paddingHorizontal: 16,

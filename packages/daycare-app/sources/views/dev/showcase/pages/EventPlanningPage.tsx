@@ -280,7 +280,7 @@ function Avatar({ name, color }: { name: string; color: string }) {
     );
 }
 
-const avatarStyles = StyleSheet.create((_theme) => ({
+const avatarStyles = StyleSheet.create((theme) => ({
     circle: {
         width: 28,
         height: 28,
@@ -306,7 +306,7 @@ function PriorityChip({ priority }: { priority: Priority }) {
     );
 }
 
-const chipStyles = StyleSheet.create((_theme) => ({
+const chipStyles = StyleSheet.create((theme) => ({
     container: {
         paddingHorizontal: 8,
         paddingVertical: 2,
@@ -599,7 +599,7 @@ function BudgetMetric({
     );
 }
 
-const metricStyles = StyleSheet.create((_theme) => ({
+const metricStyles = StyleSheet.create((theme) => ({
     card: {
         flex: 1,
         borderRadius: 12,
@@ -655,7 +655,7 @@ export function EventPlanningPage() {
     return (
         <ScrollView
             contentContainerStyle={{
-                maxWidth: 600,
+                maxWidth: theme.layout.maxWidth,
                 width: "100%",
                 alignSelf: "center",
                 padding: 16,
@@ -807,7 +807,7 @@ export function EventPlanningPage() {
 
 // --- Hero styles ---
 
-const heroStyles = StyleSheet.create((_theme) => ({
+const heroStyles = StyleSheet.create((theme) => ({
     card: {
         borderRadius: 16,
         padding: 20,
@@ -898,7 +898,7 @@ const heroStyles = StyleSheet.create((_theme) => ({
 
 // --- Budget styles ---
 
-const budgetStyles = StyleSheet.create((_theme) => ({
+const budgetStyles = StyleSheet.create((theme) => ({
     wrapper: {
         gap: 14
     },

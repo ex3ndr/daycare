@@ -646,9 +646,9 @@ export function FreelancePipelinePage() {
 
 // --- Styles ---
 
-const s = StyleSheet.create((_theme) => ({
+const s = StyleSheet.create((theme) => ({
     root: {
-        maxWidth: 600,
+        maxWidth: theme.layout.maxWidth,
         width: "100%",
         alignSelf: "center",
         paddingHorizontal: 16,

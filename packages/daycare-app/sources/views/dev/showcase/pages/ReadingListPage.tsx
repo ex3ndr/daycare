@@ -230,7 +230,7 @@ export function ReadingListPage() {
     return (
         <ScrollView
             contentContainerStyle={{
-                maxWidth: 600,
+                maxWidth: theme.layout.maxWidth,
                 width: "100%",
                 alignSelf: "center",
                 paddingHorizontal: 16,
@@ -334,7 +334,7 @@ export function ReadingListPage() {
 
 // --- Styles ---
 
-const s = StyleSheet.create((_theme) => ({
+const s = StyleSheet.create((theme) => ({
     metricsRow: {
         flexDirection: "row",
         gap: 10

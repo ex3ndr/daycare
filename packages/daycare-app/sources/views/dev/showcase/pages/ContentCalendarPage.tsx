@@ -333,7 +333,7 @@ function PlatformPill({
     );
 }
 
-const pillStyles = StyleSheet.create((_theme) => ({
+const pillStyles = StyleSheet.create((theme) => ({
     pill: {
         paddingHorizontal: 14,
         paddingVertical: 6,
@@ -382,7 +382,7 @@ function Legend() {
     );
 }
 
-const legendStyles = StyleSheet.create((_theme) => ({
+const legendStyles = StyleSheet.create((theme) => ({
     container: (bg: string) => ({
         backgroundColor: bg,
         borderRadius: 10,
@@ -447,7 +447,7 @@ export function ContentCalendarPage() {
     return (
         <ScrollView
             contentContainerStyle={{
-                maxWidth: 600,
+                maxWidth: theme.layout.maxWidth,
                 width: "100%",
                 alignSelf: "center",
                 padding: 16,
@@ -510,7 +510,7 @@ export function ContentCalendarPage() {
     );
 }
 
-const styles = StyleSheet.create((_theme) => ({
+const styles = StyleSheet.create((theme) => ({
     filterRow: {
         flexDirection: "row",
         gap: 8,

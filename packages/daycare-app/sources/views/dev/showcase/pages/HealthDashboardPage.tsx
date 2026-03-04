@@ -316,7 +316,7 @@ export function HealthDashboardPage() {
     return (
         <ScrollView
             contentContainerStyle={{
-                maxWidth: 600,
+                maxWidth: theme.layout.maxWidth,
                 width: "100%",
                 alignSelf: "center",
                 paddingHorizontal: 16,
@@ -702,7 +702,7 @@ export function HealthDashboardPage() {
 
 // --- Styles ---
 
-const styles = StyleSheet.create((_theme) => ({
+const styles = StyleSheet.create((theme) => ({
     // Hero
     heroSection: {
         alignItems: "center",

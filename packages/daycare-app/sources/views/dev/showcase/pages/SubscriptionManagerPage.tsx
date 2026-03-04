@@ -277,7 +277,7 @@ function RenewalBanner() {
     );
 }
 
-const bannerStyles = StyleSheet.create((_theme) => ({
+const bannerStyles = StyleSheet.create((theme) => ({
     container: {
         flexDirection: "row",
         alignItems: "flex-start",
@@ -353,7 +353,7 @@ function CategoryBreakdownBar({ category }: { category: Category }) {
     );
 }
 
-const breakdownStyles = StyleSheet.create((_theme) => ({
+const breakdownStyles = StyleSheet.create((theme) => ({
     row: {
         flexDirection: "row",
         alignItems: "center",
@@ -501,7 +501,7 @@ function SubscriptionCard({ sub, expanded, onToggle }: { sub: Subscription; expa
     );
 }
 
-const cardStyles = StyleSheet.create((_theme) => ({
+const cardStyles = StyleSheet.create((theme) => ({
     container: {
         borderRadius: 12,
         overflow: "hidden",
@@ -689,7 +689,7 @@ function CategorySection({
     );
 }
 
-const sectionStyles = StyleSheet.create((_theme) => ({
+const sectionStyles = StyleSheet.create((theme) => ({
     container: {
         marginBottom: 20
     },
@@ -776,7 +776,7 @@ export function SubscriptionManagerPage() {
     return (
         <ScrollView
             contentContainerStyle={{
-                maxWidth: 600,
+                maxWidth: theme.layout.maxWidth,
                 width: "100%",
                 alignSelf: "center",
                 paddingHorizontal: 16,
@@ -871,7 +871,7 @@ export function SubscriptionManagerPage() {
 
 // --- Page Styles ---
 
-const pageStyles = StyleSheet.create((_theme) => ({
+const pageStyles = StyleSheet.create((theme) => ({
     // Hero
     hero: {
         alignItems: "center",

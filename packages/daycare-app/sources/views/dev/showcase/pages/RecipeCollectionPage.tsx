@@ -738,7 +738,7 @@ export function RecipeCollectionPage() {
         <ScrollView
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
             contentContainerStyle={{
-                maxWidth: 600,
+                maxWidth: theme.layout.maxWidth,
                 width: "100%",
                 alignSelf: "center",
                 paddingHorizontal: 16,

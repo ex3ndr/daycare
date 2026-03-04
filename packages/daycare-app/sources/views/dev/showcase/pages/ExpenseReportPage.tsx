@@ -72,7 +72,7 @@ function CategoryBar({ category, total }: { category: Expense["category"]; total
     );
 }
 
-const barStyles = StyleSheet.create({
+const barStyles = StyleSheet.create((theme) => ({
     row: {
         flexDirection: "row",
         alignItems: "center",
@@ -100,7 +100,7 @@ const barStyles = StyleSheet.create({
         width: 88,
         textAlign: "right"
     }
-});
+}));
 
 // --- Receipt card ---
 
@@ -143,7 +143,7 @@ function ReceiptCard({ expense }: { expense: Expense }) {
     );
 }
 
-const cardStyles = StyleSheet.create({
+const cardStyles = StyleSheet.create((theme) => ({
     container: {
         borderRadius: 10,
         overflow: "hidden",
@@ -194,7 +194,7 @@ const cardStyles = StyleSheet.create({
         bottom: 10,
         right: 14
     }
-});
+}));
 
 // --- Main component ---
 
@@ -204,7 +204,7 @@ export function ExpenseReportPage() {
     return (
         <ScrollView
             contentContainerStyle={{
-                maxWidth: 600,
+                maxWidth: theme.layout.maxWidth,
                 width: "100%",
                 alignSelf: "center",
                 paddingHorizontal: 20,
@@ -271,7 +271,7 @@ export function ExpenseReportPage() {
     );
 }
 
-const pageStyles = StyleSheet.create({
+const pageStyles = StyleSheet.create((theme) => ({
     // Header
     header: {
         alignItems: "center",
@@ -366,4 +366,4 @@ const pageStyles = StyleSheet.create({
         fontFamily: "IBMPlexMono-Regular",
         fontSize: 22
     }
-});
+}));

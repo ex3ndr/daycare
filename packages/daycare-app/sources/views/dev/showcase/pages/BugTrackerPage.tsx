@@ -205,7 +205,7 @@ function MetricTile({ value, label, color, pulse }: { value: string; label: stri
     );
 }
 
-const tileStyles = StyleSheet.create((_theme) => ({
+const tileStyles = StyleSheet.create((theme) => ({
     container: {
         flex: 1,
         borderRadius: 12,
@@ -275,7 +275,7 @@ function SeverityBar() {
     );
 }
 
-const barStyles = StyleSheet.create((_theme) => ({
+const barStyles = StyleSheet.create((theme) => ({
     container: {
         borderRadius: 12,
         padding: 16,
@@ -364,7 +364,7 @@ function FilterPills({ active, onSelect }: { active: FilterTab; onSelect: (tab: 
     );
 }
 
-const pillStyles = StyleSheet.create((_theme) => ({
+const pillStyles = StyleSheet.create((theme) => ({
     row: {
         flexDirection: "row",
         gap: 8,
@@ -401,7 +401,7 @@ function StatusBadge({ status }: { status: Status }) {
     );
 }
 
-const statusStyles = StyleSheet.create((_theme) => ({
+const statusStyles = StyleSheet.create((theme) => ({
     badge: (bg: string) => ({
         backgroundColor: bg,
         paddingHorizontal: 9,
@@ -462,7 +462,7 @@ function BugCard({ bug }: { bug: Bug }) {
     );
 }
 
-const cardStyles = StyleSheet.create((_theme) => ({
+const cardStyles = StyleSheet.create((theme) => ({
     outer: {
         borderRadius: 12,
         overflow: "hidden"
@@ -556,7 +556,7 @@ function SeverityGroupHeader({ severity }: { severity: Severity }) {
     );
 }
 
-const groupStyles = StyleSheet.create((_theme) => ({
+const groupStyles = StyleSheet.create((theme) => ({
     header: {
         flexDirection: "row",
         alignItems: "center",
@@ -645,9 +645,9 @@ export function BugTrackerPage() {
     );
 }
 
-const pageStyles = StyleSheet.create((_theme) => ({
+const pageStyles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: 600,
+        maxWidth: theme.layout.maxWidth,
         width: "100%",
         alignSelf: "center",
         padding: 16,

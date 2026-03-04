@@ -618,7 +618,7 @@ export function BoardroomAgendaPage() {
 
 const styles = StyleSheet.create((theme) => ({
     contentContainer: {
-        maxWidth: 600,
+        maxWidth: theme.layout.maxWidth,
         width: "100%",
         alignSelf: "center" as const,
         paddingHorizontal: 16,
