@@ -1,6 +1,7 @@
 import type http from "node:http";
 import type { Context } from "@/types";
 import type { RouteAgentCallbacks } from "../routeTypes.js";
+import { agentsChats } from "./agentsChats.js";
 import { agentsCreate } from "./agentsCreate.js";
 import { agentsDelete } from "./agentsDelete.js";
 import { agentsHistory } from "./agentsHistory.js";
@@ -39,6 +40,15 @@ export async function agentsRouteHandle(
 
     if (pathname === "/agents" && request.method === "GET") {
         const result = await agentsList({
+            ctx: context.ctx,
+            agentList: context.callbacks.agentList
+        });
+        context.sendJson(response, 200, result);
+        return true;
+    }
+
+    if (pathname === "/agents/chats" && request.method === "GET") {
+        const result = await agentsChats({
             ctx: context.ctx,
             agentList: context.callbacks.agentList
         });

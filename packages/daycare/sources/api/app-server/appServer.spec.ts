@@ -447,8 +447,24 @@ describe("AppServer authenticated routes", () => {
     it("supports app-agent create/send/read/delete lifecycle", async () => {
         const secret = "valid-secret-for-tests-1234567890";
         const history = new Map<string, Array<{ type: "user_message" | "assistant_message"; at: number }>>();
+        const chats = new Map<
+            string,
+            {
+                agentId: string;
+                path: string;
+                kind: "app";
+                name: string | null;
+                description: string | null;
+                connectorName: null;
+                foreground: false;
+                lifecycle: "active" | "sleeping" | "dead";
+                createdAt: number;
+                updatedAt: number;
+                userId: string;
+            }
+        >();
         const callbacks: RouteAgentCallbacks = {
-            agentList: async () => [],
+            agentList: async () => Array.from(chats.values()),
             agentHistoryLoad: async (_ctx, agentId) =>
                 (history.get(agentId) ?? []).map((entry) =>
                     entry.type === "user_message"
@@ -463,8 +479,28 @@ describe("AppServer authenticated routes", () => {
                             ? { type: "user_message" as const, at: entry.at, text: "hello", files: [] }
                             : { type: "assistant_message" as const, at: entry.at, content: [], tokens: null }
                     ),
-            agentCreate: async () => ({ agentId: "app-agent-1", initializedAt: 1_700_000_000_000 }),
-            agentKill: async (_ctx, agentId) => agentId === "app-agent-1",
+            agentCreate: async (ctx) => {
+                const createdAt = 1_700_000_000_000;
+                chats.set("app-agent-1", {
+                    agentId: "app-agent-1",
+                    path: `/${ctx.userId}/app/app-agent-1`,
+                    kind: "app",
+                    name: "App chat",
+                    description: null,
+                    connectorName: null,
+                    foreground: false,
+                    lifecycle: "active",
+                    createdAt,
+                    updatedAt: createdAt,
+                    userId: ctx.userId
+                });
+                return { agentId: "app-agent-1", initializedAt: createdAt };
+            },
+            agentKill: async (_ctx, agentId) => {
+                const exists = chats.has(agentId);
+                chats.delete(agentId);
+                return exists;
+            },
             agentPost: async (_ctx, target, item) => {
                 if (!("agentId" in target)) {
                     return;
@@ -474,6 +510,10 @@ describe("AppServer authenticated routes", () => {
                     const now = Date.now();
                     list.push({ type: "user_message", at: now });
                     list.push({ type: "assistant_message", at: now + 1 });
+                    const existing = chats.get(target.agentId);
+                    if (existing) {
+                        existing.updatedAt = now + 1;
+                    }
                 }
                 history.set(target.agentId, list);
             }
@@ -498,6 +538,24 @@ describe("AppServer authenticated routes", () => {
                 agentId: "app-agent-1",
                 initializedAt: 1_700_000_000_000
             }
+        });
+
+        const listedChats = await fetch(`http://127.0.0.1:${built.port}/agents/chats`, {
+            headers: { authorization: `Bearer ${token}` }
+        });
+        expect(listedChats.status).toBe(200);
+        await expect(listedChats.json()).resolves.toEqual({
+            ok: true,
+            chats: [
+                {
+                    agentId: "app-agent-1",
+                    name: "App chat",
+                    description: null,
+                    lifecycle: "active",
+                    createdAt: 1_700_000_000_000,
+                    updatedAt: 1_700_000_000_000
+                }
+            ]
         });
 
         const sent = await fetch(`http://127.0.0.1:${built.port}/agents/app-agent-1/messages/create`, {
@@ -527,6 +585,12 @@ describe("AppServer authenticated routes", () => {
         });
         expect(killed.status).toBe(200);
         await expect(killed.json()).resolves.toEqual({ ok: true, deleted: true });
+
+        const listedAfterDelete = await fetch(`http://127.0.0.1:${built.port}/agents/chats`, {
+            headers: { authorization: `Bearer ${token}` }
+        });
+        expect(listedAfterDelete.status).toBe(200);
+        await expect(listedAfterDelete.json()).resolves.toEqual({ ok: true, chats: [] });
     });
 
     it("lists prompt files", async () => {
