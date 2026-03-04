@@ -15,6 +15,7 @@
   },
   "scripts": {
     "app": "yarn workspace daycare-app web",
+    "app:prebuild": "yarn workspace daycare-app prebuild",
     "build": "yarn workspace daycare-cli run build",
     "dashboard": "yarn workspace daycare-dashboard dev",
     "dev": "DAYCARE_ROOT_DIR=~/.dev yarn workspace daycare-cli run dev",
@@ -25,7 +26,6 @@
     "factory:build": "node ./scripts/daycareFactoryBuildPrompt.mjs",
     "lint": "biome check",
     "lint:fix": "biome check --write",
-    "prebuild": "yarn workspace daycare-app prebuild",
     "release": "yarn workspace daycare-cli run release",
     "recipe": "yarn workspace daycare-cli run recipe",
     "test": "yarn workspaces run test",
