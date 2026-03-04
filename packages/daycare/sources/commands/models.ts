@@ -7,6 +7,12 @@ import { configLoad } from "../config/configLoad.js";
 import { configResolve } from "../config/configResolve.js";
 import { ConfigModule } from "../engine/config/configModule.js";
 import { FileFolder } from "../engine/files/fileFolder.js";
+import {
+    deleteModelRoleRule,
+    listModelRoleRules,
+    type ModelRoleRuleResponse,
+    setModelRoleRule
+} from "../engine/ipc/client.js";
 import { ImageGenerationRegistry } from "../engine/modules/imageGenerationRegistry.js";
 import { InferenceRouter } from "../engine/modules/inference/router.js";
 import { InferenceRegistry } from "../engine/modules/inferenceRegistry.js";
@@ -23,8 +29,11 @@ import {
     type SettingsConfig,
     updateSettingsFile
 } from "../settings.js";
-import type { ModelRoleRuleDbRecord } from "../storage/modelRoleRulesRepository.js";
-import type { Storage } from "../storage/storage.js";
+import type {
+    ModelRoleRuleCreateInput,
+    ModelRoleRuleDbRecord,
+    ModelRoleRuleUpdateInput
+} from "../storage/modelRoleRulesRepository.js";
 import { storageOpen } from "../storage/storageOpen.js";
 import { engineReloadRequest } from "./engineReloadRequest.js";
 import { promptConfirm, promptInput, promptSelect } from "./prompts.js";
@@ -83,7 +92,7 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
     const settingsPath = path.resolve(options.settings ?? DEFAULT_SETTINGS_PATH);
     const settings = await readSettingsFile(settingsPath);
     const config = await configLoad(settingsPath);
-    const storage = await storageOpen(config.db.path, { url: config.db.url, autoMigrate: false });
+    const ruleStore = await ruleStoreOpen(config);
 
     const configured = listProviders(settings).filter((p) => p.enabled !== false);
     if (configured.length === 0) {
@@ -120,8 +129,8 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
         console.log(`  ${flavorLabelBuild(key).padEnd(24)} ${entry.model} (${entry.description})`);
     }
 
-    // Show override rules from DB
-    const overrideRules = await storage.modelRoleRules.findAll();
+    // Show override rules
+    const overrideRules = await ruleStore.findAll();
     console.log("\nOverride rules:");
     console.log("─".repeat(60));
     if (overrideRules.length === 0) {
@@ -203,15 +212,15 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
     }
 
     if (selectedTarget === ADD_OVERRIDE_RULE_CHOICE) {
-        await overrideRuleAdd(storage);
+        await overrideRuleAdd(ruleStore);
         return;
     }
     if (selectedTarget === EDIT_OVERRIDE_RULE_CHOICE) {
-        await overrideRuleEdit(storage, overrideRules);
+        await overrideRuleEdit(ruleStore, overrideRules);
         return;
     }
     if (selectedTarget === DELETE_OVERRIDE_RULE_CHOICE) {
-        await overrideRuleDelete(storage, overrideRules);
+        await overrideRuleDelete(ruleStore, overrideRules);
         return;
     }
 
@@ -490,9 +499,86 @@ function builtinFlavorParse(flavorKey: string): BuiltinModelFlavor | null {
     return normalized in BUILTIN_MODEL_FLAVORS ? (normalized as BuiltinModelFlavor) : null;
 }
 
+// --- Override rule store (IPC when engine running, direct DB otherwise) ---
+
+type RuleRecord = ModelRoleRuleDbRecord;
+
+type RuleStore = {
+    findAll(): Promise<RuleRecord[]>;
+    insert(input: ModelRoleRuleCreateInput): Promise<RuleRecord>;
+    update(id: string, input: ModelRoleRuleUpdateInput): Promise<RuleRecord | null>;
+    delete(id: string): Promise<boolean>;
+};
+
+/**
+ * Tries IPC first (engine running). Falls back to direct DB access.
+ */
+async function ruleStoreOpen(config: {
+    socketPath: string;
+    db: { path: string; url: string | null };
+}): Promise<RuleStore> {
+    try {
+        await listModelRoleRules(config.socketPath);
+        // IPC works — use it
+        return {
+            findAll: async () => {
+                const res = await listModelRoleRules(config.socketPath);
+                return res.rules.map(ipcRuleToRecord);
+            },
+            insert: async (input) => {
+                const rule = await setModelRoleRule(
+                    {
+                        role: input.role ?? null,
+                        kind: input.kind ?? null,
+                        userId: input.userId ?? null,
+                        agentId: input.agentId ?? null,
+                        model: input.model
+                    },
+                    config.socketPath
+                );
+                return ipcRuleToRecord(rule);
+            },
+            update: async (id, input) => {
+                const rule = await setModelRoleRule(
+                    {
+                        id,
+                        role: input.role ?? null,
+                        kind: input.kind ?? null,
+                        userId: input.userId ?? null,
+                        agentId: input.agentId ?? null,
+                        model: input.model ?? ""
+                    },
+                    config.socketPath
+                );
+                return ipcRuleToRecord(rule);
+            },
+            delete: async (id) => {
+                return deleteModelRoleRule(id, config.socketPath);
+            }
+        };
+    } catch {
+        // Engine not running — open DB directly
+        const storage = await storageOpen(config.db.path, { url: config.db.url, autoMigrate: false });
+        return storage.modelRoleRules;
+    }
+}
+
+function ipcRuleToRecord(rule: ModelRoleRuleResponse): RuleRecord {
+    return {
+        id: rule.id,
+        role: rule.role,
+        kind: rule.kind,
+        userId: rule.userId,
+        agentId: rule.agentId,
+        model: rule.model,
+        createdAt: rule.createdAt,
+        updatedAt: rule.updatedAt
+    };
+}
+
 // --- Override rule helpers ---
 
-function ruleMatcherSummary(rule: ModelRoleRuleDbRecord): string {
+function ruleMatcherSummary(rule: RuleRecord): string {
     const matchers: string[] = [];
     if (rule.role) {
         matchers.push(`role=${rule.role}`);
@@ -509,7 +595,7 @@ function ruleMatcherSummary(rule: ModelRoleRuleDbRecord): string {
     return matchers.length > 0 ? matchers.join(", ") : "(wildcard)";
 }
 
-async function overrideRuleAdd(storage: Storage): Promise<void> {
+async function overrideRuleAdd(ruleStore: RuleStore): Promise<void> {
     const model = await promptInput({ message: "Model (provider/model)", placeholder: "anthropic/claude-sonnet-4-6" });
     if (!model?.trim()) {
         console.log("Cancelled.");
@@ -540,7 +626,7 @@ async function overrideRuleAdd(storage: Storage): Promise<void> {
         return;
     }
 
-    const rule = await storage.modelRoleRules.insert({
+    const rule = await ruleStore.insert({
         role: role === "__none__" ? null : role,
         kind: kind === "__none__" ? null : kind,
         userId: userId.trim() || null,
@@ -552,7 +638,7 @@ async function overrideRuleAdd(storage: Storage): Promise<void> {
     console.log(`  ${rule.id}  ${ruleMatcherSummary(rule)}  →  ${rule.model}`);
 }
 
-async function overrideRuleEdit(storage: Storage, rules: ModelRoleRuleDbRecord[]): Promise<void> {
+async function overrideRuleEdit(ruleStore: RuleStore, rules: RuleRecord[]): Promise<void> {
     const choices = rules.map((rule) => ({
         value: rule.id,
         name: `${ruleMatcherSummary(rule)}  →  ${rule.model}`,
@@ -626,7 +712,7 @@ async function overrideRuleEdit(storage: Storage, rules: ModelRoleRuleDbRecord[]
         return;
     }
 
-    const rule = await storage.modelRoleRules.update(selectedId, {
+    const rule = await ruleStore.update(selectedId, {
         role: role === "__none__" ? null : role,
         kind: kind === "__none__" ? null : kind,
         userId: userId.trim() || null,
@@ -642,7 +728,7 @@ async function overrideRuleEdit(storage: Storage, rules: ModelRoleRuleDbRecord[]
     }
 }
 
-async function overrideRuleDelete(storage: Storage, rules: ModelRoleRuleDbRecord[]): Promise<void> {
+async function overrideRuleDelete(ruleStore: RuleStore, rules: RuleRecord[]): Promise<void> {
     const choices = rules.map((rule) => ({
         value: rule.id,
         name: `${ruleMatcherSummary(rule)}  →  ${rule.model}`,
@@ -666,7 +752,7 @@ async function overrideRuleDelete(storage: Storage, rules: ModelRoleRuleDbRecord
         return;
     }
 
-    const deleted = await storage.modelRoleRules.delete(selectedId);
+    const deleted = await ruleStore.delete(selectedId);
     console.log(deleted ? `Rule ${selectedId} deleted.` : `Rule ${selectedId} not found.`);
 }
 
