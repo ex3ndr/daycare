@@ -7,6 +7,12 @@ import { configLoad } from "../config/configLoad.js";
 import { configResolve } from "../config/configResolve.js";
 import { ConfigModule } from "../engine/config/configModule.js";
 import { FileFolder } from "../engine/files/fileFolder.js";
+import {
+    deleteModelRoleRule,
+    listModelRoleRules,
+    type ModelRoleRuleResponse,
+    setModelRoleRule
+} from "../engine/ipc/client.js";
 import { ImageGenerationRegistry } from "../engine/modules/imageGenerationRegistry.js";
 import { InferenceRouter } from "../engine/modules/inference/router.js";
 import { InferenceRegistry } from "../engine/modules/inferenceRegistry.js";
@@ -24,7 +30,7 @@ import {
     updateSettingsFile
 } from "../settings.js";
 import { engineReloadRequest } from "./engineReloadRequest.js";
-import { promptInput, promptSelect } from "./prompts.js";
+import { promptConfirm, promptInput, promptSelect } from "./prompts.js";
 
 export type ModelsCommandOptions = {
     settings?: string;
@@ -43,6 +49,32 @@ const ROLE_KEYS: ModelRoleKey[] = ["user", "memory", "memorySearch", "subagent",
 const BUILTIN_FLAVOR_KEYS: BuiltinModelFlavor[] = ["small", "normal", "large"];
 
 const ADD_CUSTOM_FLAVOR_CHOICE = "__add_custom_flavor__";
+const ADD_OVERRIDE_RULE_CHOICE = "__add_override_rule__";
+const EDIT_OVERRIDE_RULE_CHOICE = "__edit_override_rule__";
+const DELETE_OVERRIDE_RULE_CHOICE = "__delete_override_rule__";
+
+const RULE_ROLE_CHOICES = [
+    { value: "__none__", name: "Any role", description: "Match all roles" },
+    { value: "user", name: "User", description: "User-facing agents" },
+    { value: "memory", name: "Memory", description: "Memory agents" },
+    { value: "memorySearch", name: "Memory Search", description: "Memory search agents" },
+    { value: "subagent", name: "Subagent", description: "Subagents" },
+    { value: "task", name: "Task", description: "Task agents" }
+];
+
+const RULE_KIND_CHOICES = [
+    { value: "__none__", name: "Any kind", description: "Match all kinds" },
+    { value: "connector", name: "Connector", description: "Messaging connectors" },
+    { value: "agent", name: "Agent", description: "General agents" },
+    { value: "app", name: "App", description: "App agents" },
+    { value: "swarm", name: "Swarm", description: "Swarm agents" },
+    { value: "cron", name: "Cron", description: "Scheduled tasks" },
+    { value: "task", name: "Task", description: "Task agents" },
+    { value: "subuser", name: "Subuser", description: "Sub-user agents" },
+    { value: "sub", name: "Sub", description: "Subagents" },
+    { value: "memory", name: "Memory", description: "Memory agents" },
+    { value: "search", name: "Search", description: "Search agents" }
+];
 
 export type ModelAssignmentTarget = { type: "role"; key: ModelRoleKey } | { type: "flavor"; key: string };
 
@@ -88,6 +120,20 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
         }
         console.log(`  ${flavorLabelBuild(key).padEnd(24)} ${entry.model} (${entry.description})`);
     }
+
+    // Try to show override rules (requires running engine)
+    const overrideRules = await overrideRulesFetch();
+    if (overrideRules) {
+        console.log("\nOverride rules:");
+        console.log("─".repeat(60));
+        if (overrideRules.length === 0) {
+            console.log("  (none)");
+        } else {
+            for (const rule of overrideRules) {
+                console.log(`  ${rule.id}  ${ruleMatcherSummary(rule)}  →  ${rule.model}`);
+            }
+        }
+    }
     console.log("");
 
     if (options.list) {
@@ -116,9 +162,39 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
         description: "Create a new named flavor mapped to provider/model"
     };
 
+    // Override rule management choices (only if engine is running)
+    const ruleChoices: Array<{ value: string; name: string; description: string }> = [];
+    if (overrideRules) {
+        ruleChoices.push({
+            value: ADD_OVERRIDE_RULE_CHOICE,
+            name: "Add override rule",
+            description: "Create a dynamic model override rule"
+        });
+        if (overrideRules.length > 0) {
+            ruleChoices.push(
+                {
+                    value: EDIT_OVERRIDE_RULE_CHOICE,
+                    name: "Edit override rule",
+                    description: "Update an existing override rule"
+                },
+                {
+                    value: DELETE_OVERRIDE_RULE_CHOICE,
+                    name: "Delete override rule",
+                    description: "Remove an existing override rule"
+                }
+            );
+        }
+    }
+
     const selectedTarget = await promptSelect({
         message: "Select assignment to configure",
-        choices: [...roleChoices, ...builtinFlavorChoices, ...customFlavorChoices, addCustomFlavorChoice]
+        choices: [
+            ...roleChoices,
+            ...builtinFlavorChoices,
+            ...customFlavorChoices,
+            addCustomFlavorChoice,
+            ...ruleChoices
+        ]
     });
 
     if (!selectedTarget) {
@@ -128,6 +204,19 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
 
     if (selectedTarget === ADD_CUSTOM_FLAVOR_CHOICE) {
         await customFlavorAdd(settingsPath, settings, configured);
+        return;
+    }
+
+    if (selectedTarget === ADD_OVERRIDE_RULE_CHOICE) {
+        await overrideRuleAdd();
+        return;
+    }
+    if (selectedTarget === EDIT_OVERRIDE_RULE_CHOICE) {
+        await overrideRuleEdit(overrideRules ?? []);
+        return;
+    }
+    if (selectedTarget === DELETE_OVERRIDE_RULE_CHOICE) {
+        await overrideRuleDelete(overrideRules ?? []);
         return;
     }
 
@@ -404,6 +493,192 @@ function flavorLabelBuild(flavorKey: string): string {
 function builtinFlavorParse(flavorKey: string): BuiltinModelFlavor | null {
     const normalized = flavorKey.trim().toLowerCase();
     return normalized in BUILTIN_MODEL_FLAVORS ? (normalized as BuiltinModelFlavor) : null;
+}
+
+// --- Override rule helpers ---
+
+async function overrideRulesFetch(): Promise<ModelRoleRuleResponse[] | null> {
+    try {
+        const { rules } = await listModelRoleRules();
+        return rules;
+    } catch {
+        return null;
+    }
+}
+
+function ruleMatcherSummary(rule: ModelRoleRuleResponse): string {
+    const matchers: string[] = [];
+    if (rule.role) {
+        matchers.push(`role=${rule.role}`);
+    }
+    if (rule.kind) {
+        matchers.push(`kind=${rule.kind}`);
+    }
+    if (rule.userId) {
+        matchers.push(`userId=${rule.userId}`);
+    }
+    if (rule.agentId) {
+        matchers.push(`agentId=${rule.agentId}`);
+    }
+    return matchers.length > 0 ? matchers.join(", ") : "(wildcard)";
+}
+
+async function overrideRuleAdd(): Promise<void> {
+    const model = await promptInput({ message: "Model (provider/model)", placeholder: "anthropic/claude-sonnet-4-6" });
+    if (!model?.trim()) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const role = await promptSelect({ message: "Match role?", choices: RULE_ROLE_CHOICES });
+    if (role === null) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const kind = await promptSelect({ message: "Match kind?", choices: RULE_KIND_CHOICES });
+    if (kind === null) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const userId = await promptInput({ message: "Match user ID? (leave empty for any)" });
+    if (userId === null) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const agentId = await promptInput({ message: "Match agent ID? (leave empty for any)" });
+    if (agentId === null) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const rule = await setModelRoleRule({
+        role: role === "__none__" ? null : role,
+        kind: kind === "__none__" ? null : kind,
+        userId: userId.trim() || null,
+        agentId: agentId.trim() || null,
+        model: model.trim()
+    });
+
+    console.log("\nRule created:");
+    console.log(`  ${rule.id}  ${ruleMatcherSummary(rule)}  →  ${rule.model}`);
+}
+
+async function overrideRuleEdit(rules: ModelRoleRuleResponse[]): Promise<void> {
+    const choices = rules.map((rule) => ({
+        value: rule.id,
+        name: `${ruleMatcherSummary(rule)}  →  ${rule.model}`,
+        description: rule.id
+    }));
+
+    const selectedId = await promptSelect({ message: "Select rule to edit", choices });
+    if (!selectedId) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const existing = rules.find((r) => r.id === selectedId);
+    if (!existing) {
+        return;
+    }
+
+    console.log(`\nEditing: ${existing.id}  ${ruleMatcherSummary(existing)}  →  ${existing.model}\n`);
+
+    const model = await promptInput({
+        message: "Model (provider/model)",
+        default: existing.model,
+        placeholder: existing.model
+    });
+    if (model === null) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const roleDefault = existing.role ?? "__none__";
+    const role = await promptSelect({
+        message: "Match role?",
+        choices: RULE_ROLE_CHOICES.map((c) => ({
+            ...c,
+            name: c.value === roleDefault ? `${c.name} (current)` : c.name
+        }))
+    });
+    if (role === null) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const kindDefault = existing.kind ?? "__none__";
+    const kind = await promptSelect({
+        message: "Match kind?",
+        choices: RULE_KIND_CHOICES.map((c) => ({
+            ...c,
+            name: c.value === kindDefault ? `${c.name} (current)` : c.name
+        }))
+    });
+    if (kind === null) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const userId = await promptInput({
+        message: "Match user ID? (leave empty for any)",
+        default: existing.userId ?? ""
+    });
+    if (userId === null) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const agentId = await promptInput({
+        message: "Match agent ID? (leave empty for any)",
+        default: existing.agentId ?? ""
+    });
+    if (agentId === null) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const rule = await setModelRoleRule({
+        id: selectedId,
+        role: role === "__none__" ? null : role,
+        kind: kind === "__none__" ? null : kind,
+        userId: userId.trim() || null,
+        agentId: agentId.trim() || null,
+        model: model.trim() || existing.model
+    });
+
+    console.log("\nRule updated:");
+    console.log(`  ${rule.id}  ${ruleMatcherSummary(rule)}  →  ${rule.model}`);
+}
+
+async function overrideRuleDelete(rules: ModelRoleRuleResponse[]): Promise<void> {
+    const choices = rules.map((rule) => ({
+        value: rule.id,
+        name: `${ruleMatcherSummary(rule)}  →  ${rule.model}`,
+        description: rule.id
+    }));
+
+    const selectedId = await promptSelect({ message: "Select rule to delete", choices });
+    if (!selectedId) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const existing = rules.find((r) => r.id === selectedId);
+    if (existing) {
+        console.log(`  ${existing.id}  ${ruleMatcherSummary(existing)}  →  ${existing.model}`);
+    }
+
+    const confirmed = await promptConfirm({ message: "Delete this rule?", default: false });
+    if (!confirmed) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const deleted = await deleteModelRoleRule(selectedId);
+    console.log(deleted ? `Rule ${selectedId} deleted.` : `Rule ${selectedId} not found.`);
 }
 
 async function validateModel(

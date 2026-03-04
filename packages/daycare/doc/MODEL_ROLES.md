@@ -76,6 +76,15 @@ POST /v1/engine/model-roles/delete
 → { ok: true, deleted: boolean }
 ```
 
+## CLI
+
+Override rules are managed interactively via the `daycare models` command. When the engine is running, the command displays current rules and offers "Add/Edit/Delete override rule" actions in the interactive menu.
+
+```bash
+daycare models          # interactive — shows settings + rules, pick action
+daycare models --list   # non-interactive — print current state
+```
+
 ## Examples
 
 **All user-facing agents use Opus:**
