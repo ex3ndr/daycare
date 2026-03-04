@@ -134,23 +134,21 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
         root: "screen",
         elements: {
             screen: {
-                type: "ItemList",
-                props: {
-                    scroll: true,
-                    padding: 20,
-                    gap: 12,
-                    backgroundColor: "#f8fafc"
-                },
-                children: ["headerCard", "loadingCard", "errorCard", "mainColumn"]
+                type: "ScrollArea",
+                props: { padding: "md" },
+                children: ["screenColumn"]
             },
-            headerCard: {
-                type: "Item",
+            screenColumn: {
+                type: "Column",
+                props: { gap: "md" },
+                children: ["headerSection", "loadingSection", "errorSection", "mainColumn"]
+            },
+            headerSection: {
+                type: "Section",
                 props: {
                     title: "Experiments",
                     subtitle: "Custom catalog + SQL-backed todo lab",
-                    padding: 16,
-                    backgroundColor: "#dbeafe",
-                    borderColor: "#93c5fd"
+                    padding: "md"
                 },
                 children: ["headerText"]
             },
@@ -158,73 +156,48 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
                 type: "Text",
                 props: {
                     text: "UI is static JSON. State is filled by SQL query snapshots and actions are SQL templates.",
-                    color: "#1e3a8a",
+                    color: "onSurfaceVariant",
                     size: "sm"
                 }
             },
-            loadingCard: {
-                type: "Item",
+            loadingSection: {
+                type: "Section",
                 visible: { $state: "/loading" },
-                props: {
-                    padding: 12,
-                    backgroundColor: "#fef3c7",
-                    borderColor: "#f59e0b"
-                },
-                children: ["loadingText"]
+                props: { padding: "md" },
+                children: ["loadingBanner"]
             },
-            loadingText: {
-                type: "Text",
-                props: {
-                    text: "Running SQL sync...",
-                    color: "#92400e",
-                    size: "sm"
-                }
+            loadingBanner: {
+                type: "Banner",
+                props: { text: "Running SQL sync...", variant: "warning" }
             },
-            errorCard: {
-                type: "Item",
+            errorSection: {
+                type: "Section",
                 visible: { $state: "/error" },
-                props: {
-                    padding: 12,
-                    backgroundColor: "#fee2e2",
-                    borderColor: "#f87171"
-                },
-                children: ["errorText"]
+                props: { padding: "md" },
+                children: ["errorBanner"]
             },
-            errorText: {
-                type: "Text",
-                props: {
-                    text: { $template: ERROR_TEMPLATE },
-                    color: "#991b1b",
-                    size: "sm"
-                }
+            errorBanner: {
+                type: "Banner",
+                props: { text: { $template: ERROR_TEMPLATE }, variant: "error" }
             },
             mainColumn: {
-                type: "ItemList",
+                type: "Column",
                 visible: { $state: "/ready" },
-                props: {
-                    gap: 12
-                },
-                children: ["composerCard", "statsCard", "emptyCard", "todosRepeat"]
+                props: { gap: "md" },
+                children: ["composerSection", "todosSection"]
             },
-            composerCard: {
-                type: "Item",
+            composerSection: {
+                type: "Section",
                 props: {
                     title: "Create Todo",
                     subtitle: "Button action compiles SQL from bound state",
-                    padding: 16,
-                    backgroundColor: "#ffffff",
-                    borderColor: "#dbe2ef"
+                    padding: "md"
                 },
                 children: ["composerRow"]
             },
             composerRow: {
-                type: "View",
-                props: {
-                    direction: "row",
-                    gap: 8,
-                    alignItems: "center",
-                    justifyContent: "space-between"
-                },
+                type: "Row",
+                props: { gap: "sm", alignItems: "center", justifyContent: "between" },
                 children: ["titleInput", "createButton"]
             },
             titleInput: {
@@ -238,102 +211,55 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
             },
             createButton: {
                 type: "Button",
-                props: {
-                    label: "Add",
-                    variant: "primary",
-                    size: "md"
-                },
+                props: { label: "Add", variant: "filled", size: "md" },
                 on: {
                     press: {
                         action: "todoCreate",
-                        params: {
-                            title: { $state: "/draft/title" }
-                        }
+                        params: { title: { $state: "/draft/title" } }
                     }
                 }
             },
-            statsCard: {
-                type: "Item",
-                props: {
-                    padding: 12,
-                    backgroundColor: "#ecfccb",
-                    borderColor: "#a3e635"
-                },
-                children: ["statsText"]
+            todosSection: {
+                type: "Section",
+                props: { title: "Todos", padding: "md" },
+                children: ["statsBanner", "emptyState", "todosRepeat"]
             },
-            statsText: {
-                type: "Text",
+            statsBanner: {
+                type: "Banner",
                 props: {
                     text: { $template: STATS_TEMPLATE },
-                    color: "#365314",
-                    size: "sm",
-                    weight: "medium"
+                    variant: "info"
                 }
             },
-            emptyCard: {
-                type: "Item",
+            emptyState: {
+                type: "EmptyState",
                 visible: { $state: "/stats/total", eq: 0 },
                 props: {
-                    padding: 12,
-                    backgroundColor: "#e2e8f0",
-                    borderColor: "#cbd5e1"
-                },
-                children: ["emptyText"]
-            },
-            emptyText: {
-                type: "Text",
-                props: {
-                    text: "No todos yet. Create one from the bound input and it will round-trip through SQL.",
-                    color: "#334155",
-                    size: "sm"
+                    title: "No todos yet",
+                    subtitle: "Create one from the bound input and it will round-trip through SQL.",
+                    icon: "clipboard-outline"
                 }
             },
             todosRepeat: {
-                type: "ItemList",
+                type: "Column",
                 visible: { $state: "/stats/total", gt: 0 },
-                props: {
-                    gap: 8
-                },
-                repeat: {
-                    statePath: "/todos",
-                    key: "id"
-                },
+                props: { gap: "sm" },
+                repeat: { statePath: "/todos", key: "id" },
                 children: ["todoCard"]
             },
             todoCard: {
-                type: "Item",
-                props: {
-                    padding: 12,
-                    backgroundColor: {
-                        $cond: { $item: "done", eq: true },
-                        $then: "#dcfce7",
-                        $else: "#ffffff"
-                    },
-                    borderColor: {
-                        $cond: { $item: "done", eq: true },
-                        $then: "#86efac",
-                        $else: "#dbe2ef"
-                    }
-                },
+                type: "Card",
+                props: { surface: "low", elevation: "low", padding: "md" },
                 children: ["todoRow"]
             },
             todoRow: {
-                type: "View",
-                props: {
-                    direction: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 8
-                },
+                type: "Row",
+                props: { justifyContent: "between", alignItems: "center", gap: "sm" },
                 children: ["todoLeftColumn", "todoActionsRow"]
             },
             todoLeftColumn: {
-                type: "View",
-                props: {
-                    direction: "column",
-                    flex: 1,
-                    gap: 4
-                },
+                type: "Column",
+                props: { flex: 1, gap: "xs" },
                 children: ["todoTitle", "todoStatus"]
             },
             todoTitle: {
@@ -342,11 +268,11 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
                     text: { $item: "title" },
                     color: {
                         $cond: { $item: "done", eq: true },
-                        $then: "#166534",
-                        $else: "#0f172a"
+                        $then: "onSurfaceVariant",
+                        $else: "onSurface"
                     },
                     weight: "medium",
-                    strike: { $item: "done" }
+                    strikethrough: { $item: "done" }
                 }
             },
             todoStatus: {
@@ -358,16 +284,12 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
                         $else: "Open"
                     },
                     size: "sm",
-                    color: "#64748b"
+                    color: "onSurfaceVariant"
                 }
             },
             todoActionsRow: {
-                type: "View",
-                props: {
-                    direction: "row",
-                    gap: 8,
-                    alignItems: "center"
-                },
+                type: "Row",
+                props: { gap: "xs", alignItems: "center" },
                 children: ["toggleButton", "deleteButton"]
             },
             toggleButton: {
@@ -378,31 +300,23 @@ export const experimentsTodoDefinition: ExperimentsTodoDefinition = {
                         $then: "Reopen",
                         $else: "Done"
                     },
-                    variant: "secondary",
+                    variant: "outlined",
                     size: "sm"
                 },
                 on: {
                     press: {
                         action: "todoToggle",
-                        params: {
-                            index: { $index: true }
-                        }
+                        params: { index: { $index: true } }
                     }
                 }
             },
             deleteButton: {
                 type: "Button",
-                props: {
-                    label: "Delete",
-                    variant: "danger",
-                    size: "sm"
-                },
+                props: { label: "Delete", variant: "outlined", size: "sm" },
                 on: {
                     press: {
                         action: "todoDelete",
-                        params: {
-                            index: { $index: true }
-                        }
+                        params: { index: { $index: true } }
                     }
                 }
             }
