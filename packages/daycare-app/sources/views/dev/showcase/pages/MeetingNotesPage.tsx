@@ -512,7 +512,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 12
     }),
     chipText: (color: string) => ({
-        fontFamily: "IBMPlexSans-Medium" as const,
+        fontFamily: "IBMPlexSans-Regular" as const,
         fontSize: 11,
         color: color
     }),
@@ -527,7 +527,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     }),
     actionBadgeText: (color: string) => ({
-        fontFamily: "IBMPlexSans-Medium" as const,
+        fontFamily: "IBMPlexSans-Regular" as const,
         fontSize: 11,
         color: color
     }),

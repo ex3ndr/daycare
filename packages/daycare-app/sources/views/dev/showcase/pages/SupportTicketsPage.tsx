@@ -350,7 +350,7 @@ const slaStyles = StyleSheet.create((theme) => ({
         borderRadius: 3
     },
     text: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10,
         lineHeight: 14,
         letterSpacing: 0.2
@@ -437,7 +437,7 @@ const groupStyles = StyleSheet.create((theme) => ({
         alignItems: "center"
     },
     countText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         lineHeight: 16
     },
@@ -626,7 +626,7 @@ const rowStyles = StyleSheet.create((theme) => ({
         justifyContent: "center"
     },
     avatarText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 9,
         lineHeight: 12
     },
@@ -681,7 +681,7 @@ const rowStyles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     markReadText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12,
         lineHeight: 16,
         color: "#ffffff"
@@ -762,7 +762,7 @@ const filterStyles = StyleSheet.create((theme) => ({
         borderRadius: 20
     },
     pillText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12,
         lineHeight: 16
     },
@@ -774,7 +774,7 @@ const filterStyles = StyleSheet.create((theme) => ({
         alignItems: "center"
     },
     pillCountText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10,
         lineHeight: 14
     }

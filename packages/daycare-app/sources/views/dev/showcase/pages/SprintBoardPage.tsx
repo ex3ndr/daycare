@@ -562,7 +562,7 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 12
     },
     sprintStatusText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
 
@@ -649,7 +649,7 @@ const s = StyleSheet.create((theme) => ({
         gap: 8
     },
     burndownLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
     burndownLegend: {
@@ -708,7 +708,7 @@ const s = StyleSheet.create((theme) => ({
         gap: 6
     },
     columnTitle: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
     countBadge: {
@@ -720,7 +720,7 @@ const s = StyleSheet.create((theme) => ({
         paddingHorizontal: 6
     },
     countBadgeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
     columnPoints: {
@@ -774,7 +774,7 @@ const s = StyleSheet.create((theme) => ({
         justifyContent: "center"
     },
     assigneeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 9
     },
     typePill: {
@@ -783,7 +783,7 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     typePillText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10
     },
     pointsCircle: {
@@ -795,7 +795,7 @@ const s = StyleSheet.create((theme) => ({
         marginLeft: "auto"
     },
     pointsText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10
     }
 }));

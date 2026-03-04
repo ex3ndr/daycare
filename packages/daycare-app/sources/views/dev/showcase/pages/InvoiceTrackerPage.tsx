@@ -540,7 +540,7 @@ const styles = StyleSheet.create((theme) => ({
         marginBottom: 16
     },
     heroLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13,
         color: theme.colors.onSurfaceVariant,
         letterSpacing: 0.8,
@@ -607,7 +607,7 @@ const styles = StyleSheet.create((theme) => ({
         borderBottomLeftRadius: 12
     },
     statusCardLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         letterSpacing: 0.6,
         textTransform: "uppercase"
@@ -658,7 +658,7 @@ const styles = StyleSheet.create((theme) => ({
         alignItems: "center"
     },
     invoiceCardClient: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 15,
         color: theme.colors.onSurface,
         flex: 1,
@@ -743,7 +743,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 4
     },
     detailSummaryLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10,
         color: theme.colors.onSurfaceVariant,
         letterSpacing: 0.8,
@@ -781,7 +781,7 @@ const styles = StyleSheet.create((theme) => ({
         borderBottomWidth: 1
     },
     detailTableHeaderCell: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         letterSpacing: 0.5,
         textTransform: "uppercase"

@@ -453,7 +453,7 @@ function PopularityTag({ badge }: { badge: PopularityBadge }) {
             <Ionicons name={config.icon} size={11} color={config.color} />
             <Text
                 style={{
-                    fontFamily: "IBMPlexSans-Medium",
+                    fontFamily: "IBMPlexSans-Regular",
                     fontSize: 10,
                     color: config.color,
                     letterSpacing: 0.2
@@ -746,7 +746,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 10
     },
     legendTitle: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12,
         letterSpacing: 0.3,
         textTransform: "uppercase"
@@ -784,7 +784,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     segmentLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
 

@@ -747,7 +747,7 @@ const styles = StyleSheet.create((theme) => ({
         borderWidth: 1
     },
     segmentLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14
     },
 
@@ -812,7 +812,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     heroDetailText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
 
@@ -900,7 +900,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 1
     },
     dateBadgeMonth: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10,
         textTransform: "uppercase"
     },
@@ -919,7 +919,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 6
     },
     appointmentTitle: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14,
         flex: 1
     },
@@ -984,11 +984,11 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     vaccinationBadgeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10
     },
     timelineDescription: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14,
         lineHeight: 18
     },
@@ -1034,7 +1034,7 @@ const styles = StyleSheet.create((theme) => ({
         justifyContent: "center"
     },
     careTitle: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14,
         flex: 1
     },

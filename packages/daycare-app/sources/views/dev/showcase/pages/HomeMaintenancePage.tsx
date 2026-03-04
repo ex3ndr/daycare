@@ -799,7 +799,7 @@ const styles = StyleSheet.create((theme) => ({
         alignItems: "center"
     },
     overallProgressTitle: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14
     },
     overallProgressPct: {
@@ -834,7 +834,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 8
     },
     costBarTitle: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14
     },
     costBarRow: {
@@ -876,7 +876,7 @@ const styles = StyleSheet.create((theme) => ({
         borderWidth: 1
     },
     filterPillText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
     filterPillCount: {
@@ -896,7 +896,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     frequencyChipText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10,
         lineHeight: 14
     },
@@ -916,7 +916,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 3
     },
     statusBadgeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10,
         lineHeight: 14
     },
@@ -996,7 +996,7 @@ const styles = StyleSheet.create((theme) => ({
         justifyContent: "center"
     },
     taskName: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14,
         lineHeight: 18,
         flex: 1

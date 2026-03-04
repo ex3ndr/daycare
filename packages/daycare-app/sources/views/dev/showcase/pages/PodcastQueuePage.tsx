@@ -676,7 +676,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 6
     },
     playingBadgeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10
     },
     reorderButtons: {
@@ -774,7 +774,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     frequencyChipText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
     subscriptionRight: {
@@ -786,7 +786,7 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 10
     },
     lastEpisodeDate: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     }
 }));

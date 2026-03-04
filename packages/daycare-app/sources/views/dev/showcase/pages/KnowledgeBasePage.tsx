@@ -479,7 +479,7 @@ const catStyles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     countText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12,
         lineHeight: 16
     }
@@ -827,7 +827,7 @@ const cardStyles = StyleSheet.create((theme) => ({
         gap: 6
     },
     sectionTitle: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13,
         lineHeight: 18
     },
@@ -848,7 +848,7 @@ const cardStyles = StyleSheet.create((theme) => ({
     },
     tocDot: {},
     tocTextL1: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13,
         lineHeight: 18
     },
@@ -879,7 +879,7 @@ const cardStyles = StyleSheet.create((theme) => ({
         gap: 2
     },
     relatedTitle: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13,
         lineHeight: 18
     },

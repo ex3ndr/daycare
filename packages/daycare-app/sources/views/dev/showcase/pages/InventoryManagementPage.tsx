@@ -721,7 +721,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 1
     },
     bannerItemName: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
     bannerItemDetail: {
@@ -893,7 +893,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 2
     },
     productName: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14
     },
     productSku: {
@@ -970,7 +970,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 3
     },
     supplierText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
 
@@ -986,7 +986,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 8
     },
     expandedLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12,
         width: 95
     },
@@ -1006,7 +1006,7 @@ const styles = StyleSheet.create((theme) => ({
         marginTop: 4
     },
     expandedReorderText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12,
         flex: 1,
         lineHeight: 18

@@ -720,7 +720,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 4
     },
     heroLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         letterSpacing: 1.2,
         textTransform: "uppercase"
@@ -742,7 +742,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 8
     },
     breakdownTitle: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         letterSpacing: 1,
         textTransform: "uppercase"
@@ -839,7 +839,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 16
     },
     filterPillText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
 
@@ -967,7 +967,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     performanceChipText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
 
@@ -1020,7 +1020,7 @@ const styles = StyleSheet.create((theme) => ({
         justifyContent: "center"
     },
     scheduledDate: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
     scheduledTime: {
@@ -1037,7 +1037,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 5
     },
     scheduledPlatformName: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
     scheduledPreview: {

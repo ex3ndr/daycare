@@ -80,7 +80,7 @@ const barStyles = StyleSheet.create((theme) => ({
         paddingVertical: 6
     },
     label: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13,
         width: 72
     },
@@ -304,7 +304,7 @@ const pageStyles = StyleSheet.create((theme) => ({
         marginTop: 10
     },
     badgeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
 
@@ -359,7 +359,7 @@ const pageStyles = StyleSheet.create((theme) => ({
         paddingBottom: 40
     },
     footerLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 16
     },
     footerTotal: {

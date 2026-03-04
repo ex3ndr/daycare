@@ -254,7 +254,7 @@ function StatusChip({ status, small }: { status: EpisodeStatus; small?: boolean 
             }}
         >
             <Ionicons name={meta.icon} size={size} color={meta.color} />
-            <Text style={{ fontFamily: "IBMPlexSans-Medium", fontSize: size, color: meta.color }}>{meta.label}</Text>
+            <Text style={{ fontFamily: "IBMPlexSans-Regular", fontSize: size, color: meta.color }}>{meta.label}</Text>
         </View>
     );
 }
@@ -817,7 +817,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 10
     },
     heroGuestName: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14
     },
     heroGuestSub: {
@@ -845,7 +845,7 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 12
     },
     heroDateValue: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
     heroDateAway: {
@@ -1084,7 +1084,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 1
     },
     audioLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
     audioDuration: {

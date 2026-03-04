@@ -425,7 +425,7 @@ function DifficultyChip({ difficulty }: { difficulty: Difficulty }) {
                 borderColor: `${color}40`
             }}
         >
-            <Text style={{ fontFamily: "IBMPlexSans-Medium", fontSize: 11, color }}>
+            <Text style={{ fontFamily: "IBMPlexSans-Regular", fontSize: 11, color }}>
                 {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
             </Text>
         </View>
@@ -877,7 +877,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     segmentLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
 
@@ -973,7 +973,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 6
     },
     servingText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
 

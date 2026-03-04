@@ -74,7 +74,7 @@ const styles = StyleSheet.create((theme) => ({
         justifyContent: "center"
     },
     cardTitle: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13,
         flex: 1
     },

@@ -790,7 +790,7 @@ const styles = StyleSheet.create((theme) => ({
         borderWidth: 1
     },
     filterPillText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
     filterPillCount: {
@@ -878,7 +878,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 2
     },
     plantName: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14,
         lineHeight: 18
     },
@@ -920,7 +920,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     chipText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10,
         lineHeight: 14
     },
@@ -940,7 +940,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 3
     },
     healthBadgeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10,
         lineHeight: 14
     },
@@ -970,7 +970,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     wateredBadgeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
 

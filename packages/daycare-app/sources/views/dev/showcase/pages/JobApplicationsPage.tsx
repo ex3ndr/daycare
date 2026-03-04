@@ -839,7 +839,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 5
     },
     pipelineStageLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         flex: 1
     },
@@ -874,7 +874,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 20
     },
     filterPillText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
     filterPillBadge: {
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     locationChipText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10
     },
 
@@ -1029,7 +1029,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     referralBadgeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10
     },
 
@@ -1045,7 +1045,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 8
     },
     appExpandedLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12,
         width: 72
     },

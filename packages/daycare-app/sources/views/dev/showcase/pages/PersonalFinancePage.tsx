@@ -275,7 +275,7 @@ const metricStyles = StyleSheet.create((theme) => ({
         lineHeight: 28
     },
     subtitle: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     }
 }));
@@ -337,7 +337,7 @@ const txnStyles = StyleSheet.create((theme) => ({
         gap: 4
     },
     merchant: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 15
     },
     tagRow: {
@@ -351,7 +351,7 @@ const txnStyles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     chipText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
     accountBadge: {
@@ -446,7 +446,7 @@ const budgetStyles = StyleSheet.create((theme) => ({
         justifyContent: "center"
     },
     name: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14
     },
     amountRow: {
@@ -711,7 +711,7 @@ const pageStyles = StyleSheet.create((theme) => ({
         borderRadius: 12
     },
     heroBadgeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
 

@@ -653,7 +653,7 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 18
     },
     segmentLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
 
@@ -736,7 +736,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 5
     },
     xpLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
     xpCount: {
@@ -808,7 +808,7 @@ const styles = StyleSheet.create((theme) => ({
         justifyContent: "center"
     },
     practiceLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 15,
         flex: 1
     },
@@ -913,7 +913,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 8
     },
     resourceName: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14,
         flex: 1
     },
@@ -923,7 +923,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     resourceTypeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         textTransform: "capitalize"
     },

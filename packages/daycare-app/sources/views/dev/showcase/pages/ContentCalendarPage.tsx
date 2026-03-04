@@ -212,7 +212,7 @@ const cardStyles = StyleSheet.create((theme) => ({
         backgroundColor: color
     }),
     title: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12,
         color: theme.colors.onSurface,
         lineHeight: 16,
@@ -267,7 +267,7 @@ const columnStyles = StyleSheet.create((theme) => ({
         gap: 4
     },
     dayName: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         color: theme.colors.onSurfaceVariant,
         textTransform: "uppercase",
@@ -346,7 +346,7 @@ const pillStyles = StyleSheet.create((theme) => ({
         backgroundColor: bg
     }),
     pillText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     }
 }));
@@ -396,7 +396,7 @@ const legendStyles = StyleSheet.create((theme) => ({
         gap: 10
     },
     label: (color: string) => ({
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         color: color,
         marginRight: 2

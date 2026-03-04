@@ -515,7 +515,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 4
     },
     headerTimeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14
     },
     headerTitle: {
@@ -541,7 +541,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 3
     },
     headerProgressLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
 
@@ -664,7 +664,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 6
     },
     diffText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 10
     },
 

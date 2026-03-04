@@ -750,7 +750,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 4
     },
     metricsLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         letterSpacing: 1,
         textTransform: "uppercase"
@@ -842,7 +842,7 @@ const styles = StyleSheet.create((theme) => ({
         paddingRight: 8
     },
     funnelStageLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
     funnelStageCount: {
@@ -880,7 +880,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 20
     },
     pillText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
     pillBadge: {
@@ -1027,7 +1027,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 8
     },
     dealExpandedLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12,
         width: 80
     },

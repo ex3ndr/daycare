@@ -680,7 +680,7 @@ const styles = StyleSheet.create((theme) => ({
         color: theme.colors.onSurfaceVariant
     },
     criteriaValue: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13,
         color: theme.colors.onSurface
     },
@@ -702,7 +702,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 12
     },
     neighborhoodChipText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
 
@@ -765,7 +765,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 5
     },
     sortPillText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
 
@@ -856,7 +856,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 4
     },
     bedBathText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14,
         color: theme.colors.onSurfaceVariant
     },
@@ -960,7 +960,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 8
     },
     brokerName: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13,
         color: theme.colors.onSurface
     },
@@ -979,7 +979,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     photosLinkText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
 
@@ -1006,7 +1006,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 12
     },
     statusBadgeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     }
 }));

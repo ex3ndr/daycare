@@ -705,7 +705,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 4
     },
     heroLabel: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         letterSpacing: 1.2,
         textTransform: "uppercase"
@@ -730,7 +730,7 @@ const styles = StyleSheet.create((theme) => ({
         marginTop: 4
     },
     heroBadgeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
 
@@ -863,7 +863,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     statusChipText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
     subjectLine: {
@@ -987,7 +987,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     winnerText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         color: "#10B981"
     },
@@ -1037,7 +1037,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 4
     },
     segmentName: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
     segmentRecipients: {

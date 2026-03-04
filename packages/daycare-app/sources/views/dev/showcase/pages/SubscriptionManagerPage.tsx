@@ -322,7 +322,7 @@ const bannerStyles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     chipText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 12
     },
     chipDate: {
@@ -367,7 +367,7 @@ const breakdownStyles = StyleSheet.create((theme) => ({
         width: 120
     },
     label: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
     track: {
@@ -552,7 +552,7 @@ const cardStyles = StyleSheet.create((theme) => ({
         borderRadius: 6
     },
     paymentText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
     statusBadge: {
@@ -603,7 +603,7 @@ const cardStyles = StyleSheet.create((theme) => ({
         fontSize: 11
     },
     expandedValue: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
     cancelButton: {
@@ -616,7 +616,7 @@ const cardStyles = StyleSheet.create((theme) => ({
         paddingVertical: 10
     },
     cancelText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
     cancelledNotice: {
@@ -628,7 +628,7 @@ const cardStyles = StyleSheet.create((theme) => ({
         paddingVertical: 8
     },
     cancelledText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     }
 }));
@@ -895,7 +895,7 @@ const pageStyles = StyleSheet.create((theme) => ({
         marginTop: 4
     },
     annualText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 14
     },
 

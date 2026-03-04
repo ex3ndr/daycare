@@ -428,7 +428,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 20
     },
     pillTextBase: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 13
     },
     metricsBar: {

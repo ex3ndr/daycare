@@ -825,7 +825,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 2
     },
     medicationName: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 15
     },
     medicationDetail: {
@@ -878,7 +878,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     specialtyBadgeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         letterSpacing: 0.3
     },
@@ -945,7 +945,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 3
     },
     statusBadgeText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11
     },
     labRangeSection: {
@@ -988,7 +988,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     severityChipText: {
-        fontFamily: "IBMPlexSans-Medium",
+        fontFamily: "IBMPlexSans-Regular",
         fontSize: 11,
         letterSpacing: 0.3
     },
