@@ -9,7 +9,6 @@ import { type AppMode, appModes } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
-import { showcasePages } from "@/views/dev/showcase/_showcasePages";
 import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 
 export const SIDEBAR_WIDTH = 240;
@@ -61,7 +60,7 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     dev: [
         { id: "widgets", title: "Widgets" },
         { id: "examples", title: "Examples" },
-        ...showcasePages.map((p) => ({ id: p.id, title: p.title }))
+        { id: "showcase", title: "Showcase" }
     ],
     settings: []
 };

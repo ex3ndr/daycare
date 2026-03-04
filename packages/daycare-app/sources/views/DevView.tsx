@@ -4,30 +4,33 @@ import { StyleSheet } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
 import { ExamplesView } from "@/views/dev/ExamplesView";
 import { showcasePagesMap } from "@/views/dev/showcase/_showcasePages";
+import { ShowcaseListView } from "@/views/dev/showcase/ShowcaseListView";
 import { ShowcasePageView } from "@/views/dev/showcase/ShowcasePageView";
 import { WidgetsShowcaseView } from "@/views/dev/WidgetsShowcaseView";
 
-type DevPage = "widgets" | "examples";
+type DevPage = "widgets" | "examples" | "showcase";
 
 const pageTitles: Record<DevPage, string> = {
     widgets: "Widgets",
-    examples: "Examples"
+    examples: "Examples",
+    showcase: "Showcase"
 };
 
 const pageComponents: Record<DevPage, React.ComponentType> = {
     widgets: WidgetsShowcaseView,
-    examples: ExamplesView
+    examples: ExamplesView,
+    showcase: ShowcaseListView
 };
 
 /**
  * Dev screen that routes sub-pages based on pathname.
- * /dev → widgets (default), /dev/widgets, /dev/examples, /dev/<showcase-id>.
+ * /dev → widgets (default), /dev/widgets, /dev/examples, /dev/showcase, /dev/<showcase-id>.
  */
 export function DevView() {
     const pathname = usePathname();
     const segment = pathname.split("/").filter(Boolean)[1] as string | undefined;
 
-    // Check if it's a showcase page
+    // Check if it's an individual showcase page
     const showcasePage = segment ? showcasePagesMap.get(segment) : undefined;
     if (showcasePage) {
         return (
