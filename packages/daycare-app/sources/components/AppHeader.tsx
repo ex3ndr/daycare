@@ -9,6 +9,7 @@ import { Avatar } from "@/components/Avatar";
 export type AppMode =
     | "home"
     | "agents"
+    | "fragments"
     | "people"
     | "email"
     | "inbox"
@@ -25,6 +26,7 @@ export type AppMode =
 export const appModes: AppMode[] = [
     "home",
     "agents",
+    "fragments",
     "people",
     "email",
     "inbox",
@@ -41,6 +43,7 @@ export const appModes: AppMode[] = [
 
 const segments: Array<{ mode: AppMode; icon: React.ComponentProps<typeof Octicons>["name"]; label: string }> = [
     { mode: "agents", icon: "device-desktop", label: "Agents" },
+    { mode: "fragments", icon: "note", label: "Fragments" },
     { mode: "people", icon: "people", label: "People" },
     { mode: "email", icon: "mail", label: "Email" },
     { mode: "inbox", icon: "inbox", label: "Inbox" },

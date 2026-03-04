@@ -13,6 +13,7 @@ import { DocumentMetadataPanel } from "@/views/documents/DocumentMetadataPanel";
 import { DocumentsView } from "@/views/documents/DocumentsView";
 import { EmailView } from "@/views/EmailView";
 import { ExperimentsView } from "@/views/ExperimentsView";
+import { FragmentsView } from "@/views/FragmentsView";
 import { HomeView } from "@/views/HomeView";
 import { InboxView } from "@/views/InboxView";
 import { PeopleView } from "@/views/PeopleView";
@@ -26,6 +27,7 @@ import { ToolsView } from "@/views/ToolsView";
 const viewComponents: Record<AppMode, React.ComponentType> = {
     home: HomeView,
     agents: AgentsView,
+    fragments: FragmentsView,
     people: PeopleView,
     email: EmailView,
     inbox: InboxView,

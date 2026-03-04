@@ -17,6 +17,7 @@ import { DocumentsView } from "@/views/documents/DocumentsView";
 import { DocumentTreePanel } from "@/views/documents/DocumentTreePanel";
 import { EmailView } from "@/views/EmailView";
 import { ExperimentsView } from "@/views/ExperimentsView";
+import { FragmentsView } from "@/views/FragmentsView";
 import { HomeView } from "@/views/HomeView";
 import { InboxView } from "@/views/InboxView";
 import { PeopleView } from "@/views/PeopleView";
@@ -53,6 +54,7 @@ const leftItems: Record<
         { id: "t2", title: "This Week", subtitle: "2 tasks" },
         { id: "t3", title: "Completed", subtitle: "3 done" }
     ],
+    fragments: [],
     experiments: [],
     routines: [
         { id: "r1", title: "Active", subtitle: "4 routines" },
@@ -73,6 +75,7 @@ const leftItems: Record<
 const viewComponents: Record<AppMode, React.ComponentType> = {
     home: HomeView,
     agents: AgentsView,
+    fragments: FragmentsView,
     people: PeopleView,
     email: EmailView,
     inbox: InboxView,
