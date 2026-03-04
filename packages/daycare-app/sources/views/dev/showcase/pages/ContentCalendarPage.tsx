@@ -446,7 +446,7 @@ export function ContentCalendarPage() {
     }));
 
     return (
-        <ShowcasePage contentContainerStyle={{ paddingTop: 16, paddingBottom: 16, gap: 16 }}>
+        <ShowcasePage topInset={16} bottomInset={16} contentGap={16}>
             {/* Platform filter pills */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
                 <PlatformPill

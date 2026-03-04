@@ -300,7 +300,7 @@ export function MeetingNotesPage() {
     const { theme } = useUnistyles();
 
     return (
-        <ShowcasePage style={styles.root(theme.colors.surface)} contentContainerStyle={{ paddingHorizontal: 0 }}>
+        <ShowcasePage style={styles.root(theme.colors.surface)} edgeToEdge>
             <SearchBar />
 
             {meetingGroups.map((group, groupIdx) => (

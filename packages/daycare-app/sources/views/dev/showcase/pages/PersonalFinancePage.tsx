@@ -496,7 +496,7 @@ export function PersonalFinancePage() {
     const overallBudgetPct = Math.min((totalSpent / totalBudget) * 100, 100);
 
     return (
-        <ShowcasePage contentContainerStyle={{ paddingTop: 24, paddingBottom: 60 }}>
+        <ShowcasePage topInset={24} bottomInset={60}>
             {/* --- Hero: Net Worth --- */}
             <View style={pageStyles.hero}>
                 <Text style={[pageStyles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>Net Worth</Text>

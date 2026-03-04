@@ -203,7 +203,7 @@ export function ExpenseReportPage() {
     const { theme } = useUnistyles();
 
     return (
-        <ShowcasePage contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 24 }}>
+        <ShowcasePage horizontalInset={20} topInset={24} bottomInset={24}>
             {/* 1. Report header */}
             <View style={pageStyles.header}>
                 <Text style={[pageStyles.monthTitle, { color: theme.colors.onSurface }]}>February 2026</Text>

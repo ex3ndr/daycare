@@ -311,7 +311,7 @@ export function PersonalCrmPage() {
 
     return (
         <View style={styles.root}>
-            <ShowcasePage contentContainerStyle={{ paddingHorizontal: 0, paddingBottom: 24 }}>
+            <ShowcasePage edgeToEdge bottomInset={24}>
                 {/* Search bar + filter pills */}
                 <View style={styles.searchRow}>
                     <Ionicons name="search" size={18} color={theme.colors.onSurfaceVariant} style={styles.searchIcon} />

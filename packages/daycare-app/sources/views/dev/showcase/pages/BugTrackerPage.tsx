@@ -605,10 +605,7 @@ export function BugTrackerPage() {
     }, [activeFilter]);
 
     return (
-        <ShowcasePage
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={{ paddingTop: 16, gap: 16 }}
-        >
+        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} topInset={16} contentGap={16}>
             {/* Metrics Row */}
             <View style={pageStyles.metricsRow}>
                 <MetricTile value="23" label="Open" color={theme.colors.primary} />

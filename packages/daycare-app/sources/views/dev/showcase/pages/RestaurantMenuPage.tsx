@@ -603,13 +603,7 @@ export function RestaurantMenuPage() {
     const avgPrice = totalItems > 0 ? filteredItems.reduce((sum, i) => sum + i.price, 0) / totalItems : 0;
 
     return (
-        <ShowcasePage
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={{
-                paddingHorizontal: 16,
-                paddingBottom: 48
-            }}
-        >
+        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} bottomInset={48}>
             {/* Header */}
             <View style={styles.headerSection}>
                 <View style={styles.headerTitleRow}>

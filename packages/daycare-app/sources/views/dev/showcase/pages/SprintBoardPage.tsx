@@ -446,11 +446,9 @@ export function SprintBoardPage() {
 
     return (
         <ShowcasePage
-            contentContainerStyle={{
-                paddingHorizontal: 0,
-                paddingBottom: 32,
-                backgroundColor: theme.colors.surfaceContainerHighest
-            }}
+            edgeToEdge
+            bottomInset={32}
+            contentContainerStyle={{ backgroundColor: theme.colors.surfaceContainerHighest }}
         >
             {/* Sprint header */}
             <View style={s.sprintHeader}>

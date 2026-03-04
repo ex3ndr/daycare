@@ -443,10 +443,7 @@ export function GymWorkoutPage() {
     const grouped = React.useMemo(() => groupByMuscle(exercises), [exercises]);
 
     return (
-        <ShowcasePage
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={{ paddingBottom: 48 }}
-        >
+        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} bottomInset={48}>
             {/* Workout header */}
             <WorkoutHeader completedCount={completedCount} totalCount={totalCount} duration={stats.estimatedDuration} />
 

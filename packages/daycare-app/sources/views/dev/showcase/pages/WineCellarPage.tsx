@@ -554,13 +554,7 @@ export function WineCellarPage() {
     }, []);
 
     return (
-        <ShowcasePage
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={{
-                paddingHorizontal: 16,
-                paddingBottom: 40
-            }}
-        >
+        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }}>
             {/* Header */}
             <View style={styles.headerSection}>
                 <View style={styles.headerTitleRow}>

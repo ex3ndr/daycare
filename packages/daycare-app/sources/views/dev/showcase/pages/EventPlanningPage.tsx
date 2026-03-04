@@ -654,7 +654,7 @@ export function EventPlanningPage() {
     const spentFraction = SPENT_BUDGET / TOTAL_BUDGET;
 
     return (
-        <ShowcasePage contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: 48 }}>
+        <ShowcasePage topInset={16} bottomInset={48} contentGap={20}>
             {/* Hero event card */}
             <View style={[heroStyles.card, { backgroundColor: theme.colors.primary }]}>
                 <View style={heroStyles.topRow}>

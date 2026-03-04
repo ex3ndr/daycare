@@ -352,12 +352,7 @@ export function LanguageLearningPage() {
     const practiceCompleted = practice.filter((p) => practiceState[selectedLang][p.id]).length;
 
     return (
-        <ShowcasePage
-            density="spacious"
-            contentContainerStyle={{
-                paddingHorizontal: 16
-            }}
-        >
+        <ShowcasePage density="spacious" horizontalInset={16}>
             {/* Language Selector Tabs */}
             <View style={[styles.segmentedControl, { backgroundColor: theme.colors.surfaceContainer }]}>
                 {LANGUAGES.map((l) => {

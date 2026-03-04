@@ -616,7 +616,7 @@ export function TravelPlannerPage() {
     const pendingCount = itineraryItems.filter((i) => i.status === "pending").length;
 
     return (
-        <ShowcasePage contentContainerStyle={{ paddingBottom: 48 }}>
+        <ShowcasePage bottomInset={48}>
             {/* --- Hero Header Card --- */}
             <View style={[styles.heroCard, { backgroundColor: theme.colors.primary }]}>
                 {/* Decorative travel icon */}

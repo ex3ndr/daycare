@@ -1014,13 +1014,7 @@ export function RealEstatePage() {
     }, []);
 
     return (
-        <ShowcasePage
-            contentContainerStyle={{
-                paddingHorizontal: 16,
-                paddingVertical: 24,
-                paddingBottom: 60
-            }}
-        >
+        <ShowcasePage topInset={24} bottomInset={60}>
             {/* Hero: Portfolio Value */}
             <View style={pageStyles.hero}>
                 <Text style={[pageStyles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>PORTFOLIO VALUE</Text>

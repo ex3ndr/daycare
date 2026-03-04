@@ -999,10 +999,7 @@ export function FeatureRequestsPage() {
 
     return (
         <View style={pageStyles.root}>
-            <ShowcasePage
-                style={{ flex: 1, backgroundColor: theme.colors.surface }}
-                contentContainerStyle={{ paddingTop: 16, gap: 16 }}
-            >
+            <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} topInset={16} contentGap={16}>
                 {/* Page title + icon */}
                 <View style={pageStyles.titleRow}>
                     <View style={[pageStyles.titleIcon, { backgroundColor: `${theme.colors.primary}15` }]}>

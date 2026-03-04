@@ -775,13 +775,7 @@ export function SubscriptionManagerPage() {
     const cancellingCount = subscriptions.filter((s) => s.status === "cancelling").length;
 
     return (
-        <ShowcasePage
-            contentContainerStyle={{
-                paddingHorizontal: 16,
-                paddingVertical: 24,
-                paddingBottom: 60
-            }}
-        >
+        <ShowcasePage topInset={24} bottomInset={60}>
             {/* --- Hero: Monthly Spend --- */}
             <View style={pageStyles.hero}>
                 <Text style={[pageStyles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>Monthly Spend</Text>

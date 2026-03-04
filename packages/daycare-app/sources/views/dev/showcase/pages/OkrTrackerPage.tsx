@@ -525,7 +525,7 @@ export function OkrTrackerPage() {
     const overallPercentage = totalKRs > 0 ? Math.round(totalProgress / totalKRs) : 0;
 
     return (
-        <ShowcasePage contentContainerStyle={{ paddingBottom: 48 }}>
+        <ShowcasePage bottomInset={48}>
             {/* --- Quarter Selector --- */}
             <View style={styles.quarterSelectorContainer}>
                 <View style={[styles.quarterSelector, { backgroundColor: theme.colors.surfaceContainer }]}>

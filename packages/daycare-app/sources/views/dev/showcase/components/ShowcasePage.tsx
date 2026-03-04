@@ -1,5 +1,4 @@
 import type { StyleProp, ViewStyle } from "react-native";
-import { StyleSheet } from "react-native-unistyles";
 import { ItemList, type ItemListProps } from "@/components/ItemList";
 
 type ShowcasePageDensity = "compact" | "default" | "spacious";
@@ -8,6 +7,16 @@ type ShowcasePageProps = Omit<ItemListProps, "containerStyle"> & {
     contentContainerStyle?: StyleProp<ViewStyle>;
     density?: ShowcasePageDensity;
     edgeToEdge?: boolean;
+    horizontalInset?: number;
+    topInset?: number;
+    bottomInset?: number;
+    contentGap?: number;
+};
+
+const DENSITY_PRESETS: Record<ShowcasePageDensity, { horizontalInset: number; bottomInset: number }> = {
+    compact: { horizontalInset: 12, bottomInset: 24 },
+    default: { horizontalInset: 16, bottomInset: 40 },
+    spacious: { horizontalInset: 20, bottomInset: 48 }
 };
 
 /**
@@ -20,18 +29,25 @@ export function ShowcasePage({
     contentContainerStyle,
     density = "default",
     edgeToEdge = false,
+    horizontalInset,
+    topInset,
+    bottomInset,
+    contentGap,
     ...rest
 }: ShowcasePageProps) {
-    const densityStyle =
-        density === "compact"
-            ? styles.contentCompact
-            : density === "spacious"
-              ? styles.contentSpacious
-              : styles.content;
+    const preset = DENSITY_PRESETS[density];
+    const containerStyle: ViewStyle = {
+        paddingHorizontal: edgeToEdge ? 0 : (horizontalInset ?? preset.horizontalInset),
+        paddingTop: topInset ?? 0,
+        paddingBottom: bottomInset ?? preset.bottomInset
+    };
+    if (contentGap !== undefined) {
+        containerStyle.gap = contentGap;
+    }
 
     return (
         <ItemList
-            containerStyle={[densityStyle, edgeToEdge && styles.contentEdgeToEdge, contentContainerStyle]}
+            containerStyle={[containerStyle, contentContainerStyle]}
             showsVerticalScrollIndicator={false}
             {...rest}
         >
@@ -39,21 +55,3 @@ export function ShowcasePage({
         </ItemList>
     );
 }
-
-const styles = StyleSheet.create({
-    content: {
-        paddingHorizontal: 16,
-        paddingBottom: 40
-    },
-    contentCompact: {
-        paddingHorizontal: 12,
-        paddingBottom: 24
-    },
-    contentSpacious: {
-        paddingHorizontal: 20,
-        paddingBottom: 48
-    },
-    contentEdgeToEdge: {
-        paddingHorizontal: 0
-    }
-});

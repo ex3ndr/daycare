@@ -229,7 +229,7 @@ export function ReadingListPage() {
     const { theme } = useUnistyles();
 
     return (
-        <ShowcasePage contentContainerStyle={{ paddingVertical: 20, paddingBottom: 20, gap: 28 }}>
+        <ShowcasePage topInset={20} bottomInset={20} contentGap={28}>
             {/* Top metrics row */}
             <View style={s.metricsRow}>
                 <View style={s.metricCard(theme.colors.surfaceContainer, theme.colors.primary)}>
