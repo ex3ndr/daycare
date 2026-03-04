@@ -4,22 +4,32 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { showcasePagesMap } from "@/views/dev/showcase/_showcasePages";
 import { ApartmentHuntingPage } from "@/views/dev/showcase/pages/ApartmentHuntingPage";
 import { BugTrackerPage } from "@/views/dev/showcase/pages/BugTrackerPage";
+import { ClientProjectsPage } from "@/views/dev/showcase/pages/ClientProjectsPage";
 import { CompetitiveAnalysisPage } from "@/views/dev/showcase/pages/CompetitiveAnalysisPage";
 import { ContentCalendarPage } from "@/views/dev/showcase/pages/ContentCalendarPage";
+import { CourseCurriculumPage } from "@/views/dev/showcase/pages/CourseCurriculumPage";
+import { EventPlanningPage } from "@/views/dev/showcase/pages/EventPlanningPage";
 import { ExpenseReportPage } from "@/views/dev/showcase/pages/ExpenseReportPage";
 import { FeatureRequestsPage } from "@/views/dev/showcase/pages/FeatureRequestsPage";
 import { GymWorkoutPage } from "@/views/dev/showcase/pages/GymWorkoutPage";
 import { HabitTrackerPage } from "@/views/dev/showcase/pages/HabitTrackerPage";
+import { HomeMaintenancePage } from "@/views/dev/showcase/pages/HomeMaintenancePage";
+import { InventoryManagementPage } from "@/views/dev/showcase/pages/InventoryManagementPage";
 import { InvoiceTrackerPage } from "@/views/dev/showcase/pages/InvoiceTrackerPage";
+import { JobApplicationsPage } from "@/views/dev/showcase/pages/JobApplicationsPage";
+import { KnowledgeBasePage } from "@/views/dev/showcase/pages/KnowledgeBasePage";
 import { MeetingNotesPage } from "@/views/dev/showcase/pages/MeetingNotesPage";
 import { OkrTrackerPage } from "@/views/dev/showcase/pages/OkrTrackerPage";
 import { PersonalCrmPage } from "@/views/dev/showcase/pages/PersonalCrmPage";
 import { PersonalFinancePage } from "@/views/dev/showcase/pages/PersonalFinancePage";
+import { PodcastPlannerPage } from "@/views/dev/showcase/pages/PodcastPlannerPage";
 import { ReadingListPage } from "@/views/dev/showcase/pages/ReadingListPage";
 import { RecipeCollectionPage } from "@/views/dev/showcase/pages/RecipeCollectionPage";
 import { RecruitmentPipelinePage } from "@/views/dev/showcase/pages/RecruitmentPipelinePage";
+import { ResearchPapersPage } from "@/views/dev/showcase/pages/ResearchPapersPage";
 import { SalesPipelinePage } from "@/views/dev/showcase/pages/SalesPipelinePage";
 import { SprintBoardPage } from "@/views/dev/showcase/pages/SprintBoardPage";
+import { StartupMetricsPage } from "@/views/dev/showcase/pages/StartupMetricsPage";
 import { SupportTicketsPage } from "@/views/dev/showcase/pages/SupportTicketsPage";
 import { TravelPlannerPage } from "@/views/dev/showcase/pages/TravelPlannerPage";
 
@@ -44,7 +54,17 @@ const showcaseComponents: Record<string, React.ComponentType> = {
     "support-tickets": SupportTicketsPage,
     "travel-planner": TravelPlannerPage,
     "apartment-hunting": ApartmentHuntingPage,
-    "competitive-analysis": CompetitiveAnalysisPage
+    "competitive-analysis": CompetitiveAnalysisPage,
+    "podcast-planner": PodcastPlannerPage,
+    "inventory-management": InventoryManagementPage,
+    "research-papers": ResearchPapersPage,
+    "home-maintenance": HomeMaintenancePage,
+    "course-curriculum": CourseCurriculumPage,
+    "startup-metrics": StartupMetricsPage,
+    "event-planning": EventPlanningPage,
+    "job-applications": JobApplicationsPage,
+    "client-projects": ClientProjectsPage,
+    "knowledge-base": KnowledgeBasePage
 };
 
 /**
