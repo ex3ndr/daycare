@@ -1,5 +1,4 @@
 import { Octicons } from "@expo/vector-icons";
-import * as React from "react";
 import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { ItemList } from "@/components/ItemList";

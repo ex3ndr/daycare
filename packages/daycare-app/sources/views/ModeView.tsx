@@ -50,7 +50,8 @@ const leftItems: Record<
     tools: [],
     dev: [
         { id: "widgets", title: "Widgets", subtitle: "Component catalog" },
-        { id: "examples", title: "Examples", subtitle: "Todo app demo" }
+        { id: "examples", title: "Examples", subtitle: "Todo app demo" },
+        { id: "lottie", title: "Lottie", subtitle: "Animations" }
     ]
 };
 

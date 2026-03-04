@@ -3,23 +3,26 @@ import { View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
 import { ExamplesView } from "@/views/dev/ExamplesView";
+import { LottieShowcaseView } from "@/views/dev/LottieShowcaseView";
 import { showcasePagesMap } from "@/views/dev/showcase/_showcasePages";
 import { ShowcaseListView } from "@/views/dev/showcase/ShowcaseListView";
 import { ShowcasePageView } from "@/views/dev/showcase/ShowcasePageView";
 import { WidgetsShowcaseView } from "@/views/dev/WidgetsShowcaseView";
 
-type DevPage = "widgets" | "examples" | "showcase";
+type DevPage = "widgets" | "examples" | "showcase" | "lottie";
 
 const pageTitles: Record<DevPage, string> = {
     widgets: "Widgets",
     examples: "Examples",
-    showcase: "Showcase"
+    showcase: "Showcase",
+    lottie: "Lottie"
 };
 
 const pageComponents: Record<DevPage, React.ComponentType> = {
     widgets: WidgetsShowcaseView,
     examples: ExamplesView,
-    showcase: ShowcaseListView
+    showcase: ShowcaseListView,
+    lottie: LottieShowcaseView
 };
 
 /**
