@@ -220,6 +220,36 @@ export type DocumentDbRecord = {
     updatedAt: number;
 };
 
+export type DatabaseFragmentRow = {
+    id: string;
+    user_id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
+    kit_version: string;
+    title: string;
+    description: string;
+    spec: unknown;
+    archived: boolean;
+    created_at: number;
+    updated_at: number;
+};
+
+export type FragmentDbRecord = {
+    id: string;
+    userId: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
+    kitVersion: string;
+    title: string;
+    description: string;
+    spec: unknown;
+    archived: boolean;
+    createdAt: number;
+    updatedAt: number;
+};
+
 export type DatabaseDocumentReferenceRow = {
     id: number;
     user_id: string;

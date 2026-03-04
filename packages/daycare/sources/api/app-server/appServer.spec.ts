@@ -193,6 +193,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         taskCallbacks: options.taskCallbacks ?? null,
         tokenStatsFetch: async () => [],
         documents: null,
+        fragments: null,
         keyValues: storage.keyValues,
         secrets,
         connectorTargetResolve: async (target) => {

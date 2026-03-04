@@ -16,5 +16,9 @@ export const migrations: Migration[] = [
     {
         name: "20260304101500_psql_databases",
         fileName: "20260304101500_psql_databases.sql"
+    },
+    {
+        name: "20260304120000_fragments",
+        fileName: "20260304120000_fragments.sql"
     }
 ];

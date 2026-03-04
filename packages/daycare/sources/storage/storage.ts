@@ -13,6 +13,7 @@ import type { CreateAgentInput, CreateUserInput, UserWithConnectorKeysDbRecord }
 import { DelayedSignalsRepository } from "./delayedSignalsRepository.js";
 import { DocumentsRepository } from "./documentsRepository.js";
 import { ExposeEndpointsRepository } from "./exposeEndpointsRepository.js";
+import { FragmentsRepository } from "./fragmentsRepository.js";
 import { HistoryRepository } from "./historyRepository.js";
 import { InboxRepository } from "./inboxRepository.js";
 import { KeyValuesRepository } from "./keyValuesRepository.js";
@@ -44,6 +45,7 @@ export class Storage {
     readonly webhookTasks: WebhookTasksRepository;
     readonly tasks: TasksRepository;
     readonly documents: DocumentsRepository;
+    readonly fragments: FragmentsRepository;
     readonly signalEvents: SignalEventsRepository;
     readonly signalSubscriptions: SignalSubscriptionsRepository;
     readonly delayedSignals: DelayedSignalsRepository;
@@ -77,6 +79,7 @@ export class Storage {
         this.webhookTasks = new WebhookTasksRepository(db);
         this.tasks = new TasksRepository(db);
         this.documents = new DocumentsRepository(db);
+        this.fragments = new FragmentsRepository(db);
         this.signalEvents = new SignalEventsRepository(db);
         this.signalSubscriptions = new SignalSubscriptionsRepository(db);
         this.delayedSignals = new DelayedSignalsRepository(db);

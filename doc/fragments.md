@@ -1,0 +1,74 @@
+# Fragments System
+
+Fragments are versioned JSON UI specs stored in the `fragments` table. They are user-scoped, soft-archivable, and event-sourced through `version`/`validFrom`/`validTo`.
+
+## Data Model
+
+Each row stores:
+
+- `id`, `userId`: logical fragment identity and owner
+- `version`, `validFrom`, `validTo`: temporal versioning fields
+- `kitVersion`: widget catalog version used to author the spec
+- `title`, `description`: human-readable metadata
+- `spec`: JSON render spec payload
+- `archived`: soft-archive flag (`true` means hidden from list endpoints)
+- `createdAt`, `updatedAt`: unix timestamps in milliseconds
+
+```mermaid
+erDiagram
+    FRAGMENTS {
+        text id
+        text user_id
+        integer version
+        bigint valid_from
+        bigint valid_to
+        text kit_version
+        text title
+        text description
+        jsonb spec
+        boolean archived
+        bigint created_at
+        bigint updated_at
+    }
+```
+
+## API Endpoints
+
+- `GET /fragments`: list active non-archived fragments
+- `GET /fragments/:id`: fetch latest fragment version, including archived
+- `POST /fragments/create`: create a new fragment
+- `POST /fragments/:id/update`: write next version for a fragment
+- `POST /fragments/:id/archive`: archive via version advance (`archived=true`)
+
+## Version Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant Repo
+    participant DB
+
+    Client->>API: POST /fragments/create
+    API->>Repo: create(ctx, input)
+    Repo->>DB: INSERT version=1, valid_to=NULL, archived=false
+    DB-->>Repo: row
+    Repo-->>API: fragment
+    API-->>Client: { ok: true, fragment }
+
+    Client->>API: POST /fragments/:id/update
+    API->>Repo: update(ctx, id, changes)
+    Repo->>DB: UPDATE current SET valid_to=now
+    Repo->>DB: INSERT next version valid_to=NULL
+    DB-->>Repo: row
+    Repo-->>API: fragment
+    API-->>Client: { ok: true, fragment }
+
+    Client->>API: POST /fragments/:id/archive
+    API->>Repo: archive(ctx, id)
+    Repo->>DB: UPDATE current SET valid_to=now
+    Repo->>DB: INSERT next version archived=true
+    DB-->>Repo: row
+    Repo-->>API: ok
+    API-->>Client: { ok: true }
+```

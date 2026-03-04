@@ -21,6 +21,7 @@ import { getLogger } from "../../log.js";
 import type { PsqlService } from "../../services/psql/PsqlService.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
+import type { FragmentsRepository } from "../../storage/fragmentsRepository.js";
 import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
@@ -57,6 +58,7 @@ export type AppServerOptions = {
     taskCallbacks: RouteTaskCallbacks | null;
     tokenStatsFetch: (ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>;
     documents: DocumentsRepository | null;
+    fragments: FragmentsRepository | null;
     keyValues: KeyValuesRepository | null;
     psql?: PsqlService | null;
     secrets: {
@@ -89,6 +91,7 @@ export class AppServer {
     private readonly taskCallbacks: RouteTaskCallbacks | null;
     private readonly tokenStatsFetch: AppServerOptions["tokenStatsFetch"];
     private readonly documents: DocumentsRepository | null;
+    private readonly fragments: FragmentsRepository | null;
     private readonly keyValues: KeyValuesRepository | null;
     private readonly psql: PsqlService | null;
     private readonly secrets: AppServerOptions["secrets"];
@@ -115,6 +118,7 @@ export class AppServer {
         this.taskCallbacks = options.taskCallbacks;
         this.tokenStatsFetch = options.tokenStatsFetch;
         this.documents = options.documents;
+        this.fragments = options.fragments;
         this.keyValues = options.keyValues;
         this.psql = options.psql ?? null;
         this.secrets = options.secrets;
@@ -261,6 +265,7 @@ export class AppServer {
             taskCallbacks: this.taskCallbacks,
             tokenStatsFetch: this.tokenStatsFetch,
             documents: this.documents,
+            fragments: this.fragments,
             keyValues: this.keyValues,
             psql: this.psql,
             secrets: this.secrets

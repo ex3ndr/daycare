@@ -6,6 +6,7 @@ import type { Secret } from "../../engine/secrets/secretTypes.js";
 import type { PsqlService } from "../../services/psql/PsqlService.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
+import type { FragmentsRepository } from "../../storage/fragmentsRepository.js";
 import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import { agentsRouteHandle } from "./agents/agentsRoutes.js";
@@ -13,6 +14,7 @@ import type { TokenStatsFetchOptions } from "./costs/costsRoutes.js";
 import { costsRouteHandle } from "./costs/costsRoutes.js";
 import { databasesRouteHandle } from "./databases/databasesRoutes.js";
 import { documentsRouteHandle } from "./documents/documentsRoutes.js";
+import { fragmentsRouteHandle } from "./fragments/fragmentsRoutes.js";
 import { kvRouteHandle } from "./kv/kvRoutes.js";
 import { profileRouteHandle } from "./profile/profileRoutes.js";
 import { promptsRouteHandle } from "./prompts/promptsRoutes.js";
@@ -37,6 +39,7 @@ export type ApiRouteContext = {
     taskCallbacks: RouteTaskCallbacks | null;
     tokenStatsFetch: ((ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>) | null;
     documents: DocumentsRepository | null;
+    fragments: FragmentsRepository | null;
     keyValues: KeyValuesRepository | null;
     psql: PsqlService | null;
     secrets: {
@@ -120,6 +123,14 @@ export async function apiRouteHandle(
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody,
             documents: context.documents
+        });
+    }
+    if (pathname.startsWith("/fragments")) {
+        return fragmentsRouteHandle(request, response, pathname, {
+            ctx: context.ctx,
+            sendJson: context.sendJson,
+            readJsonBody: context.readJsonBody,
+            fragments: context.fragments
         });
     }
     if (pathname.startsWith("/kv")) {

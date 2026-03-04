@@ -645,6 +645,7 @@ export class Engine {
             },
             tokenStatsFetch: (ctx, options) => this.storage.tokenStats.findMany(ctx, options),
             documents: this.storage.documents,
+            fragments: this.storage.fragments,
             keyValues: this.storage.keyValues,
             psql: this.psqlService,
             secrets: this.secrets,
