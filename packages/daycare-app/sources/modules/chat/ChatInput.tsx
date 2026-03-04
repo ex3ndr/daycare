@@ -3,14 +3,14 @@ import * as React from "react";
 import { Platform, Pressable, Text, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 
-export type AgentInputProps = {
+export type ChatInputProps = {
     onSend: (text: string) => void;
 };
 
 /**
  * Terminal-style message input — monospace prompt with send button.
  */
-export function AgentInput({ onSend }: AgentInputProps) {
+export function ChatInput({ onSend }: ChatInputProps) {
     const { theme } = useUnistyles();
     const [text, setText] = React.useState("");
     const hasText = text.trim().length > 0;

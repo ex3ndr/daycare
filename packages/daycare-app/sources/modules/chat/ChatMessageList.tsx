@@ -1,16 +1,16 @@
 import * as React from "react";
 import { ActivityIndicator, FlatList, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { AgentMessageItem } from "./AgentMessageItem";
-import type { AgentHistoryRecord } from "./agentHistoryTypes";
+import { ChatMessageItem } from "./ChatMessageItem";
+import type { AgentHistoryRecord } from "./chatHistoryTypes";
 
-export type AgentMessageListProps = {
+export type ChatMessageListProps = {
     records: AgentHistoryRecord[];
     loading: boolean;
 };
 
 /** Inverted FlatList showing agent history records (newest at bottom). */
-export const AgentMessageList = React.memo(({ records, loading }: AgentMessageListProps) => {
+export const ChatMessageList = React.memo(({ records, loading }: ChatMessageListProps) => {
     const { theme } = useUnistyles();
 
     // Sort descending by `at` for inverted list (newest first in data = bottom visually)
@@ -18,7 +18,7 @@ export const AgentMessageList = React.memo(({ records, loading }: AgentMessageLi
 
     const keyExtractor = React.useCallback((_item: AgentHistoryRecord, index: number) => String(index), []);
     const renderItem = React.useCallback(
-        ({ item }: { item: AgentHistoryRecord }) => <AgentMessageItem record={item} />,
+        ({ item }: { item: AgentHistoryRecord }) => <ChatMessageItem record={item} />,
         []
     );
 

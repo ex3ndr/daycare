@@ -7,10 +7,10 @@ import type {
     AgentHistoryRecord,
     AgentHistoryRlmToolCall,
     AgentHistoryUserMessage
-} from "./agentHistoryTypes";
-import { extractText } from "./agentMessageItemHelpers";
+} from "./chatHistoryTypes";
+import { extractText } from "./chatMessageItemHelpers";
 
-export const AgentMessageItem = React.memo(({ record }: { record: AgentHistoryRecord }) => {
+export const ChatMessageItem = React.memo(({ record }: { record: AgentHistoryRecord }) => {
     switch (record.type) {
         case "user_message":
             return <UserMessageItem record={record} />;

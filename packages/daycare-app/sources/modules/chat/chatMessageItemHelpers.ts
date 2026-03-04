@@ -1,4 +1,4 @@
-import type { AgentAssistantContentBlock, AgentHistoryRecord } from "./agentHistoryTypes";
+import type { AgentAssistantContentBlock, AgentHistoryRecord } from "./chatHistoryTypes";
 
 /** Extracts plain text from assistant content blocks. */
 export function extractText(content: AgentAssistantContentBlock[]): string {

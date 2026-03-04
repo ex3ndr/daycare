@@ -4,10 +4,7 @@ import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { useAgentsStore } from "@/modules/agents/agentsContext";
-import { useAuthStore } from "@/modules/auth/authContext";
-import { AgentInput } from "./AgentInput";
-import { AgentMessageList } from "./AgentMessageList";
+import { Chat } from "@/modules/chat/Chat";
 
 /** Derives a display name from an agent id. */
 function agentDisplayName(agentId: string): string {
@@ -19,37 +16,12 @@ export type AgentDetailViewProps = {
 };
 
 /**
- * Full-screen agent detail view: header + message list + input.
- * Fetches history on mount and refreshes after sending a message.
+ * Full-screen agent detail view: header + embedded chat session.
  */
 export function AgentDetailView({ agentId }: AgentDetailViewProps) {
     const { theme } = useUnistyles();
     const router = useRouter();
     const insets = useSafeAreaInsets();
-
-    const baseUrl = useAuthStore((s) => s.baseUrl);
-    const token = useAuthStore((s) => s.token);
-
-    const history = useAgentsStore((s) => s.history);
-    const historyLoading = useAgentsStore((s) => s.historyLoading);
-    const fetchHistory = useAgentsStore((s) => s.fetchHistory);
-    const sendMessage = useAgentsStore((s) => s.sendMessage);
-
-    React.useEffect(() => {
-        if (baseUrl && token && agentId) {
-            void fetchHistory(baseUrl, token, agentId);
-        }
-    }, [baseUrl, token, agentId, fetchHistory]);
-
-    const handleSend = React.useCallback(
-        async (text: string) => {
-            if (!baseUrl || !token) return;
-            await sendMessage(baseUrl, token, agentId, text);
-            // Refresh history after sending
-            void fetchHistory(baseUrl, token, agentId);
-        },
-        [baseUrl, token, agentId, sendMessage, fetchHistory]
-    );
 
     const handleBack = React.useCallback(() => {
         if (router.canGoBack()) {
@@ -81,14 +53,8 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps) {
                 <View style={styles.headerSpacer} />
             </View>
 
-            {/* Message list */}
-            <View style={styles.listContainer}>
-                <AgentMessageList records={history} loading={historyLoading} />
-            </View>
-
-            {/* Input */}
-            <View style={{ paddingBottom: insets.bottom }}>
-                <AgentInput onSend={handleSend} />
+            <View style={[styles.listContainer, { paddingBottom: insets.bottom }]}>
+                <Chat agentId={agentId} />
             </View>
         </View>
     );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { AgentHistoryRecord } from "./agentHistoryTypes";
-import { extractText, recordDisplayKind } from "./agentMessageItemHelpers";
+import type { AgentHistoryRecord } from "./chatHistoryTypes";
+import { extractText, recordDisplayKind } from "./chatMessageItemHelpers";
 
 describe("extractText", () => {
     it("extracts text blocks and joins with newline", () => {
