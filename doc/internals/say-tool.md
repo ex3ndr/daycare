@@ -30,3 +30,4 @@ sequenceDiagram
 - Tool-calling prompt says foreground agents should prefer the `say` tool.
 - Plain text responses are still forwarded when the model does not call `say`.
 - Inline RLM prompt prefers `say(...)` when available and also allows plain-text follow-ups.
+- The formatting prompt instructs the model to reply with `NO_MESSAGE` when there is nothing to communicate.
