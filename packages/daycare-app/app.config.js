@@ -71,8 +71,7 @@ export default {
             ]
         ],
         experiments: {
-            typedRoutes: true,
-            useExperimentalModals: true
+            typedRoutes: true
         },
         extra: {
             router: {

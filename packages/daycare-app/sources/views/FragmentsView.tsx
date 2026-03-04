@@ -1,16 +1,15 @@
-import { Octicons } from "@expo/vector-icons";
-import { createStateStore, JSONUIProvider, Renderer, type Spec, type StateStore } from "@json-render/react-native";
-import * as React from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { useCallback, useEffect } from "react";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useFragmentsStore } from "@/modules/fragments/fragmentsContext";
 import type { FragmentListItem } from "@/modules/fragments/fragmentsTypes";
-import { widgetsRegistry } from "@/widgets/widgetsComponents";
 
 export function FragmentsView() {
     const { theme } = useUnistyles();
+    const router = useRouter();
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
@@ -19,14 +18,21 @@ export function FragmentsView() {
     const loading = useFragmentsStore((s) => s.loading);
     const error = useFragmentsStore((s) => s.error);
     const fetchFragments = useFragmentsStore((s) => s.fetch);
+    const selectFragment = useFragmentsStore((s) => s.select);
 
-    const [selectedFragment, setSelectedFragment] = React.useState<FragmentListItem | null>(null);
-
-    React.useEffect(() => {
+    useEffect(() => {
         if (baseUrl && token) {
             void fetchFragments(baseUrl, token);
         }
     }, [baseUrl, token, fetchFragments]);
+
+    const handleFragmentPress = useCallback(
+        (fragment: FragmentListItem) => {
+            selectFragment(fragment);
+            router.push("/fragment-modal" as `/${string}`);
+        },
+        [selectFragment, router]
+    );
 
     if (loading && fragments.length === 0) {
         return (
@@ -69,7 +75,7 @@ export function FragmentsView() {
                     <Pressable
                         key={fragment.id}
                         style={[styles.card, { backgroundColor: theme.colors.surfaceContainerLow }]}
-                        onPress={() => setSelectedFragment(fragment)}
+                        onPress={() => handleFragmentPress(fragment)}
                     >
                         <Text style={[styles.cardTitle, { color: theme.colors.onSurface }]} numberOfLines={1}>
                             {fragment.title}
@@ -88,56 +94,7 @@ export function FragmentsView() {
                     </Pressable>
                 ))}
             </ScrollView>
-
-            <FragmentDetailModal fragment={selectedFragment} onClose={() => setSelectedFragment(null)} />
         </View>
-    );
-}
-
-type FragmentDetailModalProps = {
-    fragment: FragmentListItem | null;
-    onClose: () => void;
-};
-
-function FragmentDetailModal({ fragment, onClose }: FragmentDetailModalProps) {
-    const { theme } = useUnistyles();
-
-    // Create a fresh state store for each fragment
-    const stateStore = React.useMemo<StateStore | null>(() => {
-        if (!fragment) return null;
-        return createStateStore({});
-    }, [fragment]);
-
-    if (!fragment || !stateStore) return null;
-
-    return (
-        <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-            <View style={styles.modalOverlay}>
-                <View
-                    style={[
-                        styles.modalContent,
-                        {
-                            backgroundColor: theme.colors.surface,
-                            boxShadow: theme.elevation.level3
-                        }
-                    ]}
-                >
-                    <View style={[styles.modalHeader, { borderBottomColor: theme.colors.outlineVariant }]}>
-                        <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]} numberOfLines={1}>
-                            {fragment.title}
-                        </Text>
-                        <Pressable onPress={onClose} style={styles.closeButton}>
-                            <Octicons name="x" size={20} color={theme.colors.onSurfaceVariant} />
-                        </Pressable>
-                    </View>
-                    <ScrollView style={styles.modalBody}>
-                        <JSONUIProvider store={stateStore} handlers={{}} registry={widgetsRegistry}>
-                            <Renderer spec={fragment.spec as Spec} registry={widgetsRegistry} />
-                        </JSONUIProvider>
-                    </ScrollView>
-                </View>
-            </View>
-        </Modal>
     );
 }
 
@@ -181,40 +138,5 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 12,
         fontFamily: "IBMPlexSans-Regular",
         marginTop: 4
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: "rgba(0,0,0,0.4)",
-        justifyContent: "center",
-        alignItems: "center",
-        padding: 24
-    },
-    modalContent: {
-        width: "100%",
-        maxWidth: 640,
-        maxHeight: "80%",
-        borderRadius: 16,
-        overflow: "hidden"
-    },
-    modalHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: 20,
-        paddingVertical: 14,
-        borderBottomWidth: StyleSheet.hairlineWidth
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontFamily: "IBMPlexSans-SemiBold",
-        fontWeight: "600",
-        flex: 1,
-        marginRight: 12
-    },
-    closeButton: {
-        padding: 4
-    },
-    modalBody: {
-        padding: 20
     }
 }));

@@ -4,9 +4,11 @@ import type { FragmentListItem } from "./fragmentsTypes";
 
 export type FragmentsStore = {
     fragments: FragmentListItem[];
+    selectedFragment: FragmentListItem | null;
     loading: boolean;
     error: string | null;
     fetch: (baseUrl: string, token: string) => Promise<void>;
+    select: (fragment: FragmentListItem | null) => void;
 };
 
 /**
@@ -16,8 +18,10 @@ export type FragmentsStore = {
 export function fragmentsStoreCreate() {
     return create<FragmentsStore>((set) => ({
         fragments: [],
+        selectedFragment: null,
         loading: false,
         error: null,
+        select: (fragment) => set({ selectedFragment: fragment }),
         fetch: async (baseUrl, token) => {
             set({ loading: true, error: null });
             try {

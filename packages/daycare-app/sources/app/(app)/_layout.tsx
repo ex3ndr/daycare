@@ -1,11 +1,15 @@
 import { Octicons } from "@expo/vector-icons";
-import { Slot } from "expo-router";
+import { Stack } from "expo-router";
 import * as React from "react";
 import { Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { AppSidebar, SIDEBAR_WIDTH } from "@/components/AppSidebar";
 import { Drawer } from "@/components/Drawer";
+
+export const unstable_settings = {
+    anchor: "index"
+};
 
 export default function AppLayout() {
     const { theme } = useUnistyles();
@@ -16,6 +20,23 @@ export default function AppLayout() {
     }
 
     return <DesktopLayout />;
+}
+
+/** Shared Stack navigator used by both layouts. */
+function AppStack() {
+    return (
+        <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="[mode]" />
+            <Stack.Screen
+                name="fragment-modal"
+                options={{
+                    presentation: "modal",
+                    headerShown: false
+                }}
+            />
+        </Stack>
+    );
 }
 
 /** Desktop: sidebar card on the left, content fills the rest. */
@@ -49,7 +70,7 @@ function DesktopLayout() {
                     }
                 ]}
             >
-                <Slot />
+                <AppStack />
             </View>
         </View>
     );
@@ -76,7 +97,7 @@ function MobileLayout() {
                 position="left"
             >
                 <View style={styles.content}>
-                    <Slot />
+                    <AppStack />
                 </View>
             </Drawer>
 
