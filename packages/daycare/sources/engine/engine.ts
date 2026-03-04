@@ -61,6 +61,11 @@ import { exposeCreateToolBuild } from "./modules/tools/exposeCreateToolBuild.js"
 import { exposeListToolBuild } from "./modules/tools/exposeListToolBuild.js";
 import { exposeRemoveToolBuild } from "./modules/tools/exposeRemoveToolBuild.js";
 import { exposeUpdateToolBuild } from "./modules/tools/exposeUpdateToolBuild.js";
+import { fragmentArchiveToolBuild } from "./modules/tools/fragmentArchiveToolBuild.js";
+import { fragmentCreateToolBuild } from "./modules/tools/fragmentCreateToolBuild.js";
+import { fragmentListToolBuild } from "./modules/tools/fragmentListToolBuild.js";
+import { fragmentReadToolBuild } from "./modules/tools/fragmentReadToolBuild.js";
+import { fragmentUpdateToolBuild } from "./modules/tools/fragmentUpdateToolBuild.js";
 import { friendAddToolBuild } from "./modules/tools/friendAddToolBuild.js";
 import { friendRemoveToolBuild } from "./modules/tools/friendRemoveToolBuild.js";
 import { friendSendToolBuild } from "./modules/tools/friendSendToolBuild.js";
@@ -764,11 +769,16 @@ export class Engine {
         this.modules.tools.register("core", documentAppendToolBuild());
         this.modules.tools.register("core", documentPatchToolBuild());
         this.modules.tools.register("core", documentWriteToolBuild());
+        this.modules.tools.register("core", fragmentCreateToolBuild());
+        this.modules.tools.register("core", fragmentReadToolBuild());
+        this.modules.tools.register("core", fragmentListToolBuild());
+        this.modules.tools.register("core", fragmentUpdateToolBuild());
+        this.modules.tools.register("core", fragmentArchiveToolBuild());
         for (const tool of psqlToolsBuild(this.psqlService)) {
             this.modules.tools.register("core", tool);
         }
         logger.debug(
-            "register: Core tools registered: tasks, topology, user_profile_update, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, swarms, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, document_read, document_append, document_patch, document_write"
+            "register: Core tools registered: tasks, topology, user_profile_update, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, swarms, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, document_read, document_append, document_patch, document_write, fragment_create, fragment_read, fragment_list, fragment_update, fragment_archive"
         );
 
         await this.pluginManager.preStartAll();
