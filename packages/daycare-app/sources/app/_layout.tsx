@@ -4,13 +4,18 @@ import * as Fonts from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as React from "react";
-import { StatusBar, View } from "react-native";
+import { StatusBar, Text, View } from "react-native";
 import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context";
 import { useUnistyles } from "react-native-unistyles";
 import { AlertProvider } from "@/components/alert";
 import { AuthProvider, useAuthStore } from "@/modules/auth/authContext";
 
 export { ErrorBoundary } from "expo-router";
+
+/** Set IBMPlexSans-Regular as the default font for all Text components. */
+const defaultTextStyle = { fontFamily: "IBMPlexSans-Regular" };
+// @ts-expect-error -- RN defaultProps is untyped but widely supported
+Text.defaultProps = { ...Text.defaultProps, style: defaultTextStyle };
 
 let fontsLoaded = false;
 async function loadFonts() {
