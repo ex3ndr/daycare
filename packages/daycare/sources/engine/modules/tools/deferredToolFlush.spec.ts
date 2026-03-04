@@ -40,7 +40,7 @@ describe("deferredToolFlush", () => {
 
         expect(result).toEqual({ sent: 2, failed: 1 });
         expect(succeedHandler).toHaveBeenCalledTimes(2);
-        expect(failHandler).toHaveBeenCalledTimes(1);
+        expect(failHandler).toHaveBeenCalledTimes(3);
     });
 
     it("passes context to each handler", async () => {
@@ -51,6 +51,18 @@ describe("deferredToolFlush", () => {
         await deferredToolFlush(entries, context);
 
         expect(handler).toHaveBeenCalledWith({}, context);
+    });
+
+    it("retries a transient deferred send failure and eventually succeeds", async () => {
+        const handler = vi.fn(async () => {});
+        handler.mockRejectedValueOnce(new Error("temporary"));
+        handler.mockResolvedValueOnce(undefined);
+        const context = {} as ToolExecutionContext;
+
+        const result = await deferredToolFlush([{ toolName: "say", payload: { text: "hello" }, handler }], context);
+
+        expect(result).toEqual({ sent: 1, failed: 0 });
+        expect(handler).toHaveBeenCalledTimes(2);
     });
 });
 
