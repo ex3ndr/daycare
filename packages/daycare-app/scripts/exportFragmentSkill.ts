@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { widgetsCatalog } from "../sources/widgets/widgets";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const templatePath = path.resolve(scriptDir, "../sources/prompts/fragments/SKILL_TEMPLATE.md");
+const templatePath = path.resolve(scriptDir, "../../daycare/sources/prompts/SKILL_TEMPLATE.md");
 const outputPath = path.resolve(scriptDir, "../../daycare/sources/skills/create-fragment/SKILL.md");
 
 async function main(): Promise<void> {

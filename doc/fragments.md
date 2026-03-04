@@ -58,7 +58,7 @@ Tool return contracts:
 
 The `create-fragment` skill is generated from:
 
-- Template header: `packages/daycare-app/sources/prompts/fragments/SKILL_TEMPLATE.md`
+- Template header: `packages/daycare/sources/prompts/SKILL_TEMPLATE.md`
 - Widget catalog prompt: `widgetsCatalog.prompt()` in `packages/daycare-app/sources/widgets/widgets.ts`
 - Export script: `npx tsx packages/daycare-app/scripts/exportFragmentSkill.ts`
 - Output: `packages/daycare/sources/skills/create-fragment/SKILL.md`
