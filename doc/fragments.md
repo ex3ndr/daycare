@@ -40,6 +40,38 @@ erDiagram
 - `POST /fragments/:id/update`: write next version for a fragment
 - `POST /fragments/:id/archive`: archive via version advance (`archived=true`)
 
+## LLM Tools
+
+Core tools expose fragment CRUD to all agents:
+
+- `fragment_create`: create a new fragment (`title`, `kitVersion`, `spec`, optional `description`)
+- `fragment_update`: update an existing fragment by `fragmentId` with partial fields
+- `fragment_archive`: archive a fragment by `fragmentId`
+
+Tool return contracts:
+
+- `fragment_create` -> `{ summary, fragmentId, version }`
+- `fragment_update` -> `{ summary, fragmentId, version }`
+- `fragment_archive` -> `{ summary, fragmentId }`
+
+## Create-Fragment Skill
+
+The `create-fragment` skill is generated from:
+
+- Template header: `packages/daycare-app/sources/prompts/fragments/SKILL_TEMPLATE.md`
+- Widget catalog prompt: `widgetsCatalog.prompt()` in `packages/daycare-app/sources/widgets/widgets.ts`
+- Export script: `npx tsx packages/daycare-app/scripts/exportFragmentSkill.ts`
+- Output: `packages/daycare/sources/skills/create-fragment/SKILL.md`
+
+```mermaid
+flowchart TD
+    A[SKILL_TEMPLATE.md] --> C[exportFragmentSkill.ts]
+    B[widgetsCatalog.prompt()] --> C
+    C --> D[skills/create-fragment/SKILL.md]
+    D --> E[Skills loader]
+    E --> F[LLM can call fragment_create/update/archive]
+```
+
 ## Version Flow
 
 ```mermaid

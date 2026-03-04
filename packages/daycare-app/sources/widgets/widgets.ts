@@ -1,5 +1,5 @@
 import { defineCatalog } from "@json-render/core";
-import { schema } from "@json-render/react-native";
+import { schema } from "@json-render/react-native/schema";
 import { z } from "zod";
 
 // Semantic color roles mapped to Material Design 3 theme tokens.
