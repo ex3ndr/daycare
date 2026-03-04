@@ -13,6 +13,13 @@
 - tests must be minimal and live next to the file under test
 - repositories must use `ctx` (user-scoped context) instead of raw `agentId` arguments
 
+## App UI Conventions
+- Use `ItemList` (scrollable) or `ItemListStatic` (non-scrollable) for page content containers. These apply `maxWidth: theme.layout.maxWidth` with centering, ensuring consistent width across all screens.
+- Never use raw `ScrollView` with manual `maxWidth`/`alignSelf: "center"` — use `ItemList` instead.
+- `PageHeader` also uses `theme.layout.maxWidth` so header and content widths align automatically.
+- Use `ItemGroup` for grouped list sections with titles. It handles margins, padding, and card styling.
+- In widget specs, `ScrollArea` renders an `ItemList` internally. Do not add `padding` to ScrollArea root — let `Section` (ItemGroup) handle its own spacing.
+
 ## App API Conventions
 - All mutation endpoints use `POST` with action-based paths (never `PUT` or `DELETE`)
 - Pattern: `POST /<domain>/create`, `POST /<domain>/:id/update`, `POST /<domain>/:id/delete`
