@@ -118,22 +118,123 @@ describe("buildSendFileTool", () => {
         ).rejects.toThrow("Connector does not support voice mode");
         expect(sendMessage).not.toHaveBeenCalled();
     });
+
+    it("falls back to the most-recent foreground connector for cron agents", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const tool = buildSendFileTool();
+        const ctx = contextBuild({
+            connector: {
+                capabilities: {
+                    sendText: true,
+                    sendFiles: { modes: ["document", "photo", "video"] }
+                },
+                sendMessage
+            },
+            agent: {
+                path: "/123/cron/nightly",
+                config: {
+                    kind: "cron",
+                    modelRole: "system",
+                    connectorName: null,
+                    parentAgentId: null,
+                    foreground: false,
+                    name: "nightly",
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
+                }
+            },
+            source: "cron",
+            connectors: {
+                telegram: {
+                    capabilities: {
+                        sendText: true,
+                        sendFiles: { modes: ["document", "photo", "video"] }
+                    },
+                    sendMessage
+                }
+            },
+            foregroundAgentId: "fg-agent",
+            foregroundAgentRecord: {
+                id: "fg-agent",
+                path: "/123/telegram/456",
+                connectorName: "telegram"
+            },
+            connectorKeys: [{ connectorKey: "telegram:456" }]
+        });
+
+        await tool.execute({ path: "/tmp/report.csv", mimeType: "text/csv" }, ctx, toolCall);
+
+        expect(sendMessage).toHaveBeenCalledTimes(1);
+        expect(sendMessage).toHaveBeenCalledWith(
+            "456",
+            expect.objectContaining({
+                files: [
+                    expect.objectContaining({
+                        mimeType: "text/csv"
+                    })
+                ]
+            })
+        );
+    });
 });
 
-function contextBuild(options: {
-    connector: {
-        capabilities: {
-            sendText: boolean;
-            sendFiles: {
-                modes: Array<"document" | "photo" | "video" | "voice">;
-            };
+type TestConnector = {
+    capabilities: {
+        sendText: boolean;
+        sendFiles: {
+            modes: Array<"document" | "photo" | "video" | "voice">;
         };
-        sendMessage: (targetId: string, message: unknown) => Promise<void>;
+    };
+    sendMessage: (targetId: string, message: unknown) => Promise<void>;
+};
+
+function contextBuild(options: {
+    connector: TestConnector;
+    connectors?: Record<string, TestConnector>;
+    source?: string;
+    connectorKeys?: Array<{ connectorKey: string }>;
+    foregroundAgentId?: string | null;
+    foregroundAgentRecord?: { id: string; path: string; connectorName: string | null } | null;
+    agent?: {
+        path: string;
+        config: {
+            kind: "connector" | "agent" | "cron" | "task" | "memory" | "sub" | "search" | "swarm";
+            modelRole: "user" | "assistant" | "system";
+            connectorName: string | null;
+            parentAgentId: string | null;
+            foreground: boolean;
+            name: string | null;
+            description: string | null;
+            systemPrompt: string | null;
+            workspaceDir: string | null;
+        };
     };
 }): ToolExecutionContext {
+    const connectors = options.connectors ?? { telegram: options.connector };
+    const connectorKeys = options.connectorKeys ?? [{ connectorKey: "telegram:123" }];
+    const foregroundAgentId = options.foregroundAgentId ?? null;
+    const foregroundAgentRecord = options.foregroundAgentRecord ?? null;
+    const agent =
+        options.agent ??
+        ({
+            path: "/123/telegram",
+            config: {
+                kind: "connector",
+                modelRole: "user",
+                connectorName: "telegram",
+                parentAgentId: null,
+                foreground: true,
+                name: null,
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            }
+        } as const);
+
     return {
         connectorRegistry: {
-            get: () => options.connector
+            get: (source: string) => connectors[source]
         } as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: {
             read: async () =>
@@ -154,29 +255,25 @@ function contextBuild(options: {
         assistant: null,
         agent: {
             id: "agent-1",
-            path: "/123/telegram",
-            config: {
-                kind: "connector",
-                modelRole: "user",
-                connectorName: "telegram",
-                parentAgentId: null,
-                foreground: true,
-                name: null,
-                description: null,
-                systemPrompt: null,
-                workspaceDir: null
-            }
+            path: agent.path,
+            config: agent.config
         } as unknown as ToolExecutionContext["agent"],
         ctx: contextForAgent({ userId: "123", agentId: "agent-1" }),
-        source: "telegram",
+        source: options.source ?? "telegram",
         messageContext: {},
         agentSystem: {
+            agentFor: () => foregroundAgentId,
             storage: {
                 users: {
-                    findById: async () => ({
-                        id: "123",
-                        connectorKeys: [{ connectorKey: "telegram:123" }]
-                    })
+                    findById: async () => ({ id: "123", connectorKeys })
+                },
+                agents: {
+                    findById: async (id: string) => {
+                        if (!foregroundAgentRecord || id !== foregroundAgentRecord.id) {
+                            return null;
+                        }
+                        return foregroundAgentRecord;
+                    }
                 }
             }
         } as unknown as ToolExecutionContext["agentSystem"]

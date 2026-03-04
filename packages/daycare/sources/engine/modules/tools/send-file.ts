@@ -94,12 +94,15 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
                 throw new Error("Connector registry unavailable");
             }
 
-            const target = await agentPathTargetResolve(
+            let target = await agentPathTargetResolve(
                 context.agentSystem.storage,
                 context.ctx.userId,
                 context.agent.config,
                 context.agent.path
             );
+            if (!target) {
+                target = await foregroundTargetResolve(context);
+            }
             if (payload.source && target && payload.source !== target.connector && !payload.channelId) {
                 throw new Error("Override source requires an explicit channelId.");
             }
@@ -209,6 +212,26 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
             });
         }
     };
+}
+
+async function foregroundTargetResolve(context: ToolExecutionContext): Promise<{
+    connector: string;
+    targetId: string;
+} | null> {
+    const foregroundAgentId = context.agentSystem.agentFor(context.ctx, "most-recent-foreground");
+    if (!foregroundAgentId) {
+        return null;
+    }
+    const foregroundAgent = await context.agentSystem.storage.agents.findById(foregroundAgentId);
+    if (!foregroundAgent) {
+        return null;
+    }
+    return agentPathTargetResolve(
+        context.agentSystem.storage,
+        context.ctx.userId,
+        { connectorName: foregroundAgent.connectorName },
+        foregroundAgent.path
+    );
 }
 
 async function resolveFile(payload: SendFileArgs, context: ToolExecutionContext): Promise<FileReference> {
