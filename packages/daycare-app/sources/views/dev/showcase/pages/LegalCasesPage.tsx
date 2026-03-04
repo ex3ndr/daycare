@@ -864,7 +864,7 @@ const s = StyleSheet.create((theme) => ({
         borderWidth: 1
     },
     filterChipText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
 
@@ -899,7 +899,7 @@ const s = StyleSheet.create((theme) => ({
         paddingHorizontal: 6
     },
     typeSectionCountText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
 
@@ -932,11 +932,11 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     statusChipText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
     caseTitle: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 14,
         lineHeight: 20
     },
@@ -1025,7 +1025,7 @@ const s = StyleSheet.create((theme) => ({
         gap: 4
     },
     detailSummaryLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 9,
         letterSpacing: 0.6,
         textTransform: "uppercase"
@@ -1126,7 +1126,7 @@ const s = StyleSheet.create((theme) => ({
         gap: 2
     },
     docName: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13,
         lineHeight: 18
     },
@@ -1150,7 +1150,7 @@ const s = StyleSheet.create((theme) => ({
         marginRight: 12
     },
     billingDesc: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13,
         lineHeight: 18
     },
@@ -1189,7 +1189,7 @@ const s = StyleSheet.create((theme) => ({
         alignItems: "center"
     },
     closeButtonText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 14
     }
 }));

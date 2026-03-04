@@ -673,7 +673,7 @@ const s = StyleSheet.create((theme) => ({
         textAlign: "center"
     },
     stepperLabelActive: {
-        fontFamily: "IBMPlexSans-Regular"
+        fontFamily: "IBMPlexSans-Medium"
     },
 
     // Section
@@ -699,7 +699,7 @@ const s = StyleSheet.create((theme) => ({
         paddingHorizontal: 6
     },
     sectionCountText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
 
@@ -730,7 +730,7 @@ const s = StyleSheet.create((theme) => ({
         gap: 6
     },
     milestoneTitle: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 14,
         lineHeight: 20
     },
@@ -759,7 +759,7 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     statusBadgeText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
 
@@ -857,7 +857,7 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     priorityChipText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
     questionDays: {

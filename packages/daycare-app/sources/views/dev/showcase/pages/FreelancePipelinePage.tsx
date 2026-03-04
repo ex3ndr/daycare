@@ -705,7 +705,7 @@ const s = StyleSheet.create((theme) => ({
         gap: 8
     },
     utilizationTitle: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 14,
         lineHeight: 20
     },
@@ -747,7 +747,7 @@ const s = StyleSheet.create((theme) => ({
         gap: 8
     },
     weeklyTitle: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 14,
         lineHeight: 20
     },
@@ -814,7 +814,7 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     paymentChipText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11,
         lineHeight: 14
     },
@@ -836,7 +836,7 @@ const s = StyleSheet.create((theme) => ({
         gap: 2
     },
     projectName: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 14,
         lineHeight: 20
     },
@@ -916,7 +916,7 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 4
     },
     statusGroupLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 14,
         lineHeight: 20
     },
@@ -929,7 +929,7 @@ const s = StyleSheet.create((theme) => ({
         paddingHorizontal: 6
     },
     statusGroupCountText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
     statusGroupSpacer: {
@@ -963,7 +963,7 @@ const s = StyleSheet.create((theme) => ({
         paddingHorizontal: 6
     },
     projectsTotalText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
 
@@ -1034,7 +1034,7 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     detailStatusText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
     detailActions: {
@@ -1051,7 +1051,7 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     detailButtonText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
     detailButtonOutline: {

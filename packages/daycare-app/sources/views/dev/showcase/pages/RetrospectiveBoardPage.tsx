@@ -651,7 +651,7 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 12
     },
     statusBadgeText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12,
         lineHeight: 16
     },
@@ -794,7 +794,7 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     authorChipText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11,
         lineHeight: 16
     },
@@ -826,7 +826,7 @@ const s = StyleSheet.create((theme) => ({
         borderStyle: "dashed"
     },
     addButtonText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13,
         lineHeight: 18
     },
@@ -913,7 +913,7 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     carriedOverText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 10,
         lineHeight: 14
     },
@@ -1006,7 +1006,7 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     prevStatusText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11,
         lineHeight: 16
     }

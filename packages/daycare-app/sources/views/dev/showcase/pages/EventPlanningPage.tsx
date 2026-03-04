@@ -426,7 +426,7 @@ const taskStyles = StyleSheet.create((theme) => ({
         flexWrap: "wrap"
     },
     assigneeName: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
     metaSpacer: {
@@ -845,7 +845,7 @@ const heroStyles = StyleSheet.create((theme) => ({
         gap: 4
     },
     dateText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
     countdownCircle: {
@@ -874,7 +874,7 @@ const heroStyles = StyleSheet.create((theme) => ({
         alignItems: "center"
     },
     progressTitle: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
     progressPercent: {
@@ -926,7 +926,7 @@ const budgetStyles = StyleSheet.create((theme) => ({
         alignItems: "center"
     },
     barLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
     barPercent: {

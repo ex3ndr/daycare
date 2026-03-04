@@ -177,7 +177,7 @@ function GenreChip({ genre }: { genre: Genre }) {
     const color = GENRE_COLORS[genre];
     return (
         <View style={{ backgroundColor: color + "18", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
-            <Text style={{ fontFamily: "IBMPlexSans-Regular", fontSize: 11, color }}>{genre}</Text>
+            <Text style={{ fontFamily: "IBMPlexSans-Medium", fontSize: 11, color }}>{genre}</Text>
         </View>
     );
 }
@@ -434,7 +434,7 @@ const s = StyleSheet.create((theme) => ({
         gap: 4
     },
     finishedTitle: (color: string) => ({
-        fontFamily: "IBMPlexSans-Regular" as const,
+        fontFamily: "IBMPlexSans-Medium" as const,
         fontSize: 14,
         color
     }),

@@ -699,7 +699,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     sectionCountText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
     sectionLine: {
@@ -791,7 +791,7 @@ const styles = StyleSheet.create((theme) => ({
         borderWidth: 1
     },
     varietalText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
     quantityBadge: {
@@ -804,7 +804,7 @@ const styles = StyleSheet.create((theme) => ({
         borderWidth: 1
     },
     quantityText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
     drinkWindowBadge: {
@@ -821,7 +821,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 3
     },
     drinkWindowText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
     ratingRow: {

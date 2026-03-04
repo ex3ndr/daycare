@@ -859,7 +859,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 1
     },
     bannerItemName: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
     bannerItemDetail: {
@@ -955,7 +955,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 20
     },
     pillText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
     pillBadge: {
@@ -1087,7 +1087,7 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 11
     },
     driverName: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13,
         flex: 1
     },
@@ -1134,7 +1134,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 8
     },
     expandedLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12,
         width: 65
     },

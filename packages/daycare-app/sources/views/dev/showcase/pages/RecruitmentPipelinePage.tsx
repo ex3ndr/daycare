@@ -462,7 +462,7 @@ const styles = StyleSheet.create((theme) => ({
         paddingHorizontal: 4
     },
     funnelLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11,
         color: "#FFFFFF",
         opacity: 0.9
@@ -498,7 +498,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 20
     },
     tabPillText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
     cardsContainer: {
@@ -559,7 +559,7 @@ const styles = StyleSheet.create((theme) => ({
         paddingVertical: 3
     },
     sourceBadgeText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
     stageDot: {

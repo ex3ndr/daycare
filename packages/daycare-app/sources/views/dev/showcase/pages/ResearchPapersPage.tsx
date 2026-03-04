@@ -811,7 +811,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     segmentLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12,
         lineHeight: 16
     },
@@ -821,7 +821,7 @@ const styles = StyleSheet.create((theme) => ({
         paddingVertical: 1
     },
     segmentCountText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 10,
         lineHeight: 14
     },
@@ -837,7 +837,7 @@ const styles = StyleSheet.create((theme) => ({
         borderWidth: 1
     },
     venueChipText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 10,
         lineHeight: 14
     },
@@ -876,7 +876,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     fieldCountText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11,
         lineHeight: 16
     },
@@ -1008,7 +1008,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 2
     },
     relatedTitle: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12,
         lineHeight: 16
     },

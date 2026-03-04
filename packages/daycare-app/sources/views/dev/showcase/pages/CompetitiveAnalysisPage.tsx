@@ -755,7 +755,7 @@ const s = StyleSheet.create((theme) => ({
         borderRadius: 11
     },
     tabText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13,
         lineHeight: 18
     },
@@ -910,7 +910,7 @@ const s = StyleSheet.create((theme) => ({
         marginTop: 4
     },
     timelineTypeText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 10,
         lineHeight: 14
     },
@@ -928,7 +928,7 @@ const s = StyleSheet.create((theme) => ({
         borderBottomWidth: 1
     },
     comparisonHeaderText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12,
         lineHeight: 16
     },
@@ -958,7 +958,7 @@ const s = StyleSheet.create((theme) => ({
         borderTopWidth: 1
     },
     comparisonSummaryLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13,
         lineHeight: 18
     },

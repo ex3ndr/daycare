@@ -282,7 +282,7 @@ const barStyles = StyleSheet.create((theme) => ({
         gap: 12
     },
     title: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 14,
         lineHeight: 20
     },
@@ -376,7 +376,7 @@ const pillStyles = StyleSheet.create((theme) => ({
         borderRadius: 20
     },
     pillText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13,
         lineHeight: 18
     }
@@ -409,7 +409,7 @@ const statusStyles = StyleSheet.create((theme) => ({
         borderRadius: 10
     }),
     text: (color: string) => ({
-        fontFamily: "IBMPlexSans-Regular" as const,
+        fontFamily: "IBMPlexSans-Medium" as const,
         fontSize: 11,
         lineHeight: 16,
         color
@@ -512,7 +512,7 @@ const cardStyles = StyleSheet.create((theme) => ({
         justifyContent: "center" as const
     }),
     avatarText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 10,
         lineHeight: 14,
         color: "#ffffff"
@@ -575,7 +575,7 @@ const groupStyles = StyleSheet.create((theme) => ({
         borderRadius: 8
     }),
     countText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11,
         lineHeight: 16,
         color: "#ffffff"

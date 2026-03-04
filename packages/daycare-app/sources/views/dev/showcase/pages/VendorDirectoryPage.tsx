@@ -758,7 +758,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 20
     },
     pillText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
     pillBadge: {
@@ -883,7 +883,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     paymentBadgeText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
 
@@ -905,7 +905,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 8
     },
     expandedLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12,
         width: 52
     },
@@ -966,7 +966,7 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 11
     },
     transactionDesc: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
     transactionAmount: {

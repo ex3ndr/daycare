@@ -875,7 +875,7 @@ const styles = StyleSheet.create((theme) => ({
         backgroundColor: "#4ADE80"
     },
     publishedText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
     courseTitle: {
@@ -1042,7 +1042,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 4
     },
     lessonTitle: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 14
     },
     lessonMeta: {
@@ -1061,7 +1061,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     contentChipText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 10,
         letterSpacing: 0.3
     },
@@ -1180,7 +1180,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 3
     },
     statusPillText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
     lastUpdated: {

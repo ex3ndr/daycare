@@ -361,7 +361,7 @@ const metricStyles = StyleSheet.create((theme) => ({
         lineHeight: 28
     },
     subtitle: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     }
 }));
@@ -477,7 +477,7 @@ const expenseStyles = StyleSheet.create((theme) => ({
         marginTop: 4
     },
     totalLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
     totalAmount: {
@@ -727,7 +727,7 @@ const cardStyles = StyleSheet.create((theme) => ({
         flexWrap: "wrap"
     },
     address: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 15,
         flexShrink: 1
     },
@@ -816,7 +816,7 @@ const cardStyles = StyleSheet.create((theme) => ({
         letterSpacing: 0.5
     },
     detailValue: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
     emptyTenant: {
@@ -828,7 +828,7 @@ const cardStyles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     emptyTenantText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12,
         flex: 1
     }
@@ -976,7 +976,7 @@ const filterStyles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     chipText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     }
 }));
@@ -1120,7 +1120,7 @@ const pageStyles = StyleSheet.create((theme) => ({
         gap: 4
     },
     heroLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11,
         letterSpacing: 1.2,
         textTransform: "uppercase"
@@ -1144,7 +1144,7 @@ const pageStyles = StyleSheet.create((theme) => ({
         borderRadius: 12
     },
     heroBadgeText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
     metricsGrid: {

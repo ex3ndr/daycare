@@ -746,7 +746,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 4
     },
     heroLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11,
         letterSpacing: 1.2,
         textTransform: "uppercase"
@@ -770,7 +770,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 12
     },
     heroBadgeText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
 
@@ -989,7 +989,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 4
     },
     tierName: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
     tierBarCol: {
@@ -1035,7 +1035,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 5
     },
     signupName: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 15
     },
     signupChipRow: {
@@ -1057,7 +1057,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 3
     },
     planBadgeText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
     sourceChip: {
@@ -1066,7 +1066,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     sourceChipText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
     signupDate: {
@@ -1121,7 +1121,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 6
     },
     churnCompany: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 14,
         flex: 1
     },
@@ -1153,7 +1153,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     reasonChipText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
     churnMrr: {

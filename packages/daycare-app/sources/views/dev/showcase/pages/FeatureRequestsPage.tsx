@@ -437,7 +437,7 @@ const chipStyles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     text: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11,
         lineHeight: 16
     }
@@ -583,7 +583,7 @@ const cardStyles = StyleSheet.create((theme) => ({
         justifyContent: "center"
     },
     requesterInitials: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 9,
         lineHeight: 12
     },
@@ -816,7 +816,7 @@ const detailStyles = StyleSheet.create((theme) => ({
         lineHeight: 18
     },
     voteCount: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 14,
         lineHeight: 20,
         marginRight: 6
@@ -835,7 +835,7 @@ const detailStyles = StyleSheet.create((theme) => ({
         borderRadius: 12
     },
     statusText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12,
         lineHeight: 16
     },
@@ -885,7 +885,7 @@ const detailStyles = StyleSheet.create((theme) => ({
         borderRadius: 12
     },
     roadmapText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13,
         lineHeight: 18
     }
@@ -942,7 +942,7 @@ const distStyles = StyleSheet.create((theme) => ({
         gap: 10
     },
     title: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13,
         lineHeight: 18
     },

@@ -300,7 +300,7 @@ function ConfidenceChip({ confidence }: { confidence: Confidence }) {
             <Ionicons name={config.icon} size={12} color={config.color} />
             <Text
                 style={{
-                    fontFamily: "IBMPlexSans-Regular",
+                    fontFamily: "IBMPlexSans-Medium",
                     fontSize: 11,
                     color: config.color
                 }}
@@ -623,7 +623,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     quarterPillText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
 
@@ -775,7 +775,7 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1
     },
     krTitle: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13,
         lineHeight: 18
     },

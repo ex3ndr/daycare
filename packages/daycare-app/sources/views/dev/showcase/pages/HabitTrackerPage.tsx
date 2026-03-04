@@ -134,7 +134,7 @@ function StreakBar({
     return (
         <View style={{ gap: 4 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ fontFamily: "IBMPlexSans-Regular", fontSize: 13, color: textColor }}>{name}</Text>
+                <Text style={{ fontFamily: "IBMPlexSans-Medium", fontSize: 13, color: textColor }}>{name}</Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
                     <Ionicons name="flame" size={13} color={color} />
                     <Text style={{ fontFamily: "IBMPlexSans-SemiBold", fontSize: 13, color }}>{streak}d</Text>
@@ -406,7 +406,7 @@ const styles = StyleSheet.create((theme) => ({
         justifyContent: "center"
     },
     habitName: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 14,
         textAlign: "center"
     },

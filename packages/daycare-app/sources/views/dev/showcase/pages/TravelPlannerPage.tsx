@@ -243,7 +243,7 @@ const chipStyles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     label: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     }
 }));
@@ -272,7 +272,7 @@ const badgeStyles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     label: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     }
 }));
@@ -814,7 +814,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     statusPillText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13
     },
 

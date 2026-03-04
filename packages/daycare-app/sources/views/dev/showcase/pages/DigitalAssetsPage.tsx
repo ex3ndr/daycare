@@ -840,7 +840,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 6
     },
     assetName: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 14
     },
     assetMetaRow: {
@@ -999,7 +999,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 2
     },
     usageProject: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
     usageUser: {

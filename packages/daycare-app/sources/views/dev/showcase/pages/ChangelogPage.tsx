@@ -258,7 +258,7 @@ const chipStyles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     text: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11,
         lineHeight: 16
     }
@@ -371,7 +371,7 @@ const changeStyles = StyleSheet.create((theme) => ({
         borderRadius: 8
     },
     typeLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 10,
         lineHeight: 14
     }

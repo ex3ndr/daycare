@@ -764,7 +764,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 10
     },
     typeChipText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
 
@@ -833,7 +833,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 6
     },
     agendaDocsSectionTitle: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11,
         textTransform: "uppercase" as const,
         letterSpacing: 0.6,
@@ -929,7 +929,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 4
     },
     actionItemAssignee: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 11
     },
     actionItemDot: {
@@ -968,7 +968,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 2
     },
     preReadTitle: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 13,
         lineHeight: 18
     },

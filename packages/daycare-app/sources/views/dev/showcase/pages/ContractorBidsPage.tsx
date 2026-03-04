@@ -807,7 +807,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 4
     },
     projectMetricLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 10,
         letterSpacing: 0.8,
         textTransform: "uppercase"
@@ -838,7 +838,7 @@ const styles = StyleSheet.create((theme) => ({
         borderRadius: 18
     },
     sortPillText: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12
     },
 
@@ -1000,7 +1000,7 @@ const styles = StyleSheet.create((theme) => ({
         gap: 8
     },
     expandedLabel: {
-        fontFamily: "IBMPlexSans-Regular",
+        fontFamily: "IBMPlexSans-Medium",
         fontSize: 12,
         width: 60
     },
