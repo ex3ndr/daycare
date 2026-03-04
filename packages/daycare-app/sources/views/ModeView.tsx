@@ -10,6 +10,7 @@ import { useAuthStore } from "@/modules/auth/authContext";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
 import { AgentsView } from "@/views/AgentsView";
 import { CostsView } from "@/views/CostsView";
+import { DevView } from "@/views/DevView";
 import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 import { DocumentMetadataPanel } from "@/views/documents/DocumentMetadataPanel";
 import { DocumentsView } from "@/views/documents/DocumentsView";
@@ -62,7 +63,11 @@ const leftItems: Record<
         { id: "co2", title: "Last Month", subtitle: "$161.80" }
     ],
     skills: [],
-    tools: []
+    tools: [],
+    dev: [
+        { id: "widgets", title: "Widgets", subtitle: "Component catalog" },
+        { id: "examples", title: "Examples", subtitle: "Todo app demo" }
+    ]
 };
 
 const viewComponents: Record<AppMode, React.ComponentType> = {
@@ -78,6 +83,7 @@ const viewComponents: Record<AppMode, React.ComponentType> = {
     documents: DocumentsView,
     skills: SkillsView,
     tools: ToolsView,
+    dev: DevView,
     settings: SettingsView
 };
 

@@ -1,21 +1,20 @@
 import { createStateStore, JSONUIProvider, Renderer, type StateStore } from "@json-render/react-native";
 import * as React from "react";
 import { View } from "react-native";
-import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { StyleSheet } from "react-native-unistyles";
 import { type ExperimentsTodoDb, experimentsTodoDbCreate } from "@/modules/experiments/experimentsTodoDb";
 import { experimentsTodoDefinition } from "@/modules/experiments/experimentsTodoDefinition";
 import {
     experimentsTodoHandlersBuild,
     experimentsTodoInitialize
 } from "@/modules/experiments/experimentsTodoHandlersBuild";
-import { experimentsTodoRegistry } from "@/modules/experiments/experimentsTodoRegistry";
+import { widgetsRegistry } from "@/widgets/widgetsComponents";
 
 /**
  * Experiments screen that renders a JSON-defined todo app.
  * Uses PGlite as storage and syncs rows into json-render state.
  */
 export function ExperimentsView() {
-    const { theme } = useUnistyles();
     const dbRef = React.useRef<ExperimentsTodoDb | null>(null);
     const stateStore = React.useRef<StateStore>(createStateStore(initialStateClone())).current;
     const handlers = React.useMemo(
@@ -41,9 +40,9 @@ export function ExperimentsView() {
     }, [stateStore]);
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-            <JSONUIProvider store={stateStore} handlers={handlers} registry={experimentsTodoRegistry}>
-                <Renderer spec={experimentsTodoDefinition.spec} registry={experimentsTodoRegistry} />
+        <View style={styles.container}>
+            <JSONUIProvider store={stateStore} handlers={handlers} registry={widgetsRegistry}>
+                <Renderer spec={experimentsTodoDefinition.spec} registry={widgetsRegistry} />
             </JSONUIProvider>
         </View>
     );

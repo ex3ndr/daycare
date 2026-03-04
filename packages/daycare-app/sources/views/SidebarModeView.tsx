@@ -7,6 +7,7 @@ import { useDocumentsStore } from "@/modules/documents/documentsContext";
 import { useTasksStore } from "@/modules/tasks/tasksContext";
 import { AgentsView } from "@/views/AgentsView";
 import { CostsView } from "@/views/CostsView";
+import { DevView } from "@/views/DevView";
 import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 import { DocumentMetadataPanel } from "@/views/documents/DocumentMetadataPanel";
 import { DocumentsView } from "@/views/documents/DocumentsView";
@@ -35,6 +36,7 @@ const viewComponents: Record<AppMode, React.ComponentType> = {
     documents: DocumentsView,
     skills: SkillsView,
     tools: ToolsView,
+    dev: DevView,
     settings: SettingsView
 };
 

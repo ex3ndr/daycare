@@ -1,7 +1,7 @@
-import { Octicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { PageHeader } from "@/components/PageHeader";
 import { TodoList } from "@/views/todos/TodoList";
 import type { TodoItem } from "@/views/todos/todoTypes";
 
@@ -98,15 +98,8 @@ export function TodosView() {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+            <PageHeader title="Todo List UI" subtitle="No backend wiring" icon="checklist" />
             <View style={styles.inner}>
-                <View style={[styles.header, { borderBottomColor: theme.colors.outlineVariant }]}>
-                    <View style={styles.headerLeft}>
-                        <Octicons name="checklist" size={16} color={theme.colors.primary} />
-                        <Text style={[styles.title, { color: theme.colors.onSurface }]}>Todo List UI</Text>
-                    </View>
-                    <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>No backend wiring</Text>
-                </View>
-
                 <TodoList
                     todos={todos}
                     onToggleTodo={handleToggleTodo}
@@ -164,27 +157,6 @@ const styles = StyleSheet.create((theme) => ({
         maxWidth: theme.layout.maxWidth,
         width: "100%",
         alignSelf: "center"
-    },
-    header: {
-        height: 64,
-        borderBottomWidth: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: 20
-    },
-    headerLeft: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8
-    },
-    title: {
-        fontFamily: "IBMPlexSans-SemiBold",
-        fontSize: 15
-    },
-    subtitle: {
-        fontFamily: "IBMPlexSans-Regular",
-        fontSize: 12
     },
     selection: {
         marginHorizontal: 16,

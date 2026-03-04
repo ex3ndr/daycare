@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { PageHeader } from "@/components/PageHeader";
 import { useAgentsStore } from "@/modules/agents/agentsContext";
 import type { AgentListItem } from "@/modules/agents/agentsTypes";
 import { useAuthStore } from "@/modules/auth/authContext";
@@ -239,24 +240,33 @@ export function AgentsView() {
 
     if (loading && agents.length === 0) {
         return (
-            <View style={[styles.centered, { flex: 1 }]}>
-                <ActivityIndicator color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+                <PageHeader title="Agents" icon="hubot" />
+                <View style={[styles.centered, { flex: 1 }]}>
+                    <ActivityIndicator color={theme.colors.primary} />
+                </View>
             </View>
         );
     }
 
     if (error && agents.length === 0) {
         return (
-            <View style={[styles.centered, { flex: 1 }]}>
-                <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
+            <View style={{ flex: 1 }}>
+                <PageHeader title="Agents" icon="hubot" />
+                <View style={[styles.centered, { flex: 1 }]}>
+                    <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
+                </View>
             </View>
         );
     }
 
     if (agents.length === 0) {
         return (
-            <View style={[styles.centered, { flex: 1 }]}>
-                <Text style={[styles.errorText, { color: theme.colors.onSurfaceVariant }]}>No agents</Text>
+            <View style={{ flex: 1 }}>
+                <PageHeader title="Agents" icon="hubot" />
+                <View style={[styles.centered, { flex: 1 }]}>
+                    <Text style={[styles.errorText, { color: theme.colors.onSurfaceVariant }]}>No agents</Text>
+                </View>
             </View>
         );
     }
@@ -264,47 +274,50 @@ export function AgentsView() {
     const groups = groupByKind(agents);
 
     return (
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-            {groups.map((group) => (
-                <View key={group.kind} style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>
-                        {group.meta.label}
-                    </Text>
-                    <View style={styles.grid}>
-                        {group.items.map((agent) => {
-                            const meta = group.meta;
-                            const cardBg = isDark ? meta.darkBg : meta.lightBg;
-                            const iconColor = isDark ? meta.darkIcon : meta.lightIcon;
+        <View style={{ flex: 1 }}>
+            <PageHeader title="Agents" icon="hubot" />
+            <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+                {groups.map((group) => (
+                    <View key={group.kind} style={styles.section}>
+                        <Text style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}>
+                            {group.meta.label}
+                        </Text>
+                        <View style={styles.grid}>
+                            {group.items.map((agent) => {
+                                const meta = group.meta;
+                                const cardBg = isDark ? meta.darkBg : meta.lightBg;
+                                const iconColor = isDark ? meta.darkIcon : meta.lightIcon;
 
-                            const dotColor = LIFECYCLE_COLOR[agent.lifecycle] ?? LIFECYCLE_COLOR.dead;
+                                const dotColor = LIFECYCLE_COLOR[agent.lifecycle] ?? LIFECYCLE_COLOR.dead;
 
-                            return (
-                                <Pressable
-                                    key={agent.agentId}
-                                    style={[styles.card, { backgroundColor: cardBg }]}
-                                    onPress={() => handleAgentPress(agent.agentId)}
-                                >
-                                    <View style={styles.cardTopRow}>
-                                        <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
-                                        <Octicons name={meta.icon} size={18} color={iconColor} />
-                                    </View>
-                                    <Text
-                                        style={[styles.cardTitle, { color: theme.colors.onSurface }]}
-                                        numberOfLines={2}
+                                return (
+                                    <Pressable
+                                        key={agent.agentId}
+                                        style={[styles.card, { backgroundColor: cardBg }]}
+                                        onPress={() => handleAgentPress(agent.agentId)}
                                     >
-                                        {agentDisplayName(agent)}
-                                    </Text>
-                                </Pressable>
-                            );
-                        })}
+                                        <View style={styles.cardTopRow}>
+                                            <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
+                                            <Octicons name={meta.icon} size={18} color={iconColor} />
+                                        </View>
+                                        <Text
+                                            style={[styles.cardTitle, { color: theme.colors.onSurface }]}
+                                            numberOfLines={2}
+                                        >
+                                            {agentDisplayName(agent)}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
                     </View>
-                </View>
-            ))}
-        </ScrollView>
+                ))}
+            </ScrollView>
+        </View>
     );
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create((theme) => ({
     centered: {
         alignItems: "center",
         justifyContent: "center",
@@ -319,7 +332,10 @@ const styles = StyleSheet.create({
         flex: 1
     },
     scrollContent: {
-        padding: 20
+        padding: 20,
+        maxWidth: theme.layout.maxWidth,
+        width: "100%",
+        alignSelf: "center"
     },
     section: {
         marginBottom: 24
@@ -360,4 +376,4 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         lineHeight: 18
     }
-});
+}));

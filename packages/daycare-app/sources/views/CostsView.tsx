@@ -4,6 +4,7 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
 import { ItemList } from "@/components/ItemList";
+import { PageHeader } from "@/components/PageHeader";
 import { useAgentsStore } from "@/modules/agents/agentsContext";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { costsBreakdownByAgent } from "@/modules/costs/costsBreakdownByAgent";
@@ -79,57 +80,66 @@ export function CostsView() {
 
     if (loading && rows.length === 0) {
         return (
-            <View style={[styles.centered, { flex: 1 }]}>
-                <ActivityIndicator color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+                <PageHeader title="Costs" icon="credit-card" />
+                <View style={[styles.centered, { flex: 1 }]}>
+                    <ActivityIndicator color={theme.colors.primary} />
+                </View>
             </View>
         );
     }
 
     if (error && rows.length === 0) {
         return (
-            <View style={[styles.centered, { flex: 1 }]}>
-                <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
+            <View style={{ flex: 1 }}>
+                <PageHeader title="Costs" icon="credit-card" />
+                <View style={[styles.centered, { flex: 1 }]}>
+                    <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
+                </View>
             </View>
         );
     }
 
     return (
-        <ItemList>
-            <ItemGroup>
-                <CostsPeriodSelector value={period} onChange={setPeriod} />
-            </ItemGroup>
-            <ItemGroup>
-                <CostsSummaryCard summary={summary} period={period} />
-            </ItemGroup>
-            <ItemGroup title="Cost Over Time">
-                <CostsBarChart buckets={timeBuckets} />
-            </ItemGroup>
-            {agentBreakdown.length > 0 && (
-                <ItemGroup title="By Agent">
-                    {agentBreakdown.map((entry) => (
-                        <Item
-                            key={entry.agentId}
-                            title={agentNames.get(entry.agentId) ?? entry.agentId.slice(0, 8)}
-                            subtitle={`${entry.rows} hourly rows`}
-                            detail={costsFormatCurrency(entry.cost)}
-                            showChevron={false}
-                        />
-                    ))}
+        <View style={{ flex: 1 }}>
+            <PageHeader title="Costs" icon="credit-card" />
+            <ItemList>
+                <ItemGroup>
+                    <CostsPeriodSelector value={period} onChange={setPeriod} />
                 </ItemGroup>
-            )}
-            {modelBreakdown.length > 0 && (
-                <ItemGroup title="By Model">
-                    {modelBreakdown.map((entry) => (
-                        <Item
-                            key={entry.model}
-                            title={entry.model}
-                            subtitle={`${entry.rows} hourly rows`}
-                            detail={costsFormatCurrency(entry.cost)}
-                            showChevron={false}
-                        />
-                    ))}
+                <ItemGroup>
+                    <CostsSummaryCard summary={summary} period={period} />
                 </ItemGroup>
-            )}
-        </ItemList>
+                <ItemGroup title="Cost Over Time">
+                    <CostsBarChart buckets={timeBuckets} />
+                </ItemGroup>
+                {agentBreakdown.length > 0 && (
+                    <ItemGroup title="By Agent">
+                        {agentBreakdown.map((entry) => (
+                            <Item
+                                key={entry.agentId}
+                                title={agentNames.get(entry.agentId) ?? entry.agentId.slice(0, 8)}
+                                subtitle={`${entry.rows} hourly rows`}
+                                detail={costsFormatCurrency(entry.cost)}
+                                showChevron={false}
+                            />
+                        ))}
+                    </ItemGroup>
+                )}
+                {modelBreakdown.length > 0 && (
+                    <ItemGroup title="By Model">
+                        {modelBreakdown.map((entry) => (
+                            <Item
+                                key={entry.model}
+                                title={entry.model}
+                                subtitle={`${entry.rows} hourly rows`}
+                                detail={costsFormatCurrency(entry.cost)}
+                                showChevron={false}
+                            />
+                        ))}
+                    </ItemGroup>
+                )}
+            </ItemList>
+        </View>
     );
 }

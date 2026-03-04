@@ -4,6 +4,7 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
 import { ItemListStatic } from "@/components/ItemList";
+import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useTasksStore } from "@/modules/tasks/tasksContext";
 import { tasksFormatLastRun } from "@/modules/tasks/tasksFormatLastRun";
@@ -119,47 +120,59 @@ export function RoutinesView() {
 
     if (loading && tasks.length === 0) {
         return (
-            <View style={[styles.centered, { flex: 1 }]}>
-                <ActivityIndicator color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+                <PageHeader title="Routines" icon="clock" />
+                <View style={[styles.centered, { flex: 1 }]}>
+                    <ActivityIndicator color={theme.colors.primary} />
+                </View>
             </View>
         );
     }
 
     if (error && tasks.length === 0) {
         return (
-            <View style={[styles.centered, { flex: 1 }]}>
-                <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
+            <View style={{ flex: 1 }}>
+                <PageHeader title="Routines" icon="clock" />
+                <View style={[styles.centered, { flex: 1 }]}>
+                    <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
+                </View>
             </View>
         );
     }
 
     if (tasks.length === 0) {
         return (
-            <View style={[styles.centered, { flex: 1 }]}>
-                <Text style={[styles.errorText, { color: theme.colors.onSurfaceVariant }]}>No routines</Text>
+            <View style={{ flex: 1 }}>
+                <PageHeader title="Routines" icon="clock" />
+                <View style={[styles.centered, { flex: 1 }]}>
+                    <Text style={[styles.errorText, { color: theme.colors.onSurfaceVariant }]}>No routines</Text>
+                </View>
             </View>
         );
     }
 
     return (
-        <ItemListStatic>
-            <ItemGroup title="Routines">
-                {tasks.map((task) => (
-                    <Item
-                        key={task.id}
-                        title={task.title}
-                        subtitle={tasksSubtitle(taskCron(task.id), taskWebhook(task.id))}
-                        selected={selectedTaskId === task.id}
-                        onPress={() => handleTaskPress(task.id)}
-                        rightElement={
-                            <RoutineStatus
-                                status={tasksStatus(task)}
-                                label={tasksFormatLastRun(task.lastExecutedAt, now)}
-                            />
-                        }
-                    />
-                ))}
-            </ItemGroup>
-        </ItemListStatic>
+        <View style={{ flex: 1 }}>
+            <PageHeader title="Routines" icon="clock" />
+            <ItemListStatic>
+                <ItemGroup title="Routines">
+                    {tasks.map((task) => (
+                        <Item
+                            key={task.id}
+                            title={task.title}
+                            subtitle={tasksSubtitle(taskCron(task.id), taskWebhook(task.id))}
+                            selected={selectedTaskId === task.id}
+                            onPress={() => handleTaskPress(task.id)}
+                            rightElement={
+                                <RoutineStatus
+                                    status={tasksStatus(task)}
+                                    label={tasksFormatLastRun(task.lastExecutedAt, now)}
+                                />
+                            }
+                        />
+                    ))}
+                </ItemGroup>
+            </ItemListStatic>
+        </View>
     );
 }
