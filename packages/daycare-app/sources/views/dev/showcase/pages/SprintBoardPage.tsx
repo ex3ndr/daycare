@@ -445,11 +445,7 @@ export function SprintBoardPage() {
     const { theme } = useUnistyles();
 
     return (
-        <ShowcasePage
-            edgeToEdge
-            bottomInset={32}
-            contentContainerStyle={{ backgroundColor: theme.colors.surfaceContainerHighest }}
-        >
+        <ShowcasePage edgeToEdge bottomInset={32} contentBackgroundColor={theme.colors.surfaceContainerHighest}>
             {/* Sprint header */}
             <View style={s.sprintHeader}>
                 <View style={s.sprintTitleRow}>

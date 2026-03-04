@@ -329,7 +329,7 @@ export function RecruitmentPipelinePage() {
     };
 
     return (
-        <ShowcasePage edgeToEdge contentContainerStyle={{ backgroundColor: theme.colors.surface }}>
+        <ShowcasePage edgeToEdge contentBackgroundColor={theme.colors.surface}>
             {/* Job opening selector */}
             <View style={styles.jobSelectorRow}>
                 {jobOpenings.map((opening, idx) => {

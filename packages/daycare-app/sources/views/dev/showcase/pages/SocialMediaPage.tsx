@@ -586,7 +586,7 @@ export function SocialMediaPage() {
     }, []);
 
     return (
-        <ShowcasePage bottomInset={60} contentContainerStyle={{ backgroundColor: theme.colors.surface }}>
+        <ShowcasePage bottomInset={60} contentBackgroundColor={theme.colors.surface}>
             {/* Hero: total followers */}
             <View style={styles.heroSection}>
                 <Text style={[styles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>

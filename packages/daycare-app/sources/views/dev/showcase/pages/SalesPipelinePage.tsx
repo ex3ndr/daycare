@@ -617,7 +617,7 @@ export function SalesPipelinePage() {
     }, []);
 
     return (
-        <ShowcasePage edgeToEdge bottomInset={48} contentContainerStyle={{ backgroundColor: theme.colors.surface }}>
+        <ShowcasePage edgeToEdge bottomInset={48} contentBackgroundColor={theme.colors.surface}>
             {/* Revenue Metrics Hero */}
             <View style={[styles.metricsHero, { backgroundColor: theme.colors.surfaceContainer }]}>
                 <Text style={[styles.metricsLabel, { color: theme.colors.onSurfaceVariant }]}>MONTHLY TARGET</Text>

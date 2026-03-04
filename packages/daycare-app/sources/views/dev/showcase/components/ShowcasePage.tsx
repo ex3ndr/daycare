@@ -11,6 +11,7 @@ type ShowcasePageProps = Omit<ItemListProps, "containerStyle"> & {
     topInset?: number;
     bottomInset?: number;
     contentGap?: number;
+    contentBackgroundColor?: string;
 };
 
 const DENSITY_PRESETS: Record<ShowcasePageDensity, { horizontalInset: number; bottomInset: number }> = {
@@ -33,13 +34,15 @@ export function ShowcasePage({
     topInset,
     bottomInset,
     contentGap,
+    contentBackgroundColor,
     ...rest
 }: ShowcasePageProps) {
     const preset = DENSITY_PRESETS[density];
     const containerStyle: ViewStyle = {
         paddingHorizontal: edgeToEdge ? 0 : (horizontalInset ?? preset.horizontalInset),
         paddingTop: topInset ?? 0,
-        paddingBottom: bottomInset ?? preset.bottomInset
+        paddingBottom: bottomInset ?? preset.bottomInset,
+        backgroundColor: contentBackgroundColor
     };
     if (contentGap !== undefined) {
         containerStyle.gap = contentGap;

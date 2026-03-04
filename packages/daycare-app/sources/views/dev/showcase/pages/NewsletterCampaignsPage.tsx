@@ -612,7 +612,7 @@ export function NewsletterCampaignsPage() {
     const statusOrder: CampaignStatus[] = ["draft", "scheduled", "sent"];
 
     return (
-        <ShowcasePage bottomInset={60} contentContainerStyle={{ backgroundColor: theme.colors.surface }}>
+        <ShowcasePage bottomInset={60} contentBackgroundColor={theme.colors.surface}>
             {/* Hero: subscriber count with trend */}
             <View style={styles.heroSection}>
                 <Text style={[styles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>NEWSLETTER</Text>

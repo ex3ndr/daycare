@@ -572,7 +572,7 @@ export function JobApplicationsPage() {
     }, []);
 
     return (
-        <ShowcasePage edgeToEdge bottomInset={48} contentContainerStyle={{ backgroundColor: theme.colors.surface }}>
+        <ShowcasePage edgeToEdge bottomInset={48} contentBackgroundColor={theme.colors.surface}>
             {/* Header */}
             <View style={styles.headerContainer}>
                 <View style={styles.headerTitleRow}>
