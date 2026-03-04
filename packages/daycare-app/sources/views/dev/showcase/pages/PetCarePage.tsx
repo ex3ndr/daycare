@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Pressable, Switch, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -576,7 +577,7 @@ export function PetCarePage() {
     }, []);
 
     return (
-        <ScrollView
+        <ShowcasePage
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
             contentContainerStyle={styles.scrollContent}
         >
@@ -694,7 +695,7 @@ export function PetCarePage() {
                     )}
                 </View>
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -702,9 +703,6 @@ export function PetCarePage() {
 
 const styles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
         padding: 16,
         gap: 16,
         paddingBottom: 48

@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -351,13 +352,10 @@ export function LanguageLearningPage() {
     const practiceCompleted = practice.filter((p) => practiceState[selectedLang][p.id]).length;
 
     return (
-        <ScrollView
+        <ShowcasePage
+            density="spacious"
             contentContainerStyle={{
-                maxWidth: theme.layout.maxWidth,
-                width: "100%",
-                alignSelf: "center",
-                paddingHorizontal: 16,
-                paddingBottom: 48
+                paddingHorizontal: 16
             }}
         >
             {/* Language Selector Tabs */}
@@ -625,7 +623,7 @@ export function LanguageLearningPage() {
                     })}
                 </View>
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 

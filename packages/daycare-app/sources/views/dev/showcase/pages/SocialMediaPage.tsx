@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -585,10 +586,7 @@ export function SocialMediaPage() {
     }, []);
 
     return (
-        <ScrollView
-            contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.surface }]}
-            showsVerticalScrollIndicator={false}
-        >
+        <ShowcasePage contentContainerStyle={[styles.scrollContent, { backgroundColor: theme.colors.surface }]}>
             {/* Hero: total followers */}
             <View style={styles.heroSection}>
                 <Text style={[styles.heroLabel, { color: theme.colors.onSurfaceVariant }]}>
@@ -697,7 +695,7 @@ export function SocialMediaPage() {
                     ))}
                 </View>
             )}
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -705,9 +703,6 @@ export function SocialMediaPage() {
 
 const styles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
         paddingHorizontal: 16,
         paddingBottom: 60
     },

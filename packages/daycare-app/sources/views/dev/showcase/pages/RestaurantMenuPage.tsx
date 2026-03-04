@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -602,12 +603,9 @@ export function RestaurantMenuPage() {
     const avgPrice = totalItems > 0 ? filteredItems.reduce((sum, i) => sum + i.price, 0) / totalItems : 0;
 
     return (
-        <ScrollView
+        <ShowcasePage
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
             contentContainerStyle={{
-                maxWidth: theme.layout.maxWidth,
-                width: "100%",
-                alignSelf: "center",
                 paddingHorizontal: 16,
                 paddingBottom: 48
             }}
@@ -687,7 +685,7 @@ export function RestaurantMenuPage() {
                     </Text>
                 </View>
             )}
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 

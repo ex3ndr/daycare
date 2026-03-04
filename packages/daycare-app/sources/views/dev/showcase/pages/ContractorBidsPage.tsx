@@ -649,7 +649,7 @@ export function ContractorBidsPage() {
     }, []);
 
     return (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ShowcasePage contentContainerStyle={styles.scrollContent} density="spacious">
             {/* Project header */}
             <ProjectHeader totalBudget={totalBudget} totalBids={totalBids} categoriesCount={mockCategories.length} />
 
@@ -755,7 +755,7 @@ export function ContractorBidsPage() {
                     </Text>
                 </View>
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -763,9 +763,6 @@ export function ContractorBidsPage() {
 
 const styles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
         paddingBottom: 48
     },
 

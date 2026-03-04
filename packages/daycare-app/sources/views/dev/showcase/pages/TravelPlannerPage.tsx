@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { ShowcasePage } from "../components/ShowcasePage";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 

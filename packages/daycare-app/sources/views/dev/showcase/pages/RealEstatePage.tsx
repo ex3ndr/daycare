@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
@@ -1014,16 +1014,12 @@ export function RealEstatePage() {
     }, []);
 
     return (
-        <ScrollView
+        <ShowcasePage
             contentContainerStyle={{
-                maxWidth: theme.layout.maxWidth,
-                width: "100%",
-                alignSelf: "center",
                 paddingHorizontal: 16,
                 paddingVertical: 24,
                 paddingBottom: 60
             }}
-            showsVerticalScrollIndicator={false}
         >
             {/* Hero: Portfolio Value */}
             <View style={pageStyles.hero}>
@@ -1107,7 +1103,7 @@ export function RealEstatePage() {
                     </React.Fragment>
                 );
             })}
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 

@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -492,7 +493,7 @@ export function PodcastQueuePage() {
     const totalQueueHours = (totalQueueMinutes / 60).toFixed(1);
 
     return (
-        <ScrollView
+        <ShowcasePage
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
             contentContainerStyle={styles.scrollContent}
         >
@@ -550,7 +551,7 @@ export function PodcastQueuePage() {
                     ))}
                 </View>
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -558,9 +559,6 @@ export function PodcastQueuePage() {
 
 const styles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
         paddingHorizontal: 16,
         paddingVertical: 20,
         paddingBottom: 48,

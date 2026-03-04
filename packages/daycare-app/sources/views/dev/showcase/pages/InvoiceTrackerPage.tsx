@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -434,85 +435,79 @@ export function InvoiceTrackerPage() {
     const currentSelected = selectedInvoice ? (invoices.find((inv) => inv.id === selectedInvoice.id) ?? null) : null;
 
     return (
-        <View style={styles.root}>
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                {/* Detail overlay replaces content when an invoice is selected */}
-                {currentSelected ? (
-                    <DetailOverlay
-                        invoice={currentSelected}
-                        onClose={() => setSelectedInvoice(null)}
-                        onMarkPaid={handleMarkPaid}
-                    />
-                ) : (
-                    <>
-                        {/* Hero Metric Section */}
-                        <View style={styles.heroSection}>
-                            <Text style={styles.heroLabel}>Total Outstanding</Text>
-                            <Text style={styles.heroAmount}>{formatCurrency(totalOutstanding)}</Text>
-                            <View style={styles.heroSubMetrics}>
-                                <View style={styles.heroSubMetric}>
-                                    <Text style={styles.heroSubValue}>{formatCurrency(totalPaid)}</Text>
-                                    <Text style={styles.heroSubLabel}>Collected</Text>
-                                </View>
-                                <View
-                                    style={[styles.heroSubDivider, { backgroundColor: theme.colors.outlineVariant }]}
-                                />
-                                <View style={styles.heroSubMetric}>
-                                    <Text style={styles.heroSubValue}>{invoiceCount}</Text>
-                                    <Text style={styles.heroSubLabel}>Invoices</Text>
-                                </View>
-                                <View
-                                    style={[styles.heroSubDivider, { backgroundColor: theme.colors.outlineVariant }]}
-                                />
-                                <View style={styles.heroSubMetric}>
-                                    <Text style={[styles.heroSubValue, { color: theme.colors.error }]}>
-                                        {overdue.length}
-                                    </Text>
-                                    <Text style={styles.heroSubLabel}>Overdue</Text>
-                                </View>
+        <ShowcasePage style={styles.root} contentContainerStyle={styles.scrollContent}>
+            {/* Detail overlay replaces content when an invoice is selected */}
+            {currentSelected ? (
+                <DetailOverlay
+                    invoice={currentSelected}
+                    onClose={() => setSelectedInvoice(null)}
+                    onMarkPaid={handleMarkPaid}
+                />
+            ) : (
+                <>
+                    {/* Hero Metric Section */}
+                    <View style={styles.heroSection}>
+                        <Text style={styles.heroLabel}>Total Outstanding</Text>
+                        <Text style={styles.heroAmount}>{formatCurrency(totalOutstanding)}</Text>
+                        <View style={styles.heroSubMetrics}>
+                            <View style={styles.heroSubMetric}>
+                                <Text style={styles.heroSubValue}>{formatCurrency(totalPaid)}</Text>
+                                <Text style={styles.heroSubLabel}>Collected</Text>
+                            </View>
+                            <View style={[styles.heroSubDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                            <View style={styles.heroSubMetric}>
+                                <Text style={styles.heroSubValue}>{invoiceCount}</Text>
+                                <Text style={styles.heroSubLabel}>Invoices</Text>
+                            </View>
+                            <View style={[styles.heroSubDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                            <View style={styles.heroSubMetric}>
+                                <Text style={[styles.heroSubValue, { color: theme.colors.error }]}>
+                                    {overdue.length}
+                                </Text>
+                                <Text style={styles.heroSubLabel}>Overdue</Text>
                             </View>
                         </View>
+                    </View>
 
-                        {/* Status Cards Row */}
-                        <View style={styles.statusCardsRow}>
-                            <StatusCard
-                                label="Overdue"
-                                count={overdue.length}
-                                total={overdue.reduce((s, i) => s + i.amount, 0)}
-                                tintColor={theme.colors.error}
-                            />
-                            <StatusCard
-                                label="Pending"
-                                count={pending.length}
-                                total={pending.reduce((s, i) => s + i.amount, 0)}
-                                tintColor={theme.colors.primary}
-                            />
-                            <StatusCard
-                                label="Paid"
-                                count={paid.length}
-                                total={paid.reduce((s, i) => s + i.amount, 0)}
-                                tintColor={theme.colors.tertiary}
-                            />
-                        </View>
+                    {/* Status Cards Row */}
+                    <View style={styles.statusCardsRow}>
+                        <StatusCard
+                            label="Overdue"
+                            count={overdue.length}
+                            total={overdue.reduce((s, i) => s + i.amount, 0)}
+                            tintColor={theme.colors.error}
+                        />
+                        <StatusCard
+                            label="Pending"
+                            count={pending.length}
+                            total={pending.reduce((s, i) => s + i.amount, 0)}
+                            tintColor={theme.colors.primary}
+                        />
+                        <StatusCard
+                            label="Paid"
+                            count={paid.length}
+                            total={paid.reduce((s, i) => s + i.amount, 0)}
+                            tintColor={theme.colors.tertiary}
+                        />
+                    </View>
 
-                        {/* Recent Activity Section */}
-                        <View style={styles.activitySection}>
-                            <Text style={styles.sectionTitle}>Recent Activity</Text>
-                            <View style={styles.activityGrid}>
-                                {invoices.map((inv) => (
-                                    <InvoiceCard
-                                        key={inv.id}
-                                        invoice={inv}
-                                        onPress={() => setSelectedInvoice(inv)}
-                                        statusColor={statusColorForTheme(inv.status, theme)}
-                                    />
-                                ))}
-                            </View>
+                    {/* Recent Activity Section */}
+                    <View style={styles.activitySection}>
+                        <Text style={styles.sectionTitle}>Recent Activity</Text>
+                        <View style={styles.activityGrid}>
+                            {invoices.map((inv) => (
+                                <InvoiceCard
+                                    key={inv.id}
+                                    invoice={inv}
+                                    onPress={() => setSelectedInvoice(inv)}
+                                    statusColor={statusColorForTheme(inv.status, theme)}
+                                />
+                            ))}
                         </View>
-                    </>
-                )}
-            </ScrollView>
-        </View>
+                    </View>
+                </>
+            )}
+        </ShowcasePage>
     );
 }
 
@@ -523,10 +518,6 @@ const styles = StyleSheet.create((theme) => ({
         flex: 1
     },
     scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
-        paddingHorizontal: 16,
         paddingTop: 20,
         paddingBottom: 40
     },

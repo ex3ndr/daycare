@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -694,7 +695,7 @@ export function LegalCasesPage() {
     }, []);
 
     return (
-        <ScrollView contentContainerStyle={s.root} showsVerticalScrollIndicator={false}>
+        <ShowcasePage contentContainerStyle={s.root} density="spacious">
             {/* Page Title */}
             <View style={s.pageTitleRow}>
                 <View style={[s.pageTitleIcon, { backgroundColor: `${theme.colors.primary}18` }]}>
@@ -773,7 +774,7 @@ export function LegalCasesPage() {
                     })}
                 </>
             )}
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -781,10 +782,6 @@ export function LegalCasesPage() {
 
 const s = StyleSheet.create((theme) => ({
     root: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
-        paddingHorizontal: 16,
         paddingTop: 16,
         paddingBottom: 48,
         gap: 20

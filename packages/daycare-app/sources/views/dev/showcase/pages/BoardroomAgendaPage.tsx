@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
@@ -591,7 +591,7 @@ export function BoardroomAgendaPage() {
     }
 
     return (
-        <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+        <ShowcasePage contentContainerStyle={styles.contentContainer} density="spacious">
             <MeetingHeader />
 
             {/* Section: Agenda */}
@@ -611,7 +611,7 @@ export function BoardroomAgendaPage() {
             <PreReadMaterialsSection />
 
             <View style={styles.bottomSpacer} />
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -619,10 +619,6 @@ export function BoardroomAgendaPage() {
 
 const styles = StyleSheet.create((theme) => ({
     contentContainer: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center" as const,
-        paddingHorizontal: 16,
         paddingBottom: 48
     },
 

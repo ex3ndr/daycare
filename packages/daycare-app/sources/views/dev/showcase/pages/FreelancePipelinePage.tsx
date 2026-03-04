@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
@@ -467,7 +467,7 @@ export function FreelancePipelinePage() {
     const currentSelected = selectedProject ? (projects.find((p) => p.id === selectedProject.id) ?? null) : null;
 
     return (
-        <ScrollView contentContainerStyle={s.root} showsVerticalScrollIndicator={false}>
+        <ShowcasePage contentContainerStyle={s.root}>
             {/* --- Metrics Row --- */}
             <View style={s.metricsRow}>
                 <MetricCard
@@ -641,7 +641,7 @@ export function FreelancePipelinePage() {
                     );
                 })}
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -649,9 +649,6 @@ export function FreelancePipelinePage() {
 
 const s = StyleSheet.create((theme) => ({
     root: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
         paddingHorizontal: 16,
         paddingTop: 16,
         paddingBottom: 48,

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
@@ -432,7 +432,7 @@ export function ClientProjectsPage() {
     const totalCount = milestones.length;
 
     return (
-        <ScrollView contentContainerStyle={s.root} showsVerticalScrollIndicator={false}>
+        <ShowcasePage contentContainerStyle={s.root}>
             {/* --- Project Header --- */}
             <View style={[s.headerCard, { backgroundColor: theme.colors.surfaceContainer }]}>
                 {/* Top accent bar */}
@@ -523,7 +523,7 @@ export function ClientProjectsPage() {
                     ))}
                 </View>
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -531,9 +531,6 @@ export function ClientProjectsPage() {
 
 const s = StyleSheet.create((theme) => ({
     root: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
         paddingHorizontal: 16,
         paddingTop: 16,
         paddingBottom: 48,

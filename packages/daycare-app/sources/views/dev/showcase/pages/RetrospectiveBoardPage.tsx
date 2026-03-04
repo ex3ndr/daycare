@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -438,11 +439,7 @@ export function RetrospectiveBoardPage() {
     const prevCompleted = PREVIOUS_ACTIONS.filter((a) => a.completed).length;
 
     return (
-        <ScrollView
-            style={{ flex: 1, backgroundColor: theme.colors.surface }}
-            contentContainerStyle={s.root}
-            showsVerticalScrollIndicator={false}
-        >
+        <ShowcasePage style={{ flex: 1, backgroundColor: theme.colors.surface }} contentContainerStyle={s.root}>
             {/* Sprint header */}
             <View style={[s.headerCard, { backgroundColor: theme.colors.surfaceContainer }]}>
                 <View style={s.headerTop}>
@@ -597,7 +594,7 @@ export function RetrospectiveBoardPage() {
                     ))}
                 </View>
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -605,9 +602,6 @@ export function RetrospectiveBoardPage() {
 
 const s = StyleSheet.create((theme) => ({
     root: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
         padding: 16,
         gap: 16,
         paddingBottom: 40

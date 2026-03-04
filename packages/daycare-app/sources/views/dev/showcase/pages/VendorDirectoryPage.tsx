@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ShowcasePage } from "@/views/dev/showcase/components/ShowcasePage";
 
 // --- Types ---
 
@@ -627,7 +628,7 @@ export function VendorDirectoryPage() {
     }, []);
 
     return (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ShowcasePage contentContainerStyle={styles.scrollContent}>
             {/* Metric cards row */}
             <View style={styles.metricsRow}>
                 <MetricCard
@@ -702,7 +703,7 @@ export function VendorDirectoryPage() {
                     );
                 })}
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -710,9 +711,6 @@ export function VendorDirectoryPage() {
 
 const styles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
         paddingBottom: 48
     },
 

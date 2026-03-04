@@ -647,7 +647,7 @@ export function FleetManagementPage() {
     };
 
     return (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ShowcasePage contentContainerStyle={styles.scrollContent} density="spacious">
             {/* Overdue Service Banner */}
             <OverdueBanner
                 vehicles={overdueVehicles}
@@ -784,7 +784,7 @@ export function FleetManagementPage() {
                     );
                 })}
             </View>
-        </ScrollView>
+        </ShowcasePage>
     );
 }
 
@@ -792,9 +792,6 @@ export function FleetManagementPage() {
 
 const styles = StyleSheet.create((theme) => ({
     scrollContent: {
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center",
         paddingHorizontal: 16,
         paddingTop: 20,
         paddingBottom: 48
