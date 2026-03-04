@@ -41,7 +41,9 @@ Use `task_run` to execute a task immediately.
    skip()
    ```
 
-If `skip()` is not called, all Python output is provided to the LLM as context. If `skip()` is called, the agent never wakes up — the code ran and that's it.
+If `skip()` is not called, all Python output is provided to the LLM as context. If `skip()` is called, the agent never wakes up — the code ran and that's it. Any `print()` output before `skip()` is discarded.
+
+**Choosing the right pattern:** If the outcome requires judgment, analysis, or a creative response, you MUST use pattern 1 — gather all essential context via `print()` and let the LLM respond. Only use `skip()` when the entire action is fully mechanical with no reasoning needed.
 
 Cron triggers: precise time-based scheduling; default routing is `system:cron` unless a specific `agentId` is set.
 

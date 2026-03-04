@@ -10,7 +10,8 @@ import { SKIP_TOOL_NAME } from "./rlmConstants.js";
 export function rlmSkipTool(): Tool {
     return {
         name: SKIP_TOOL_NAME,
-        description: "Skip this turn. Call when you have nothing useful to do right now.",
+        description:
+            "Skip this turn — no LLM inference will run. All print() output is discarded. Call only when the task is fully mechanical or there is nothing to do.",
         parameters: Type.Object({}, { additionalProperties: false })
     };
 }
