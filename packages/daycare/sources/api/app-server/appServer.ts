@@ -403,6 +403,7 @@ export class AppServer {
                         text: "Open your Daycare app using the button below.",
                         buttons: [
                             {
+                                type: "url",
                                 text: "Open Daycare",
                                 url: link.url
                             }

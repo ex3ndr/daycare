@@ -16,25 +16,81 @@ describe("sayTool", () => {
 
         expect(sendMessage).toHaveBeenCalledWith("channel-1", {
             text: "Hello user",
-            replyToMessageId: "message-1"
+            replyToMessageId: "message-1",
+            buttons: undefined,
+            files: undefined
         });
         expect(result.toolMessage.isError).toBe(false);
     });
 
-    it("defers sending during pythonExecution", async () => {
+    it("sends URL buttons", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const tool = sayTool();
+        const context = contextBuild({ sendMessage });
+
+        await tool.execute(
+            {
+                text: "Open the app.",
+                buttons: [{ type: "url", text: "Open Daycare", url: "https://app.example.com" }]
+            },
+            context,
+            toolCall
+        );
+
+        expect(sendMessage).toHaveBeenCalledWith(
+            "channel-1",
+            expect.objectContaining({
+                text: "Open the app.",
+                buttons: [{ type: "url", text: "Open Daycare", url: "https://app.example.com" }]
+            })
+        );
+    });
+
+    it("sends callback buttons", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const tool = sayTool();
+        const context = contextBuild({ sendMessage });
+
+        await tool.execute(
+            {
+                text: "Pick one.",
+                buttons: [{ type: "callback", text: "Retry", callback: "retry_action" }]
+            },
+            context,
+            toolCall
+        );
+
+        expect(sendMessage).toHaveBeenCalledWith(
+            "channel-1",
+            expect.objectContaining({
+                buttons: [{ type: "callback", text: "Retry", callback: "retry_action" }]
+            })
+        );
+    });
+
+    it("defers sending during pythonExecution and preserves buttons", async () => {
         const sendMessage = vi.fn(async () => undefined);
         const tool = sayTool();
         const context = contextBuild({ sendMessage });
         (context as Record<string, unknown>).pythonExecution = true;
 
-        const result = await tool.execute({ text: "Hello user" }, context, toolCall);
+        const result = await tool.execute(
+            {
+                text: "Hello user",
+                buttons: [{ type: "callback", text: "Approve", callback: "approve_request" }]
+            },
+            context,
+            toolCall
+        );
 
         expect(sendMessage).not.toHaveBeenCalled();
         expect(result.deferredPayload).toEqual({
             connector: "telegram",
             targetId: "channel-1",
             text: "Hello user",
-            replyToMessageId: "message-1"
+            replyToMessageId: "message-1",
+            buttons: [{ type: "callback", text: "Approve", callback: "approve_request" }],
+            files: undefined
         });
         expect(result.toolMessage.isError).toBe(false);
     });
@@ -49,24 +105,237 @@ describe("sayTool", () => {
 
         expect(sendMessage).toHaveBeenCalledWith("channel-1", {
             text: "Urgent",
-            replyToMessageId: "message-1"
+            replyToMessageId: "message-1",
+            buttons: undefined,
+            files: undefined
         });
         expect(result.deferredPayload).toBeUndefined();
     });
 
-    it("executeDeferred sends via connector", async () => {
+    it("sends a single file attachment", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const sandboxRead = vi.fn(async () => ({
+            type: "binary" as const,
+            displayPath: "/tmp/photo.png",
+            content: Buffer.from("photo")
+        }));
+        const sandboxWrite = vi.fn(async () => ({
+            sandboxPath: "sandbox:/downloads/photo.png",
+            resolvedPath: "/tmp/photo.png",
+            bytes: 5
+        }));
+        const tool = sayTool();
+        const context = contextBuild({
+            sendMessage,
+            sandboxRead,
+            sandboxWrite,
+            sendFilesModes: ["document", "photo", "video", "voice"]
+        });
+
+        await tool.execute(
+            {
+                text: "See attachment.",
+                files: [{ path: "/tmp/photo.png", mimeType: "image/png", sendAs: "photo" }]
+            },
+            context,
+            toolCall
+        );
+
+        expect(sendMessage).toHaveBeenCalledWith(
+            "channel-1",
+            expect.objectContaining({
+                text: "See attachment.",
+                files: [
+                    {
+                        id: "sandbox:/downloads/photo.png",
+                        name: "photo.png",
+                        mimeType: "image/png",
+                        size: 5,
+                        path: "/tmp/photo.png",
+                        sendAs: "photo"
+                    }
+                ]
+            })
+        );
+        expect(sandboxRead).toHaveBeenCalledWith({ path: "/tmp/photo.png", binary: true });
+    });
+
+    it("sends multiple file attachments", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const sandboxRead = vi.fn(async ({ path }: { path: string }) => ({
+            type: "binary" as const,
+            displayPath: path,
+            content: Buffer.from(path)
+        }));
+        const sandboxWrite = vi.fn(async ({ path, content }: { path: string; content: Buffer }) => {
+            const name = path.replace("~/downloads/", "");
+            return {
+                sandboxPath: `sandbox:/downloads/${name}`,
+                resolvedPath: `/tmp/${name}`,
+                bytes: content.length
+            };
+        });
+        const tool = sayTool();
+        const context = contextBuild({
+            sendMessage,
+            sandboxRead,
+            sandboxWrite,
+            sendFilesModes: ["document", "photo", "video", "voice"]
+        });
+
+        await tool.execute(
+            {
+                text: "Multiple files.",
+                files: [
+                    { path: "/tmp/photo-1.png", mimeType: "image/png" },
+                    { path: "/tmp/report.pdf", mimeType: "application/pdf", sendAs: "document" }
+                ]
+            },
+            context,
+            toolCall
+        );
+
+        expect(sendMessage).toHaveBeenCalledTimes(1);
+        const calls = sendMessage.mock.calls as unknown as Array<
+            [string, { files?: Array<{ name?: string; mimeType?: string; sendAs?: string }> }]
+        >;
+        const message = calls[0]?.[1];
+        expect(message?.files).toHaveLength(2);
+        expect(message?.files?.[0]).toMatchObject({
+            name: "photo-1.png",
+            mimeType: "image/png"
+        });
+        expect(message?.files?.[1]).toMatchObject({
+            name: "report.pdf",
+            mimeType: "application/pdf",
+            sendAs: "document"
+        });
+    });
+
+    it("sends text, files, and buttons together", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const tool = sayTool();
+        const context = contextBuild({
+            sendMessage,
+            sendFilesModes: ["document", "photo", "video", "voice"]
+        });
+
+        await tool.execute(
+            {
+                text: "Choose and review file.",
+                buttons: [{ type: "callback", text: "Confirm", callback: "confirm_send" }],
+                files: [{ path: "/tmp/report.txt", mimeType: "text/plain", sendAs: "document" }]
+            },
+            context,
+            toolCall
+        );
+
+        expect(sendMessage).toHaveBeenCalledTimes(1);
+        const calls = sendMessage.mock.calls as unknown as Array<
+            [string, { text: string; buttons?: unknown[]; files?: unknown[] }]
+        >;
+        const message = calls[0]?.[1];
+        expect(message).toBeDefined();
+        const payload = message as {
+            text: string;
+            buttons?: unknown[];
+            files?: unknown[];
+        };
+        expect(payload.text).toBe("Choose and review file.");
+        expect(payload.buttons).toEqual([{ type: "callback", text: "Confirm", callback: "confirm_send" }]);
+        expect(payload.files).toHaveLength(1);
+    });
+
+    it("resolves files before deferring during pythonExecution", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const sandboxRead = vi.fn(async () => ({
+            type: "binary" as const,
+            displayPath: "/tmp/audio.ogg",
+            content: Buffer.from("audio")
+        }));
+        const sandboxWrite = vi.fn(async () => ({
+            sandboxPath: "sandbox:/downloads/audio.ogg",
+            resolvedPath: "/tmp/audio.ogg",
+            bytes: 5
+        }));
+        const tool = sayTool();
+        const context = contextBuild({
+            sendMessage,
+            sandboxRead,
+            sandboxWrite,
+            sendFilesModes: ["document", "photo", "video", "voice"]
+        });
+        (context as Record<string, unknown>).pythonExecution = true;
+
+        const result = await tool.execute(
+            {
+                text: "Deferred file.",
+                files: [{ path: "/tmp/audio.ogg", mimeType: "audio/ogg", sendAs: "voice" }]
+            },
+            context,
+            toolCall
+        );
+
+        expect(sendMessage).not.toHaveBeenCalled();
+        expect(result.deferredPayload).toMatchObject({
+            connector: "telegram",
+            targetId: "channel-1",
+            text: "Deferred file.",
+            files: [
+                {
+                    id: "sandbox:/downloads/audio.ogg",
+                    name: "audio.ogg",
+                    mimeType: "audio/ogg",
+                    size: 5,
+                    path: "/tmp/audio.ogg",
+                    sendAs: "voice"
+                }
+            ]
+        });
+        expect(sandboxRead).toHaveBeenCalledTimes(1);
+        expect(sandboxWrite).toHaveBeenCalledTimes(1);
+    });
+
+    it("executeDeferred sends via connector with buttons and files", async () => {
         const sendMessage = vi.fn(async () => undefined);
         const tool = sayTool();
         const context = contextBuild({ sendMessage });
 
         await tool.executeDeferred!(
-            { connector: "telegram", targetId: "channel-1", text: "deferred msg", replyToMessageId: "msg-1" },
+            {
+                connector: "telegram",
+                targetId: "channel-1",
+                text: "deferred msg",
+                replyToMessageId: "msg-1",
+                buttons: [{ type: "callback", text: "Ack", callback: "ack" }],
+                files: [
+                    {
+                        id: "sandbox:/downloads/report.pdf",
+                        name: "report.pdf",
+                        mimeType: "application/pdf",
+                        size: 42,
+                        path: "/tmp/report.pdf",
+                        sendAs: "document"
+                    }
+                ]
+            },
             context
         );
 
         expect(sendMessage).toHaveBeenCalledWith("channel-1", {
             text: "deferred msg",
-            replyToMessageId: "msg-1"
+            replyToMessageId: "msg-1",
+            buttons: [{ type: "callback", text: "Ack", callback: "ack" }],
+            files: [
+                {
+                    id: "sandbox:/downloads/report.pdf",
+                    name: "report.pdf",
+                    mimeType: "application/pdf",
+                    size: 42,
+                    path: "/tmp/report.pdf",
+                    sendAs: "document"
+                }
+            ]
         });
     });
 
@@ -108,18 +377,55 @@ describe("sayTool", () => {
     });
 });
 
+type TestSendMessage = (targetId: string, message: Record<string, unknown>) => Promise<void>;
+
 function contextBuild(options: {
-    sendMessage: (targetId: string, message: { text: string; replyToMessageId?: string }) => Promise<void>;
+    sendMessage: TestSendMessage;
+    sendFilesModes?: Array<"document" | "photo" | "video" | "voice">;
+    sandboxRead?: (args: { path: string; binary: true }) => Promise<{
+        type: "binary";
+        displayPath: string;
+        content: Buffer;
+    }>;
+    sandboxWrite?: (args: { path: string; content: Buffer }) => Promise<{
+        sandboxPath: string;
+        resolvedPath: string;
+        bytes: number;
+    }>;
 }): ToolExecutionContext {
+    const sandboxRead =
+        options.sandboxRead ??
+        (async ({ path }: { path: string; binary: true }) => ({
+            type: "binary" as const,
+            displayPath: path,
+            content: Buffer.from(path)
+        }));
+    const sandboxWrite =
+        options.sandboxWrite ??
+        (async ({ path, content }: { path: string; content: Buffer }) => {
+            const name = path.replace("~/downloads/", "");
+            return {
+                sandboxPath: `sandbox:/downloads/${name}`,
+                resolvedPath: `/tmp/${name}`,
+                bytes: content.length
+            };
+        });
+
     return {
         connectorRegistry: {
             get: () => ({
-                capabilities: { sendText: true },
+                capabilities: {
+                    sendText: true,
+                    ...(options.sendFilesModes ? { sendFiles: { modes: options.sendFilesModes } } : {})
+                },
                 onMessage: () => () => undefined,
                 sendMessage: options.sendMessage
             })
         } as unknown as ToolExecutionContext["connectorRegistry"],
-        sandbox: null as unknown as ToolExecutionContext["sandbox"],
+        sandbox: {
+            read: sandboxRead,
+            write: sandboxWrite
+        } as unknown as ToolExecutionContext["sandbox"],
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,

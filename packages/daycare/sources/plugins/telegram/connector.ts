@@ -46,7 +46,9 @@ const TELEGRAM_MESSAGE_FORMAT_PROMPT = [
     "Tables render as plain text.",
     "Task lists (- [x] item) render with checkbox symbols.",
     "Do NOT use raw HTML tags; they will be escaped.",
-    "Keep formatting simple and well-nested."
+    "Keep formatting simple and well-nested.",
+    "When using say, URL buttons should be used for external links and callback buttons should be used for quick in-chat actions.",
+    "Button labels should be short and action-oriented, and buttons are optional when plain text is clearer."
 ].join(" ");
 
 const TELEGRAM_MESSAGE_MAX_LENGTH = 4096;
@@ -180,6 +182,56 @@ export class TelegramConnector implements Connector {
                 await handler(payload, context, path);
             }
             logger.debug(`event: All handlers completed path=${path}`);
+        });
+
+        this.bot.on("callback_query", async (callbackQuery) => {
+            await this.bot.answerCallbackQuery(callbackQuery.id);
+
+            const chat = callbackQuery.message?.chat;
+            if (!chat) {
+                logger.debug("skip: callback query has no chat context");
+                return;
+            }
+            const chatType = chat?.type;
+            if (chatType !== "private" && chatType !== "group" && chatType !== "supergroup") {
+                logger.debug(`skip: Skipping callback query with unsupported chat type=${chatType}`);
+                return;
+            }
+
+            const senderId = callbackQuery.from?.id ?? chat?.id;
+            if (!this.isAllowedUid(senderId)) {
+                logger.info(
+                    { senderId, chatId: chat?.id },
+                    "skip: Skipping telegram callback query from unapproved uid"
+                );
+                if (this.mode === "private" && chat?.id !== undefined) {
+                    await this.bot.sendMessage(String(chat.id), TELEGRAM_UNAUTHORIZED_MESSAGE);
+                }
+                return;
+            }
+
+            if (!callbackQuery.data) {
+                logger.debug("skip: callback query has no data payload");
+                return;
+            }
+
+            const channelId = String(chat.id);
+            const telegramUserId = String(senderId);
+            const path = agentPath(`${agentPathConnector(telegramUserId, "telegram")}/${channelId}/${telegramUserId}`);
+            const context: MessageContext = {
+                messageId: callbackQuery.message?.message_id ? String(callbackQuery.message.message_id) : undefined
+            };
+            const payload: ConnectorMessage = {
+                text: callbackQuery.data
+            };
+
+            logger.debug(
+                `event: Dispatching callback query to handlers handlerCount=${this.handlers.length} path=${path}`
+            );
+            for (const handler of this.handlers) {
+                await handler(payload, context, path);
+            }
+            logger.debug(`event: All handlers completed for callback query path=${path}`);
         });
 
         this.bot.on("polling_error", (error) => {
@@ -1019,12 +1071,22 @@ function targetIdIsGroupChat(targetId: string): boolean {
 
 function messageButtonsBuild(buttons: NonNullable<ConnectorMessage["buttons"]>): TelegramBot.InlineKeyboardMarkup {
     return {
-        inline_keyboard: buttons.map((button) => [
-            {
-                text: button.text,
-                url: button.url
+        inline_keyboard: buttons.map((button) => {
+            if (button.type === "callback") {
+                return [
+                    {
+                        text: button.text,
+                        callback_data: button.callback
+                    }
+                ];
             }
-        ])
+            return [
+                {
+                    text: button.text,
+                    url: button.url
+                }
+            ];
+        })
     };
 }
 

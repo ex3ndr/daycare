@@ -135,6 +135,85 @@ describe("TelegramConnector commands", () => {
     });
 });
 
+describe("TelegramConnector callback queries", () => {
+    beforeEach(() => {
+        telegramInstances.length = 0;
+    });
+
+    it("routes callback query data as a message payload", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+        const messageHandler = vi.fn(async (_message, _context, _target) => undefined);
+        connector.onMessage(messageHandler);
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        const callbackQueryHandler = bot!.handlers.get("callback_query")?.[0];
+        await callbackQueryHandler?.({
+            id: "callback-1",
+            from: { id: 123 },
+            data: "approve_request",
+            message: {
+                message_id: 66,
+                chat: { id: 123, type: "private" }
+            }
+        });
+
+        expect(bot!.answerCallbackQuery).toHaveBeenCalledWith("callback-1");
+        expect(messageHandler).toHaveBeenCalledTimes(1);
+        const [payload, context, target] = messageHandler.mock.calls[0] as [{ text: string }, MessageContext, string];
+        expect(payload.text).toBe("approve_request");
+        expect(context).toMatchObject({ messageId: "66" });
+        expect(target).toBe("/123/telegram/123/123");
+    });
+
+    it("rejects unauthorized callback queries in private mode", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            mode: "private",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+        const messageHandler = vi.fn(async (_message, _context, _target) => undefined);
+        connector.onMessage(messageHandler);
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        const callbackQueryHandler = bot!.handlers.get("callback_query")?.[0];
+        await callbackQueryHandler?.({
+            id: "callback-2",
+            from: { id: 999 },
+            data: "approve_request",
+            message: {
+                message_id: 67,
+                chat: { id: 999, type: "private" }
+            }
+        });
+
+        expect(bot!.answerCallbackQuery).toHaveBeenCalledWith("callback-2");
+        expect(messageHandler).not.toHaveBeenCalled();
+        expect(bot!.sendMessage).toHaveBeenCalledWith(
+            "999",
+            "🚫 You are not authorized to use this bot. Please contact the system administrator to request access."
+        );
+    });
+});
+
 describe("TelegramConnector incoming documents", () => {
     beforeEach(() => {
         telegramInstances.length = 0;
@@ -701,9 +780,9 @@ describe("TelegramConnector command updates", () => {
             );
             expect(bot!.setChatMenuButton).toHaveBeenCalledTimes(1);
             expect(bot!.setChatMenuButton).toHaveBeenCalledWith({
-                menu_button: {
+                menu_button: JSON.stringify({
                     type: "commands"
-                }
+                })
             });
 
             await connector.shutdown("test");
@@ -736,13 +815,13 @@ describe("TelegramConnector command updates", () => {
             await vi.advanceTimersByTimeAsync(1000);
             expect(bot!.setChatMenuButton).toHaveBeenCalledTimes(1);
             expect(bot!.setChatMenuButton).toHaveBeenCalledWith({
-                menu_button: {
+                menu_button: JSON.stringify({
                     type: "web_app",
                     text: "Open Daycare",
                     web_app: {
                         url: "https://app.example.com/?backend=https%3A%2F%2Fapi.example.com"
                     }
-                }
+                })
             });
 
             await connector.shutdown("test");
@@ -931,6 +1010,7 @@ describe("TelegramConnector file uploads", () => {
             replyToMessageId: "77",
             buttons: [
                 {
+                    type: "url",
                     text: "Open Daycare",
                     url: "https://app.example.com/auth#token"
                 }
@@ -978,6 +1058,7 @@ describe("TelegramConnector file uploads", () => {
             replyToMessageId: "77",
             buttons: [
                 {
+                    type: "url",
                     text: "Open Daycare",
                     url: "https://app.example.com/auth#token"
                 }
@@ -1002,6 +1083,103 @@ describe("TelegramConnector file uploads", () => {
             }
         });
         expect(sendCall?.[2]).not.toHaveProperty("reply_to_message_id");
+    });
+
+    it("sends inline callback buttons for text messages", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await connector.sendMessage("123", {
+            text: "Choose an option.",
+            buttons: [
+                {
+                    type: "callback",
+                    text: "Approve",
+                    callback: "approve_request"
+                }
+            ]
+        });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
+        const sendCall = bot!.sendMessage.mock.calls[0];
+        expect(sendCall?.[2]).toMatchObject({
+            parse_mode: "HTML",
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        {
+                            text: "Approve",
+                            callback_data: "approve_request"
+                        }
+                    ]
+                ]
+            }
+        });
+    });
+
+    it("renders mixed URL and callback buttons", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await connector.sendMessage("123", {
+            text: "Pick one.",
+            buttons: [
+                {
+                    type: "url",
+                    text: "Open docs",
+                    url: "https://example.com/docs"
+                },
+                {
+                    type: "callback",
+                    text: "Retry",
+                    callback: "retry_action"
+                }
+            ]
+        });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
+        const sendCall = bot!.sendMessage.mock.calls[0];
+        expect(sendCall?.[2]).toMatchObject({
+            parse_mode: "HTML",
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        {
+                            text: "Open docs",
+                            url: "https://example.com/docs"
+                        }
+                    ],
+                    [
+                        {
+                            text: "Retry",
+                            callback_data: "retry_action"
+                        }
+                    ]
+                ]
+            }
+        });
     });
 
     it("sends reply_to_message_id for group targets when group replies are enabled", async () => {

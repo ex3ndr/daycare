@@ -28,10 +28,17 @@ export type ConnectorMessage = {
     buttons?: ConnectorMessageButton[];
 };
 
-export type ConnectorMessageButton = {
-    text: string;
-    url: string;
-};
+export type ConnectorMessageButton =
+    | {
+          type: "url";
+          text: string;
+          url: string;
+      }
+    | {
+          type: "callback";
+          text: string;
+          callback: string;
+      };
 
 export type MessageContext = {
     messageId?: string;

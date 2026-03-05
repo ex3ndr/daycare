@@ -1,4 +1,3 @@
-import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 
@@ -9,8 +8,8 @@ import type {
     ToolExecutionContext,
     ToolResultContract
 } from "@/types";
-import { sanitizeFilename } from "../../../utils/filename.js";
 import { agentPathTargetResolve } from "../../agents/ops/agentPathTargetResolve.js";
+import { fileResolve } from "./fileResolve.js";
 
 const schema = Type.Object(
     {
@@ -122,7 +121,14 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
                 throw new Error(`Connector does not support ${sendAs} mode: ${source}`);
             }
 
-            const file = await resolveFile(payload, context);
+            const file = await fileResolve(
+                {
+                    path: payload.path ?? "",
+                    name: payload.name,
+                    mimeType: payload.mimeType ?? ""
+                },
+                context
+            );
             const messageText = typeof payload.text === "string" && payload.text.length > 0 ? payload.text : null;
 
             const targetId = payload.channelId ?? target?.targetId;
@@ -232,31 +238,4 @@ async function foregroundTargetResolve(context: ToolExecutionContext): Promise<{
         { connectorName: foregroundAgent.connectorName },
         foregroundAgent.path
     );
-}
-
-async function resolveFile(payload: SendFileArgs, context: ToolExecutionContext): Promise<FileReference> {
-    if (!payload.path || payload.path.length === 0) {
-        throw new Error("path is required");
-    }
-    if (!payload.mimeType) {
-        throw new Error("mimeType is required when sending a path");
-    }
-
-    const readResult = await context.sandbox.read({ path: payload.path, binary: true });
-    if (readResult.type !== "binary") {
-        throw new Error("Path is not a file");
-    }
-
-    const name = sanitizeFilename(payload.name ?? path.basename(readResult.displayPath));
-    const stored = await context.sandbox.write({
-        path: `~/downloads/${name}`,
-        content: readResult.content
-    });
-    return {
-        id: stored.sandboxPath,
-        name,
-        mimeType: payload.mimeType,
-        size: stored.bytes,
-        path: stored.resolvedPath
-    };
 }

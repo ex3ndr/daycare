@@ -257,9 +257,9 @@ describe("AppServer auth endpoints", () => {
             async (
                 _targetId: string,
                 _message: {
-                    text: string;
+                    text: string | null;
                     replyToMessageId?: string;
-                    buttons?: Array<{ text: string; url: string }>;
+                    buttons?: Array<{ type: "url" | "callback"; text: string; url?: string; callback?: string }>;
                 }
             ) => undefined
         );
@@ -282,8 +282,8 @@ describe("AppServer auth endpoints", () => {
         expect(sent.text).not.toContain("http");
         expect(sent.replyToMessageId).toBe("42");
         expect(sent.buttons).toHaveLength(1);
-        expect(sent.buttons?.[0]).toMatchObject({ text: "Open Daycare" });
-        expect(sent.buttons?.[0]?.url).toContain("/auth#");
+        expect(sent.buttons?.[0]).toMatchObject({ type: "url", text: "Open Daycare" });
+        expect(sent.buttons?.[0]?.type === "url" ? sent.buttons[0].url : "").toContain("/auth#");
     });
 
     it("keeps app command and tool disabled when app server is disabled", async () => {

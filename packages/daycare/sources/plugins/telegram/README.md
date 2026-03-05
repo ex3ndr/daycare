@@ -26,19 +26,21 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 - Onboarding prompts for the bot token and stores it in the auth store under the plugin instance id.
 
 ## Incoming message handling
-- Only accepts `message.chat.type === "private"`.
+- Accepts `private`, `group`, and `supergroup` chat messages.
 - In `"private"` mode, rejects users not listed in `allowedUids` with an explicit unauthorized message.
 - In `"public"` mode, skips allowlist checks and allows all Telegram users.
 - Extracts text or caption and downloads attached photos/documents/voice/audio/stickers into the file store.
 - Reuses already stored Telegram files by `file_id` and persists the cache in connector state for restart-safe dedupe.
 - Builds `MessageContext` with `messageId` only and emits a user descriptor for targeting.
 - Emits normalized payloads to agent handling.
+- Handles `callback_query` events by acknowledging the click and routing `callback_query.data` as a normal incoming message.
 
 ## Outgoing message handling
 - Sends text replies with `reply_to_message_id` when present and either:
   - `sendReplies` is enabled, or
   - `sendRepliesInGroups` is enabled and target chat is group/supergroup.
 - Sends images with `sendPhoto`, videos with `sendVideo`, voice notes with `sendVoice` when `sendAs: "voice"`, and other files with `sendDocument`.
+- Supports inline URL buttons (`url`) and callback buttons (`callback_data`) on text messages.
 - Supports typing indicators and emoji reactions.
 
 ## Slash commands
