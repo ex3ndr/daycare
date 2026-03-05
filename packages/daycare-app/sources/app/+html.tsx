@@ -25,6 +25,9 @@ const fontFiles = [
     "SpaceMono-Regular"
 ];
 
+/** Icon fonts from @expo/vector-icons — preload only, @font-face registered at runtime */
+const iconFontFiles = ["Octicons", "Ionicons"];
+
 const fontFaceCss = fontFiles
     .map(
         (name) =>
@@ -39,7 +42,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
                 <meta charSet="utf-8" />
                 <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
                 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-                {fontFiles.map((name) => (
+                {[...fontFiles, ...iconFontFiles].map((name) => (
                     <link
                         key={name}
                         rel="preload"
