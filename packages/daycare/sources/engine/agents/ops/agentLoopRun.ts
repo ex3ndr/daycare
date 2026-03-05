@@ -39,7 +39,6 @@ import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
 import {
     type DeferredToolEntry,
-    type DeferredToolFlushResult,
     deferredToolFlush,
     deferredToolStatusBuild
 } from "../../modules/tools/deferredToolFlush.js";
@@ -240,12 +239,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     const runPythonFailureHandle = async (
         blockState: AgentLoopBlockState,
         error: unknown,
-        options?: {
-            printOutput?: string[];
-            toolCallCount?: number;
-            deferredCount?: number;
-            deferredResult?: DeferredToolFlushResult | null;
-        }
+        options?: { printOutput?: string[]; toolCallCount?: number; deferredDiscardCount?: number }
     ): Promise<void> => {
         const message = error instanceof Error ? error.message : String(error);
         await appendHistoryRecord?.(
@@ -256,9 +250,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 options?.toolCallCount ?? 0
             )
         );
-        const errorText =
-            rlmErrorTextBuild(error) +
-            deferredToolStatusBuild(options?.deferredResult ?? null, options?.deferredCount ?? 0);
+        const errorText = rlmErrorTextBuild(error) + deferredToolStatusBuild(null, options?.deferredDiscardCount ?? 0);
         context.messages.push(
             rlmToolResultBuild({ id: blockState.toolCallId, name: RLM_TOOL_NAME }, errorText, true).toolMessage
         );
@@ -425,16 +417,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     }
                 } catch (error) {
                     rlmPrintCaptureFlushTrailing(printCapture);
-                    const deferredCount = restoredDeferred.length;
-                    const deferredResult =
-                        deferredCount > 0
-                            ? await deferredToolFlush(restoredDeferred, blockState.executionContext)
-                            : null;
                     await runPythonFailureHandle(blockState, error, {
                         printOutput,
                         toolCallCount: initialPhase.snapshot.toolCallCount,
-                        deferredCount,
-                        deferredResult
+                        deferredDiscardCount: restoredDeferred.length
                     });
                     phase = restoreOnly ? { type: "done", reason: "complete" } : { type: "inference", iteration: 1 };
                 }
@@ -947,16 +933,11 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                         if (isInferenceAbortError(error, abortSignal)) {
                             throw error;
                         }
-                        const deferredCount = phase.type === "tool_call" ? phase.deferredEntries.length : 0;
-                        const deferredResult =
-                            phase.type === "tool_call" && deferredCount > 0
-                                ? await deferredToolFlush(phase.deferredEntries, blockState.executionContext)
-                                : null;
+                        const discardedCount = phase.type === "tool_call" ? phase.deferredEntries.length : 0;
                         await runPythonFailureHandle(blockState, error, {
                             printOutput: phase.type === "tool_call" ? phase.printOutput : undefined,
                             toolCallCount: phase.type === "tool_call" ? phase.toolCallCount : undefined,
-                            deferredCount,
-                            deferredResult
+                            deferredDiscardCount: discardedCount
                         });
                         phase = runPythonErrorPhaseResolve(blockState);
                     }
