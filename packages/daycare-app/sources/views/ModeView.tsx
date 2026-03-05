@@ -52,7 +52,8 @@ const leftItems: Record<
     dev: [
         { id: "components", title: "Components", subtitle: "Component catalog" },
         { id: "examples", title: "Examples", subtitle: "Todo app demo" },
-        { id: "lottie", title: "Lottie", subtitle: "Animations" }
+        { id: "lottie", title: "Lottie", subtitle: "Animations" },
+        { id: "monty", title: "Monty", subtitle: "Runtime smoke checks" }
     ]
 };
 

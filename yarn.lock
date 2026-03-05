@@ -10750,6 +10750,13 @@ react-native-is-edge-to-edge@1.2.1, react-native-is-edge-to-edge@^1.2.1:
   resolved "https://registry.yarnpkg.com/react-native-is-edge-to-edge/-/react-native-is-edge-to-edge-1.2.1.tgz#64e10851abd9d176cbf2b40562f751622bde3358"
   integrity sha512-FLbPWl/MyYQWz+KwqOZsSyj2JmLKglHatd3xLZWskXOpRaio4LfEDEz8E/A6uD8QoTHW6Aobw1jbEwK7KMgR7Q==
 
+react-native-monty@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/react-native-monty/-/react-native-monty-0.1.0.tgz#27ce53d888838e413ec225200cc6e1d46f3ab955"
+  integrity sha512-CTAgDO1R017CFSTFe0leLRY0sYbigy9O1//4ga640SPqDdb4ehGwNeJdUkBqKPijUTlix03z55tS7MjZV9u83w==
+  dependencies:
+    "@napi-rs/wasm-runtime" "^1.1.1"
+
 react-native-nitro-modules@^0.34.1:
   version "0.34.1"
   resolved "https://registry.yarnpkg.com/react-native-nitro-modules/-/react-native-nitro-modules-0.34.1.tgz#cfddce7046d0fd8cc113170299f75c11cd415004"
