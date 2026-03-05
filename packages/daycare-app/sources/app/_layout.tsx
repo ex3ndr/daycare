@@ -68,7 +68,10 @@ export default function RootLayout() {
     const [fontsReady, setFontsReady] = React.useState(false);
 
     React.useEffect(() => {
-        loadFonts().then(() => setFontsReady(true));
+        // Catch font loading failures (e.g. timeout in Telegram WebApp) so the app still renders.
+        loadFonts()
+            .catch(() => {})
+            .then(() => setFontsReady(true));
     }, []);
 
     React.useEffect(() => {

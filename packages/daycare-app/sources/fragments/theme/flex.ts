@@ -8,9 +8,13 @@ export const flexJustifySchema = z.enum([
     "center",
     "end",
     "between",
+    "around",
+    "evenly",
     "flex-start",
     "flex-end",
-    "space-between"
+    "space-between",
+    "space-around",
+    "space-evenly"
 ]);
 
 /**
@@ -42,13 +46,13 @@ export function flexAlignResolve(
 
 /**
  * Resolves shorthand justify-content values to React Native FlexStyle equivalents.
- * Accepts both shorthand ("start", "end", "between") and original RN values ("flex-start", "flex-end", "space-between").
+ * Accepts both shorthand ("start", "end", "between", "around", "evenly") and original RN values.
  *
  * Expects: catalog or RN values, or null/undefined.
  */
 export function flexJustifyResolve(
     v: string | null | undefined
-): "flex-start" | "center" | "flex-end" | "space-between" | undefined {
+): "flex-start" | "center" | "flex-end" | "space-between" | "space-around" | "space-evenly" | undefined {
     switch (v) {
         case "start":
         case "flex-start":
@@ -59,6 +63,12 @@ export function flexJustifyResolve(
         case "between":
         case "space-between":
             return "space-between";
+        case "around":
+        case "space-around":
+            return "space-around";
+        case "evenly":
+        case "space-evenly":
+            return "space-evenly";
         case "center":
             return "center";
         default:
