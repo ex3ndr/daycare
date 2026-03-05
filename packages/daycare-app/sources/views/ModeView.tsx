@@ -49,7 +49,7 @@ const leftItems: Record<
     skills: [],
     tools: [],
     dev: [
-        { id: "widgets", title: "Widgets", subtitle: "Component catalog" },
+        { id: "components", title: "Components", subtitle: "Component catalog" },
         { id: "examples", title: "Examples", subtitle: "Todo app demo" },
         { id: "lottie", title: "Lottie", subtitle: "Animations" }
     ]

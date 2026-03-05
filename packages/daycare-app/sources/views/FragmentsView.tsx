@@ -4,10 +4,10 @@ import * as React from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
+import { fragmentsRegistry } from "@/fragments/registry";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useFragmentsStore } from "@/modules/fragments/fragmentsContext";
 import type { FragmentListItem } from "@/modules/fragments/fragmentsTypes";
-import { widgetsRegistry } from "@/widgets/widgetsComponents";
 
 export function FragmentsView() {
     const { theme } = useUnistyles();
@@ -131,8 +131,8 @@ function FragmentDetailModal({ fragment, onClose }: FragmentDetailModalProps) {
                         </Pressable>
                     </View>
                     <ScrollView style={styles.modalBody}>
-                        <JSONUIProvider store={stateStore} handlers={{}} registry={widgetsRegistry}>
-                            <Renderer spec={fragment.spec as Spec} registry={widgetsRegistry} />
+                        <JSONUIProvider store={stateStore} handlers={{}} registry={fragmentsRegistry}>
+                            <Renderer spec={fragment.spec as Spec} registry={fragmentsRegistry} />
                         </JSONUIProvider>
                     </ScrollView>
                 </View>

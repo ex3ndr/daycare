@@ -48,7 +48,7 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     skills: [],
     tools: [],
     dev: [
-        { id: "widgets", title: "Widgets" },
+        { id: "components", title: "Components" },
         { id: "examples", title: "Examples" },
         { id: "showcase", title: "Showcase" },
         { id: "lottie", title: "Lottie" }

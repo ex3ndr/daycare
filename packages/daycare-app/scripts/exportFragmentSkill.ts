@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { widgetsCatalog } from "../sources/widgets/widgets";
+import { fragmentsCatalog } from "../sources/fragments/catalog";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const templatePath = path.resolve(scriptDir, "../../daycare/sources/prompts/SKILL_TEMPLATE.md");
@@ -9,7 +9,7 @@ const outputPath = path.resolve(scriptDir, "../../daycare/sources/skills/create-
 
 async function main(): Promise<void> {
     const template = await fs.readFile(templatePath, "utf8");
-    const catalogPrompt = widgetsCatalog.prompt();
+    const catalogPrompt = fragmentsCatalog.prompt();
     const content = `${template.trimEnd()}\n\n${catalogPrompt.trimStart()}\n`;
 
     await fs.mkdir(path.dirname(outputPath), { recursive: true });

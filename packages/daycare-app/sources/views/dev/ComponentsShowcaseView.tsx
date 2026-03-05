@@ -1,7 +1,7 @@
 import { JSONUIProvider, Renderer, type Spec } from "@json-render/react-native";
 import { View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { widgetsRegistry } from "@/widgets/widgetsComponents";
+import { fragmentsRegistry } from "@/fragments/registry";
 
 /**
  * Static spec that exercises every widget component with representative props.
@@ -624,11 +624,11 @@ const showcaseSpec: Spec = {
  * Renders a scrollable showcase of every widget from the catalog.
  * Each component is displayed with representative props and variants.
  */
-export function WidgetsShowcaseView() {
+export function ComponentsShowcaseView() {
     return (
         <View style={styles.container}>
-            <JSONUIProvider registry={widgetsRegistry}>
-                <Renderer spec={showcaseSpec} registry={widgetsRegistry} includeStandard={false} />
+            <JSONUIProvider registry={fragmentsRegistry}>
+                <Renderer spec={showcaseSpec} registry={fragmentsRegistry} includeStandard={false} />
             </JSONUIProvider>
         </View>
     );

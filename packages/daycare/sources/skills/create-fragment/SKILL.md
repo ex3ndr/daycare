@@ -13,7 +13,7 @@ that can be embedded anywhere in the app.
 
 1. Every fragment must have a `title`, `kitVersion`, and valid `spec`.
 2. The `spec` is a json-render component tree using the widget catalog below.
-3. Use semantic tokens only (colorRole, spacingScale, surfaceLevel) - never raw hex values or pixel sizes.
+3. Use semantic color tokens whenever possible — never raw values for spacing or surfaces.
 4. Keep specs focused - one clear UI purpose per fragment.
 5. Always set `kitVersion` to "1" (current catalog version).
 
@@ -30,24 +30,160 @@ that can be embedded anywhere in the app.
 - `fragment_update` - update an existing fragment by `fragmentId` (partial fields: title, description, spec, kitVersion)
 - `fragment_archive` - archive a fragment by `fragmentId` (hides from listings, still renderable by direct reference)
 
+## Colors
+
+Color props follow the **Material Design 3** color system. Every `color` prop accepts a string
+that is resolved at render time in two steps:
+
+1. **Theme role lookup**: if the string matches a known MD3 color role, the corresponding
+   theme color is used. This ensures the fragment adapts to light/dark themes automatically.
+2. **Raw color fallback**: if no theme role matches, the string is passed through as a
+   standard CSS color (e.g. `#FF0000`, `rgb(0,128,255)`, `rgba(0,0,0,0.5)`, `red`).
+
+**Always prefer Material Design 3 color roles** over raw colors. Theme roles guarantee
+consistency with the app's palette and automatic dark mode support. Only use raw colors
+when a specific brand color or custom value is truly required.
+
+Available MD3 color roles:
+
+| Role | Typical use |
+|------|-------------|
+| `primary` | Main actions, active states |
+| `onPrimary` | Text/icons on primary surfaces |
+| `primaryContainer` | Filled containers, tonal buttons |
+| `onPrimaryContainer` | Text/icons on primary containers |
+| `secondary`, `onSecondary` | Supporting actions |
+| `secondaryContainer`, `onSecondaryContainer` | Tonal surfaces |
+| `tertiary`, `onTertiary` | Accent/complementary |
+| `tertiaryContainer`, `onTertiaryContainer` | Accent containers |
+| `error`, `onError` | Error states |
+| `errorContainer`, `onErrorContainer` | Error surfaces |
+| `surface`, `onSurface` | Default background and text |
+| `surfaceVariant`, `onSurfaceVariant` | Secondary text, icons |
+| `surfaceContainer`, `surfaceContainerLow`, `surfaceContainerHigh`, `surfaceContainerHighest` | Layered surfaces |
+| `outline`, `outlineVariant` | Borders, dividers |
+
+Examples:
+- `"color": "primary"` — uses the theme's primary color (adapts to dark mode)
+- `"color": "onSurfaceVariant"` — muted text color from the theme
+- `"color": "#E53935"` — raw red, does NOT adapt to dark mode (use sparingly)
+
+## Typography
+
+The `weight` prop on `Text` (and similar text components) accepts a string that is resolved
+at render time:
+
+1. **Weight role lookup**: if the string matches a known weight role, the corresponding
+   IBM Plex Sans font family is used.
+2. **Raw font family fallback**: if no role matches, the string is passed through as a
+   literal font family name (e.g. `"Helvetica-Bold"`).
+
+**Always prefer weight roles** over raw font family names. Roles ensure consistent
+typography across the app.
+
+Available weight roles:
+
+| Role | Font family | Typical use |
+|------|------------|-------------|
+| `regular` | IBMPlexSans-Regular | Body text (default when omitted) |
+| `medium` | IBMPlexSans-Medium | Emphasized text, labels |
+| `semibold` | IBMPlexSans-SemiBold | Headings, strong emphasis |
+
+When `weight` is `null`, `undefined`, or omitted, it defaults to `regular` (IBMPlexSans-Regular).
+
+Examples:
+- `"weight": "semibold"` — bold heading style
+- `"weight": "regular"` — normal body text (same as omitting)
+- `"weight": "Helvetica-Bold"` — raw font family, bypasses role resolution (use sparingly)
+
+## Layout
+
+Fragments use **React Native flexbox**, which differs from web CSS in several defaults:
+
+| Property | RN default | Web default |
+|----------|-----------|-------------|
+| `flexDirection` | `column` | `row` |
+| `flexShrink` | `0` | `1` |
+| `alignContent` | `flex-start` | `stretch` |
+
+Key implications:
+- Children stack **vertically** by default (use `direction: "row"` on `View` for horizontal).
+- Items do **not** shrink by default — set `flexShrink: 1` explicitly if needed.
+- `flexGrow: 1` makes an item fill remaining space (equivalent to `flex: 1` in RN shorthand).
+
+The `View` component exposes `flexGrow`, `flexShrink`, and `flexBasis` individually
+(not the shorthand `flex`). Use `flexGrow` to expand, `flexShrink` to allow compression,
+and `flexBasis` to set the initial size before flex distribution.
+
+## Spacing Scale
+
+Spacing props (`gap`, `padding`, `margin`, etc.) accept a semantic token **or** a raw
+number (pixels). Prefer tokens for consistency; use raw numbers only when a specific
+pixel value is needed (e.g. fine-tuning alignment).
+
+| Token | Pixels | Typical use |
+|-------|--------|-------------|
+| `"none"` | 0 | No spacing |
+| `"xs"` | 4px | Tight gaps between related items, icon-to-text spacing |
+| `"sm"` | 8px | Default inner gaps, compact padding, row gaps |
+| `"md"` | 16px | Standard card/section padding, horizontal page inset |
+| `"lg"` | 24px | Group separation, generous padding between sections |
+| `"xl"` | 32px | Major section separation, large outer margins |
+| `12` | 12px | Example raw number — passed through as-is |
+
+Common patterns:
+- **Card/section padding**: `"md"` (16px)
+- **Gap between items in a list**: `"sm"` (8px) or `"xs"` (4px)
+- **Gap between sections**: `"lg"` (24px)
+- **Compact row gap**: `"sm"` (8px)
+- **Page horizontal inset**: `"md"` (16px)
+
+## Content Alignment
+
+`ScrollView` renders inside a max-width container (1100px, centered). Content placed
+directly inside `ScrollView` needs horizontal padding to avoid touching the edges.
+
+- `ItemGroup` handles its own side margins internally (16px on iOS, 12px on Android) —
+  do **not** add extra horizontal padding to `ScrollView` when using `ItemGroup` children.
+- For free-form content (e.g. `View`, `Text`, `Card` directly inside `ScrollView`),
+  add `paddingHorizontal: "md"` to the `ScrollView` to match the `ItemGroup` inset.
+- When mixing `ItemGroup` with free-form content, wrap the free-form content in a
+  `View` with `paddingHorizontal: "md"` instead of padding the `ScrollView` itself,
+  so `ItemGroup` margins are not doubled.
+
+## Border Radius
+
+Components use these border radius values (built into the components, not configurable):
+
+| Component | Radius |
+|-----------|--------|
+| `Card` | 16px |
+| `Button` | 12px |
+| `TextInput` | 12px |
+| `Checkbox` box | 4px |
+| `ItemGroup` content | 10px (iOS) / 16px (Android) |
+
 ## Design Guidelines
 
-1. **Layout first**: start with `Column` or `Row` as root, then nest content.
+1. **Layout first**: start with `View` as root, then nest content.
 2. **Consistent spacing**: use the same `gap` scale within a container.
 3. **Surface hierarchy**: use `surfaceLevel` to create visual depth (lowest -> highest).
-4. **Readable text**: pair `textSize` with appropriate `textWeight`.
+4. **Readable text**: pair `size` with appropriate `weight` roles (`regular`, `medium`, `semibold`).
 5. **Accessible controls**: always set `label` on buttons, `title` on list items.
-6. **Sections**: use `ScrollArea` > `Section` pattern for grouped content with titles.
+6. **Grouped lists**: use `ScrollView` > `ItemGroup` > `ListItem` pattern for grouped settings/navigation.
+7. **Colors**: prefer MD3 theme roles for all color props; raw colors only when necessary.
 
 ## Completion Checklist
 
 Before finishing:
 
 1. Spec uses only components from the widget catalog.
-2. All props use semantic tokens (no raw values).
-3. `kitVersion` is set to "1".
-4. `fragment_create` or `fragment_update` was called successfully.
-5. Fragment has a clear, descriptive `title`.
+2. Color props use MD3 theme roles; raw colors only where a specific value is required.
+3. Font weight props use weight roles (`regular`, `medium`, `semibold`); raw font families only when necessary.
+4. All spacing and surface props use semantic tokens (no raw values).
+5. `kitVersion` is set to "1".
+6. `fragment_create` or `fragment_update` was called successfully.
+7. Fragment has a clear, descriptive `title`.
 
 ## Widget Catalog Reference
 
@@ -60,10 +196,10 @@ Each line is a JSON patch operation (add, remove, replace). Start with /root, th
 Example output (each line is a separate JSON object):
 
 {"op":"add","path":"/root","value":"main"}
-{"op":"add","path":"/elements/main","value":{"type":"Column","props":{},"children":["child-1","list"]}}
-{"op":"add","path":"/elements/child-1","value":{"type":"Row","props":{},"children":[]}}
-{"op":"add","path":"/elements/list","value":{"type":"Column","props":{},"repeat":{"statePath":"/items","key":"id"},"children":["item"]}}
-{"op":"add","path":"/elements/item","value":{"type":"Row","props":{},"children":[]}}
+{"op":"add","path":"/elements/main","value":{"type":"View","props":{},"children":["child-1","list"]}}
+{"op":"add","path":"/elements/child-1","value":{"type":"ScrollView","props":{},"children":[]}}
+{"op":"add","path":"/elements/list","value":{"type":"View","props":{},"repeat":{"statePath":"/items","key":"id"},"children":["item"]}}
+{"op":"add","path":"/elements/item","value":{"type":"ScrollView","props":{},"children":[]}}
 {"op":"add","path":"/state/items","value":[]}
 {"op":"add","path":"/state/items/0","value":{"id":"1","title":"First Item"}}
 {"op":"add","path":"/state/items/1","value":{"id":"2","title":"Second Item"}}
@@ -84,7 +220,7 @@ Include realistic sample data in state. For blogs: 3-4 posts with titles, excerp
 DYNAMIC LISTS (repeat field):
 Any element can have a top-level "repeat" field to render its children once per item in a state array: { "repeat": { "statePath": "/arrayPath", "key": "id" } }.
 The element itself renders once (as the container), and its children are expanded once per array item. "statePath" is the state array path. "key" is an optional field name on each item for stable React keys.
-Example: {"type":"Column","props":{},"repeat":{"statePath":"/todos","key":"id"},"children":["todo-item"]}
+Example: {"type":"View","props":{},"repeat":{"statePath":"/todos","key":"id"},"children":["todo-item"]}
 Inside children of a repeated element, use { "$item": "field" } to read a field from the current item, and { "$index": true } to get the current array index. For two-way binding to an item field use { "$bindItem": "completed" } on the appropriate prop.
 ALWAYS use the repeat field for lists backed by state arrays. NEVER hardcode individual elements for each array item.
 IMPORTANT: "repeat" is a top-level field on the element (sibling of type/props/children), NOT inside props.
@@ -99,46 +235,39 @@ For lists where users can add/remove items (todos, carts, etc.), use pushState a
 
 IMPORTANT: State paths use RFC 6901 JSON Pointer syntax (e.g. "/todos/0/title"). Do NOT use JavaScript-style dot notation (e.g. "/todos.length" is WRONG). To generate unique IDs for new items, use "$id" instead of trying to read array length.
 
-AVAILABLE COMPONENTS (24):
+AVAILABLE COMPONENTS (17):
 
-- Column: { gap?: "none" | "xs" | "sm" | "md" | "lg" | "xl", padding?: "none" | "xs" | "sm" | "md" | "lg" | "xl", alignItems?: "start" | "center" | "end" | "stretch", justifyContent?: "start" | "center" | "end" | "between", flex?: number, surface?: "lowest" | "low" | "default" | "high" | "highest" } - Vertical stack with theme-based spacing and optional surface background. [accepts children]
-- Row: { gap?: "none" | "xs" | "sm" | "md" | "lg" | "xl", padding?: "none" | "xs" | "sm" | "md" | "lg" | "xl", alignItems?: "start" | "center" | "end" | "stretch" | "baseline", justifyContent?: "start" | "center" | "end" | "between", flex?: number, wrap?: boolean } - Horizontal stack with theme-based spacing. [accepts children]
-- ScrollArea: { padding?: "none" | "xs" | "sm" | "md" | "lg" | "xl", surface?: "lowest" | "low" | "default" | "high" | "highest" } - Scrollable vertical container. [accepts children]
-- Card: { surface?: "lowest" | "low" | "default" | "high" | "highest", color?: "primary" | "onPrimary" | "primaryContainer" | "onPrimaryContainer" | "secondary" | "onSecondary" | "secondaryContainer" | "onSecondaryContainer" | "tertiary" | "onTertiary" | "tertiaryContainer" | "onTertiaryContainer" | "error" | "onError" | "errorContainer" | "onErrorContainer" | "surface" | "onSurface" | "surfaceVariant" | "onSurfaceVariant" | "surfaceContainer" | "surfaceContainerLow" | "surfaceContainerHigh" | "surfaceContainerHighest" | "outline" | "outlineVariant", elevation?: "none" | "low" | "medium" | "high", padding?: "none" | "xs" | "sm" | "md" | "lg" | "xl" } - Rounded surface container with elevation. 'color' overrides 'surface' with any theme color role (e.g. primaryContainer). [accepts children]
-- Section: { title?: string, subtitle?: string, surface?: "lowest" | "low" | "default" | "high" | "highest", padding?: "none" | "xs" | "sm" | "md" | "lg" | "xl" } - Card with an optional header (title + subtitle) and body content. [accepts children]
-- Divider: { spacing?: "none" | "xs" | "sm" | "md" | "lg" | "xl" } - Horizontal rule using outline variant color.
-- Spacer: { size?: "none" | "xs" | "sm" | "md" | "lg" | "xl", flex?: number } - Empty space or flex filler.
-- Text: { text: string, size?: "xs" | "sm" | "md" | "lg" | "xl", weight?: "regular" | "medium" | "semibold", color?: "primary" | "onPrimary" | "primaryContainer" | "onPrimaryContainer" | "secondary" | "onSecondary" | "secondaryContainer" | "onSecondaryContainer" | "tertiary" | "onTertiary" | "tertiaryContainer" | "onTertiaryContainer" | "error" | "onError" | "errorContainer" | "onErrorContainer" | "surface" | "onSurface" | "surfaceVariant" | "onSurfaceVariant" | "surfaceContainer" | "surfaceContainerLow" | "surfaceContainerHigh" | "surfaceContainerHighest" | "outline" | "outlineVariant", align?: "left" | "center" | "right", numberOfLines?: number, strikethrough?: boolean } - Theme-styled text. Color defaults to onSurface.
-- Heading: { text: string, level?: "h1" | "h2" | "h3", color?: "primary" | "onPrimary" | "primaryContainer" | "onPrimaryContainer" | "secondary" | "onSecondary" | "secondaryContainer" | "onSecondaryContainer" | "tertiary" | "onTertiary" | "tertiaryContainer" | "onTertiaryContainer" | "error" | "onError" | "errorContainer" | "onErrorContainer" | "surface" | "onSurface" | "surfaceVariant" | "onSurfaceVariant" | "surfaceContainer" | "surfaceContainerLow" | "surfaceContainerHigh" | "surfaceContainerHighest" | "outline" | "outlineVariant", align?: "left" | "center" | "right" } - Section heading using semibold weight. Color defaults to onSurface.
-- Icon: { name: string, set?: "AntDesign" | "Entypo" | "EvilIcons" | "Feather" | "FontAwesome" | "FontAwesome5" | "FontAwesome6" | "Fontisto" | "Foundation" | "Ionicons" | "MaterialCommunityIcons" | "MaterialIcons" | "Octicons" | "SimpleLineIcons" | "Zocial", size?: number, color?: "primary" | "onPrimary" | "primaryContainer" | "onPrimaryContainer" | "secondary" | "onSecondary" | "secondaryContainer" | "onSecondaryContainer" | "tertiary" | "onTertiary" | "tertiaryContainer" | "onTertiaryContainer" | "error" | "onError" | "errorContainer" | "onErrorContainer" | "surface" | "onSurface" | "surfaceVariant" | "onSurfaceVariant" | "surfaceContainer" | "surfaceContainerLow" | "surfaceContainerHigh" | "surfaceContainerHighest" | "outline" | "outlineVariant" } - Vector icon from any @expo/vector-icons set. Defaults to Ionicons. Set determines the icon family.
+- View: { direction?: "row" | "column", gap?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, padding?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingHorizontal?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingVertical?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingTop?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingBottom?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingLeft?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingRight?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, margin?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginHorizontal?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginVertical?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginTop?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginBottom?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginLeft?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginRight?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, alignItems?: "start" | "center" | "end" | "stretch" | "baseline" | "flex-start" | "flex-end", justifyContent?: "start" | "center" | "end" | "between" | "flex-start" | "flex-end" | "space-between", flexGrow?: number, flexShrink?: number, flexBasis?: number, wrap?: boolean, color?: string, pressedColor?: string, hoverColor?: string, pressable?: boolean } - General-purpose container. Optionally pressable with background, pressed, and hover colors. Accepts all flex layout props. [accepts children]
+- ScrollView: { gap?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, padding?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingHorizontal?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingVertical?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingTop?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingBottom?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingLeft?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingRight?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, margin?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginHorizontal?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginVertical?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginTop?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginBottom?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginLeft?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginRight?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, alignItems?: "start" | "center" | "end" | "stretch" | "baseline" | "flex-start" | "flex-end", justifyContent?: "start" | "center" | "end" | "between" | "flex-start" | "flex-end" | "space-between", flexGrow?: number, flexShrink?: number, flexBasis?: number, color?: string, surface?: "lowest" | "low" | "default" | "high" | "highest" } - Scrollable vertical container with full layout props. [accepts children]
+- Card: { surface?: "lowest" | "low" | "default" | "high" | "highest", color?: string, elevation?: "none" | "low" | "medium" | "high", padding?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number } - Rounded surface container with elevation. 'color' overrides 'surface' with any theme color role (e.g. primaryContainer). [accepts children]
+- ItemGroup: { title?: string, subtitle?: string, surface?: "lowest" | "low" | "default" | "high" | "highest", padding?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number } - Grouped list section with optional header (title + subtitle). Children must be ListItem components only — do not place arbitrary content inside. [accepts children]
+- Divider: { spacing?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number } - Horizontal rule using outline variant color.
+- Spacer: { size?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, flex?: number } - Empty space or flex filler.
+- Text: { text: string, size?: "xs" | "sm" | "md" | "lg" | "xl", weight?: "regular" | "medium" | "semibold", color?: string, align?: "left" | "center" | "right", numberOfLines?: number, strikethrough?: boolean, underline?: boolean, italic?: boolean, lineHeight?: number, letterSpacing?: number, opacity?: number, padding?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingHorizontal?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingVertical?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingTop?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingBottom?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingLeft?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, paddingRight?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, margin?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginHorizontal?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginVertical?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginTop?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginBottom?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginLeft?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, marginRight?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | number, flexGrow?: number, flexShrink?: number } - Theme-styled text. Color defaults to onSurface.
+- Heading: { text: string, level?: "h1" | "h2" | "h3", color?: string, align?: "left" | "center" | "right" } - Section heading using semibold weight. Color defaults to onSurface.
+- Icon: { name: string, set?: "AntDesign" | "Entypo" | "EvilIcons" | "Feather" | "FontAwesome" | "FontAwesome5" | "FontAwesome6" | "Fontisto" | "Foundation" | "Ionicons" | "MaterialCommunityIcons" | "MaterialIcons" | "Octicons" | "SimpleLineIcons" | "Zocial", size?: number, color?: string } - Vector icon from any @expo/vector-icons set. Defaults to Ionicons. Set determines the icon family.
 - Button: { label: string, variant?: "filled" | "tonal" | "outlined" | "text", size?: "sm" | "md" | "lg", disabled?: boolean, loading?: boolean } - Material Design 3 button. 'filled' uses primary, 'tonal' uses secondaryContainer, 'outlined' uses outline border, 'text' is borderless.
 - IconButton: { icon: string, set?: "AntDesign" | "Entypo" | "EvilIcons" | "Feather" | "FontAwesome" | "FontAwesome5" | "FontAwesome6" | "Fontisto" | "Foundation" | "Ionicons" | "MaterialCommunityIcons" | "MaterialIcons" | "Octicons" | "SimpleLineIcons" | "Zocial", variant?: "filled" | "tonal" | "outlined" | "standard", size?: "sm" | "md" | "lg", disabled?: boolean } - Icon-only button. Defaults to Ionicons; use 'set' for other icon families. Variant controls surface/color treatment.
 - TextInput: { label?: string, placeholder?: string, value?: string, flex?: number, multiline?: boolean, numberOfLines?: number } - Text field with outline styling using theme outline color.
 - Switch: { checked?: boolean, label?: string, disabled?: boolean } - Toggle switch with primary track color.
 - Checkbox: { checked?: boolean, label?: string, disabled?: boolean } - Checkbox with primary fill color when checked.
 - ListItem: { title: string, subtitle?: string, showChevron?: boolean, showDivider?: boolean } - Standard list row using onSurface/onSurfaceVariant text colors.
-- Badge: { label: string, variant?: "default" | "primary" | "secondary" | "error" } - Small label badge. 'default' uses surfaceVariant, 'primary' uses primaryContainer, 'error' uses errorContainer.
-- Avatar: { initials?: string, src?: string, size?: "sm" | "md" | "lg" } - Circular avatar using primaryContainer background for initials fallback.
 - Spinner: { size?: "small" | "large" } - Loading indicator using primary color.
-- ProgressBar: { value: number, color?: "primary" | "onPrimary" | "primaryContainer" | "onPrimaryContainer" | "secondary" | "onSecondary" | "secondaryContainer" | "onSecondaryContainer" | "tertiary" | "onTertiary" | "tertiaryContainer" | "onTertiaryContainer" | "error" | "onError" | "errorContainer" | "onErrorContainer" | "surface" | "onSurface" | "surfaceVariant" | "onSurfaceVariant" | "surfaceContainer" | "surfaceContainerLow" | "surfaceContainerHigh" | "surfaceContainerHighest" | "outline" | "outlineVariant", trackColor?: "primary" | "onPrimary" | "primaryContainer" | "onPrimaryContainer" | "secondary" | "onSecondary" | "secondaryContainer" | "onSecondaryContainer" | "tertiary" | "onTertiary" | "tertiaryContainer" | "onTertiaryContainer" | "error" | "onError" | "errorContainer" | "onErrorContainer" | "surface" | "onSurface" | "surfaceVariant" | "onSurfaceVariant" | "surfaceContainer" | "surfaceContainerLow" | "surfaceContainerHigh" | "surfaceContainerHighest" | "outline" | "outlineVariant", height?: number } - Horizontal progress bar. 'value' is 0–1. Defaults: color=primary, trackColor=surfaceContainerHigh, height=6.
-- Chip: { label: string, icon?: string, iconSet?: "AntDesign" | "Entypo" | "EvilIcons" | "Feather" | "FontAwesome" | "FontAwesome5" | "FontAwesome6" | "Fontisto" | "Foundation" | "Ionicons" | "MaterialCommunityIcons" | "MaterialIcons" | "Octicons" | "SimpleLineIcons" | "Zocial", variant?: "filled" | "tonal" | "outlined" } - Compact pill element. 'filled' uses primary, 'tonal' uses secondaryContainer (default), 'outlined' uses outline border.
-- Metric: { value: string, label: string, size?: "sm" | "md" | "lg", color?: "primary" | "onPrimary" | "primaryContainer" | "onPrimaryContainer" | "secondary" | "onSecondary" | "secondaryContainer" | "onSecondaryContainer" | "tertiary" | "onTertiary" | "tertiaryContainer" | "onTertiaryContainer" | "error" | "onError" | "errorContainer" | "onErrorContainer" | "surface" | "onSurface" | "surfaceVariant" | "onSurfaceVariant" | "surfaceContainer" | "surfaceContainerLow" | "surfaceContainerHigh" | "surfaceContainerHighest" | "outline" | "outlineVariant", align?: "left" | "center" | "right" } - Stacked value/label KPI pair. Value is semibold, label is smaller with reduced opacity.
-- Banner: { text: string, variant?: "info" | "success" | "warning" | "error" } - Status banner. 'info' uses secondaryContainer, 'success' uses tertiaryContainer, 'warning' uses primaryContainer, 'error' uses errorContainer.
-- EmptyState: { title: string, subtitle?: string, icon?: string, iconSet?: "AntDesign" | "Entypo" | "EvilIcons" | "Feather" | "FontAwesome" | "FontAwesome5" | "FontAwesome6" | "Fontisto" | "Foundation" | "Ionicons" | "MaterialCommunityIcons" | "MaterialIcons" | "Octicons" | "SimpleLineIcons" | "Zocial" } - Centered placeholder for empty lists/screens. Uses onSurfaceVariant colors.
+- ProgressBar: { value: number, color?: string, trackColor?: string, height?: number } - Horizontal progress bar. 'value' is 0–1. Defaults: color=primary, trackColor=surfaceContainerHigh, height=6.
 
 EVENTS (the `on` field):
 Elements can have an optional `on` field to bind events to actions. The `on` field is a top-level field on the element (sibling of type/props/children), NOT inside props.
 Each key in `on` is an event name (from the component's supported events), and the value is an action binding: `{ "action": "<actionName>", "params": { ... } }`.
 
 Example:
-  {"type":"Column","props":{},"on":{"press":{"action":"setState","params":{"statePath":"/saved","value":true}}},"children":[]}
+  {"type":"View","props":{},"on":{"press":{"action":"setState","params":{"statePath":"/saved","value":true}}},"children":[]}
 
 Action params can use dynamic references to read from state: { "$state": "/statePath" }.
 IMPORTANT: Do NOT put action/actionParams inside props. Always use the `on` field for event bindings.
 
 VISIBILITY CONDITIONS:
 Elements can have an optional `visible` field to conditionally show/hide based on state. IMPORTANT: `visible` is a top-level field on the element object (sibling of type/props/children), NOT inside props.
-Correct: {"type":"Column","props":{},"visible":{"$state":"/activeTab","eq":"home"},"children":["..."]}
+Correct: {"type":"View","props":{},"visible":{"$state":"/activeTab","eq":"home"},"children":["..."]}
 - `{ "$state": "/path" }` - visible when state at path is truthy
 - `{ "$state": "/path", "not": true }` - visible when state at path is falsy
 - `{ "$state": "/path", "eq": "value" }` - visible when state equals value
@@ -152,7 +281,7 @@ Correct: {"type":"Column","props":{},"visible":{"$state":"/activeTab","eq":"home
 - `true` / `false` - always visible/hidden
 
 Use a component with on.press bound to setState to update state and drive visibility.
-Example: A Column with on: { "press": { "action": "setState", "params": { "statePath": "/activeTab", "value": "home" } } } sets state, then a container with visible: { "$state": "/activeTab", "eq": "home" } shows only when that tab is active.
+Example: A View with on: { "press": { "action": "setState", "params": { "statePath": "/activeTab", "value": "home" } } } sets state, then a container with visible: { "$state": "/activeTab", "eq": "home" } shows only when that tab is active.
 
 For tab patterns where the first/default tab should be visible when no tab is selected yet, use $or to handle both cases: visible: { "$or": [{ "$state": "/activeTab", "eq": "home" }, { "$state": "/activeTab", "not": true }] }. This ensures the first tab is visible both when explicitly selected AND when /activeTab is not yet set.
 

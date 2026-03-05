@@ -1,7 +1,7 @@
 import { JSONUIProvider, Renderer, type Spec } from "@json-render/react-native";
 import { View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { widgetsRegistry } from "@/widgets/widgetsComponents";
+import { fragmentsRegistry } from "@/fragments/registry";
 
 /**
  * Static spec showing practical UI patterns built from widgets.
@@ -193,8 +193,8 @@ const examplesSpec: Spec = {
 export function ExamplesView() {
     return (
         <View style={styles.container}>
-            <JSONUIProvider registry={widgetsRegistry}>
-                <Renderer spec={examplesSpec} registry={widgetsRegistry} includeStandard={false} />
+            <JSONUIProvider registry={fragmentsRegistry}>
+                <Renderer spec={examplesSpec} registry={fragmentsRegistry} includeStandard={false} />
             </JSONUIProvider>
         </View>
     );

@@ -1,47 +1,16 @@
 import { defineCatalog } from "@json-render/core";
 import { schema } from "@json-render/react-native/schema";
 import { z } from "zod";
-
-// Semantic color roles mapped to Material Design 3 theme tokens.
-// No raw hex colors allowed — all colors resolve through the theme at render time.
-const colorRole = z.enum([
-    "primary",
-    "onPrimary",
-    "primaryContainer",
-    "onPrimaryContainer",
-    "secondary",
-    "onSecondary",
-    "secondaryContainer",
-    "onSecondaryContainer",
-    "tertiary",
-    "onTertiary",
-    "tertiaryContainer",
-    "onTertiaryContainer",
-    "error",
-    "onError",
-    "errorContainer",
-    "onErrorContainer",
-    "surface",
-    "onSurface",
-    "surfaceVariant",
-    "onSurfaceVariant",
-    "surfaceContainer",
-    "surfaceContainerLow",
-    "surfaceContainerHigh",
-    "surfaceContainerHighest",
-    "outline",
-    "outlineVariant"
-]);
+import { colorSchema } from "./theme/colors";
+import { flexAlignSchema, flexJustifySchema } from "./theme/flex";
+import { spacingSchema } from "./theme/size";
+import { fontWeightSchema } from "./theme/typography";
 
 // Semantic surface levels that map to Material Design 3 surface container hierarchy.
 const surfaceLevel = z.enum(["lowest", "low", "default", "high", "highest"]);
 
 // Typography scale following Material Design 3 type scale.
 const textSize = z.enum(["xs", "sm", "md", "lg", "xl"]);
-const textWeight = z.enum(["regular", "medium", "semibold"]);
-
-// Spacing scale: 4px increments for consistent density.
-const spacingScale = z.enum(["none", "xs", "sm", "md", "lg", "xl"]);
 
 // Elevation levels matching theme.elevation.
 const elevationLevel = z.enum(["none", "low", "medium", "high"]);
@@ -66,49 +35,77 @@ const iconSet = z.enum([
 ]);
 
 /**
- * Widgets catalog — theme-constrained components for json-render.
+ * Fragments catalog — theme-constrained components for json-render.
  *
- * Every visual property uses semantic tokens (color roles, spacing scale,
- * typography scale) instead of raw values. The rendering layer maps these
- * tokens to the active Material Design 3 theme.
+ * Color props accept either a theme color role (e.g. "primary", "onSurface")
+ * or any CSS color string (e.g. "#FF0000"). Theme roles are resolved at
+ * render time; raw colors are passed through directly.
  */
-export const widgetsCatalog = defineCatalog(schema, {
+export const fragmentsCatalog = defineCatalog(schema, {
     components: {
         // -- Layout --
 
-        Column: {
+        View: {
             props: z.object({
-                gap: spacingScale.nullable(),
-                padding: spacingScale.nullable(),
-                alignItems: z.enum(["start", "center", "end", "stretch"]).nullable(),
-                justifyContent: z.enum(["start", "center", "end", "between"]).nullable(),
-                flex: z.number().nullable(),
+                direction: z.enum(["row", "column"]).nullable(),
+                gap: spacingSchema.nullable(),
+                padding: spacingSchema.nullable(),
+                paddingHorizontal: spacingSchema.nullable(),
+                paddingVertical: spacingSchema.nullable(),
+                paddingTop: spacingSchema.nullable(),
+                paddingBottom: spacingSchema.nullable(),
+                paddingLeft: spacingSchema.nullable(),
+                paddingRight: spacingSchema.nullable(),
+                margin: spacingSchema.nullable(),
+                marginHorizontal: spacingSchema.nullable(),
+                marginVertical: spacingSchema.nullable(),
+                marginTop: spacingSchema.nullable(),
+                marginBottom: spacingSchema.nullable(),
+                marginLeft: spacingSchema.nullable(),
+                marginRight: spacingSchema.nullable(),
+                alignItems: flexAlignSchema.nullable(),
+                justifyContent: flexJustifySchema.nullable(),
+                flexGrow: z.number().nullable(),
+                flexShrink: z.number().nullable(),
+                flexBasis: z.number().nullable(),
+                wrap: z.boolean().nullable(),
+                color: colorSchema.nullable(),
+                pressedColor: colorSchema.nullable(),
+                hoverColor: colorSchema.nullable(),
+                pressable: z.boolean().nullable()
+            }),
+            slots: ["default"],
+            description:
+                "General-purpose container. Optionally pressable with background, pressed, and hover colors. Accepts all flex layout props."
+        },
+
+        ScrollView: {
+            props: z.object({
+                gap: spacingSchema.nullable(),
+                padding: spacingSchema.nullable(),
+                paddingHorizontal: spacingSchema.nullable(),
+                paddingVertical: spacingSchema.nullable(),
+                paddingTop: spacingSchema.nullable(),
+                paddingBottom: spacingSchema.nullable(),
+                paddingLeft: spacingSchema.nullable(),
+                paddingRight: spacingSchema.nullable(),
+                margin: spacingSchema.nullable(),
+                marginHorizontal: spacingSchema.nullable(),
+                marginVertical: spacingSchema.nullable(),
+                marginTop: spacingSchema.nullable(),
+                marginBottom: spacingSchema.nullable(),
+                marginLeft: spacingSchema.nullable(),
+                marginRight: spacingSchema.nullable(),
+                alignItems: flexAlignSchema.nullable(),
+                justifyContent: flexJustifySchema.nullable(),
+                flexGrow: z.number().nullable(),
+                flexShrink: z.number().nullable(),
+                flexBasis: z.number().nullable(),
+                color: colorSchema.nullable(),
                 surface: surfaceLevel.nullable()
             }),
             slots: ["default"],
-            description: "Vertical stack with theme-based spacing and optional surface background."
-        },
-
-        Row: {
-            props: z.object({
-                gap: spacingScale.nullable(),
-                padding: spacingScale.nullable(),
-                alignItems: z.enum(["start", "center", "end", "stretch", "baseline"]).nullable(),
-                justifyContent: z.enum(["start", "center", "end", "between"]).nullable(),
-                flex: z.number().nullable(),
-                wrap: z.boolean().nullable()
-            }),
-            slots: ["default"],
-            description: "Horizontal stack with theme-based spacing."
-        },
-
-        ScrollArea: {
-            props: z.object({
-                padding: spacingScale.nullable(),
-                surface: surfaceLevel.nullable()
-            }),
-            slots: ["default"],
-            description: "Scrollable vertical container."
+            description: "Scrollable vertical container with full layout props."
         },
 
         // -- Surfaces --
@@ -116,9 +113,9 @@ export const widgetsCatalog = defineCatalog(schema, {
         Card: {
             props: z.object({
                 surface: surfaceLevel.nullable(),
-                color: colorRole.nullable(),
+                color: colorSchema.nullable(),
                 elevation: elevationLevel.nullable(),
-                padding: spacingScale.nullable()
+                padding: spacingSchema.nullable()
             }),
             slots: ["default"],
             description:
@@ -126,21 +123,22 @@ export const widgetsCatalog = defineCatalog(schema, {
             example: { surface: "default", elevation: "low", padding: "md" }
         },
 
-        Section: {
+        ItemGroup: {
             props: z.object({
                 title: z.string().nullable(),
                 subtitle: z.string().nullable(),
                 surface: surfaceLevel.nullable(),
-                padding: spacingScale.nullable()
+                padding: spacingSchema.nullable()
             }),
             slots: ["default"],
-            description: "Card with an optional header (title + subtitle) and body content.",
+            description:
+                "Grouped list section with optional header (title + subtitle). Children must be ListItem components only — do not place arbitrary content inside.",
             example: { title: "Settings", padding: "md" }
         },
 
         Divider: {
             props: z.object({
-                spacing: spacingScale.nullable()
+                spacing: spacingSchema.nullable()
             }),
             slots: [],
             description: "Horizontal rule using outline variant color."
@@ -148,7 +146,7 @@ export const widgetsCatalog = defineCatalog(schema, {
 
         Spacer: {
             props: z.object({
-                size: spacingScale.nullable(),
+                size: spacingSchema.nullable(),
                 flex: z.number().nullable()
             }),
             slots: [],
@@ -161,11 +159,32 @@ export const widgetsCatalog = defineCatalog(schema, {
             props: z.object({
                 text: z.string(),
                 size: textSize.nullable(),
-                weight: textWeight.nullable(),
-                color: colorRole.nullable(),
+                weight: fontWeightSchema.nullable(),
+                color: colorSchema.nullable(),
                 align: z.enum(["left", "center", "right"]).nullable(),
                 numberOfLines: z.number().nullable(),
-                strikethrough: z.boolean().nullable()
+                strikethrough: z.boolean().nullable(),
+                underline: z.boolean().nullable(),
+                italic: z.boolean().nullable(),
+                lineHeight: z.number().nullable(),
+                letterSpacing: z.number().nullable(),
+                opacity: z.number().nullable(),
+                padding: spacingSchema.nullable(),
+                paddingHorizontal: spacingSchema.nullable(),
+                paddingVertical: spacingSchema.nullable(),
+                paddingTop: spacingSchema.nullable(),
+                paddingBottom: spacingSchema.nullable(),
+                paddingLeft: spacingSchema.nullable(),
+                paddingRight: spacingSchema.nullable(),
+                margin: spacingSchema.nullable(),
+                marginHorizontal: spacingSchema.nullable(),
+                marginVertical: spacingSchema.nullable(),
+                marginTop: spacingSchema.nullable(),
+                marginBottom: spacingSchema.nullable(),
+                marginLeft: spacingSchema.nullable(),
+                marginRight: spacingSchema.nullable(),
+                flexGrow: z.number().nullable(),
+                flexShrink: z.number().nullable()
             }),
             slots: [],
             description: "Theme-styled text. Color defaults to onSurface.",
@@ -176,7 +195,7 @@ export const widgetsCatalog = defineCatalog(schema, {
             props: z.object({
                 text: z.string(),
                 level: z.enum(["h1", "h2", "h3"]).nullable(),
-                color: colorRole.nullable(),
+                color: colorSchema.nullable(),
                 align: z.enum(["left", "center", "right"]).nullable()
             }),
             slots: [],
@@ -191,7 +210,7 @@ export const widgetsCatalog = defineCatalog(schema, {
                 name: z.string(),
                 set: iconSet.nullable(),
                 size: z.number().nullable(),
-                color: colorRole.nullable()
+                color: colorSchema.nullable()
             }),
             slots: [],
             description:
@@ -277,28 +296,6 @@ export const widgetsCatalog = defineCatalog(schema, {
             example: { title: "Wi-Fi", subtitle: "Connected", showChevron: true }
         },
 
-        Badge: {
-            props: z.object({
-                label: z.string(),
-                variant: z.enum(["default", "primary", "secondary", "error"]).nullable()
-            }),
-            slots: [],
-            description:
-                "Small label badge. 'default' uses surfaceVariant, 'primary' uses primaryContainer, 'error' uses errorContainer.",
-            example: { label: "New", variant: "primary" }
-        },
-
-        Avatar: {
-            props: z.object({
-                initials: z.string().nullable(),
-                src: z.string().nullable(),
-                size: z.enum(["sm", "md", "lg"]).nullable()
-            }),
-            slots: [],
-            description: "Circular avatar using primaryContainer background for initials fallback.",
-            example: { initials: "AB", size: "md" }
-        },
-
         Spinner: {
             props: z.object({
                 size: z.enum(["small", "large"]).nullable()
@@ -310,69 +307,18 @@ export const widgetsCatalog = defineCatalog(schema, {
         ProgressBar: {
             props: z.object({
                 value: z.number(),
-                color: colorRole.nullable(),
-                trackColor: colorRole.nullable(),
+                color: colorSchema.nullable(),
+                trackColor: colorSchema.nullable(),
                 height: z.number().nullable()
             }),
             slots: [],
             description:
                 "Horizontal progress bar. 'value' is 0–1. Defaults: color=primary, trackColor=surfaceContainerHigh, height=6.",
             example: { value: 0.6 }
-        },
-
-        Chip: {
-            props: z.object({
-                label: z.string(),
-                icon: z.string().nullable(),
-                iconSet: iconSet.nullable(),
-                variant: z.enum(["filled", "tonal", "outlined"]).nullable()
-            }),
-            slots: [],
-            description:
-                "Compact pill element. 'filled' uses primary, 'tonal' uses secondaryContainer (default), 'outlined' uses outline border.",
-            example: { label: "Active", variant: "tonal" }
-        },
-
-        Metric: {
-            props: z.object({
-                value: z.string(),
-                label: z.string(),
-                size: z.enum(["sm", "md", "lg"]).nullable(),
-                color: colorRole.nullable(),
-                align: z.enum(["left", "center", "right"]).nullable()
-            }),
-            slots: [],
-            description: "Stacked value/label KPI pair. Value is semibold, label is smaller with reduced opacity.",
-            example: { value: "$12.8K", label: "Revenue", size: "md" }
-        },
-
-        // -- Feedback --
-
-        Banner: {
-            props: z.object({
-                text: z.string(),
-                variant: z.enum(["info", "success", "warning", "error"]).nullable()
-            }),
-            slots: [],
-            description:
-                "Status banner. 'info' uses secondaryContainer, 'success' uses tertiaryContainer, 'warning' uses primaryContainer, 'error' uses errorContainer.",
-            example: { text: "Changes saved", variant: "success" }
-        },
-
-        EmptyState: {
-            props: z.object({
-                title: z.string(),
-                subtitle: z.string().nullable(),
-                icon: z.string().nullable(),
-                iconSet: iconSet.nullable()
-            }),
-            slots: [],
-            description: "Centered placeholder for empty lists/screens. Uses onSurfaceVariant colors.",
-            example: { title: "No items", subtitle: "Create one to get started" }
         }
     },
 
     actions: {}
 });
 
-export type WidgetsCatalog = typeof widgetsCatalog;
+export type FragmentsCatalog = typeof fragmentsCatalog;

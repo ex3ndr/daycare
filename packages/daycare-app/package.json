@@ -12,6 +12,7 @@
         "android": "expo run:android",
         "test": "vitest --run",
         "typecheck": "tsc --noEmit",
+        "export:fragment-skill": "npx tsx scripts/exportFragmentSkill.ts",
         "prebuild": "rm -rf android ios && expo prebuild"
     },
     "dependencies": {
