@@ -14,7 +14,7 @@ describe("fragmentsUpdate", () => {
             kitVersion: "1",
             title: "Profile Card v2",
             description: "Updated",
-            spec: { type: "Text", text: "updated" },
+            spec: { root: "main", elements: { main: { type: "Text", props: { text: "updated" }, children: [] } } },
             archived: false,
             createdAt: 10,
             updatedAt: 20
@@ -26,7 +26,7 @@ describe("fragmentsUpdate", () => {
             body: {
                 title: "Profile Card v2",
                 description: "Updated",
-                spec: { type: "Text", text: "updated" }
+                spec: { root: "main", elements: { main: { type: "Text", props: { text: "updated" }, children: [] } } }
             },
             fragments: {
                 update
@@ -40,7 +40,7 @@ describe("fragmentsUpdate", () => {
                 kitVersion: "1",
                 title: "Profile Card v2",
                 description: "Updated",
-                spec: { type: "Text", text: "updated" },
+                spec: { root: "main", elements: { main: { type: "Text", props: { text: "updated" }, children: [] } } },
                 archived: false,
                 version: 2,
                 createdAt: 10,

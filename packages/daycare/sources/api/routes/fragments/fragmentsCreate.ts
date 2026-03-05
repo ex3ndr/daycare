@@ -1,4 +1,5 @@
 import type { Context } from "@/types";
+import { fragmentSpecIssuesFormat, fragmentSpecValidate } from "../../../fragments/fragmentSpecValidate.js";
 import type { FragmentDbRecord } from "../../../storage/databaseTypes.js";
 import type { FragmentsRepository } from "../../../storage/fragmentsRepository.js";
 
@@ -50,6 +51,11 @@ export async function fragmentsCreate(input: FragmentsCreateInput): Promise<Frag
 
     if (!Object.hasOwn(input.body, "spec")) {
         return { ok: false, error: "spec is required." };
+    }
+
+    const specValidation = fragmentSpecValidate(input.body.spec);
+    if (!specValidation.valid) {
+        return { ok: false, error: `Invalid spec:\n${fragmentSpecIssuesFormat(specValidation.issues)}` };
     }
 
     const description = typeof input.body.description === "string" ? input.body.description.trim() : "";

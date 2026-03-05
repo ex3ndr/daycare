@@ -25,7 +25,13 @@ describe("fragmentCreateToolBuild", () => {
                     title: "Profile Card",
                     kitVersion: "1",
                     description: "Shows profile summary",
-                    spec: { type: "Column", children: [{ type: "Text", text: "Hello" }] }
+                    spec: {
+                        root: "main",
+                        elements: {
+                            main: { type: "View", props: {}, children: ["txt"] },
+                            txt: { type: "Text", props: { text: "Hello" }, children: [] }
+                        }
+                    }
                 },
                 contextBuild(storage),
                 toolCall
@@ -47,7 +53,13 @@ describe("fragmentCreateToolBuild", () => {
             expect(saved?.title).toBe("Profile Card");
             expect(saved?.kitVersion).toBe("1");
             expect(saved?.description).toBe("Shows profile summary");
-            expect(saved?.spec).toEqual({ type: "Column", children: [{ type: "Text", text: "Hello" }] });
+            expect(saved?.spec).toEqual({
+                root: "main",
+                elements: {
+                    main: { type: "View", props: {}, children: ["txt"] },
+                    txt: { type: "Text", props: { text: "Hello" }, children: [] }
+                }
+            });
         } finally {
             storage.connection.close();
         }

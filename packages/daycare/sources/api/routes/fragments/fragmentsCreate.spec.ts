@@ -14,7 +14,7 @@ describe("fragmentsCreate", () => {
             kitVersion: "1",
             title: "Profile Card",
             description: "Shows profile summary",
-            spec: { type: "Column", children: [] },
+            spec: { root: "main", elements: { main: { type: "View", props: {}, children: [] } } },
             archived: false,
             createdAt: 100,
             updatedAt: 100
@@ -28,7 +28,7 @@ describe("fragmentsCreate", () => {
                 kitVersion: "1",
                 title: "Profile Card",
                 description: "Shows profile summary",
-                spec: { type: "Column", children: [] }
+                spec: { root: "main", elements: { main: { type: "View", props: {}, children: [] } } }
             },
             fragments: {
                 create
@@ -42,7 +42,7 @@ describe("fragmentsCreate", () => {
                 kitVersion: "1",
                 title: "Profile Card",
                 description: "Shows profile summary",
-                spec: { type: "Column", children: [] },
+                spec: { root: "main", elements: { main: { type: "View", props: {}, children: [] } } },
                 archived: false,
                 version: 1,
                 createdAt: 100,
@@ -78,13 +78,14 @@ describe("fragmentsCreate", () => {
             })
         ).resolves.toEqual({ ok: false, error: "spec is required." });
 
+        const validSpec = { root: "main", elements: { main: { type: "View", props: {}, children: [] } } };
         const failed = await fragmentsCreate({
             ctx,
             body: {
                 id: "fragment-1",
                 kitVersion: "1",
                 title: "Card",
-                spec: {}
+                spec: validSpec
             },
             fragments: {
                 create: async () => {

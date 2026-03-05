@@ -1,7 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
-
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import { fragmentSpecIssuesFormat, fragmentSpecValidate } from "../../../fragments/fragmentSpecValidate.js";
 import type { FragmentUpdateInput } from "../../../storage/fragmentsRepository.js";
 
 const schema = Type.Object(
@@ -82,6 +82,10 @@ export function fragmentUpdateToolBuild(): ToolDefinition {
                 const spec = payload.spec;
                 if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
                     throw new Error("spec must be an object.");
+                }
+                const validation = fragmentSpecValidate(spec);
+                if (!validation.valid) {
+                    throw new Error(`Invalid spec:\n${fragmentSpecIssuesFormat(validation.issues)}`);
                 }
                 changes.spec = spec;
             }

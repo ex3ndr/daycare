@@ -17,7 +17,7 @@ describe("fragmentsRouteHandle integration", () => {
                     kitVersion: "1",
                     title: "Profile Card",
                     description: "Shows profile summary",
-                    spec: { type: "Column", children: [] }
+                    spec: { root: "main", elements: { main: { type: "View", props: {}, children: [] } } }
                 },
                 ctx,
                 fragments: storage.fragments
@@ -31,7 +31,13 @@ describe("fragmentsRouteHandle integration", () => {
                 method: "POST",
                 body: {
                     title: "Profile Card V2",
-                    spec: { type: "Column", children: [{ type: "Text", text: "hello" }] }
+                    spec: {
+                        root: "main",
+                        elements: {
+                            main: { type: "View", props: {}, children: ["txt"] },
+                            txt: { type: "Text", props: { text: "hello" }, children: [] }
+                        }
+                    }
                 },
                 ctx,
                 fragments: storage.fragments

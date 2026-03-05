@@ -74,7 +74,12 @@ describe("fragmentsRouteHandle", () => {
             pathname: "/fragments/create",
             method: "POST",
             fragments: repo,
-            body: { id: "fragment-1", kitVersion: "1", title: "Profile", spec: {} }
+            body: {
+                id: "fragment-1",
+                kitVersion: "1",
+                title: "Profile",
+                spec: { root: "main", elements: { main: { type: "View", props: {}, children: [] } } }
+            }
         });
         expect(create.statusCode).toBe(200);
         expect(create.payload.ok).toBe(true);

@@ -25,7 +25,7 @@ describe("fragmentUpdateToolBuild", () => {
                 kitVersion: "1",
                 title: "Profile Card",
                 description: "Original",
-                spec: { type: "Text", text: "old" },
+                spec: { root: "main", elements: { main: { type: "Text", props: { text: "old" }, children: [] } } },
                 createdAt: 1,
                 updatedAt: 1
             });
@@ -36,7 +36,7 @@ describe("fragmentUpdateToolBuild", () => {
                     fragmentId: "fragment-1",
                     title: "Profile Card V2",
                     description: "Updated",
-                    spec: { type: "Text", text: "new" }
+                    spec: { root: "main", elements: { main: { type: "Text", props: { text: "new" }, children: [] } } }
                 },
                 contextBuild(storage),
                 toolCall
@@ -47,7 +47,10 @@ describe("fragmentUpdateToolBuild", () => {
             const saved = await storage.fragments.findById(ctx, "fragment-1");
             expect(saved?.title).toBe("Profile Card V2");
             expect(saved?.description).toBe("Updated");
-            expect(saved?.spec).toEqual({ type: "Text", text: "new" });
+            expect(saved?.spec).toEqual({
+                root: "main",
+                elements: { main: { type: "Text", props: { text: "new" }, children: [] } }
+            });
         } finally {
             storage.connection.close();
         }

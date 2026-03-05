@@ -1,8 +1,8 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { type Static, Type } from "@sinclair/typebox";
-
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import { fragmentSpecIssuesFormat, fragmentSpecValidate } from "../../../fragments/fragmentSpecValidate.js";
 
 const schema = Type.Object(
     {
@@ -64,6 +64,11 @@ export function fragmentCreateToolBuild(): ToolDefinition {
             const spec = payload.spec;
             if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
                 throw new Error("spec is required.");
+            }
+
+            const validation = fragmentSpecValidate(spec);
+            if (!validation.valid) {
+                throw new Error(`Invalid spec:\n${fragmentSpecIssuesFormat(validation.issues)}`);
             }
 
             const description = typeof payload.description === "string" ? payload.description.trim() : undefined;
