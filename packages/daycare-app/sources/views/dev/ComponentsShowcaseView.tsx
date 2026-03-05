@@ -11,13 +11,13 @@ const showcaseSpec: Spec = {
     root: "root",
     elements: {
         root: {
-            type: "ScrollArea",
+            type: "ScrollView",
             props: {},
             children: ["main"]
         },
         main: {
-            type: "Column",
-            props: { gap: "lg" },
+            type: "View",
+            props: { direction: "column", gap: "lg" },
             children: [
                 "sectionTypography",
                 "sectionIcons",
@@ -25,15 +25,9 @@ const showcaseSpec: Spec = {
                 "sectionIconButtons",
                 "sectionInputs",
                 "sectionToggles",
-                "sectionBadges",
                 "sectionListItems",
-                "sectionAvatars",
-                "sectionBanners",
                 "sectionCards",
                 "sectionProgress",
-                "sectionChips",
-                "sectionMetrics",
-                "sectionEmpty",
                 "sectionSpinner"
             ]
         },
@@ -41,13 +35,13 @@ const showcaseSpec: Spec = {
         // -- Typography --
 
         sectionTypography: {
-            type: "Section",
+            type: "ItemGroup",
             props: { title: "Typography", padding: "md" },
             children: ["typoCol"]
         },
         typoCol: {
-            type: "Column",
-            props: { gap: "sm" },
+            type: "View",
+            props: { direction: "column", gap: "sm" },
             children: ["typoH1", "typoH2", "typoH3", "typoXs", "typoSm", "typoMd", "typoLg", "typoXl", "typoStrike"]
         },
         typoH1: { type: "Heading", props: { text: "Heading h1", level: "h1" }, children: [] },
@@ -67,13 +61,13 @@ const showcaseSpec: Spec = {
         // -- Icons --
 
         sectionIcons: {
-            type: "Section",
+            type: "ItemGroup",
             props: { title: "Icons", padding: "md" },
             children: ["iconSetsCol"]
         },
         iconSetsCol: {
-            type: "Column",
-            props: { gap: "md" },
+            type: "View",
+            props: { direction: "column", gap: "md" },
             children: [
                 "iconRowIonicons",
                 "iconRowMaterial",
@@ -86,8 +80,8 @@ const showcaseSpec: Spec = {
             ]
         },
         iconRowIonicons: {
-            type: "Column",
-            props: { gap: "xs" },
+            type: "View",
+            props: { direction: "column", gap: "xs" },
             children: ["iconLabelIonicons", "iconIoniconsRow"]
         },
         iconLabelIonicons: {
@@ -96,8 +90,8 @@ const showcaseSpec: Spec = {
             children: []
         },
         iconIoniconsRow: {
-            type: "Row",
-            props: { gap: "md", alignItems: "center", wrap: true },
+            type: "View",
+            props: { direction: "row", gap: "md", alignItems: "center", wrap: true },
             children: ["icIon1", "icIon2", "icIon3", "icIon4", "icIon5"]
         },
         icIon1: { type: "Icon", props: { name: "home", set: "Ionicons" }, children: [] },
@@ -107,8 +101,8 @@ const showcaseSpec: Spec = {
         icIon5: { type: "Icon", props: { name: "star", set: "Ionicons", color: "primary" }, children: [] },
 
         iconRowMaterial: {
-            type: "Column",
-            props: { gap: "xs" },
+            type: "View",
+            props: { direction: "column", gap: "xs" },
             children: ["iconLabelMaterial", "iconMaterialRow"]
         },
         iconLabelMaterial: {
@@ -117,8 +111,8 @@ const showcaseSpec: Spec = {
             children: []
         },
         iconMaterialRow: {
-            type: "Row",
-            props: { gap: "md", alignItems: "center", wrap: true },
+            type: "View",
+            props: { direction: "row", gap: "md", alignItems: "center", wrap: true },
             children: ["icMat1", "icMat2", "icMat3", "icMat4", "icMat5"]
         },
         icMat1: { type: "Icon", props: { name: "dashboard", set: "MaterialIcons" }, children: [] },
@@ -128,8 +122,8 @@ const showcaseSpec: Spec = {
         icMat5: { type: "Icon", props: { name: "folder", set: "MaterialIcons", color: "primary" }, children: [] },
 
         iconRowMaterialCommunity: {
-            type: "Column",
-            props: { gap: "xs" },
+            type: "View",
+            props: { direction: "column", gap: "xs" },
             children: ["iconLabelMaterialCommunity", "iconMaterialCommunityRow"]
         },
         iconLabelMaterialCommunity: {
@@ -138,8 +132,8 @@ const showcaseSpec: Spec = {
             children: []
         },
         iconMaterialCommunityRow: {
-            type: "Row",
-            props: { gap: "md", alignItems: "center", wrap: true },
+            type: "View",
+            props: { direction: "row", gap: "md", alignItems: "center", wrap: true },
             children: ["icMci1", "icMci2", "icMci3", "icMci4", "icMci5"]
         },
         icMci1: { type: "Icon", props: { name: "account-circle", set: "MaterialCommunityIcons" }, children: [] },
@@ -157,8 +151,8 @@ const showcaseSpec: Spec = {
         },
 
         iconRowFeather: {
-            type: "Column",
-            props: { gap: "xs" },
+            type: "View",
+            props: { direction: "column", gap: "xs" },
             children: ["iconLabelFeather", "iconFeatherRow"]
         },
         iconLabelFeather: {
@@ -167,8 +161,8 @@ const showcaseSpec: Spec = {
             children: []
         },
         iconFeatherRow: {
-            type: "Row",
-            props: { gap: "md", alignItems: "center", wrap: true },
+            type: "View",
+            props: { direction: "row", gap: "md", alignItems: "center", wrap: true },
             children: ["icFea1", "icFea2", "icFea3", "icFea4", "icFea5"]
         },
         icFea1: { type: "Icon", props: { name: "activity", set: "Feather" }, children: [] },
@@ -178,8 +172,8 @@ const showcaseSpec: Spec = {
         icFea5: { type: "Icon", props: { name: "zap", set: "Feather", color: "tertiary" }, children: [] },
 
         iconRowFontAwesome: {
-            type: "Column",
-            props: { gap: "xs" },
+            type: "View",
+            props: { direction: "column", gap: "xs" },
             children: ["iconLabelFontAwesome", "iconFontAwesomeRow"]
         },
         iconLabelFontAwesome: {
@@ -188,8 +182,8 @@ const showcaseSpec: Spec = {
             children: []
         },
         iconFontAwesomeRow: {
-            type: "Row",
-            props: { gap: "md", alignItems: "center", wrap: true },
+            type: "View",
+            props: { direction: "row", gap: "md", alignItems: "center", wrap: true },
             children: ["icFa1", "icFa2", "icFa3", "icFa4", "icFa5"]
         },
         icFa1: { type: "Icon", props: { name: "rocket", set: "FontAwesome" }, children: [] },
@@ -199,8 +193,8 @@ const showcaseSpec: Spec = {
         icFa5: { type: "Icon", props: { name: "bolt", set: "FontAwesome" }, children: [] },
 
         iconRowOcticons: {
-            type: "Column",
-            props: { gap: "xs" },
+            type: "View",
+            props: { direction: "column", gap: "xs" },
             children: ["iconLabelOcticons", "iconOcticonsRow"]
         },
         iconLabelOcticons: {
@@ -209,8 +203,8 @@ const showcaseSpec: Spec = {
             children: []
         },
         iconOcticonsRow: {
-            type: "Row",
-            props: { gap: "md", alignItems: "center", wrap: true },
+            type: "View",
+            props: { direction: "row", gap: "md", alignItems: "center", wrap: true },
             children: ["icOct1", "icOct2", "icOct3", "icOct4", "icOct5"]
         },
         icOct1: { type: "Icon", props: { name: "repo", set: "Octicons" }, children: [] },
@@ -220,8 +214,8 @@ const showcaseSpec: Spec = {
         icOct5: { type: "Icon", props: { name: "code", set: "Octicons" }, children: [] },
 
         iconRowAntDesign: {
-            type: "Column",
-            props: { gap: "xs" },
+            type: "View",
+            props: { direction: "column", gap: "xs" },
             children: ["iconLabelAntDesign", "iconAntDesignRow"]
         },
         iconLabelAntDesign: {
@@ -230,8 +224,8 @@ const showcaseSpec: Spec = {
             children: []
         },
         iconAntDesignRow: {
-            type: "Row",
-            props: { gap: "md", alignItems: "center", wrap: true },
+            type: "View",
+            props: { direction: "row", gap: "md", alignItems: "center", wrap: true },
             children: ["icAnt1", "icAnt2", "icAnt3", "icAnt4", "icAnt5"]
         },
         icAnt1: { type: "Icon", props: { name: "home", set: "AntDesign" }, children: [] },
@@ -241,8 +235,8 @@ const showcaseSpec: Spec = {
         icAnt5: { type: "Icon", props: { name: "Safety", set: "AntDesign", color: "tertiary" }, children: [] },
 
         iconRowEntypo: {
-            type: "Column",
-            props: { gap: "xs" },
+            type: "View",
+            props: { direction: "column", gap: "xs" },
             children: ["iconLabelEntypo", "iconEntypoRow"]
         },
         iconLabelEntypo: {
@@ -251,8 +245,8 @@ const showcaseSpec: Spec = {
             children: []
         },
         iconEntypoRow: {
-            type: "Row",
-            props: { gap: "md", alignItems: "center", wrap: true },
+            type: "View",
+            props: { direction: "row", gap: "md", alignItems: "center", wrap: true },
             children: ["icEnt1", "icEnt2", "icEnt3", "icEnt4", "icEnt5"]
         },
         icEnt1: { type: "Icon", props: { name: "air", set: "Entypo" }, children: [] },
@@ -264,18 +258,18 @@ const showcaseSpec: Spec = {
         // -- Buttons --
 
         sectionButtons: {
-            type: "Section",
+            type: "ItemGroup",
             props: { title: "Buttons", padding: "md" },
             children: ["btnCol"]
         },
         btnCol: {
-            type: "Column",
-            props: { gap: "sm" },
+            type: "View",
+            props: { direction: "column", gap: "sm" },
             children: ["btnRow1", "btnRow2"]
         },
         btnRow1: {
-            type: "Row",
-            props: { gap: "sm", wrap: true },
+            type: "View",
+            props: { direction: "row", gap: "sm", wrap: true },
             children: ["btnFilled", "btnTonal", "btnOutlined", "btnText"]
         },
         btnFilled: { type: "Button", props: { label: "Filled", variant: "filled" }, children: [] },
@@ -283,8 +277,8 @@ const showcaseSpec: Spec = {
         btnOutlined: { type: "Button", props: { label: "Outlined", variant: "outlined" }, children: [] },
         btnText: { type: "Button", props: { label: "Text", variant: "text" }, children: [] },
         btnRow2: {
-            type: "Row",
-            props: { gap: "sm", wrap: true },
+            type: "View",
+            props: { direction: "row", gap: "sm", wrap: true },
             children: ["btnSm", "btnMd", "btnLg", "btnDisabled", "btnLoading"]
         },
         btnSm: { type: "Button", props: { label: "Small", variant: "filled", size: "sm" }, children: [] },
@@ -304,13 +298,13 @@ const showcaseSpec: Spec = {
         // -- Icon Buttons --
 
         sectionIconButtons: {
-            type: "Section",
+            type: "ItemGroup",
             props: { title: "Icon Buttons", padding: "md" },
             children: ["iconBtnRow"]
         },
         iconBtnRow: {
-            type: "Row",
-            props: { gap: "sm", alignItems: "center" },
+            type: "View",
+            props: { direction: "row", gap: "sm", alignItems: "center" },
             children: ["iconFilled", "iconTonal", "iconOutlined", "iconStandard"]
         },
         iconFilled: {
@@ -337,13 +331,13 @@ const showcaseSpec: Spec = {
         // -- Inputs --
 
         sectionInputs: {
-            type: "Section",
+            type: "ItemGroup",
             props: { title: "Text Inputs", padding: "md" },
             children: ["inputCol"]
         },
         inputCol: {
-            type: "Column",
-            props: { gap: "sm" },
+            type: "View",
+            props: { direction: "column", gap: "sm" },
             children: ["inputBasic", "inputMultiline"]
         },
         inputBasic: {
@@ -360,13 +354,13 @@ const showcaseSpec: Spec = {
         // -- Toggles --
 
         sectionToggles: {
-            type: "Section",
+            type: "ItemGroup",
             props: { title: "Toggles", padding: "md" },
             children: ["toggleCol"]
         },
         toggleCol: {
-            type: "Column",
-            props: { gap: "md" },
+            type: "View",
+            props: { direction: "column", gap: "md" },
             children: ["switchOn", "switchOff", "checkOn", "checkOff"]
         },
         switchOn: { type: "Switch", props: { label: "Notifications", checked: true }, children: [] },
@@ -374,27 +368,10 @@ const showcaseSpec: Spec = {
         checkOn: { type: "Checkbox", props: { label: "Accept terms", checked: true }, children: [] },
         checkOff: { type: "Checkbox", props: { label: "Subscribe to newsletter", checked: false }, children: [] },
 
-        // -- Badges --
-
-        sectionBadges: {
-            type: "Section",
-            props: { title: "Badges", padding: "md" },
-            children: ["badgeRow"]
-        },
-        badgeRow: {
-            type: "Row",
-            props: { gap: "sm", wrap: true },
-            children: ["badgeDefault", "badgePrimary", "badgeSecondary", "badgeError"]
-        },
-        badgeDefault: { type: "Badge", props: { label: "Default", variant: "default" }, children: [] },
-        badgePrimary: { type: "Badge", props: { label: "Primary", variant: "primary" }, children: [] },
-        badgeSecondary: { type: "Badge", props: { label: "Secondary", variant: "secondary" }, children: [] },
-        badgeError: { type: "Badge", props: { label: "Error", variant: "error" }, children: [] },
-
         // -- List Items --
 
         sectionListItems: {
-            type: "Section",
+            type: "ItemGroup",
             props: { title: "List Items" },
             children: ["listItem1", "listItem2", "listItem3"]
         },
@@ -414,61 +391,16 @@ const showcaseSpec: Spec = {
             children: []
         },
 
-        // -- Avatars --
-
-        sectionAvatars: {
-            type: "Section",
-            props: { title: "Avatars", padding: "md" },
-            children: ["avatarRow"]
-        },
-        avatarRow: {
-            type: "Row",
-            props: { gap: "md", alignItems: "center" },
-            children: ["avatarSm", "avatarMd", "avatarLg"]
-        },
-        avatarSm: { type: "Avatar", props: { initials: "SM", size: "sm" }, children: [] },
-        avatarMd: { type: "Avatar", props: { initials: "MD", size: "md" }, children: [] },
-        avatarLg: { type: "Avatar", props: { initials: "LG", size: "lg" }, children: [] },
-
-        // -- Banners --
-
-        sectionBanners: {
-            type: "Section",
-            props: { title: "Banners", padding: "md" },
-            children: ["bannerCol"]
-        },
-        bannerCol: {
-            type: "Column",
-            props: { gap: "sm" },
-            children: ["bannerInfo", "bannerSuccess", "bannerWarning", "bannerError"]
-        },
-        bannerInfo: { type: "Banner", props: { text: "Info: New update available", variant: "info" }, children: [] },
-        bannerSuccess: {
-            type: "Banner",
-            props: { text: "Success: Changes saved", variant: "success" },
-            children: []
-        },
-        bannerWarning: {
-            type: "Banner",
-            props: { text: "Warning: Low storage", variant: "warning" },
-            children: []
-        },
-        bannerError: {
-            type: "Banner",
-            props: { text: "Error: Connection failed", variant: "error" },
-            children: []
-        },
-
         // -- Cards --
 
         sectionCards: {
-            type: "Section",
+            type: "ItemGroup",
             props: { title: "Cards & Surfaces", padding: "md" },
             children: ["cardsCol"]
         },
         cardsCol: {
-            type: "Column",
-            props: { gap: "sm" },
+            type: "View",
+            props: { direction: "column", gap: "sm" },
             children: ["cardLow", "cardHigh", "cardColored", "dividerExample"]
         },
         cardLow: {
@@ -506,18 +438,18 @@ const showcaseSpec: Spec = {
         // -- Progress Bars --
 
         sectionProgress: {
-            type: "Section",
+            type: "ItemGroup",
             props: { title: "Progress Bars", padding: "md" },
             children: ["progressCol"]
         },
         progressCol: {
-            type: "Column",
-            props: { gap: "md" },
+            type: "View",
+            props: { direction: "column", gap: "md" },
             children: ["progress25", "progress60", "progress100"]
         },
         progress25: {
-            type: "Column",
-            props: { gap: "xs" },
+            type: "View",
+            props: { direction: "column", gap: "xs" },
             children: ["progress25Label", "progress25Bar"]
         },
         progress25Label: {
@@ -527,8 +459,8 @@ const showcaseSpec: Spec = {
         },
         progress25Bar: { type: "ProgressBar", props: { value: 0.25 }, children: [] },
         progress60: {
-            type: "Column",
-            props: { gap: "xs" },
+            type: "View",
+            props: { direction: "column", gap: "xs" },
             children: ["progress60Label", "progress60Bar"]
         },
         progress60Label: {
@@ -538,8 +470,8 @@ const showcaseSpec: Spec = {
         },
         progress60Bar: { type: "ProgressBar", props: { value: 0.6, color: "tertiary" }, children: [] },
         progress100: {
-            type: "Column",
-            props: { gap: "xs" },
+            type: "View",
+            props: { direction: "column", gap: "xs" },
             children: ["progress100Label", "progress100Bar"]
         },
         progress100Label: {
@@ -549,70 +481,16 @@ const showcaseSpec: Spec = {
         },
         progress100Bar: { type: "ProgressBar", props: { value: 1, color: "tertiary", height: 10 }, children: [] },
 
-        // -- Chips --
-
-        sectionChips: {
-            type: "Section",
-            props: { title: "Chips", padding: "md" },
-            children: ["chipsRow"]
-        },
-        chipsRow: {
-            type: "Row",
-            props: { gap: "sm", wrap: true },
-            children: ["chipTonal", "chipFilled", "chipOutlined", "chipIcon"]
-        },
-        chipTonal: { type: "Chip", props: { label: "Tonal" }, children: [] },
-        chipFilled: { type: "Chip", props: { label: "Filled", variant: "filled" }, children: [] },
-        chipOutlined: { type: "Chip", props: { label: "Outlined", variant: "outlined" }, children: [] },
-        chipIcon: {
-            type: "Chip",
-            props: { label: "12", icon: "flame", iconSet: "Octicons", variant: "tonal" },
-            children: []
-        },
-
-        // -- Metrics --
-
-        sectionMetrics: {
-            type: "Section",
-            props: { title: "Metrics", padding: "md" },
-            children: ["metricsRow"]
-        },
-        metricsRow: {
-            type: "Row",
-            props: { gap: "lg" },
-            children: ["metricSm", "metricMd", "metricLg"]
-        },
-        metricSm: { type: "Metric", props: { value: "$2.6K", label: "Ad Spend", size: "sm" }, children: [] },
-        metricMd: { type: "Metric", props: { value: "4.9x", label: "ROAS", size: "md" }, children: [] },
-        metricLg: {
-            type: "Metric",
-            props: { value: "$12,840", label: "Revenue", size: "lg", color: "primary" },
-            children: []
-        },
-
-        // -- Empty State --
-
-        sectionEmpty: {
-            type: "Section",
-            props: { title: "Empty State", padding: "md" },
-            children: ["emptyDemo"]
-        },
-        emptyDemo: {
-            type: "EmptyState",
-            props: { title: "No items yet", subtitle: "Create one to get started", icon: "file-tray-outline" },
-            children: []
-        },
-
         // -- Spinner --
 
         sectionSpinner: {
-            type: "Section",
+            type: "ItemGroup",
             props: { title: "Spinner", padding: "md" },
             children: ["spinnerRow"]
         },
         spinnerRow: {
-            type: "Row",
-            props: { gap: "lg", alignItems: "center", justifyContent: "center" },
+            type: "View",
+            props: { direction: "row", gap: "lg", alignItems: "center", justifyContent: "center" },
             children: ["spinnerSmall", "spinnerLarge"]
         },
         spinnerSmall: { type: "Spinner", props: { size: "small" }, children: [] },

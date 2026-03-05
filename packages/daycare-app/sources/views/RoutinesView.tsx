@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
@@ -58,6 +59,7 @@ const styles = StyleSheet.create({
 
 export function RoutinesView() {
     const { theme } = useUnistyles();
+    const router = useRouter();
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
@@ -67,8 +69,6 @@ export function RoutinesView() {
     const loading = useTasksStore((s) => s.loading);
     const error = useTasksStore((s) => s.error);
     const fetchTasks = useTasksStore((s) => s.fetch);
-    const selectedTaskId = useTasksStore((s) => s.selectedTaskId);
-    const selectTask = useTasksStore((s) => s.selectTask);
 
     useEffect(() => {
         if (baseUrl && token) {
@@ -107,11 +107,9 @@ export function RoutinesView() {
 
     const handleTaskPress = useCallback(
         (taskId: string) => {
-            if (!baseUrl || !token) return;
-            // Toggle: deselect if already selected
-            selectTask(baseUrl, token, selectedTaskId === taskId ? null : taskId);
+            router.push(`/routine/${taskId}`);
         },
-        [baseUrl, token, selectTask, selectedTaskId]
+        [router]
     );
 
     // Recalculate "now" when tasks change so relative times are fresh
@@ -161,7 +159,6 @@ export function RoutinesView() {
                             key={task.id}
                             title={task.title}
                             subtitle={tasksSubtitle(taskCron(task.id), taskWebhook(task.id))}
-                            selected={selectedTaskId === task.id}
                             onPress={() => handleTaskPress(task.id)}
                             rightElement={
                                 <RoutineStatus

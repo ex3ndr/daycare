@@ -1,45 +1,21 @@
-import { Octicons } from "@expo/vector-icons";
 import * as React from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { useAuthStore } from "@/modules/auth/authContext";
 import { useTasksStore } from "@/modules/tasks/tasksContext";
 import { tasksFormatLastRun } from "@/modules/tasks/tasksFormatLastRun";
 
 /**
- * Panel 3: Routine detail display.
+ * Routine detail content.
  * Shows task code, description, parameters, triggers, and timestamps.
+ * Expects the task to be selected via the tasks store before rendering.
  */
 export const RoutineDetailPanel = React.memo(() => {
     const { theme } = useUnistyles();
-    const baseUrl = useAuthStore((s) => s.baseUrl);
-    const token = useAuthStore((s) => s.token);
 
-    const selectedTaskId = useTasksStore((s) => s.selectedTaskId);
     const detail = useTasksStore((s) => s.selectedDetail);
-    const detailLoading = useTasksStore((s) => s.detailLoading);
-    const selectTask = useTasksStore((s) => s.selectTask);
 
     // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally recompute when detail loads
     const now = React.useMemo(() => Date.now(), [detail]);
-
-    const handleClose = React.useCallback(() => {
-        if (baseUrl && token) {
-            selectTask(baseUrl, token, null);
-        }
-    }, [baseUrl, token, selectTask]);
-
-    if (!selectedTaskId) {
-        return null;
-    }
-
-    if (detailLoading) {
-        return (
-            <View style={[panelStyles.centered, { flex: 1 }]}>
-                <ActivityIndicator color={theme.colors.primary} />
-            </View>
-        );
-    }
 
     if (!detail) {
         return null;
@@ -52,16 +28,6 @@ export const RoutineDetailPanel = React.memo(() => {
             style={{ flex: 1, backgroundColor: theme.colors.surface }}
             contentContainerStyle={panelStyles.content}
         >
-            {/* Header */}
-            <View style={panelStyles.header}>
-                <Text style={[panelStyles.title, { color: theme.colors.onSurface }]} numberOfLines={2}>
-                    {task.title}
-                </Text>
-                <Pressable onPress={handleClose} hitSlop={8}>
-                    <Octicons name="x" size={16} color={theme.colors.onSurfaceVariant} />
-                </Pressable>
-            </View>
-
             {/* Description */}
             {task.description && (
                 <View style={panelStyles.section}>
@@ -208,25 +174,9 @@ export const RoutineDetailPanel = React.memo(() => {
 });
 
 const panelStyles = StyleSheet.create({
-    centered: {
-        alignItems: "center",
-        justifyContent: "center"
-    },
     content: {
         padding: 20,
         paddingBottom: 40
-    },
-    header: {
-        flexDirection: "row",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
-        gap: 12,
-        marginBottom: 20
-    },
-    title: {
-        fontSize: 16,
-        fontFamily: "IBMPlexSans-SemiBold",
-        flex: 1
     },
     section: {
         marginBottom: 20

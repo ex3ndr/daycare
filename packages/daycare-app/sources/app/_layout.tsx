@@ -49,6 +49,17 @@ async function loadFonts() {
     });
 }
 
+const modalScreenOptions = {
+    presentation: "modal" as const,
+    animation: "fade_from_bottom" as const,
+    webModalStyle: {
+        width: "90vw",
+        height: "90vh",
+        minWidth: "min(1100px, 90vw)",
+        minHeight: "min(800px, 90vh)"
+    }
+};
+
 export default function RootLayout() {
     const { theme } = useUnistyles();
     const ready = useAuthStore((state) => state.ready);
@@ -115,6 +126,8 @@ export default function RootLayout() {
                                 <Stack screenOptions={{ headerShown: false }}>
                                     <Stack.Protected guard={authState === "authenticated"}>
                                         <Stack.Screen name="(app)" />
+                                        <Stack.Screen name="fragment/[id]" options={modalScreenOptions} />
+                                        <Stack.Screen name="routine/[id]" options={modalScreenOptions} />
                                     </Stack.Protected>
                                     <Stack.Protected guard={authState === "unauthenticated"}>
                                         <Stack.Screen name="(auth)" />

@@ -4,7 +4,6 @@ import type { AppMode } from "@/components/AppHeader";
 import { ContentPanelLayout } from "@/components/layout/ContentPanelLayout";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
-import { useTasksStore } from "@/modules/tasks/tasksContext";
 import { AgentsView } from "@/views/AgentsView";
 import { CostsView } from "@/views/CostsView";
 import { DevView } from "@/views/DevView";
@@ -14,7 +13,6 @@ import { DocumentsView } from "@/views/documents/DocumentsView";
 import { FragmentsView } from "@/views/FragmentsView";
 import { HomeView } from "@/views/HomeView";
 import { RoutinesView } from "@/views/RoutinesView";
-import { RoutineDetailPanel } from "@/views/routines/RoutineDetailPanel";
 import { SettingsView } from "@/views/SettingsView";
 import { SkillsView } from "@/views/SkillsView";
 import { TodosView } from "@/views/TodosView";
@@ -52,9 +50,7 @@ export function SidebarModeView({ mode }: SidebarModeViewProps) {
     const [createDialogVisible, setCreateDialogVisible] = React.useState(false);
     const [createParentId, setCreateParentId] = React.useState<string | null>(null);
 
-    const selectedTaskId = useTasksStore((s) => s.selectedTaskId);
     const isDocuments = mode === "documents";
-    const isRoutines = mode === "routines";
 
     React.useEffect(() => {
         if (isDocuments && baseUrl && token) {
@@ -82,13 +78,7 @@ export function SidebarModeView({ mode }: SidebarModeViewProps) {
         <>
             <ContentPanelLayout
                 panel2={<ViewComponent />}
-                panel3={
-                    isDocuments && selectedId ? (
-                        <DocumentMetadataPanel />
-                    ) : isRoutines && selectedTaskId ? (
-                        <RoutineDetailPanel />
-                    ) : undefined
-                }
+                panel3={isDocuments && selectedId ? <DocumentMetadataPanel /> : undefined}
             />
             {isDocuments && (
                 <DocumentCreateDialog

@@ -13,6 +13,7 @@ COPY packages/daycare-app ./packages/daycare-app
 ENV NODE_ENV=production
 ENV APP_ENV=production
 ENV EXPO_PUBLIC_BASE_URL=/
+ENV EXPO_UNSTABLE_WEB_MODAL=1
 RUN yarn workspace daycare-app export:web
 
 FROM nginx:alpine AS runner
