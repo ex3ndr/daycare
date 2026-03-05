@@ -1040,6 +1040,77 @@ describe("TelegramConnector file uploads", () => {
         });
     });
 
+    it("adds openApp flag for daycare.dev URL buttons", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await connector.sendMessage("123", {
+            text: "Open Daycare",
+            buttons: [{ type: "url", text: "Open", url: "https://daycare.dev/auth#token" }]
+        });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        const sendCall = bot!.sendMessage.mock.calls[0];
+        expect(sendCall?.[2]).toMatchObject({
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        {
+                            text: "Open",
+                            url: "https://daycare.dev/auth?openApp=1#token"
+                        }
+                    ]
+                ]
+            }
+        });
+    });
+
+    it("adds openApp flag for configured app frontend URL buttons", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            webAppUrl: "https://app.example.com/?backend=https%3A%2F%2Fapi.example.com",
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await connector.sendMessage("123", {
+            text: "Open configured app",
+            buttons: [{ type: "url", text: "Open", url: "https://app.example.com/auth#token" }]
+        });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        const sendCall = bot!.sendMessage.mock.calls[0];
+        expect(sendCall?.[2]).toMatchObject({
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        {
+                            text: "Open",
+                            url: "https://app.example.com/auth?openApp=1#token"
+                        }
+                    ]
+                ]
+            }
+        });
+    });
+
     it("does not send reply_to_message_id for private targets by default", async () => {
         const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         const connector = new TelegramConnector({

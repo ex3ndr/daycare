@@ -41,6 +41,7 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
   - `sendRepliesInGroups` is enabled and target chat is group/supergroup.
 - Sends images with `sendPhoto`, videos with `sendVideo`, voice notes with `sendVoice` when `sendAs: "voice"`, and other files with `sendDocument`.
 - Supports inline URL buttons (`url`) and callback buttons (`callback_data`) on text messages.
+- Adds `openApp=1` to URL button links targeting `https://daycare.dev` or the configured app frontend URL so those buttons can trigger app-open behavior.
 - Supports typing indicators and emoji reactions.
 
 ## Slash commands

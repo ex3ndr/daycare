@@ -20,6 +20,7 @@ import type { FileFolder } from "../../engine/files/fileFolder.js";
 import { getLogger } from "../../log.js";
 import { markdownToTelegramHtml } from "./markdownToTelegramHtml.js";
 import { telegramMessageSplit } from "./telegramMessageSplit.js";
+import { telegramUrlOpenAppFlag } from "./telegramUrlOpenAppFlag.js";
 
 export type TelegramConnectorOptions = {
     token: string;
@@ -298,7 +299,9 @@ export class TelegramConnector implements Connector {
             logger.debug(`send: Sending text-only message targetId=${targetId} chatId=${chatId}`);
             await this.sendTextWithFallback(chatId, message.text ?? "", {
                 ...messageReplyOptionsBuild(message, chatId, this.sendReplies, this.sendRepliesInGroups),
-                ...(message.buttons?.length ? { reply_markup: messageButtonsBuild(message.buttons) } : {})
+                ...(message.buttons?.length
+                    ? { reply_markup: messageButtonsBuild(message.buttons, this.webAppUrl) }
+                    : {})
             });
             logger.debug(`send: Text message sent targetId=${targetId} chatId=${chatId}`);
             return;
@@ -1069,7 +1072,10 @@ function targetIdIsGroupChat(targetId: string): boolean {
     return Number.isFinite(parsed) && parsed < 0;
 }
 
-function messageButtonsBuild(buttons: NonNullable<ConnectorMessage["buttons"]>): TelegramBot.InlineKeyboardMarkup {
+function messageButtonsBuild(
+    buttons: NonNullable<ConnectorMessage["buttons"]>,
+    webAppUrl: string | null
+): TelegramBot.InlineKeyboardMarkup {
     return {
         inline_keyboard: buttons.map((button) => {
             if (button.type === "callback") {
@@ -1083,7 +1089,7 @@ function messageButtonsBuild(buttons: NonNullable<ConnectorMessage["buttons"]>):
             return [
                 {
                     text: button.text,
-                    url: button.url
+                    url: telegramUrlOpenAppFlag(button.url, webAppUrl)
                 }
             ];
         })
