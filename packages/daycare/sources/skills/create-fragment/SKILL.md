@@ -98,6 +98,21 @@ Examples:
 
 ## Layout
 
+The app renders on both wide screens (with a max-width of ~1100px, centered) and mobile
+devices. Fragments should be designed to look good at any width. Most interfaces fall
+into three layout categories:
+
+1. **Column layout** — a single vertical stack of full-width sections (`ItemGroup`, `Section`,
+   `Card`, etc.). Best for settings pages, detail views, and simple forms.
+2. **Masonry layout** — a wrapping row of fixed-width or proportional cards/tiles. Use a
+   `View` with `direction: "row"` and `wrap: true` so items flow into multiple rows on
+   wide screens and collapse to fewer columns on narrow ones.
+3. **Combination** — mix both via separate sections. For example, a column of `ItemGroup`
+   settings at the top, followed by a masonry grid of cards below.
+
+Design for the widest case first (the content will be constrained to max-width), then
+verify the layout still works when the container is narrow (mobile).
+
 Fragments use **React Native flexbox**, which differs from web CSS in several defaults:
 
 | Property | RN default | Web default |
