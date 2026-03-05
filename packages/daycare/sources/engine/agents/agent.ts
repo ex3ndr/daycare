@@ -23,6 +23,7 @@ import { Skills } from "../skills/skills.js";
 import type { UserHome } from "../users/userHome.js";
 import { userHomeEnsure } from "../users/userHomeEnsure.js";
 import type { AgentSystem } from "./agentSystem.js";
+import { agentEventEmit } from "./ops/agentEventEmit.js";
 import { agentHistoryAppend } from "./ops/agentHistoryAppend.js";
 import { agentHistoryContext } from "./ops/agentHistoryContext.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
@@ -146,6 +147,18 @@ export class Agent {
             agentId: ctx.agentId,
             source: "agent",
             context: {}
+        });
+        agentEventEmit(agentSystem.eventBus, ctx.userId, "agent.sync.created", {
+            agentId: ctx.agentId,
+            path: String(path),
+            kind: config.kind ?? "agent",
+            name: config.name ?? null,
+            description: config.description ?? null,
+            connectorName: config.connectorName ?? null,
+            foreground: config.foreground,
+            lifecycle: "active",
+            createdAt: state.createdAt,
+            updatedAt: state.updatedAt
         });
         return agent;
     }

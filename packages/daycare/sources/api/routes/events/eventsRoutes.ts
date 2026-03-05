@@ -4,6 +4,7 @@ import { eventsStream } from "./eventsStream.js";
 
 export type EventsRouteContext = {
     eventBus: EngineEventBus | null;
+    userId: string;
     sendJson: (response: http.ServerResponse, statusCode: number, payload: Record<string, unknown>) => void;
 };
 
@@ -32,7 +33,8 @@ export async function eventsRouteHandle(
     eventsStream({
         request,
         response,
-        eventBus: context.eventBus
+        eventBus: context.eventBus,
+        userId: context.userId
     });
     return true;
 }

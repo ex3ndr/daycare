@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { EngineEventBus } from "../../../engine/ipc/events.js";
 import { eventsStream } from "./eventsStream.js";
 
@@ -39,17 +39,26 @@ function responseMockCreate(): MockResponse {
     };
 }
 
+function streamCreate(userId = "user-1") {
+    const request = new EventEmitter();
+    const response = responseMockCreate();
+    const eventBus = new EngineEventBus();
+    eventsStream({
+        request: request as never,
+        response: response as never,
+        eventBus,
+        userId
+    });
+    return { request, response, eventBus };
+}
+
+afterEach(() => {
+    vi.useRealTimers();
+});
+
 describe("eventsStream", () => {
     it("sets SSE headers and sends connected event", () => {
-        const request = new EventEmitter();
-        const response = responseMockCreate();
-        const eventBus = new EngineEventBus();
-
-        eventsStream({
-            request: request as never,
-            response: response as never,
-            eventBus
-        });
+        const { response } = streamCreate();
 
         expect(response.statusCode).toBe(200);
         expect(response.headers["content-type"]).toBe("text/event-stream");
@@ -60,33 +69,45 @@ describe("eventsStream", () => {
     });
 
     it("streams emitted events", () => {
-        const request = new EventEmitter();
-        const response = responseMockCreate();
-        const eventBus = new EngineEventBus();
+        const { response, eventBus } = streamCreate();
 
-        eventsStream({
-            request: request as never,
-            response: response as never,
-            eventBus
-        });
-
-        eventBus.emit("agent.created", { agentId: "a1" });
+        eventBus.emit("agent.created", { agentId: "a1" }, "user-1");
 
         const combined = response.chunks.join("");
         expect(combined).toContain('"type":"agent.created"');
         expect(combined).toContain('"agentId":"a1"');
     });
 
-    it("unsubscribes and ends on request close", () => {
-        const request = new EventEmitter();
-        const response = responseMockCreate();
-        const eventBus = new EngineEventBus();
+    it("filters events scoped to a different user", () => {
+        const { response, eventBus } = streamCreate("user-1");
 
-        eventsStream({
-            request: request as never,
-            response: response as never,
-            eventBus
-        });
+        eventBus.emit("agent.created", { agentId: "a1" }, "user-2");
+
+        // Only the initial connected event should be present
+        expect(response.chunks).toHaveLength(1);
+        expect(response.chunks[0]).toContain('"type":"connected"');
+    });
+
+    it("forwards events with matching userId", () => {
+        const { response, eventBus } = streamCreate("user-1");
+
+        eventBus.emit("agent.updated", { agentId: "a1" }, "user-1");
+
+        expect(response.chunks).toHaveLength(2);
+        expect(response.chunks[1]).toContain('"type":"agent.updated"');
+    });
+
+    it("forwards events without userId (global events)", () => {
+        const { response, eventBus } = streamCreate("user-1");
+
+        eventBus.emit("signal.generated", { id: "s1" });
+
+        expect(response.chunks).toHaveLength(2);
+        expect(response.chunks[1]).toContain('"type":"signal.generated"');
+    });
+
+    it("unsubscribes and ends on request close", () => {
+        const { request, response, eventBus } = streamCreate();
 
         const beforeCloseLength = response.chunks.length;
         request.emit("close");
@@ -94,5 +115,27 @@ describe("eventsStream", () => {
 
         expect(response.writableEnded).toBe(true);
         expect(response.chunks.length).toBe(beforeCloseLength);
+    });
+
+    it("sends keepalive comments periodically", () => {
+        vi.useFakeTimers();
+        const { response } = streamCreate();
+
+        const initialCount = response.chunks.length;
+        vi.advanceTimersByTime(30_000);
+
+        expect(response.chunks.length).toBe(initialCount + 1);
+        expect(response.chunks[response.chunks.length - 1]).toBe(`:keepalive\n\n`);
+    });
+
+    it("clears keepalive timer on request close", () => {
+        vi.useFakeTimers();
+        const { request, response } = streamCreate();
+
+        request.emit("close");
+        const countAfterClose = response.chunks.length;
+        vi.advanceTimersByTime(60_000);
+
+        expect(response.chunks.length).toBe(countAfterClose);
     });
 });

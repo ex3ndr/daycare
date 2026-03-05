@@ -237,6 +237,7 @@ export class AppServer {
         const ctx = contextForUser({ userId: auth.userId });
         const eventsHandled = await eventsRouteHandle(request, response, pathname, {
             eventBus: this.eventBus,
+            userId: auth.userId,
             sendJson: appSendJson
         });
         if (eventsHandled) {

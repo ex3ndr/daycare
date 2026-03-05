@@ -36,6 +36,7 @@ import { UserHome } from "../users/userHome.js";
 import type { Webhooks } from "../webhook/webhooks.js";
 import { Agent } from "./agent.js";
 import { contextForAgent, contextForUser } from "./context.js";
+import { agentEventEmit } from "./ops/agentEventEmit.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
 import { AgentInbox } from "./ops/agentInbox.js";
 import { agentLoopPendingPhaseResolve } from "./ops/agentLoopPendingPhaseResolve.js";
@@ -496,6 +497,11 @@ export class AgentSystem {
         }
         await this.storage.inbox.deleteByAgentId(normalizedAgentId);
         this.eventBus.emit("agent.dead", { agentId: normalizedAgentId, reason: "manual" });
+        agentEventEmit(this.eventBus, targetContext.userId, "agent.sync.updated", {
+            agentId: normalizedAgentId,
+            lifecycle: "dead",
+            updatedAt: state.updatedAt
+        });
         return true;
     }
 
@@ -526,8 +532,14 @@ export class AgentSystem {
                 return;
             }
             entry.agent.state.state = "sleeping";
+            entry.agent.state.updatedAt = Date.now();
             await agentStateWrite(this.storage, entry.ctx, entry.agent.state);
             this.eventBus.emit("agent.sleep", { agentId, reason });
+            agentEventEmit(this.eventBus, entry.ctx.userId, "agent.sync.updated", {
+                agentId,
+                lifecycle: "sleeping",
+                updatedAt: entry.agent.state.updatedAt
+            });
             logger.debug({ agentId, reason }, "event: Agent entered sleep mode");
             // Mark session for memory processing on idle
             // Memory-agents must never trigger the memory worker
@@ -892,8 +904,14 @@ export class AgentSystem {
         await this.cancelIdleSignal(entry.ctx.agentId);
         await this.cancelPoisonPill(entry.ctx.agentId, { kind: entry.config.kind });
         entry.agent.state.state = "active";
+        entry.agent.state.updatedAt = Date.now();
         await agentStateWrite(this.storage, entry.ctx, entry.agent.state);
         this.eventBus.emit("agent.woke", { agentId: entry.ctx.agentId });
+        agentEventEmit(this.eventBus, entry.ctx.userId, "agent.sync.updated", {
+            agentId: entry.ctx.agentId,
+            lifecycle: "active",
+            updatedAt: entry.agent.state.updatedAt
+        });
         logger.debug({ agentId: entry.ctx.agentId }, "event: Agent woke from sleep");
         return true;
     }
@@ -1065,6 +1083,11 @@ export class AgentSystem {
         await agentStateWrite(this.storage, context, state);
         await this.storage.inbox.deleteByAgentId(agentId);
         this.eventBus.emit("agent.dead", { agentId, reason: "poison-pill" });
+        agentEventEmit(this.eventBus, context.userId, "agent.sync.updated", {
+            agentId,
+            lifecycle: "dead",
+            updatedAt: state.updatedAt
+        });
     }
 
     private async markEntryDead(entry: AgentEntry, reason: "poison-pill" | "manual"): Promise<void> {
@@ -1096,6 +1119,11 @@ export class AgentSystem {
             queued.completion?.reject(deadError);
         }
         this.eventBus.emit("agent.dead", { agentId: entry.ctx.agentId, reason });
+        agentEventEmit(this.eventBus, entry.ctx.userId, "agent.sync.updated", {
+            agentId: entry.ctx.agentId,
+            lifecycle: "dead",
+            updatedAt: entry.agent.state.updatedAt
+        });
     }
 
     private async restoreAgent(agentId: string, options?: { allowSleeping?: boolean }): Promise<AgentEntry | null> {

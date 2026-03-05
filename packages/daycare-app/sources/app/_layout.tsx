@@ -9,6 +9,7 @@ import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-c
 import { useUnistyles } from "react-native-unistyles";
 import { AlertProvider } from "@/components/alert";
 import { AuthProvider, useAuthStore } from "@/modules/auth/authContext";
+import { SyncProvider } from "@/modules/sync/SyncProvider";
 import { isTMA } from "@/modules/tma/isTMA";
 
 export { ErrorBoundary } from "expo-router";
@@ -128,24 +129,26 @@ export default function RootLayout() {
         <>
             <StatusBar barStyle={theme.dark ? "light-content" : "dark-content"} />
             <AuthProvider>
-                <AlertProvider>
-                    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-                        <View style={{ flexDirection: "column", flexGrow: 1, flexBasis: 0 }}>
-                            <ThemeProvider value={navigationTheme}>
-                                <Stack screenOptions={{ headerShown: false }}>
-                                    <Stack.Protected guard={authState === "authenticated"}>
-                                        <Stack.Screen name="(app)" />
-                                        <Stack.Screen name="fragment/[id]" options={modalScreenOptions} />
-                                        <Stack.Screen name="routine/[id]" options={modalScreenOptions} />
-                                    </Stack.Protected>
-                                    <Stack.Protected guard={authState === "unauthenticated"}>
-                                        <Stack.Screen name="(auth)" />
-                                    </Stack.Protected>
-                                </Stack>
-                            </ThemeProvider>
-                        </View>
-                    </SafeAreaProvider>
-                </AlertProvider>
+                <SyncProvider>
+                    <AlertProvider>
+                        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+                            <View style={{ flexDirection: "column", flexGrow: 1, flexBasis: 0 }}>
+                                <ThemeProvider value={navigationTheme}>
+                                    <Stack screenOptions={{ headerShown: false }}>
+                                        <Stack.Protected guard={authState === "authenticated"}>
+                                            <Stack.Screen name="(app)" />
+                                            <Stack.Screen name="fragment/[id]" options={modalScreenOptions} />
+                                            <Stack.Screen name="routine/[id]" options={modalScreenOptions} />
+                                        </Stack.Protected>
+                                        <Stack.Protected guard={authState === "unauthenticated"}>
+                                            <Stack.Screen name="(auth)" />
+                                        </Stack.Protected>
+                                    </Stack>
+                                </ThemeProvider>
+                            </View>
+                        </SafeAreaProvider>
+                    </AlertProvider>
+                </SyncProvider>
             </AuthProvider>
         </>
     );
