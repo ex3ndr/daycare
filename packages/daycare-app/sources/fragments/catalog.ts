@@ -132,7 +132,7 @@ export const fragmentsCatalog = defineCatalog(schema, {
             }),
             slots: ["default"],
             description:
-                "Grouped list section with optional header (title + subtitle). Children must be ListItem components only — do not place arbitrary content inside.",
+                "Grouped list section with optional header (title + subtitle). Children must be Item components only — do not place arbitrary content inside.",
             example: { title: "Settings", padding: "md" }
         },
 
@@ -270,7 +270,7 @@ export const fragmentsCatalog = defineCatalog(schema, {
 
         // -- Data Display --
 
-        ListItem: {
+        Item: {
             props: z.object({
                 title: z.string(),
                 subtitle: z.string().nullable(),

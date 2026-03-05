@@ -376,17 +376,17 @@ const showcaseSpec: Spec = {
             children: ["listItem1", "listItem2", "listItem3"]
         },
         listItem1: {
-            type: "ListItem",
+            type: "Item",
             props: { title: "Wi-Fi", subtitle: "Connected", showChevron: true, showDivider: true },
             children: []
         },
         listItem2: {
-            type: "ListItem",
+            type: "Item",
             props: { title: "Bluetooth", subtitle: "Off", showChevron: true, showDivider: true },
             children: []
         },
         listItem3: {
-            type: "ListItem",
+            type: "Item",
             props: { title: "Airplane Mode", showChevron: false, showDivider: false },
             children: []
         },

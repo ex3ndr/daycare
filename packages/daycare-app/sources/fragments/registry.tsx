@@ -257,7 +257,7 @@ const components: Components<FragmentsCatalog> = {
         return (
             <RNView
                 style={{
-                    height: Platform.select({ ios: 0.33, default: 1 }),
+                    height: StyleSheet.hairlineWidth,
                     backgroundColor: theme.colors.outlineVariant,
                     marginVertical: spacing
                 }}
@@ -513,7 +513,7 @@ const components: Components<FragmentsCatalog> = {
         );
     },
 
-    ListItem: ({ props, emit }) => (
+    Item: ({ props, emit }) => (
         <Item
             title={String(props.title ?? "")}
             subtitle={props.subtitle ?? undefined}

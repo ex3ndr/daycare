@@ -95,17 +95,17 @@ const examplesSpec: Spec = {
             children: ["notif1", "notif2", "notif3"]
         },
         notif1: {
-            type: "ListItem",
+            type: "Item",
             props: { title: "Build completed", subtitle: "v2.4.1 deployed to staging", showDivider: true },
             children: []
         },
         notif2: {
-            type: "ListItem",
+            type: "Item",
             props: { title: "New comment", subtitle: "Alex replied to your review", showDivider: true },
             children: []
         },
         notif3: {
-            type: "ListItem",
+            type: "Item",
             props: { title: "Scheduled maintenance", subtitle: "Tomorrow 2:00 AM UTC", showDivider: false },
             children: []
         },
