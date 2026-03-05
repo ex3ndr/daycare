@@ -8,15 +8,9 @@ import { authTelegramExchange } from "@/modules/auth/authApi";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { authLinkPayloadFromUrl } from "@/modules/auth/authLinkPayloadFromUrl";
 import { authTelegramWebAppContextParse } from "@/modules/auth/authTelegramWebAppContextParse";
-
-type TelegramWindow = Window & {
-    Telegram?: {
-        WebApp?: {
-            initData?: string;
-            ready?: () => void;
-        };
-    };
-};
+import { isTMA } from "@/modules/tma/isTMA";
+import { tmaInitData } from "@/modules/tma/tmaInitData";
+import { tmaReady } from "@/modules/tma/tmaReady";
 
 export default function AuthMagicLinkScreen() {
     const { theme } = useUnistyles();
@@ -58,8 +52,19 @@ export default function AuthMagicLinkScreen() {
         if (Platform.OS !== "web" || typeof window === "undefined") {
             return null;
         }
-        const telegramWindow = window as TelegramWindow;
-        return authTelegramWebAppContextParse(window.location.search, telegramWindow.Telegram?.WebApp?.initData);
+        if (!isTMA()) {
+            console.info("[daycare-app] auth-screen: not TMA environment");
+            return null;
+        }
+        const initData = tmaInitData();
+        console.info(
+            `[daycare-app] auth-screen: TMA detected, initData=${initData ? `present (${initData.length} chars)` : "missing"}`
+        );
+        const ctx = authTelegramWebAppContextParse(window.location.search, initData);
+        console.info(
+            `[daycare-app] auth-screen: context=${ctx ? "parsed" : "failed"} search=${window.location.search}`
+        );
+        return ctx;
     }, []);
 
     const serverLabel = React.useMemo(() => {
@@ -80,22 +85,21 @@ export default function AuthMagicLinkScreen() {
     const [error, setError] = React.useState<string | null>(null);
 
     React.useEffect(() => {
-        if (!telegramWebAppContext || typeof window === "undefined") {
+        if (!telegramWebAppContext) {
             return;
         }
-        const telegramWindow = window as TelegramWindow;
-        telegramWindow.Telegram?.WebApp?.ready?.();
+        tmaReady();
     }, [telegramWebAppContext]);
 
     React.useEffect(() => {
-        if (!__DEV__ || isAuthUrlPending) {
+        if (isAuthUrlPending) {
             return;
         }
         console.info(`[daycare-app] auth incoming-link url=${authUrl ?? "none"}`);
     }, [authUrl, isAuthUrlPending]);
 
     React.useEffect(() => {
-        if (!__DEV__ || isAuthUrlPending) {
+        if (isAuthUrlPending) {
             return;
         }
         if (magicPayload || telegramWebAppContext) {
@@ -125,6 +129,7 @@ export default function AuthMagicLinkScreen() {
             return;
         }
 
+        console.info("[daycare-app] auth-screen: entering telegram auth");
         setIsSubmitting(true);
         setError(null);
         try {
@@ -134,11 +139,16 @@ export default function AuthMagicLinkScreen() {
                 telegramWebAppContext.telegramInstanceId
             );
             if (!result.ok) {
+                console.warn(`[daycare-app] auth-screen: telegram exchange failed - ${result.error}`);
                 throw new Error(result.error);
             }
+            console.info(`[daycare-app] auth-screen: telegram exchange succeeded userId=${result.userId}`);
             await login(telegramWebAppContext.backendUrl, result.token);
             router.replace("/(app)" as never);
-        } catch {
+        } catch (e) {
+            console.warn(
+                `[daycare-app] auth-screen: telegram login error - ${e instanceof Error ? e.message : String(e)}`
+            );
             setError("Telegram login failed. Re-open the app from the bot menu or try again.");
         } finally {
             setIsSubmitting(false);

@@ -1,68 +1,68 @@
 import { authTelegramExchange } from "@/modules/auth/authApi";
 import type { AuthSession } from "@/modules/auth/authStoreCreate";
 import { authTelegramWebAppContextParse } from "@/modules/auth/authTelegramWebAppContextParse";
-
-type TelegramWindow = Window & {
-    Telegram?: {
-        WebApp?: {
-            initData?: string;
-            ready?: () => void;
-        };
-    };
-};
-
-const TELEGRAM_INIT_DATA_WAIT_TIMEOUT_MS = 1500;
-const TELEGRAM_INIT_DATA_WAIT_STEP_MS = 50;
+import { isTMA } from "@/modules/tma/isTMA";
+import { tmaInitData } from "@/modules/tma/tmaInitData";
+import { tmaReady } from "@/modules/tma/tmaReady";
 
 /**
  * Resolves a Telegram WebApp session from the current browser page.
- * Expects: Telegram WebApp initData and `backend` query param are present in the active URL.
+ * Uses @tma.js/bridge to detect TMA environment and retrieve initData.
+ * Expects: `backend` query param is present in the active URL when inside TMA.
  */
 export async function authTelegramSessionResolve(): Promise<AuthSession | null> {
     if (typeof window === "undefined") {
+        console.info("[daycare-app] tma-auth: skipped (no window)");
         return null;
     }
 
-    const telegramWindow = window as TelegramWindow;
-    const telegramContextBase = authTelegramWebAppContextParse(window.location.search, "__pending__");
-    if (!telegramContextBase) {
+    if (!isTMA()) {
+        console.info("[daycare-app] tma-auth: skipped (not TMA environment)");
         return null;
     }
-    const initData = await telegramInitDataResolve(telegramWindow);
+
+    console.info("[daycare-app] tma-auth: TMA environment detected");
+
+    const initData = tmaInitData();
+    console.info(`[daycare-app] tma-auth: initData=${initData ? `present (${initData.length} chars)` : "missing"}`);
     if (!initData) {
+        console.warn("[daycare-app] tma-auth: failed - no initData available");
         return null;
     }
+
     const telegramContext = authTelegramWebAppContextParse(window.location.search, initData);
-    if (!telegramContext) {
-        return null;
-    }
-
-    telegramWindow.Telegram?.WebApp?.ready?.();
-    const result = await authTelegramExchange(
-        telegramContext.backendUrl,
-        telegramContext.initData,
-        telegramContext.telegramInstanceId
+    console.info(
+        `[daycare-app] tma-auth: context=${telegramContext ? "parsed" : "failed"} search=${window.location.search}`
     );
-    if (!result.ok) {
+    if (!telegramContext) {
+        console.warn("[daycare-app] tma-auth: failed - missing backend query param");
         return null;
     }
 
-    return {
-        baseUrl: telegramContext.backendUrl,
-        token: result.token
-    };
-}
+    tmaReady();
+    console.info(
+        `[daycare-app] tma-auth: exchanging token with backend=${telegramContext.backendUrl}` +
+            (telegramContext.telegramInstanceId ? ` instanceId=${telegramContext.telegramInstanceId}` : "")
+    );
 
-async function telegramInitDataResolve(telegramWindow: TelegramWindow): Promise<string | null> {
-    const deadline = Date.now() + TELEGRAM_INIT_DATA_WAIT_TIMEOUT_MS;
-    while (Date.now() <= deadline) {
-        const initData = telegramWindow.Telegram?.WebApp?.initData?.trim() ?? "";
-        if (initData.length > 0) {
-            return initData;
+    try {
+        const result = await authTelegramExchange(
+            telegramContext.backendUrl,
+            telegramContext.initData,
+            telegramContext.telegramInstanceId
+        );
+        if (!result.ok) {
+            console.warn(`[daycare-app] tma-auth: exchange failed - ${result.error}`);
+            return null;
         }
-        await new Promise<void>((resolve) => {
-            setTimeout(resolve, TELEGRAM_INIT_DATA_WAIT_STEP_MS);
-        });
+
+        console.info(`[daycare-app] tma-auth: exchange succeeded userId=${result.userId}`);
+        return {
+            baseUrl: telegramContext.backendUrl,
+            token: result.token
+        };
+    } catch (e) {
+        console.warn(`[daycare-app] tma-auth: exchange error - ${e instanceof Error ? e.message : String(e)}`);
+        return null;
     }
-    return null;
 }
