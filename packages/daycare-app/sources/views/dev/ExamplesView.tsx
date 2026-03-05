@@ -1,31 +1,71 @@
-import { JSONUIProvider, Renderer, type Spec } from "@json-render/react-native";
+import { createStateStore, JSONUIProvider, Renderer, type Spec } from "@json-render/react-native";
+import * as React from "react";
 import { View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { fragmentsRegistry } from "@/fragments/registry";
 
 /**
- * Static spec showing practical UI patterns built from widgets.
- * No actions or state — purely visual examples of real-world layouts.
+ * Static spec showing practical UI patterns built from fragment components.
+ * Includes an interactive TodoList example backed by local fragment state.
  */
 const examplesSpec: Spec = {
+    state: {
+        todos: [
+            {
+                id: "sep-work",
+                type: "separator",
+                title: "Work"
+            },
+            {
+                id: "todo-1",
+                title: "Review PR #248",
+                done: true,
+                icons: [{ name: "git-pull-request", set: "Octicons", color: "primary" }],
+                counter: { current: 2, total: 4 },
+                hint: "Due today",
+                toggleIcon: { active: true }
+            },
+            {
+                id: "todo-2",
+                title: "Prepare release notes",
+                done: false,
+                pill: "Today",
+                hint: "Ship before 17:00",
+                toggleIcon: { active: false }
+            },
+            {
+                id: "sep-personal",
+                type: "separator",
+                title: "Personal"
+            },
+            {
+                id: "todo-3",
+                title: "Book dentist appointment",
+                done: false,
+                icons: [{ name: "calendar", set: "Feather", color: "tertiary" }],
+                hint: "This week",
+                toggleIcon: { active: false }
+            }
+        ]
+    },
     root: "root",
     elements: {
         root: {
-            type: "ScrollArea",
+            type: "ScrollView",
             props: {},
             children: ["main"]
         },
         main: {
-            type: "Column",
-            props: { gap: "lg" },
-            children: ["sectionProfile", "sectionSettings", "sectionNotifications", "sectionStats"]
+            type: "View",
+            props: { direction: "column", gap: "lg" },
+            children: ["sectionProfile", "sectionSettings", "sectionNotifications", "sectionStats", "sectionTodos"]
         },
 
         // -- Profile Card --
 
         sectionProfile: {
             type: "Section",
-            props: { title: "Profile Card", padding: "md" },
+            props: { title: "Profile Card", padding: "md", gap: "sm" },
             children: ["profileCard"]
         },
         profileCard: {
@@ -34,15 +74,19 @@ const examplesSpec: Spec = {
             children: ["profileRow"]
         },
         profileRow: {
-            type: "Row",
-            props: { gap: "md", alignItems: "center" },
-            children: ["profileAvatar", "profileInfo", "profileAction"]
+            type: "View",
+            props: { direction: "row", gap: "md", alignItems: "center" },
+            children: ["profileIcon", "profileInfo", "profileAction"]
         },
-        profileAvatar: { type: "Avatar", props: { initials: "JD", size: "lg" }, children: [] },
+        profileIcon: {
+            type: "Icon",
+            props: { name: "person-circle", set: "Ionicons", size: 34, color: "primary" },
+            children: []
+        },
         profileInfo: {
-            type: "Column",
-            props: { flex: 1, gap: "xs" },
-            children: ["profileName", "profileRole", "profileBadge"]
+            type: "View",
+            props: { direction: "column", gap: "xs", flexGrow: 1 },
+            children: ["profileName", "profileRole"]
         },
         profileName: { type: "Text", props: { text: "Jane Doe", weight: "semibold", size: "lg" }, children: [] },
         profileRole: {
@@ -50,13 +94,6 @@ const examplesSpec: Spec = {
             props: { text: "Product Designer", size: "sm", color: "onSurfaceVariant" },
             children: []
         },
-        profileBadge: {
-            type: "Row",
-            props: { gap: "xs" },
-            children: ["badgeOnline", "badgeTeam"]
-        },
-        badgeOnline: { type: "Badge", props: { label: "Online", variant: "primary" }, children: [] },
-        badgeTeam: { type: "Badge", props: { label: "Design Team", variant: "secondary" }, children: [] },
         profileAction: {
             type: "IconButton",
             props: { icon: "create-outline", variant: "standard" },
@@ -67,12 +104,7 @@ const examplesSpec: Spec = {
 
         sectionSettings: {
             type: "Section",
-            props: { title: "Settings", padding: "md" },
-            children: ["settingsCol"]
-        },
-        settingsCol: {
-            type: "Column",
-            props: { gap: "sm" },
+            props: { title: "Settings", padding: "md", gap: "sm" },
             children: ["settingNotif", "settingDark", "settingBio", "settingDivider", "settingsActions"]
         },
         settingNotif: { type: "Switch", props: { label: "Push notifications", checked: true }, children: [] },
@@ -80,8 +112,8 @@ const examplesSpec: Spec = {
         settingBio: { type: "Checkbox", props: { label: "Biometric login", checked: true }, children: [] },
         settingDivider: { type: "Divider", props: { spacing: "xs" }, children: [] },
         settingsActions: {
-            type: "Row",
-            props: { gap: "sm" },
+            type: "View",
+            props: { direction: "row", gap: "sm" },
             children: ["settingSave", "settingReset"]
         },
         settingSave: { type: "Button", props: { label: "Save", variant: "filled", size: "sm" }, children: [] },
@@ -110,90 +142,76 @@ const examplesSpec: Spec = {
             children: []
         },
 
-        // -- Stats Dashboard --
+        // -- Stats --
 
         sectionStats: {
             type: "Section",
-            props: { title: "Dashboard", padding: "md" },
-            children: ["statsRow", "statsDivider", "statsFooter"]
+            props: { title: "Dashboard", padding: "md", gap: "sm" },
+            children: ["statsUptimeLabel", "statsUptimeBar", "statsLatency"]
         },
-        statsRow: {
-            type: "Row",
-            props: { gap: "sm" },
-            children: ["statCard1", "statCard2", "statCard3"]
-        },
-        statCard1: {
-            type: "Card",
-            props: { surface: "low", padding: "md", elevation: "low" },
-            children: ["statCol1"]
-        },
-        statCol1: {
-            type: "Column",
-            props: { gap: "xs", alignItems: "center" },
-            children: ["statIcon1", "statValue1", "statLabel1"]
-        },
-        statIcon1: { type: "Icon", props: { name: "people", set: "Ionicons", color: "primary" }, children: [] },
-        statValue1: { type: "Text", props: { text: "1,247", weight: "semibold", size: "lg" }, children: [] },
-        statLabel1: {
+        statsUptimeLabel: {
             type: "Text",
-            props: { text: "Users", size: "xs", color: "onSurfaceVariant" },
+            props: { text: "Uptime: 89%", size: "sm", color: "onSurfaceVariant" },
             children: []
         },
-        statCard2: {
-            type: "Card",
-            props: { surface: "low", padding: "md", elevation: "low" },
-            children: ["statCol2"]
-        },
-        statCol2: {
-            type: "Column",
-            props: { gap: "xs", alignItems: "center" },
-            children: ["statIcon2", "statValue2", "statLabel2"]
-        },
-        statIcon2: {
-            type: "Icon",
-            props: { name: "checkmark-circle", set: "Ionicons", color: "tertiary" },
+        statsUptimeBar: {
+            type: "ProgressBar",
+            props: { value: 0.89, color: "tertiary" },
             children: []
         },
-        statValue2: { type: "Text", props: { text: "89%", weight: "semibold", size: "lg" }, children: [] },
-        statLabel2: {
+        statsLatency: {
             type: "Text",
-            props: { text: "Uptime", size: "xs", color: "onSurfaceVariant" },
+            props: { text: "Latency: 42ms", size: "sm", color: "onSurfaceVariant" },
             children: []
         },
-        statCard3: {
-            type: "Card",
-            props: { surface: "low", padding: "md", elevation: "low" },
-            children: ["statCol3"]
+
+        // -- TodoList Fragment Example --
+
+        sectionTodos: {
+            type: "Section",
+            props: { title: "Todo List Fragment", subtitle: "Drag, toggle, edit titles", padding: "md", gap: "sm" },
+            children: ["todoIntro", "todoList"]
         },
-        statCol3: {
-            type: "Column",
-            props: { gap: "xs", alignItems: "center" },
-            children: ["statIcon3", "statValue3", "statLabel3"]
-        },
-        statIcon3: { type: "Icon", props: { name: "flash", set: "Ionicons", color: "error" }, children: [] },
-        statValue3: { type: "Text", props: { text: "42ms", weight: "semibold", size: "lg" }, children: [] },
-        statLabel3: {
+        todoIntro: {
             type: "Text",
-            props: { text: "Latency", size: "xs", color: "onSurfaceVariant" },
+            props: {
+                text: "Uses state binding (/todos) with separators, icons, counters, pills, hints, and a two-state toggle icon.",
+                size: "sm",
+                color: "onSurfaceVariant"
+            },
             children: []
         },
-        statsDivider: { type: "Divider", props: { spacing: "xs" }, children: [] },
-        statsFooter: {
-            type: "Banner",
-            props: { text: "All systems operational", variant: "success" },
+        todoList: {
+            type: "TodoList",
+            props: {
+                items: { $bindState: "/todos" },
+                gap: "xs",
+                showCheckbox: true,
+                editable: true,
+                pillColor: "secondaryContainer",
+                pillTextColor: "onSecondaryContainer",
+                toggleIcon: {
+                    icon: "star",
+                    activeIcon: "star-fill",
+                    set: "Octicons",
+                    color: "onSurfaceVariant",
+                    activeColor: "tertiary"
+                }
+            },
             children: []
         }
     }
 };
 
 /**
- * Renders practical UI examples built entirely from widgets.
- * Shows real-world patterns: profile cards, settings, notifications, dashboards.
+ * Renders practical UI examples built entirely from fragment components.
  */
 export function ExamplesView() {
+    const store = React.useMemo(() => createStateStore(examplesSpec.state ?? {}), []);
+
     return (
         <View style={styles.container}>
-            <JSONUIProvider registry={fragmentsRegistry}>
+            <JSONUIProvider registry={fragmentsRegistry} store={store}>
                 <Renderer spec={examplesSpec} registry={fragmentsRegistry} includeStandard={false} />
             </JSONUIProvider>
         </View>
