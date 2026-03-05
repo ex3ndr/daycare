@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { telegramWebAppUrlResolve } from "./telegramWebAppUrlResolve.js";
 
 describe("telegramWebAppUrlResolve", () => {
-    it("returns null when app server is not enabled", () => {
+    it("falls back to default endpoint when no settings are configured", () => {
         const result = telegramWebAppUrlResolve({}, "telegram");
-        expect(result).toBeNull();
+        expect(result).toBe("https://daycare.dev/?backend=https%3A%2F%2Fdaycare.dev&telegramInstanceId=telegram");
     });
 
     it("builds a web app URL with backend and telegram instance id", () => {
@@ -22,5 +22,17 @@ describe("telegramWebAppUrlResolve", () => {
         expect(result).toBe(
             "https://app.example.com/?backend=https%3A%2F%2Fapi.example.com&telegramInstanceId=telegram-main"
         );
+    });
+
+    it("uses server endpoint as both app and backend when app endpoint is missing", () => {
+        const result = telegramWebAppUrlResolve({ appServer: { serverEndpoint: "https://api.example.com" } }, "tg-1");
+
+        expect(result).toBe("https://api.example.com/?backend=https%3A%2F%2Fapi.example.com&telegramInstanceId=tg-1");
+    });
+
+    it("uses default endpoint as backend when only app endpoint is set", () => {
+        const result = telegramWebAppUrlResolve({ appServer: { appEndpoint: "https://app.example.com" } }, "tg-1");
+
+        expect(result).toBe("https://app.example.com/?backend=https%3A%2F%2Fapp.example.com&telegramInstanceId=tg-1");
     });
 });

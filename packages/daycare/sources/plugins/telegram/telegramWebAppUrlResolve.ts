@@ -3,15 +3,12 @@ import { appEndpointNormalize } from "../../api/app-server/appEndpointNormalize.
 import type { SettingsConfig } from "../../settings.js";
 
 /**
- * Resolves Telegram WebApp URL when app server is enabled.
+ * Resolves Telegram WebApp URL from app server endpoint settings.
+ * Falls back to APP_AUTH_DEFAULT_ENDPOINT when no endpoints are configured.
  * Expects: engineSettings are normalized settings and telegramInstanceId is non-empty.
  */
-export function telegramWebAppUrlResolve(engineSettings: SettingsConfig, telegramInstanceId: string): string | null {
+export function telegramWebAppUrlResolve(engineSettings: SettingsConfig, telegramInstanceId: string): string {
     const appServerSettings = engineSettings.appServer;
-    if (appServerSettings?.enabled !== true) {
-        return null;
-    }
-
     const appEndpoint = appEndpointNormalize(valueAsString(appServerSettings?.appEndpoint), "appEndpoint");
     const serverEndpoint = appEndpointNormalize(valueAsString(appServerSettings?.serverEndpoint), "serverEndpoint");
     const appBaseUrl = appEndpoint ?? serverEndpoint ?? APP_AUTH_DEFAULT_ENDPOINT;

@@ -145,8 +145,8 @@ export const plugin = definePlugin({
                         : config.statePath === null
                           ? null
                           : resolvePluginPath(api.dataDir, config.statePath);
-                const webAppUrl = telegramWebAppUrlResolve(api.engineSettings, connectorId) ?? undefined;
-                api.logger.info({ webAppUrl: webAppUrl ?? "none", connectorId }, "event: Resolved Telegram WebApp URL");
+                const webAppUrl = telegramWebAppUrlResolve(api.engineSettings, connectorId);
+                api.logger.info({ webAppUrl, connectorId }, "event: Resolved Telegram WebApp URL");
                 connector = new TelegramConnector({
                     ...config,
                     statePath,
