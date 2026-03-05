@@ -35,4 +35,13 @@ describe("telegramWebAppUrlResolve", () => {
 
         expect(result).toBe("https://app.example.com/?backend=https%3A%2F%2Fapp.example.com&telegramInstanceId=tg-1");
     });
+
+    it("ignores non-HTTPS endpoints and falls back to default", () => {
+        const result = telegramWebAppUrlResolve(
+            { appServer: { appEndpoint: "http://127.0.0.1:8081", serverEndpoint: "http://127.0.0.1:7332" } },
+            "telegram"
+        );
+
+        expect(result).toBe("https://daycare.dev/?backend=https%3A%2F%2Fdaycare.dev&telegramInstanceId=telegram");
+    });
 });

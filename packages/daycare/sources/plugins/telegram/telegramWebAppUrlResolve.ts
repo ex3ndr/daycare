@@ -9,8 +9,11 @@ import type { SettingsConfig } from "../../settings.js";
  */
 export function telegramWebAppUrlResolve(engineSettings: SettingsConfig, telegramInstanceId: string): string {
     const appServerSettings = engineSettings.appServer;
-    const appEndpoint = appEndpointNormalize(valueAsString(appServerSettings?.appEndpoint), "appEndpoint");
-    const serverEndpoint = appEndpointNormalize(valueAsString(appServerSettings?.serverEndpoint), "serverEndpoint");
+    // Telegram rejects non-HTTPS URLs for web app buttons, so only use public endpoints.
+    const appEndpoint = httpsOnly(appEndpointNormalize(valueAsString(appServerSettings?.appEndpoint), "appEndpoint"));
+    const serverEndpoint = httpsOnly(
+        appEndpointNormalize(valueAsString(appServerSettings?.serverEndpoint), "serverEndpoint")
+    );
     const appBaseUrl = appEndpoint ?? serverEndpoint ?? APP_AUTH_DEFAULT_ENDPOINT;
     const backendUrl = serverEndpoint ?? appBaseUrl;
     return telegramWebAppUrlBuild(appBaseUrl, backendUrl, telegramInstanceId);
@@ -24,6 +27,17 @@ function telegramWebAppUrlBuild(appBaseUrl: string, backendUrl: string, telegram
     url.searchParams.set("backend", backendUrl);
     url.searchParams.set("telegramInstanceId", telegramInstanceId);
     return url.toString();
+}
+
+function httpsOnly(url: string | undefined): string | undefined {
+    if (!url) {
+        return undefined;
+    }
+    try {
+        return new URL(url).protocol === "https:" ? url : undefined;
+    } catch {
+        return undefined;
+    }
 }
 
 function valueAsString(value: unknown): string | undefined {
