@@ -926,9 +926,7 @@ export class TelegramConnector implements Connector {
 
     private async menuButtonSync(): Promise<void> {
         const botWithMenu = this.bot as TelegramBot & {
-            setChatMenuButton?: (options: {
-                menu_button: { type: "commands" } | { type: "web_app"; text: string; web_app: { url: string } };
-            }) => Promise<unknown>;
+            setChatMenuButton?: (options: { menu_button: string }) => Promise<unknown>;
         };
         if (typeof botWithMenu.setChatMenuButton !== "function") {
             logger.debug("skip: Telegram API does not expose setChatMenuButton");
@@ -937,22 +935,18 @@ export class TelegramConnector implements Connector {
 
         if (!this.webAppUrl) {
             await botWithMenu.setChatMenuButton({
-                menu_button: {
-                    type: "commands"
-                }
+                menu_button: JSON.stringify({ type: "commands" })
             });
             logger.debug("register: Telegram chat menu button set to commands");
             return;
         }
 
         await botWithMenu.setChatMenuButton({
-            menu_button: {
+            menu_button: JSON.stringify({
                 type: "web_app",
                 text: "Open Daycare",
-                web_app: {
-                    url: this.webAppUrl
-                }
-            }
+                web_app: { url: this.webAppUrl }
+            })
         });
         logger.debug({ webAppUrl: this.webAppUrl }, "register: Telegram chat menu button set to web app");
     }
