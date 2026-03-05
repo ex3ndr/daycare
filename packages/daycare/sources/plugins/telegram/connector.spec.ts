@@ -793,6 +793,51 @@ describe("TelegramConnector file uploads", () => {
         telegramInstances.length = 0;
     });
 
+    it("allows private composite targets and sends to chat id", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await connector.sendMessage("123/123", { text: "hello" });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
+        const sendCall = bot!.sendMessage.mock.calls[0];
+        expect(sendCall?.[0]).toBe("123");
+    });
+
+    it("allows group composite targets by sender uid in private mode", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            mode: "private",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await connector.sendMessage("-100123/123", { text: "hello group" });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
+        const sendCall = bot!.sendMessage.mock.calls[0];
+        expect(sendCall?.[0]).toBe("-100123");
+    });
+
     it("sends explicit contentType and filename for document uploads", async () => {
         const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         const connector = new TelegramConnector({
@@ -984,6 +1029,38 @@ describe("TelegramConnector file uploads", () => {
         expect(bot).toBeTruthy();
         expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
         const sendCall = bot!.sendMessage.mock.calls[0];
+        expect(sendCall?.[2]).toMatchObject({
+            parse_mode: "HTML",
+            reply_to_message_id: 77
+        });
+    });
+
+    it("sends reply_to_message_id for composite group targets when group replies are enabled", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            mode: "public",
+            allowedUids: ["123"],
+            sendReplies: false,
+            sendRepliesInGroups: true,
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await connector.sendMessage("-100123/123", {
+            text: "Group reply",
+            replyToMessageId: "77"
+        });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
+        const sendCall = bot!.sendMessage.mock.calls[0];
+        expect(sendCall?.[0]).toBe("-100123");
         expect(sendCall?.[2]).toMatchObject({
             parse_mode: "HTML",
             reply_to_message_id: 77

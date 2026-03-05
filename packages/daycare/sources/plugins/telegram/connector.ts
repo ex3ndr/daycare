@@ -240,14 +240,15 @@ export class TelegramConnector implements Connector {
         if (!this.isAllowedTarget(targetId, "sendMessage")) {
             return;
         }
+        const chatId = telegramTargetChatIdResolve(targetId);
         const files = message.files ?? [];
         if (files.length === 0) {
-            logger.debug(`send: Sending text-only message targetId=${targetId}`);
-            await this.sendTextWithFallback(targetId, message.text ?? "", {
-                ...messageReplyOptionsBuild(message, targetId, this.sendReplies, this.sendRepliesInGroups),
+            logger.debug(`send: Sending text-only message targetId=${targetId} chatId=${chatId}`);
+            await this.sendTextWithFallback(chatId, message.text ?? "", {
+                ...messageReplyOptionsBuild(message, chatId, this.sendReplies, this.sendRepliesInGroups),
                 ...(message.buttons?.length ? { reply_markup: messageButtonsBuild(message.buttons) } : {})
             });
-            logger.debug(`send: Text message sent targetId=${targetId}`);
+            logger.debug(`send: Text message sent targetId=${targetId} chatId=${chatId}`);
             return;
         }
 
@@ -266,26 +267,27 @@ export class TelegramConnector implements Connector {
             );
         }
         logger.debug(
-            `send: Sending first file targetId=${targetId} fileName=${first.name} mimeType=${first.mimeType} hasCaption=${!!sendCaption}`
+            `send: Sending first file targetId=${targetId} chatId=${chatId} fileName=${first.name} mimeType=${first.mimeType} hasCaption=${!!sendCaption}`
         );
-        await this.sendFile(targetId, first, sendCaption, message.replyToMessageId);
+        await this.sendFile(chatId, first, sendCaption, message.replyToMessageId);
         for (const file of rest) {
             logger.debug(
-                `send: Sending additional file targetId=${targetId} fileName=${file.name} mimeType=${file.mimeType}`
+                `send: Sending additional file targetId=${targetId} chatId=${chatId} fileName=${file.name} mimeType=${file.mimeType}`
             );
-            await this.sendFile(targetId, file);
+            await this.sendFile(chatId, file);
         }
         if (!sendCaption && caption) {
-            await this.sendTextWithFallback(targetId, caption);
+            await this.sendTextWithFallback(chatId, caption);
         }
-        logger.debug(`send: All files sent targetId=${targetId} totalFiles=${files.length}`);
+        logger.debug(`send: All files sent targetId=${targetId} chatId=${chatId} totalFiles=${files.length}`);
     }
 
     startTyping(targetId: string): () => void {
         if (!this.isAllowedTarget(targetId, "startTyping")) {
             return () => undefined;
         }
-        const key = String(targetId);
+        const chatId = telegramTargetChatIdResolve(targetId);
+        const key = chatId;
         if (this.typingTimers.has(key)) {
             return () => {
                 this.stopTyping(key);
@@ -293,7 +295,7 @@ export class TelegramConnector implements Connector {
         }
 
         const send = () => {
-            void this.bot.sendChatAction(targetId, "typing").catch((error) => {
+            void this.bot.sendChatAction(chatId, "typing").catch((error) => {
                 logger.warn({ error }, "error: Telegram typing failed");
             });
         };
@@ -311,8 +313,9 @@ export class TelegramConnector implements Connector {
         if (!this.isAllowedTarget(targetId, "setReaction")) {
             return;
         }
+        const chatId = telegramTargetChatIdResolve(targetId);
         const emoji = reaction as TelegramBot.TelegramEmoji;
-        await this.bot.setMessageReaction(targetId, Number(messageId), {
+        await this.bot.setMessageReaction(chatId, Number(messageId), {
             reaction: [{ type: "emoji", emoji }]
         });
     }
@@ -643,10 +646,21 @@ export class TelegramConnector implements Connector {
     }
 
     private isAllowedTarget(targetId: string, action: string): boolean {
-        if (this.isAllowedUid(targetId)) {
-            return true;
+        const candidates = telegramTargetAllowedCandidatesResolve(targetId);
+        for (const candidate of candidates) {
+            if (this.isAllowedUid(candidate)) {
+                return true;
+            }
         }
-        logger.warn({ targetId, action }, "event: Blocked telegram action for unapproved uid");
+        logger.warn(
+            {
+                targetId,
+                action,
+                chatId: telegramTargetChatIdResolve(targetId),
+                senderId: telegramTargetSenderIdResolve(targetId)
+            },
+            "event: Blocked telegram action for unapproved uid"
+        );
         return false;
     }
 
@@ -953,6 +967,34 @@ function recoverLastUpdateId(content: string): number | null {
     return null;
 }
 
+function telegramTargetPartsResolve(targetId: string): { chatId: string; senderId: string | null } {
+    const segments = targetId
+        .split("/")
+        .map((segment) => segment.trim())
+        .filter((segment) => segment.length > 0);
+    if (segments.length === 0) {
+        return { chatId: targetId.trim(), senderId: null };
+    }
+    if (segments.length === 1) {
+        return { chatId: segments[0]!, senderId: null };
+    }
+    return { chatId: segments[0]!, senderId: segments[1] ?? null };
+}
+
+function telegramTargetChatIdResolve(targetId: string): string {
+    return telegramTargetPartsResolve(targetId).chatId;
+}
+
+function telegramTargetSenderIdResolve(targetId: string): string | null {
+    return telegramTargetPartsResolve(targetId).senderId;
+}
+
+function telegramTargetAllowedCandidatesResolve(targetId: string): string[] {
+    const { chatId, senderId } = telegramTargetPartsResolve(targetId);
+    const candidates = [targetId.trim(), chatId, senderId ?? ""].filter((value) => value.length > 0);
+    return Array.from(new Set(candidates));
+}
+
 function messageReplyOptionsBuild(
     message: Pick<ConnectorMessage, "replyToMessageId">,
     targetId: string,
@@ -977,7 +1019,7 @@ function messageReplyOptionsBuild(
 }
 
 function targetIdIsGroupChat(targetId: string): boolean {
-    const parsed = Number(targetId);
+    const parsed = Number(telegramTargetChatIdResolve(targetId));
     return Number.isFinite(parsed) && parsed < 0;
 }
 
