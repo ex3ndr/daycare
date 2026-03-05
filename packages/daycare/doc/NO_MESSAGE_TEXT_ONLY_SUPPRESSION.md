@@ -10,6 +10,7 @@ Everything else in the turn continues normally:
 - tool calls
 - deferred payload flush/side effects
 - history persistence
+- assistant content record remains unchanged (no text block stripping)
 
 ## Flow
 

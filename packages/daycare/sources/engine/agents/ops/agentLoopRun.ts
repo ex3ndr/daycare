@@ -562,7 +562,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     const toolCallPartition = runPythonToolCallsPartition(assistantToolCalls);
                     const suppressUserOutput = messageNoMessageIs(responseText);
                     if (suppressUserOutput) {
-                        stripNoMessageTextBlocks(response.message);
                         logger.debug("event: NO_MESSAGE detected; suppressing user output for this response");
                     }
                     lastResponseNoMessage = suppressUserOutput;
@@ -1171,16 +1170,6 @@ async function historyRecordAppend(
 }
 
 // Remove NO_MESSAGE text blocks so the sentinel never re-enters future model context.
-function stripNoMessageTextBlocks(message: InferenceContext["messages"][number]): void {
-    if (message.role !== "assistant" || !Array.isArray(message.content)) {
-        return;
-    }
-    const nextContent = message.content.filter((block) => block.type !== "text");
-    if (nextContent.length !== message.content.length) {
-        message.content = nextContent;
-    }
-}
-
 function messageAssistantTextRewrite(message: InferenceContext["messages"][number], text: string): void {
     if (message.role !== "assistant") {
         return;

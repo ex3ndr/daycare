@@ -380,6 +380,11 @@ describe("agentLoopRun", () => {
 
         expect(result.responseText).toBeNull();
         expect(connectorSend).not.toHaveBeenCalled();
+        const assistant = result.historyRecords.find(
+            (record): record is Extract<(typeof result.historyRecords)[number], { type: "assistant_message" }> =>
+                record.type === "assistant_message"
+        );
+        expect(assistant?.content).toEqual([{ type: "text", text: "NO_MESSAGE" }]);
     });
 });
 
