@@ -132,8 +132,21 @@ export const fragmentsCatalog = defineCatalog(schema, {
             }),
             slots: ["default"],
             description:
-                "Grouped list section with optional header (title + subtitle). Children must be Item components only — do not place arbitrary content inside.",
+                "Grouped list section with card background, optional header (title + subtitle). Children must be Item components only — do not place arbitrary content inside.",
             example: { title: "Settings", padding: "md" }
+        },
+
+        Section: {
+            props: z.object({
+                title: z.string().nullable(),
+                subtitle: z.string().nullable(),
+                padding: spacingSchema.nullable(),
+                gap: spacingSchema.nullable()
+            }),
+            slots: ["default"],
+            description:
+                "Plain section with optional header (title + subtitle) but no card background. Use for non-Item content such as Text, Button, View, or any custom layout. Unlike ItemGroup, Section does not apply card styling (no border radius, elevation, or surface color).",
+            example: { title: "About", padding: "md", gap: "sm" }
         },
 
         Divider: {

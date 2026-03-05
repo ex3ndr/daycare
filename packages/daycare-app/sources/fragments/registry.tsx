@@ -22,9 +22,9 @@ import {
     Platform,
     Pressable,
     Switch as RNSwitch,
-    TextInput as RNTextInput,
     View as RNView,
-    Text
+    Text,
+    TextInput
 } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
@@ -251,6 +251,71 @@ const components: Components<FragmentsCatalog> = {
         );
     },
 
+    Section: ({ props, children }) => {
+        const { theme } = useUnistyles();
+        const title = props.title ?? undefined;
+        const subtitle = props.subtitle ?? undefined;
+        return (
+            <RNView style={{ alignItems: "center" }}>
+                <RNView style={{ width: "100%" }}>
+                    {title ? (
+                        <RNView
+                            style={{
+                                paddingTop: Platform.select({ ios: 35, default: 16 }),
+                                paddingBottom: Platform.select({ ios: 6, default: 8 }),
+                                paddingHorizontal: Platform.select({ ios: 32, default: 24 })
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    fontFamily: "IBMPlexSans-Regular",
+                                    color: theme.colors.onSurfaceVariant,
+                                    fontSize: Platform.select({ ios: 13, default: 14 }),
+                                    lineHeight: Platform.select({ ios: 18, default: 20 }),
+                                    textTransform: "uppercase",
+                                    fontWeight: Platform.select({ ios: "normal", default: "500" })
+                                }}
+                            >
+                                {title}
+                            </Text>
+                        </RNView>
+                    ) : (
+                        <RNView style={{ paddingTop: Platform.select({ ios: 20, default: 16 }) }} />
+                    )}
+                    <RNView
+                        style={{
+                            marginHorizontal: Platform.select({ ios: 16, default: 12 }),
+                            gap: spacingResolve(props.gap),
+                            ...(props.padding ? { padding: spacingResolve(props.padding) } : {})
+                        }}
+                    >
+                        {children}
+                    </RNView>
+                    {subtitle ? (
+                        <RNView
+                            style={{
+                                paddingTop: Platform.select({ ios: 6, default: 8 }),
+                                paddingBottom: Platform.select({ ios: 8, default: 16 }),
+                                paddingHorizontal: Platform.select({ ios: 32, default: 24 })
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    fontFamily: "IBMPlexSans-Regular",
+                                    color: theme.colors.onSurfaceVariant,
+                                    fontSize: Platform.select({ ios: 13, default: 14 }),
+                                    lineHeight: Platform.select({ ios: 18, default: 20 })
+                                }}
+                            >
+                                {subtitle}
+                            </Text>
+                        </RNView>
+                    ) : null}
+                </RNView>
+            </RNView>
+        );
+    },
+
     Divider: ({ props }) => {
         const { theme } = useUnistyles();
         const spacing = spacingResolve(props.spacing);
@@ -402,7 +467,7 @@ const components: Components<FragmentsCatalog> = {
                 {props.label && (
                     <Text style={[styles.inputLabel, { color: theme.colors.onSurfaceVariant }]}>{props.label}</Text>
                 )}
-                <RNTextInput
+                <TextInput
                     style={[
                         styles.inputField,
                         {
