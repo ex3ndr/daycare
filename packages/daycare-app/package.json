@@ -24,6 +24,7 @@
         "@lottiefiles/dotlottie-react": "^0.18.3",
         "@paralleldrive/cuid2": "^2.2.2",
         "@react-navigation/native": "7.1.28",
+        "@tma.js/bridge": "^2.2.3",
         "expo": "^55.0.2",
         "expo-clipboard": "~55.0.8",
         "expo-constants": "~55.0.7",

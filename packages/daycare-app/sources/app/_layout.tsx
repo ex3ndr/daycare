@@ -9,6 +9,7 @@ import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-c
 import { useUnistyles } from "react-native-unistyles";
 import { AlertProvider } from "@/components/alert";
 import { AuthProvider, useAuthStore } from "@/modules/auth/authContext";
+import { isTMA } from "@/modules/tma/isTMA";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -68,10 +69,15 @@ export default function RootLayout() {
     const [fontsReady, setFontsReady] = React.useState(false);
 
     React.useEffect(() => {
-        // Catch font loading failures (e.g. timeout in Telegram WebApp) so the app still renders.
-        loadFonts()
-            .catch(() => {})
-            .then(() => setFontsReady(true));
+        if (isTMA()) {
+            // In Telegram Mini Apps, skip awaiting fonts to avoid timeout-induced blank screens.
+            loadFonts().catch(() => {});
+            setFontsReady(true);
+        } else {
+            loadFonts()
+                .catch(() => {})
+                .then(() => setFontsReady(true));
+        }
     }, []);
 
     React.useEffect(() => {
