@@ -32,7 +32,7 @@ describe("authTelegramSessionResolve", () => {
         const fetchMock = vi.fn();
         vi.stubGlobal("fetch", fetchMock);
         vi.stubGlobal("window", {
-            location: { search: "?backend=https%3A%2F%2Fapi.example.com" }
+            location: { href: "https://app.test?backend=https%3A%2F%2Fapi.example.com" }
         } as unknown as Window);
         vi.mocked(isTMA).mockReturnValue(false);
 
@@ -44,7 +44,7 @@ describe("authTelegramSessionResolve", () => {
         const fetchMock = vi.fn();
         vi.stubGlobal("fetch", fetchMock);
         vi.stubGlobal("window", {
-            location: { search: "?backend=https%3A%2F%2Fapi.example.com" }
+            location: { href: "https://app.test?backend=https%3A%2F%2Fapi.example.com" }
         } as unknown as Window);
         vi.mocked(isTMA).mockReturnValue(true);
         vi.mocked(tmaInitData).mockReturnValue(undefined);
@@ -57,7 +57,7 @@ describe("authTelegramSessionResolve", () => {
         const fetchMock = vi.fn();
         vi.stubGlobal("fetch", fetchMock);
         vi.stubGlobal("window", {
-            location: { search: "?foo=bar" }
+            location: { href: "https://app.test?foo=bar" }
         } as unknown as Window);
         vi.mocked(isTMA).mockReturnValue(true);
         vi.mocked(tmaInitData).mockReturnValue("init-data");
@@ -69,7 +69,7 @@ describe("authTelegramSessionResolve", () => {
     it("returns session and calls tmaReady when auth exchange succeeds", async () => {
         vi.stubGlobal("window", {
             location: {
-                search: "?backend=https%3A%2F%2Fapi.example.com%2F&telegramInstanceId=telegram-main"
+                href: "https://app.test?backend=https%3A%2F%2Fapi.example.com%2F&telegramInstanceId=telegram-main"
             }
         } as unknown as Window);
         vi.stubGlobal(
@@ -90,7 +90,7 @@ describe("authTelegramSessionResolve", () => {
 
     it("returns null when auth exchange fails", async () => {
         vi.stubGlobal("window", {
-            location: { search: "?backend=https%3A%2F%2Fapi.example.com" }
+            location: { href: "https://app.test?backend=https%3A%2F%2Fapi.example.com" }
         } as unknown as Window);
         vi.stubGlobal(
             "fetch",

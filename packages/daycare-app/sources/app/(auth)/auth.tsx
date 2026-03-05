@@ -60,10 +60,8 @@ export default function AuthMagicLinkScreen() {
         console.info(
             `[daycare-app] auth-screen: TMA detected, initData=${initData ? `present (${initData.length} chars)` : "missing"}`
         );
-        const ctx = authTelegramWebAppContextParse(window.location.search, initData);
-        console.info(
-            `[daycare-app] auth-screen: context=${ctx ? "parsed" : "failed"} search=${window.location.search}`
-        );
+        const ctx = authTelegramWebAppContextParse(window.location.href, initData);
+        console.info(`[daycare-app] auth-screen: context=${ctx ? "parsed" : "failed"} href=${window.location.href}`);
         return ctx;
     }, []);
 

@@ -30,9 +30,9 @@ export async function authTelegramSessionResolve(): Promise<AuthSession | null> 
         return null;
     }
 
-    const telegramContext = authTelegramWebAppContextParse(window.location.search, initData);
+    const telegramContext = authTelegramWebAppContextParse(window.location.href, initData);
     console.info(
-        `[daycare-app] tma-auth: context=${telegramContext ? "parsed" : "failed"} search=${window.location.search}`
+        `[daycare-app] tma-auth: context=${telegramContext ? "parsed" : "failed"} href=${window.location.href}`
     );
     if (!telegramContext) {
         console.warn("[daycare-app] tma-auth: failed - missing backend query param");
