@@ -3,6 +3,7 @@ import * as React from "react";
 import type { AppMode } from "@/components/AppHeader";
 import { ContentPanelLayout } from "@/components/layout/ContentPanelLayout";
 import { useAuthStore } from "@/modules/auth/authContext";
+import { documentRootIdResolve } from "@/modules/documents/documentRootIdResolve";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
 import { AgentsView } from "@/views/AgentsView";
 import { CostsView } from "@/views/CostsView";
@@ -44,11 +45,13 @@ type SidebarModeViewProps = {
 export function SidebarModeView({ mode }: SidebarModeViewProps) {
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
+    const documentItems = useDocumentsStore((s) => s.items);
     const selectedId = useDocumentsStore((s) => s.selectedId);
     const fetchDocuments = useDocumentsStore((s) => s.fetch);
     const createDocument = useDocumentsStore((s) => s.createDocument);
     const [createDialogVisible, setCreateDialogVisible] = React.useState(false);
     const [createParentId, setCreateParentId] = React.useState<string | null>(null);
+    const documentRootId = React.useMemo(() => documentRootIdResolve(documentItems), [documentItems]);
 
     const isDocuments = mode === "documents";
 
@@ -67,9 +70,11 @@ export function SidebarModeView({ mode }: SidebarModeViewProps) {
     const handleCreate = React.useCallback(
         (input: { title: string; slug: string; parentId: string | null }) => {
             if (!baseUrl || !token) return;
-            void createDocument(baseUrl, token, { id: createId(), ...input });
+            const parentId = input.parentId ?? documentRootId;
+            if (!parentId) return;
+            void createDocument(baseUrl, token, { id: createId(), title: input.title, slug: input.slug, parentId });
         },
-        [baseUrl, token, createDocument]
+        [baseUrl, token, createDocument, documentRootId]
     );
 
     const ViewComponent = viewComponents[mode];
@@ -83,7 +88,7 @@ export function SidebarModeView({ mode }: SidebarModeViewProps) {
             {isDocuments && (
                 <DocumentCreateDialog
                     visible={createDialogVisible}
-                    parentId={createParentId}
+                    parentId={createParentId ?? documentRootId}
                     onClose={() => setCreateDialogVisible(false)}
                     onCreate={handleCreate}
                 />

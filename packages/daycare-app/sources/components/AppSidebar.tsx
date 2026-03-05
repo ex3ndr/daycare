@@ -8,6 +8,7 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { type AppMode, appModes } from "@/components/AppHeader";
 import { Avatar } from "@/components/Avatar";
 import { useAuthStore } from "@/modules/auth/authContext";
+import { documentRootIdResolve } from "@/modules/documents/documentRootIdResolve";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
 import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 
@@ -114,11 +115,12 @@ export const AppSidebar = React.memo<AppSidebarProps>(({ onNavigate }) => {
     }, [activeMode, baseUrl, token, fetchDocuments]);
 
     // Documents under ~/document (children of the root "document" folder)
+    const documentRootId = React.useMemo(() => documentRootIdResolve(documents), [documents]);
+
     const sidebarDocs = React.useMemo(() => {
-        const docRoot = documents.find((d) => d.slug === "document" && d.parentId === null);
-        if (!docRoot) return [];
-        return documents.filter((d) => d.parentId === docRoot.id).sort((a, b) => a.title.localeCompare(b.title));
-    }, [documents]);
+        if (!documentRootId) return [];
+        return documents.filter((d) => d.parentId === documentRootId).sort((a, b) => a.title.localeCompare(b.title));
+    }, [documents, documentRootId]);
 
     const handleModePress = React.useCallback(
         (mode: AppMode) => {
@@ -148,9 +150,11 @@ export const AppSidebar = React.memo<AppSidebarProps>(({ onNavigate }) => {
     const handleCreateDocument = React.useCallback(
         (input: { title: string; slug: string; parentId: string | null }) => {
             if (!baseUrl || !token) return;
-            void createDocument(baseUrl, token, { id: createId(), ...input });
+            const parentId = input.parentId ?? documentRootId;
+            if (!parentId) return;
+            void createDocument(baseUrl, token, { id: createId(), title: input.title, slug: input.slug, parentId });
         },
-        [baseUrl, token, createDocument]
+        [baseUrl, token, createDocument, documentRootId]
     );
 
     return (
@@ -333,7 +337,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(({ onNavigate }) => {
             {/* Document create dialog */}
             <DocumentCreateDialog
                 visible={createDialogVisible}
-                parentId={null}
+                parentId={documentRootId}
                 onClose={() => setCreateDialogVisible(false)}
                 onCreate={handleCreateDocument}
             />

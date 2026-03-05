@@ -4,9 +4,9 @@ import type { DocumentsRouteContext } from "./documentsRoutes.js";
 
 /**
  * Handles POST /documents.
- * Creates a new document with optional parentId.
+ * Creates a new document with required parentId.
  *
- * Expects: JSON body with { id, slug, title, description?, body?, parentId? }.
+ * Expects: JSON body with { id, slug, title, parentId, description?, body? }.
  */
 export async function documentsCreate(
     request: http.IncomingMessage,
@@ -18,12 +18,12 @@ export async function documentsCreate(
     const id = typeof body.id === "string" ? body.id.trim() : "";
     const slug = typeof body.slug === "string" ? body.slug.trim() : "";
     const title = typeof body.title === "string" ? body.title.trim() : "";
+    const parentId = typeof body.parentId === "string" ? body.parentId.trim() : "";
     const description = typeof body.description === "string" ? body.description.trim() : "";
     const docBody = typeof body.body === "string" ? body.body : "";
-    const parentId = typeof body.parentId === "string" ? body.parentId.trim() || null : null;
 
-    if (!id || !slug || !title) {
-        context.sendJson(response, 400, { ok: false, error: "Fields id, slug, and title are required." });
+    if (!id || !slug || !title || !parentId) {
+        context.sendJson(response, 400, { ok: false, error: "Fields id, slug, title, and parentId are required." });
         return;
     }
 

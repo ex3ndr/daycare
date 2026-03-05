@@ -26,7 +26,7 @@ export type DocumentsStore = {
     createDocument: (
         baseUrl: string,
         token: string,
-        input: { id: string; slug: string; title: string; parentId?: string | null }
+        input: { id: string; slug: string; title: string; parentId: string }
     ) => Promise<void>;
     updateDocument: (
         baseUrl: string,

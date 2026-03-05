@@ -32,6 +32,7 @@ import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
 import { Channels } from "./channels/channels.js";
 import { ConfigModule } from "./config/configModule.js";
 import { Crons } from "./cron/crons.js";
+import { documentRootDocumentEnsure } from "./document/documentRootDocumentEnsure.js";
 import { Exposes } from "./expose/exposes.js";
 import { FileFolder } from "./files/fileFolder.js";
 import { Friends } from "./friends/friends.js";
@@ -673,6 +674,7 @@ export class Engine {
         await userHomeEnsure(ownerUserHome);
         await memoryRootDocumentEnsure(ownerCtx, this.storage);
         await peopleRootDocumentEnsure(ownerCtx, this.storage);
+        await documentRootDocumentEnsure(ownerCtx, this.storage);
         await userHomeMigrate(this.config.current, this.storage);
         if (this.config.current.docker.enabled) {
             const imageRef = `${this.config.current.docker.image}:${this.config.current.docker.tag}`;

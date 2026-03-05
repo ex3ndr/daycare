@@ -7,7 +7,7 @@ import type { DocumentItem } from "./documentsTypes";
 export async function documentCreate(
     baseUrl: string,
     token: string,
-    input: { id: string; slug: string; title: string; description?: string; body?: string; parentId?: string | null }
+    input: { id: string; slug: string; title: string; description?: string; body?: string; parentId: string }
 ): Promise<DocumentItem> {
     const response = await fetch(`${baseUrl}/documents`, {
         method: "POST",
