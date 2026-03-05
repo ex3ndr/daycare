@@ -6,9 +6,10 @@ import { Platform, Pressable, Text, TextInput, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { useUnistyles } from "react-native-unistyles";
+import { TODO_HEIGHT } from "./todoHeight";
 import type { TodoDueDate, TodoSubtask } from "./todoTypes";
 
-export const TODO_HEIGHT = Platform.OS === "web" ? 48 : 56;
+export { TODO_HEIGHT };
 
 export type TodoViewProps = {
     id: string;

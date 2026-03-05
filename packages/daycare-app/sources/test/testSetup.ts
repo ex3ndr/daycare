@@ -5,6 +5,7 @@ type StyleValue = Record<string, unknown> | StyleValue[] | null | false | undefi
 
 // Vitest compiles TSX with a runtime that expects global React in this workspace.
 (globalThis as { React?: typeof React }).React = React;
+(globalThis as { __DEV__?: boolean }).__DEV__ = false;
 
 function styleFlatten(style: StyleValue): Record<string, unknown> {
     if (!style) {
@@ -57,12 +58,31 @@ const Ionicons = Object.assign(primitive("Ionicons"), {
         "list-outline": 3,
         "star-outline": 4,
         "trending-up-outline": 5,
-        "checkmark-circle": 6
+        "checkmark-circle": 6,
+        check: 7,
+        star: 8,
+        "star-fill": 9
     }
 });
 
+const iconSet = Ionicons;
+
 vi.mock("@expo/vector-icons", () => ({
-    Ionicons
+    Ionicons,
+    AntDesign: iconSet,
+    Entypo: iconSet,
+    EvilIcons: iconSet,
+    Feather: iconSet,
+    FontAwesome: iconSet,
+    FontAwesome5: iconSet,
+    FontAwesome6: iconSet,
+    Fontisto: iconSet,
+    Foundation: iconSet,
+    MaterialCommunityIcons: iconSet,
+    MaterialIcons: iconSet,
+    Octicons: iconSet,
+    SimpleLineIcons: iconSet,
+    Zocial: iconSet
 }));
 
 vi.mock("react-native-unistyles", () => ({

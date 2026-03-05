@@ -319,6 +319,47 @@ export const fragmentsCatalog = defineCatalog(schema, {
             description:
                 "Horizontal progress bar. 'value' is 0–1. Defaults: color=primary, trackColor=surfaceContainerHigh, height=6.",
             example: { value: 0.6 }
+        },
+
+        TodoList: {
+            props: z.object({
+                items: z.array(
+                    z.object({
+                        id: z.string(),
+                        title: z.string(),
+                        type: z.enum(["item", "separator"]).nullable().optional()
+                    })
+                ),
+                itemHeight: z.number().nullable(),
+                gap: spacingSchema.nullable(),
+                showCheckbox: z.boolean().nullable(),
+                toggleIcon: z
+                    .object({
+                        icon: z.string(),
+                        activeIcon: z.string(),
+                        set: iconSet.nullable(),
+                        color: colorSchema.nullable(),
+                        activeColor: colorSchema.nullable()
+                    })
+                    .nullable(),
+                editable: z.boolean().nullable(),
+                pillColor: colorSchema.nullable(),
+                pillTextColor: colorSchema.nullable()
+            }),
+            slots: [],
+            description:
+                "State-bound draggable todo list. Bind 'items' with {$bindState: '/todos'}. Item shapes: Regular {id, title, done, type?: 'item', icons?: [{name, set?, color?}], counter?: {current, total}, toggleIcon?: {active}, pill?: string, hint?: string}; Separator {id, title, type: 'separator'}. Emits press/toggle/toggleIcon/change/move events.",
+            example: {
+                items: { $bindState: "/todos" },
+                editable: true,
+                toggleIcon: {
+                    icon: "star",
+                    activeIcon: "star-fill",
+                    set: "Octicons",
+                    color: "onSurfaceVariant",
+                    activeColor: "tertiary"
+                }
+            }
         }
     },
 
