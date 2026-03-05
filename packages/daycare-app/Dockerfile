@@ -28,8 +28,18 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Static assets — return 404 if missing (never serve index.html for .js/.css/etc)
+    location ~* \.(?:js|css|map|json|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot)$ {
+        try_files $uri =404;
+        expires 0;
+        add_header Cache-Control "no-store";
+    }
+
+    # SPA fallback — serve index.html for all other routes (no cache)
     location / {
-        try_files $uri $uri/ /index.html;
+        try_files $uri /index.html;
+        expires 0;
+        add_header Cache-Control "no-store";
     }
 }
 EOF
