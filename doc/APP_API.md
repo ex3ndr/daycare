@@ -29,6 +29,7 @@ flowchart TD
     F --> H[/agents]
     F --> I[/tasks]
     F --> J[/skills]
+    F --> O[/swarms]
     F --> K[/documents]
     F --> L[/prompts]
     F --> M[/costs]
@@ -180,6 +181,7 @@ Trigger remove body:
 ## Skills Routes
 - `GET /skills`
 - `GET /skills/:id/content`
+- `POST /skills/eject`
 
 `GET /skills` response (example):
 ```json
@@ -208,6 +210,28 @@ Trigger remove body:
         "description": "Custom helper"
     },
     "content": "# My Skill\n..."
+}
+```
+
+`POST /skills/eject` body:
+```json
+{
+    "name": "my-skill",
+    "path": "/Users/me/workspace/exports"
+}
+```
+
+## Swarm Secret Routes
+- `GET /swarms/:nametag/secrets`
+- `POST /swarms/:nametag/secrets/copy`
+- `POST /swarms/:nametag/secrets/create`
+- `POST /swarms/:nametag/secrets/:name/update`
+- `POST /swarms/:nametag/secrets/:name/delete`
+
+`POST /swarms/:nametag/secrets/copy` body:
+```json
+{
+    "secret": "openai-key"
 }
 ```
 

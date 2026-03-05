@@ -3,6 +3,7 @@ import type { Tool } from "@mariozechner/pi-ai";
 import type { AgentSkill, Context, TaskActiveSummary, TaskListAllResult } from "@/types";
 import type { EngineEventBus } from "../../engine/ipc/events.js";
 import type { Secret } from "../../engine/secrets/secretTypes.js";
+import { UserHome } from "../../engine/users/userHome.js";
 import type { PsqlService } from "../../services/psql/PsqlService.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
@@ -21,6 +22,7 @@ import { promptsRouteHandle } from "./prompts/promptsRoutes.js";
 import type { RouteAgentCallbacks, RouteTaskCallbacks } from "./routeTypes.js";
 import { secretsRouteHandle } from "./secrets/secretsRoutes.js";
 import { skillsRouteHandle } from "./skills/skillsRoutes.js";
+import { swarmsRouteHandle } from "./swarms/swarmsRoutes.js";
 import { tasksRouteHandle } from "./tasks/tasksRoutes.js";
 import { toolsRouteHandle } from "./tools/toolsRoutes.js";
 
@@ -91,8 +93,11 @@ export async function apiRouteHandle(
         });
     }
     if (pathname.startsWith("/skills")) {
+        const userHome = new UserHome(context.usersDir, context.ctx.userId);
         return skillsRouteHandle(request, response, pathname, {
             sendJson: context.sendJson,
+            readJsonBody: context.readJsonBody,
+            personalRoot: userHome.skillsPersonal,
             skills: context.skills
         });
     }
@@ -107,6 +112,15 @@ export async function apiRouteHandle(
             ctx: context.ctx,
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody,
+            secrets: context.secrets
+        });
+    }
+    if (pathname.startsWith("/swarms")) {
+        return swarmsRouteHandle(request, response, pathname, {
+            ctx: context.ctx,
+            sendJson: context.sendJson,
+            readJsonBody: context.readJsonBody,
+            users: context.users,
             secrets: context.secrets
         });
     }

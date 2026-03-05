@@ -1,12 +1,15 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
-import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { Context, ToolDefinition, ToolResultContract } from "@/types";
+import { contextForUser } from "../../agents/context.js";
+import { swarmOwnedUserResolve } from "./swarmOwnedUserResolve.js";
 
 const schema = Type.Object(
     {
         name: Type.String({ minLength: 1 }),
         displayName: Type.String({ minLength: 1 }),
         description: Type.String({ minLength: 1 }),
+        userId: Type.Optional(Type.String({ minLength: 1 })),
         variables: Type.Record(
             Type.String({ minLength: 1 }),
             Type.Union([Type.String(), Type.Number(), Type.Boolean()]),
@@ -72,19 +75,21 @@ export function secretAddToolBuild(): ToolDefinition {
                 throw new Error("At least one variable is required.");
             }
 
-            const existing = await toolContext.secrets.list(toolContext.ctx);
+            const target = await secretTargetResolve(payload.userId, toolContext);
+            const existing = await toolContext.secrets.list(target.ctx);
             const status: SecretAddResult["status"] = existing.some((entry) => entry.name === name)
                 ? "updated"
                 : "created";
 
-            await toolContext.secrets.add(toolContext.ctx, {
+            await toolContext.secrets.add(target.ctx, {
                 name,
                 displayName,
                 description,
                 variables
             });
 
-            const summary = `Secret "${name}" ${status}. Variables: ${variableNames.join(", ")}.`;
+            const scope = target.userId ? ` for swarm "${target.userId}"` : "";
+            const summary = `Secret "${name}" ${status}${scope}. Variables: ${variableNames.join(", ")}.`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -104,6 +109,26 @@ export function secretAddToolBuild(): ToolDefinition {
                 typedResult
             };
         }
+    };
+}
+
+async function secretTargetResolve(
+    userId: string | undefined,
+    toolContext: Parameters<NonNullable<ToolDefinition["execute"]>>[1]
+): Promise<{ ctx: Context; userId: string | null }> {
+    const normalizedUserId = userId?.trim();
+    if (!normalizedUserId) {
+        return { ctx: toolContext.ctx, userId: null };
+    }
+
+    const swarmUser = await swarmOwnedUserResolve({
+        toolContext,
+        userId: normalizedUserId,
+        ownerError: "Only the owner user can manage swarm secrets."
+    });
+    return {
+        ctx: contextForUser({ userId: swarmUser.id }),
+        userId: swarmUser.id
     };
 }
 

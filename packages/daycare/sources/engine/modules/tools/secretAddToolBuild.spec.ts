@@ -107,9 +107,103 @@ describe("secretAddToolBuild", () => {
         expect(listed[0]?.displayName).toBe("New");
         expect(listed[0]?.variables.OPENAI_API_KEY).toBe("sk-new");
     });
+
+    it("creates a secret on a target swarm when userId is provided", async () => {
+        const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-secret-add-tool-"));
+        dirs.push(usersDir);
+        const storage = await storageOpenTest();
+        storages.push(storage);
+        const secrets = new Secrets({ usersDir, observationLog: storage.observationLog });
+        const ownerCtx = contextForUser({ userId: "owner-1" });
+        const tool = secretAddToolBuild();
+
+        const result = await tool.execute(
+            {
+                name: "swarm-key",
+                displayName: "Swarm Key",
+                description: "For swarm",
+                userId: "swarm-1",
+                variables: { API_KEY: "secret" }
+            },
+            contextBuild(ownerCtx, secrets, {
+                owner: { id: "owner-1", isOwner: true, isSwarm: false, parentUserId: null },
+                swarm: { id: "swarm-1", isOwner: false, isSwarm: true, parentUserId: "owner-1" }
+            }),
+            toolCall
+        );
+
+        expect(result.typedResult.status).toBe("created");
+        await expect(secrets.list(contextForUser({ userId: "owner-1" }))).resolves.toEqual([]);
+        await expect(secrets.list(contextForUser({ userId: "swarm-1" }))).resolves.toEqual([
+            {
+                name: "swarm-key",
+                displayName: "Swarm Key",
+                description: "For swarm",
+                variables: { API_KEY: "secret" }
+            }
+        ]);
+    });
+
+    it("throws when non-owner tries to add a swarm secret", async () => {
+        const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-secret-add-tool-"));
+        dirs.push(usersDir);
+        const storage = await storageOpenTest();
+        storages.push(storage);
+        const secrets = new Secrets({ usersDir, observationLog: storage.observationLog });
+        const tool = secretAddToolBuild();
+
+        await expect(
+            tool.execute(
+                {
+                    name: "swarm-key",
+                    displayName: "Swarm Key",
+                    description: "For swarm",
+                    userId: "swarm-1",
+                    variables: { API_KEY: "secret" }
+                },
+                contextBuild(contextForUser({ userId: "user-1" }), secrets, {
+                    owner: { id: "user-1", isOwner: false, isSwarm: false, parentUserId: null },
+                    swarm: { id: "swarm-1", isOwner: false, isSwarm: true, parentUserId: "owner-1" }
+                }),
+                toolCall
+            )
+        ).rejects.toThrow("Only the owner user can manage swarm secrets.");
+    });
+
+    it("throws when target swarm does not exist", async () => {
+        const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-secret-add-tool-"));
+        dirs.push(usersDir);
+        const storage = await storageOpenTest();
+        storages.push(storage);
+        const secrets = new Secrets({ usersDir, observationLog: storage.observationLog });
+        const tool = secretAddToolBuild();
+
+        await expect(
+            tool.execute(
+                {
+                    name: "swarm-key",
+                    displayName: "Swarm Key",
+                    description: "For swarm",
+                    userId: "missing-swarm",
+                    variables: { API_KEY: "secret" }
+                },
+                contextBuild(contextForUser({ userId: "owner-1" }), secrets, {
+                    owner: { id: "owner-1", isOwner: true, isSwarm: false, parentUserId: null }
+                }),
+                toolCall
+            )
+        ).rejects.toThrow("Swarm not found: missing-swarm");
+    });
 });
 
-function contextBuild(ctx: ToolExecutionContext["ctx"], secrets: Secrets): ToolExecutionContext {
+function contextBuild(
+    ctx: ToolExecutionContext["ctx"],
+    secrets: Secrets,
+    users?: {
+        owner: { id: string; isOwner: boolean; isSwarm: boolean; parentUserId: string | null };
+        swarm?: { id: string; isOwner: boolean; isSwarm: boolean; parentUserId: string | null };
+    }
+): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: null as unknown as ToolExecutionContext["sandbox"],
@@ -120,7 +214,23 @@ function contextBuild(ctx: ToolExecutionContext["ctx"], secrets: Secrets): ToolE
         ctx,
         source: "test",
         messageContext: {},
-        agentSystem: {} as unknown as ToolExecutionContext["agentSystem"],
+        agentSystem: users
+            ? ({
+                  storage: {
+                      users: {
+                          findById: async (id: string) => {
+                              if (id === users.owner.id) {
+                                  return users.owner;
+                              }
+                              if (users.swarm && id === users.swarm.id) {
+                                  return users.swarm;
+                              }
+                              return null;
+                          }
+                      }
+                  }
+              } as unknown as ToolExecutionContext["agentSystem"])
+            : ({} as unknown as ToolExecutionContext["agentSystem"]),
         secrets
     };
 }

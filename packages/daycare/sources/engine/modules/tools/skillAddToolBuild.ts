@@ -5,11 +5,13 @@ import { type Static, Type } from "@sinclair/typebox";
 import matter from "gray-matter";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { SKILL_FILENAME } from "../../skills/skillConstants.js";
+import { swarmOwnedUserResolve } from "./swarmOwnedUserResolve.js";
 import type { ToolExecutionContext } from "./types.js";
 
 const schema = Type.Object(
     {
-        path: Type.String({ minLength: 1 })
+        path: Type.String({ minLength: 1 }),
+        userId: Type.Optional(Type.String({ minLength: 1 }))
     },
     { additionalProperties: false }
 );
@@ -51,10 +53,7 @@ export function skillAddToolBuild(): ToolDefinition {
         visibleByDefault: (context) => context.config.foreground === true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as SkillAddArgs;
-            const personalRoot = toolContext.skillsPersonalRoot;
-            if (!personalRoot) {
-                throw new Error("Personal skills directory is not configured.");
-            }
+            const target = await skillAddTargetResolve(payload, toolContext);
 
             const sourcePath = payload.path.trim();
             const skillFileSandboxPath = path.posix.join(sourcePath, SKILL_FILENAME);
@@ -73,17 +72,18 @@ export function skillAddToolBuild(): ToolDefinition {
 
             // Copy source directory to personal skills using host paths
             const sourceHostDir = path.dirname(readResult.resolvedPath);
-            const targetDir = path.join(personalRoot, skillName);
+            const targetDir = path.join(target.personalRoot, skillName);
             const existed = (await statSafe(targetDir))?.isDirectory() ?? false;
             await fs.rm(targetDir, { recursive: true, force: true });
-            await fs.mkdir(personalRoot, { recursive: true });
+            await fs.mkdir(target.personalRoot, { recursive: true });
             await fs.cp(sourceHostDir, targetDir, { recursive: true });
 
             const status = existed ? "replaced" : "installed";
+            const location = target.userId ? `swarm "${target.userId}" personal skills` : "personal skills";
             const summary =
                 status === "replaced"
-                    ? `Skill "${skillName}" replaced in personal skills.`
-                    : `Skill "${skillName}" installed to personal skills.`;
+                    ? `Skill "${skillName}" replaced in ${location}.`
+                    : `Skill "${skillName}" installed to ${location}.`;
 
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
@@ -98,6 +98,30 @@ export function skillAddToolBuild(): ToolDefinition {
                 typedResult: { summary, skillName, status }
             };
         }
+    };
+}
+
+async function skillAddTargetResolve(
+    payload: SkillAddArgs,
+    toolContext: ToolExecutionContext
+): Promise<{ personalRoot: string; userId: string | null }> {
+    const targetUserId = payload.userId?.trim();
+    if (!targetUserId) {
+        const personalRoot = toolContext.skillsPersonalRoot;
+        if (!personalRoot) {
+            throw new Error("Personal skills directory is not configured.");
+        }
+        return { personalRoot, userId: null };
+    }
+
+    const swarmUser = await swarmOwnedUserResolve({
+        toolContext,
+        userId: targetUserId,
+        ownerError: "Only the owner user can install skills to swarms."
+    });
+    return {
+        personalRoot: toolContext.agentSystem.userHomeForUserId(swarmUser.id).skillsPersonal,
+        userId: swarmUser.id
     };
 }
 

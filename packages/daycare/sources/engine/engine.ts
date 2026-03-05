@@ -81,6 +81,7 @@ import { buildReactionTool } from "./modules/tools/reaction.js";
 import { sayTool } from "./modules/tools/sayTool.js";
 import { secretAddToolBuild } from "./modules/tools/secretAddToolBuild.js";
 import { secretRemoveToolBuild } from "./modules/tools/secretRemoveToolBuild.js";
+import { secretCopyToolBuild } from "./modules/tools/secretsCopyToolBuild.js";
 import { buildSendFileTool } from "./modules/tools/send-file.js";
 import { sendUserMessageToolBuild } from "./modules/tools/sendUserMessageTool.js";
 import { sessionHistoryToolBuild } from "./modules/tools/sessionHistoryToolBuild.js";
@@ -89,6 +90,7 @@ import { signalEventsCsvToolBuild } from "./modules/tools/signalEventsCsvToolBui
 import { buildSignalSubscribeTool } from "./modules/tools/signalSubscribeToolBuild.js";
 import { buildSignalUnsubscribeTool } from "./modules/tools/signalUnsubscribeToolBuild.js";
 import { skillAddToolBuild } from "./modules/tools/skillAddToolBuild.js";
+import { skillEjectToolBuild } from "./modules/tools/skillEjectToolBuild.js";
 import { skillRemoveToolBuild } from "./modules/tools/skillRemoveToolBuild.js";
 import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
 import { buildSpeechGenerationTool } from "./modules/tools/speech-generation.js";
@@ -731,8 +733,10 @@ export class Engine {
         this.modules.tools.register("core", skillToolBuild());
         this.modules.tools.register("core", skillAddToolBuild());
         this.modules.tools.register("core", skillRemoveToolBuild());
+        this.modules.tools.register("core", skillEjectToolBuild());
         this.modules.tools.register("core", secretAddToolBuild());
         this.modules.tools.register("core", secretRemoveToolBuild());
+        this.modules.tools.register("core", secretCopyToolBuild());
         this.modules.tools.register("core", userProfileUpdateTool());
         this.modules.tools.register(
             "core",

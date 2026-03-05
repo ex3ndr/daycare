@@ -154,9 +154,139 @@ describe("skillAddToolBuild", () => {
             await dirs.cleanup();
         }
     });
+
+    it("installs a skill to a target swarm user when userId is provided", async () => {
+        const dirs = await testDirsCreate();
+        try {
+            const sourceDir = path.join(dirs.homeDir, "source-skill");
+            await fs.mkdir(sourceDir, { recursive: true });
+            await fs.writeFile(path.join(sourceDir, "SKILL.md"), "---\nname: test-skill\n---\nBody");
+
+            const swarmUserId = "swarm-1";
+            const swarmPersonalRoot = path.join(dirs.baseDir, swarmUserId, "skills", "personal");
+            const tool = skillAddToolBuild();
+            const context = contextBuild({
+                skillsPersonalRoot: dirs.personalRoot,
+                homeDir: dirs.homeDir,
+                agentSystem: {
+                    storage: {
+                        users: {
+                            findById: async (id: string) => {
+                                if (id === "owner-1") {
+                                    return {
+                                        id: "owner-1",
+                                        isOwner: true,
+                                        isSwarm: false,
+                                        parentUserId: null
+                                    };
+                                }
+                                if (id === swarmUserId) {
+                                    return {
+                                        id: swarmUserId,
+                                        isOwner: false,
+                                        isSwarm: true,
+                                        parentUserId: "owner-1"
+                                    };
+                                }
+                                return null;
+                            }
+                        }
+                    },
+                    userHomeForUserId: (userId: string) => ({
+                        skillsPersonal: path.join(dirs.baseDir, userId, "skills", "personal")
+                    })
+                } as unknown as ToolExecutionContext["agentSystem"],
+                ctx: { userId: "owner-1", agentId: "agent-1" } as ToolExecutionContext["ctx"]
+            });
+            const result = await tool.execute({ path: "source-skill", userId: swarmUserId }, context, toolCall);
+
+            expect(result.typedResult.status).toBe("installed");
+            const installed = await fs.readFile(path.join(swarmPersonalRoot, "test-skill", "SKILL.md"), "utf8");
+            expect(installed).toContain("name: test-skill");
+        } finally {
+            await dirs.cleanup();
+        }
+    });
+
+    it("throws when non-owner user tries to install a skill to a swarm", async () => {
+        const dirs = await testDirsCreate();
+        try {
+            const sourceDir = path.join(dirs.homeDir, "source-skill");
+            await fs.mkdir(sourceDir, { recursive: true });
+            await fs.writeFile(path.join(sourceDir, "SKILL.md"), "---\nname: test-skill\n---\nBody");
+
+            const tool = skillAddToolBuild();
+            const context = contextBuild({
+                skillsPersonalRoot: dirs.personalRoot,
+                homeDir: dirs.homeDir,
+                agentSystem: {
+                    storage: {
+                        users: {
+                            findById: async (id: string) =>
+                                id === "user-1"
+                                    ? {
+                                          id: "user-1",
+                                          isOwner: false,
+                                          isSwarm: false,
+                                          parentUserId: null
+                                      }
+                                    : null
+                        }
+                    }
+                } as unknown as ToolExecutionContext["agentSystem"]
+            });
+
+            await expect(tool.execute({ path: "source-skill", userId: "swarm-1" }, context, toolCall)).rejects.toThrow(
+                "Only the owner user can install skills to swarms."
+            );
+        } finally {
+            await dirs.cleanup();
+        }
+    });
+
+    it("throws when target swarm is not found", async () => {
+        const dirs = await testDirsCreate();
+        try {
+            const sourceDir = path.join(dirs.homeDir, "source-skill");
+            await fs.mkdir(sourceDir, { recursive: true });
+            await fs.writeFile(path.join(sourceDir, "SKILL.md"), "---\nname: test-skill\n---\nBody");
+
+            const tool = skillAddToolBuild();
+            const context = contextBuild({
+                skillsPersonalRoot: dirs.personalRoot,
+                homeDir: dirs.homeDir,
+                agentSystem: {
+                    storage: {
+                        users: {
+                            findById: async (id: string) =>
+                                id === "owner-1"
+                                    ? {
+                                          id: "owner-1",
+                                          isOwner: true,
+                                          isSwarm: false,
+                                          parentUserId: null
+                                      }
+                                    : null
+                        }
+                    },
+                    userHomeForUserId: (userId: string) => ({
+                        skillsPersonal: path.join(dirs.baseDir, userId, "skills", "personal")
+                    })
+                } as unknown as ToolExecutionContext["agentSystem"],
+                ctx: { userId: "owner-1", agentId: "agent-1" } as ToolExecutionContext["ctx"]
+            });
+
+            await expect(
+                tool.execute({ path: "source-skill", userId: "missing-swarm" }, context, toolCall)
+            ).rejects.toThrow("Swarm not found: missing-swarm");
+        } finally {
+            await dirs.cleanup();
+        }
+    });
 });
 
 async function testDirsCreate(): Promise<{
+    baseDir: string;
     homeDir: string;
     personalRoot: string;
     cleanup: () => Promise<void>;
@@ -166,13 +296,19 @@ async function testDirsCreate(): Promise<{
     const personalRoot = path.join(baseDir, "personal");
     await fs.mkdir(homeDir, { recursive: true });
     return {
+        baseDir,
         homeDir,
         personalRoot,
         cleanup: () => fs.rm(baseDir, { recursive: true, force: true })
     };
 }
 
-function contextBuild(input: { skillsPersonalRoot?: string; homeDir: string }): ToolExecutionContext {
+function contextBuild(input: {
+    skillsPersonalRoot?: string;
+    homeDir: string;
+    agentSystem?: ToolExecutionContext["agentSystem"];
+    ctx?: ToolExecutionContext["ctx"];
+}): ToolExecutionContext {
     const sandbox = new Sandbox({
         homeDir: input.homeDir,
         permissions: { workingDir: input.homeDir, writeDirs: [input.homeDir] }
@@ -184,11 +320,11 @@ function contextBuild(input: { skillsPersonalRoot?: string; homeDir: string }): 
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
         agent: { id: "agent-1", descriptor: { type: "user" } } as unknown as ToolExecutionContext["agent"],
-        ctx: { userId: "user-1", agentId: "agent-1" } as unknown as ToolExecutionContext["ctx"],
+        ctx: input.ctx ?? ({ userId: "user-1", agentId: "agent-1" } as unknown as ToolExecutionContext["ctx"]),
         source: "test",
         messageContext: {},
         skills: [],
         skillsPersonalRoot: input?.skillsPersonalRoot,
-        agentSystem: {} as unknown as ToolExecutionContext["agentSystem"]
+        agentSystem: input.agentSystem ?? ({} as unknown as ToolExecutionContext["agentSystem"])
     };
 }

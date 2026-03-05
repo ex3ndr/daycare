@@ -1,10 +1,13 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
-import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { Context, ToolDefinition, ToolResultContract } from "@/types";
+import { contextForUser } from "../../agents/context.js";
+import { swarmOwnedUserResolve } from "./swarmOwnedUserResolve.js";
 
 const schema = Type.Object(
     {
-        name: Type.String({ minLength: 1 })
+        name: Type.String({ minLength: 1 }),
+        userId: Type.Optional(Type.String({ minLength: 1 }))
     },
     { additionalProperties: false }
 );
@@ -52,9 +55,11 @@ export function secretRemoveToolBuild(): ToolDefinition {
             if (!name) {
                 throw new Error("name is required.");
             }
-            const removed = await toolContext.secrets.remove(toolContext.ctx, name);
+            const target = await secretTargetResolve(payload.userId, toolContext);
+            const removed = await toolContext.secrets.remove(target.ctx, name);
             const status: SecretRemoveResult["status"] = removed ? "removed" : "not_found";
-            const summary = removed ? `Secret "${name}" removed.` : `Secret "${name}" not found.`;
+            const scope = target.userId ? ` for swarm "${target.userId}"` : "";
+            const summary = removed ? `Secret "${name}" removed${scope}.` : `Secret "${name}" not found${scope}.`;
 
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
@@ -73,5 +78,25 @@ export function secretRemoveToolBuild(): ToolDefinition {
                 }
             };
         }
+    };
+}
+
+async function secretTargetResolve(
+    userId: string | undefined,
+    toolContext: Parameters<NonNullable<ToolDefinition["execute"]>>[1]
+): Promise<{ ctx: Context; userId: string | null }> {
+    const normalizedUserId = userId?.trim();
+    if (!normalizedUserId) {
+        return { ctx: toolContext.ctx, userId: null };
+    }
+
+    const swarmUser = await swarmOwnedUserResolve({
+        toolContext,
+        userId: normalizedUserId,
+        ownerError: "Only the owner user can manage swarm secrets."
+    });
+    return {
+        ctx: contextForUser({ userId: swarmUser.id }),
+        userId: swarmUser.id
     };
 }
