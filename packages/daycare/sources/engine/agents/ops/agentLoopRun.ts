@@ -241,6 +241,18 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         error: unknown,
         options?: { printOutput?: string[]; toolCallCount?: number; deferredDiscardCount?: number }
     ): Promise<void> => {
+        const deferredDiscardCount = options?.deferredDiscardCount ?? 0;
+        if (deferredDiscardCount > 0) {
+            logger.warn(
+                { toolCallId: blockState.toolCallId, deferredDiscardCount },
+                "event: Deferred entries dropped after failed <run_python> block"
+            );
+        } else {
+            logger.debug(
+                { toolCallId: blockState.toolCallId },
+                "event: No deferred entries dropped after failed <run_python> block"
+            );
+        }
         const message = error instanceof Error ? error.message : String(error);
         await appendHistoryRecord?.(
             rlmHistoryCompleteErrorRecordBuild(
@@ -250,7 +262,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 options?.toolCallCount ?? 0
             )
         );
-        const errorText = rlmErrorTextBuild(error) + deferredToolStatusBuild(null, options?.deferredDiscardCount ?? 0);
+        const errorText = rlmErrorTextBuild(error) + deferredToolStatusBuild(null, deferredDiscardCount);
         context.messages.push(
             rlmToolResultBuild({ id: blockState.toolCallId, name: RLM_TOOL_NAME }, errorText, true).toolMessage
         );
@@ -356,7 +368,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     assistantRecordAt: initialPhase.assistantAt,
                     historyResponseText: initialPhase.historyResponseText
                 });
-                const restoredDeferred = deferredEntriesRestore(initialPhase.persistedDeferredEntries, toolResolver);
+                const restoredDeferred = deferredEntriesRestore(
+                    initialPhase.persistedDeferredEntries,
+                    toolResolver,
+                    logger
+                );
                 const printOutput = [...initialPhase.snapshot.printOutput];
                 const printCapture = rlmPrintCaptureCreate(printOutput);
                 const printCallback = (...values: unknown[]): void => {
@@ -1322,18 +1338,37 @@ function abortErrorBuild(): Error {
 
 /**
  * Resolves persisted deferred entries to full DeferredToolEntry objects by looking up handlers.
- * Entries whose tools are no longer registered (or have no executeDeferred) are silently dropped.
+ * Entries whose tools are no longer registered (or have no executeDeferred) are dropped with logging.
  */
 function deferredEntriesRestore(
     persisted: PersistedDeferredEntry[],
-    toolResolver: ToolResolverApi
+    toolResolver: ToolResolverApi,
+    logger: Logger
 ): DeferredToolEntry[] {
     const entries: DeferredToolEntry[] = [];
+    let droppedCount = 0;
     for (const entry of persisted) {
         const handler = toolResolver.deferredHandlerFor(entry.toolName);
         if (handler) {
             entries.push({ toolName: entry.toolName, payload: entry.payload, handler });
+        } else {
+            droppedCount++;
         }
+    }
+    if (droppedCount > 0) {
+        logger.warn(
+            {
+                persistedDeferredCount: persisted.length,
+                restoredDeferredCount: entries.length,
+                droppedDeferredCount: droppedCount
+            },
+            "event: Dropped persisted deferred entries with missing handlers"
+        );
+    } else if (persisted.length > 0) {
+        logger.debug(
+            { restoredDeferredCount: entries.length },
+            "event: Restored persisted deferred entries without drops"
+        );
     }
     return entries;
 }
