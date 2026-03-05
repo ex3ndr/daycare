@@ -172,10 +172,15 @@ const components: Components<FragmentsCatalog> = {
             return (
                 <Pressable
                     onPress={() => emit("press")}
-                    style={({ pressed: isPressed, hovered: isHovered }) => ({
-                        ...style,
-                        backgroundColor: isPressed && pressed ? pressed : isHovered && hovered ? hovered : bg
-                    })}
+                    style={(state) => {
+                        const isPressed = state.pressed;
+                        // hovered is a React Native Web extension, not in base RN types
+                        const isHovered = (state as unknown as Record<string, unknown>).hovered === true;
+                        return {
+                            ...style,
+                            backgroundColor: isPressed && pressed ? pressed : isHovered && hovered ? hovered : bg
+                        };
+                    }}
                 >
                     {children}
                 </Pressable>
