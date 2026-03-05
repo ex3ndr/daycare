@@ -161,7 +161,12 @@ const components: Components<FragmentsCatalog> = {
             flexGrow: props.flexGrow ?? undefined,
             flexShrink: props.flexShrink ?? undefined,
             flexBasis: props.flexBasis ?? undefined,
-            flexWrap: props.wrap ? ("wrap" as const) : undefined
+            flexWrap: props.wrap ? ("wrap" as const) : undefined,
+            position: props.position ?? undefined,
+            top: props.top ?? undefined,
+            right: props.right ?? undefined,
+            bottom: props.bottom ?? undefined,
+            left: props.left ?? undefined
         };
         if (props.pressable) {
             return (
