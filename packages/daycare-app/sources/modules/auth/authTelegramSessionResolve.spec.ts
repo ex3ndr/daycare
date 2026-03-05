@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { authTelegramSessionResolve } from "@/modules/auth/authTelegramSessionResolve";
 import { isTMA } from "@/modules/tma/isTMA";
 import { tmaInitData } from "@/modules/tma/tmaInitData";
+import { tmaLaunchParams } from "@/modules/tma/tmaLaunchParams";
 import { tmaReady } from "@/modules/tma/tmaReady";
 
 vi.mock("@/modules/tma/isTMA", () => ({
@@ -10,6 +11,10 @@ vi.mock("@/modules/tma/isTMA", () => ({
 
 vi.mock("@/modules/tma/tmaInitData", () => ({
     tmaInitData: vi.fn(() => undefined)
+}));
+
+vi.mock("@/modules/tma/tmaLaunchParams", () => ({
+    tmaLaunchParams: vi.fn(() => undefined)
 }));
 
 vi.mock("@/modules/tma/tmaReady", () => ({
@@ -21,6 +26,7 @@ describe("authTelegramSessionResolve", () => {
         vi.unstubAllGlobals();
         vi.mocked(isTMA).mockReturnValue(false);
         vi.mocked(tmaInitData).mockReturnValue(undefined);
+        vi.mocked(tmaLaunchParams).mockReturnValue(undefined);
         vi.mocked(tmaReady).mockReset();
     });
 
@@ -84,6 +90,29 @@ describe("authTelegramSessionResolve", () => {
         await expect(authTelegramSessionResolve()).resolves.toEqual({
             baseUrl: "https://api.example.com",
             token: "jwt-1"
+        });
+        expect(tmaReady).toHaveBeenCalledTimes(1);
+    });
+
+    it("resolves session from launch params when href has no backend", async () => {
+        vi.stubGlobal("window", {
+            location: { href: "https://app.test/" }
+        } as unknown as Window);
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                json: async () => ({ ok: true, userId: "456", token: "jwt-lp" })
+            }))
+        );
+        vi.mocked(isTMA).mockReturnValue(true);
+        vi.mocked(tmaInitData).mockReturnValue("init-data");
+        vi.mocked(tmaLaunchParams).mockReturnValue(
+            "backend=https%3A%2F%2Fapi.example.com&telegramInstanceId=tg-1&tgWebAppData=foo"
+        );
+
+        await expect(authTelegramSessionResolve()).resolves.toEqual({
+            baseUrl: "https://api.example.com",
+            token: "jwt-lp"
         });
         expect(tmaReady).toHaveBeenCalledTimes(1);
     });

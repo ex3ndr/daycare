@@ -40,7 +40,21 @@ describe("authTelegramWebAppContextParse", () => {
         });
     });
 
-    it("returns null when backend param is missing from both query and hash", () => {
+    it("falls back to rawLaunchParams when backend is missing from href", () => {
+        const result = authTelegramWebAppContextParse(
+            "https://app.example.com/",
+            "init-data-value",
+            "backend=https%3A%2F%2Fapi.example.com&telegramInstanceId=tg-1&tgWebAppData=foo"
+        );
+
+        expect(result).toEqual({
+            backendUrl: "https://api.example.com",
+            initData: "init-data-value",
+            telegramInstanceId: "tg-1"
+        });
+    });
+
+    it("returns null when backend param is missing from all sources", () => {
         expect(authTelegramWebAppContextParse("https://app.example.com?foo=bar", "init-data-value")).toBeNull();
     });
 

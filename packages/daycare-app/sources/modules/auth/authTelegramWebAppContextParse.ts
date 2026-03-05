@@ -5,21 +5,30 @@ export type AuthTelegramWebAppContext = {
 };
 
 /**
- * Parses Telegram WebApp auth context from URL and initData.
- * Checks both query params and hash fragment, since Telegram may move params to the hash.
+ * Parses Telegram WebApp auth context from URL, launch params, and initData.
+ * Checks query params, hash fragment, and raw TMA launch params (which preserve the original URL).
  * Expects: backend URL in `backend` param and initData is the raw Telegram WebApp payload.
  */
 export function authTelegramWebAppContextParse(
     href: string,
-    initDataRaw: string | null | undefined
+    initDataRaw: string | null | undefined,
+    rawLaunchParams?: string | null
 ): AuthTelegramWebAppContext | null {
     const initData = initDataRaw?.trim() ?? "";
     if (!initData) {
         return null;
     }
 
-    // Try query params first, then hash fragment (Telegram may put params in either).
+    // Try href (query + hash), then raw launch params (preserves original URL params).
     const params = paramsFromHref(href);
+    if (rawLaunchParams) {
+        for (const [key, value] of new URLSearchParams(rawLaunchParams)) {
+            if (!params.has(key)) {
+                params.set(key, value);
+            }
+        }
+    }
+
     const backendUrl = backendUrlNormalize(params.get("backend"));
     if (!backendUrl) {
         return null;

@@ -3,6 +3,7 @@ import type { AuthSession } from "@/modules/auth/authStoreCreate";
 import { authTelegramWebAppContextParse } from "@/modules/auth/authTelegramWebAppContextParse";
 import { isTMA } from "@/modules/tma/isTMA";
 import { tmaInitData } from "@/modules/tma/tmaInitData";
+import { tmaLaunchParams } from "@/modules/tma/tmaLaunchParams";
 import { tmaReady } from "@/modules/tma/tmaReady";
 
 /**
@@ -30,7 +31,11 @@ export async function authTelegramSessionResolve(): Promise<AuthSession | null> 
         return null;
     }
 
-    const telegramContext = authTelegramWebAppContextParse(window.location.href, initData);
+    const rawLaunchParams = tmaLaunchParams();
+    console.info(
+        `[daycare-app] tma-auth: rawLaunchParams=${rawLaunchParams ? `present (${rawLaunchParams.length} chars)` : "missing"}`
+    );
+    const telegramContext = authTelegramWebAppContextParse(window.location.href, initData, rawLaunchParams);
     console.info(
         `[daycare-app] tma-auth: context=${telegramContext ? "parsed" : "failed"} href=${window.location.href}`
     );
