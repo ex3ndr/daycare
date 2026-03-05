@@ -2,6 +2,8 @@ import { APP_AUTH_DEFAULT_ENDPOINT } from "../../api/app-server/appAuthLinkTool.
 import { appEndpointNormalize } from "../../api/app-server/appEndpointNormalize.js";
 import type { SettingsConfig } from "../../settings.js";
 
+const DEFAULT_SERVER_ENDPOINT = "https://api.daycare.dev";
+
 /**
  * Resolves Telegram WebApp URL from app server endpoint settings.
  * Falls back to APP_AUTH_DEFAULT_ENDPOINT when no endpoints are configured.
@@ -14,8 +16,8 @@ export function telegramWebAppUrlResolve(engineSettings: SettingsConfig, telegra
     const serverEndpoint = httpsOnly(
         appEndpointNormalize(valueAsString(appServerSettings?.serverEndpoint), "serverEndpoint")
     );
-    const appBaseUrl = appEndpoint ?? serverEndpoint ?? APP_AUTH_DEFAULT_ENDPOINT;
-    const backendUrl = serverEndpoint ?? appBaseUrl;
+    const appBaseUrl = appEndpoint ?? APP_AUTH_DEFAULT_ENDPOINT;
+    const backendUrl = serverEndpoint ?? DEFAULT_SERVER_ENDPOINT;
     return telegramWebAppUrlBuild(appBaseUrl, backendUrl, telegramInstanceId);
 }
 
