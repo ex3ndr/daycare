@@ -10,6 +10,7 @@ type AgentLoopBlockState = {
     iteration: number;
     blocks: string[];
     blockToolCallIds: string[];
+    blockDescriptions?: Array<string | undefined>;
     blockInputs?: Array<Record<string, unknown> | null>;
     blockInputSchemas?: Array<TaskParameter[] | null>;
     blockIndex: number;

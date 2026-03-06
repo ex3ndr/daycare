@@ -69,6 +69,37 @@ describe("agentLoopRun", () => {
         ]);
     });
 
+    it("records run_python descriptions in rlm_start history", async () => {
+        const responses = [
+            assistantToolCallMessageBuild("tool-1", "run_python", {
+                code: "'step complete'",
+                description: "Check status"
+            }),
+            assistantMessageBuild("Finished")
+        ];
+        const inferenceRouter = inferenceRouterBuild(responses);
+        const toolResolver = toolResolverBuild();
+        const appendedHistory: Array<{ type: string; toolCallId?: string; description?: string }> = [];
+        const options = optionsBuild({
+            connector: null,
+            inferenceRouter,
+            toolResolver
+        });
+        options.appendHistoryRecord = async (record) => {
+            appendedHistory.push(record as (typeof appendedHistory)[number]);
+        };
+
+        await agentLoopRun(options);
+
+        expect(appendedHistory).toContainEqual(
+            expect.objectContaining({
+                type: "rlm_start",
+                toolCallId: "tool-1",
+                description: "Check status"
+            })
+        );
+    });
+
     it("nudges child agents when no send_agent_message call was made", async () => {
         const responses = [assistantMessageBuild("No execution"), assistantMessageBuild("Still no execution")];
         const inferenceRouter = inferenceRouterBuild(responses);

@@ -20,6 +20,7 @@ type AssistantRunPythonContext = {
     historyResponseText: string;
     blocks: string[];
     blockToolCallIds: string[];
+    blockDescriptions?: Array<string | undefined>;
 };
 
 export type AgentLoopPendingPhase =
@@ -27,6 +28,7 @@ export type AgentLoopPendingPhase =
           type: "vm_start";
           blocks: string[];
           blockToolCallIds: string[];
+          blockDescriptions?: Array<string | undefined>;
           blockInputs?: Array<Record<string, unknown> | null>;
           blockInputSchemas?: Array<TaskParameter[] | null>;
           blockIndex: number;
@@ -39,6 +41,7 @@ export type AgentLoopPendingPhase =
           snapshot: AgentHistoryRlmToolCallRecord;
           blocks: string[];
           blockToolCallIds: string[];
+          blockDescriptions?: Array<string | undefined>;
           blockInputs?: Array<Record<string, unknown> | null>;
           blockInputSchemas?: Array<TaskParameter[] | null>;
           blockIndex: number;
@@ -90,6 +93,7 @@ export function agentLoopPendingPhaseResolve(records: AgentHistoryRecord[]): Age
         );
         const blocks = assistantContext?.blocks ?? [pendingStart.code];
         const blockToolCallIds = assistantContext?.blockToolCallIds ?? [pendingStart.toolCallId];
+        const blockDescriptions = assistantContext?.blockDescriptions ?? [pendingStart.description];
         const matchedByToolCallId = blockToolCallIds.indexOf(pendingStart.toolCallId);
         const matchedByCode = blocks.indexOf(pendingStart.code);
         const blockIndex = matchedByToolCallId >= 0 ? matchedByToolCallId : matchedByCode >= 0 ? matchedByCode : 0;
@@ -118,6 +122,7 @@ export function agentLoopPendingPhaseResolve(records: AgentHistoryRecord[]): Age
             snapshot: snapshots[0],
             blocks,
             blockToolCallIds,
+            blockDescriptions,
             blockIndex,
             assistantAt: assistantContext?.assistantAt ?? pendingStart.at,
             historyResponseText: assistantContext?.historyResponseText ?? "",
@@ -139,6 +144,7 @@ export function agentLoopPendingPhaseResolve(records: AgentHistoryRecord[]): Age
         type: "vm_start",
         blocks: latestAssistant.blocks,
         blockToolCallIds: latestAssistant.blockToolCallIds,
+        blockDescriptions: latestAssistant.blockDescriptions,
         blockIndex: 0,
         assistantAt: latestAssistant.assistantAt,
         historyResponseText: latestAssistant.historyResponseText
@@ -159,7 +165,8 @@ function latestAssistantRunPythonResolve(records: AgentHistoryRecord[]): Assista
                     assistantAt: record.at,
                     historyResponseText: messageContentExtractText(record.content),
                     blocks: runPythonCalls.map((call) => call.code),
-                    blockToolCallIds: runPythonCalls.map((call) => call.toolCallId)
+                    blockToolCallIds: runPythonCalls.map((call) => call.toolCallId),
+                    blockDescriptions: runPythonCalls.map((call) => call.description)
                 });
             }
             continue;
@@ -202,7 +209,8 @@ function assistantRunPythonForStart(
                     assistantAt: record.at,
                     historyResponseText: messageContentExtractText(record.content),
                     blocks: runPythonCalls.map((call) => call.code),
-                    blockToolCallIds: runPythonCalls.map((call) => call.toolCallId)
+                    blockToolCallIds: runPythonCalls.map((call) => call.toolCallId),
+                    blockDescriptions: runPythonCalls.map((call) => call.description)
                 });
             }
             continue;
@@ -236,20 +244,29 @@ function assistantRunPythonForStart(
 
 function runPythonCallsExtract(
     toolCalls: Array<{ type: "toolCall"; id: string; name: string; arguments: Record<string, unknown> }>
-): Array<{ toolCallId: string; code: string }> {
-    const runPythonCalls: Array<{ toolCallId: string; code: string }> = [];
+): Array<{ toolCallId: string; code: string; description?: string }> {
+    const runPythonCalls: Array<{ toolCallId: string; code: string; description?: string }> = [];
     for (const toolCall of toolCalls) {
         if (toolCall.name !== RLM_TOOL_NAME) {
             continue;
         }
         const code = toolCall.arguments.code;
+        const description = descriptionNormalize(toolCall.arguments.description);
         if (typeof code !== "string" || code.trim().length === 0) {
             continue;
         }
         runPythonCalls.push({
             toolCallId: toolCall.id,
-            code
+            code,
+            ...(description ? { description } : {})
         });
     }
     return runPythonCalls;
+}
+
+function descriptionNormalize(value: unknown): string | undefined {
+    if (typeof value !== "string") {
+        return undefined;
+    }
+    return value.trim().length > 0 ? value : undefined;
 }

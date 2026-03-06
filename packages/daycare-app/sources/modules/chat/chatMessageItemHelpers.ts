@@ -15,6 +15,8 @@ export function recordDisplayKind(record: AgentHistoryRecord): "user" | "assista
             return "user";
         case "assistant_message":
             return "assistant";
+        case "rlm_start":
+            return record.description?.trim() ? "tool" : null;
         case "rlm_tool_call":
             return "tool";
         case "note":

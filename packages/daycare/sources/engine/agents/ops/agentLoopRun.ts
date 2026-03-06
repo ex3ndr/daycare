@@ -168,6 +168,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         iteration: number;
         blocks: string[];
         blockToolCallIds?: string[];
+        blockDescriptions?: Array<string | undefined>;
         blockInputs?: Array<Record<string, unknown> | null>;
         blockInputSchemas?: Array<TaskParameter[] | null>;
         blockIndex: number;
@@ -334,6 +335,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         iteration: 0,
                         blocks: initialPhase.blocks,
                         blockToolCallIds: initialPhase.blockToolCallIds,
+                        blockDescriptions: initialPhase.blockDescriptions,
                         blockInputs: initialPhase.blockInputs,
                         blockInputSchemas: initialPhase.blockInputSchemas,
                         blockIndex: initialPhase.blockIndex,
@@ -348,6 +350,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     iteration: 0,
                     blocks: initialPhase.blocks,
                     blockToolCallIds: initialPhase.blockToolCallIds,
+                    blockDescriptions: initialPhase.blockDescriptions,
                     blockInputs: initialPhase.blockInputs,
                     blockInputSchemas: initialPhase.blockInputSchemas,
                     blockIndex: initialPhase.blockIndex,
@@ -628,6 +631,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 iteration,
                                 blocks: toolCallPartition.runPythonCalls.map((call) => call.code),
                                 blockToolCallIds: toolCallPartition.runPythonCalls.map((call) => call.id),
+                                blockDescriptions: toolCallPartition.runPythonCalls.map((call) => call.description),
                                 blockIndex: 0,
                                 preamble: montyPreambleBuild(availableTools),
                                 toolCallId: toolCallPartition.runPythonCalls[0]!.id,
@@ -691,7 +695,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             at: Date.now(),
                             toolCallId: blockState.toolCallId,
                             code: runPythonCode,
-                            preamble: blockState.preamble
+                            preamble: blockState.preamble,
+                            description: blockState.blockDescriptions?.[blockState.blockIndex]
                         });
 
                         const runtimeTools = rlmToolsForContextResolve(
@@ -1198,7 +1203,8 @@ const runPythonInferenceTool: Tool = {
     description: "Execute Python code in the Daycare runtime and return the execution summary.",
     parameters: Type.Object(
         {
-            code: Type.String({ minLength: 1 })
+            code: Type.String({ minLength: 1 }),
+            description: Type.Optional(Type.String())
         },
         { additionalProperties: false }
     )
@@ -1211,6 +1217,7 @@ function toolListInferenceResolve(): Tool[] {
 type RunPythonToolCall = {
     id: string;
     code: string;
+    description?: string;
 };
 
 type RunPythonToolCallPartition = {
@@ -1229,13 +1236,15 @@ function runPythonToolCallsPartition(toolCalls: ToolCall[]): RunPythonToolCallPa
             continue;
         }
         const code = toolCall.arguments.code;
+        const description = descriptionNormalize(toolCall.arguments.description);
         if (typeof code !== "string" || code.trim().length === 0) {
             invalidRunPythonCalls.push(toolCall);
             continue;
         }
         runPythonCalls.push({
             id: toolCall.id,
-            code
+            code,
+            ...(description ? { description } : {})
         });
     }
     return {
@@ -1243,6 +1252,13 @@ function runPythonToolCallsPartition(toolCalls: ToolCall[]): RunPythonToolCallPa
         invalidRunPythonCalls,
         unsupportedCalls
     };
+}
+
+function descriptionNormalize(value: unknown): string | undefined {
+    if (typeof value !== "string") {
+        return undefined;
+    }
+    return value.trim().length > 0 ? value : undefined;
 }
 
 function usageCostResolve(cost: unknown): number {

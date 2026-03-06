@@ -15,7 +15,14 @@ describe("agentLoopPendingPhaseResolve", () => {
                 type: "assistant_message",
                 at: 10,
                 tokens: null,
-                content: [{ type: "toolCall", id: "tool-1", name: "run_python", arguments: { code: "echo('x')" } }]
+                content: [
+                    {
+                        type: "toolCall",
+                        id: "tool-1",
+                        name: "run_python",
+                        arguments: { code: "echo('x')", description: "Echo x" }
+                    }
+                ]
             }
         ];
 
@@ -26,6 +33,7 @@ describe("agentLoopPendingPhaseResolve", () => {
         if (pending?.type === "vm_start") {
             expect(pending.blocks).toEqual(["echo('x')"]);
             expect(pending.blockToolCallIds).toEqual(["tool-1"]);
+            expect(pending.blockDescriptions).toEqual(["Echo x"]);
             expect(pending.blockIndex).toBe(0);
             expect(pending.assistantAt).toBe(10);
         }
@@ -38,8 +46,18 @@ describe("agentLoopPendingPhaseResolve", () => {
                 at: 5,
                 tokens: null,
                 content: [
-                    { type: "toolCall", id: "tool-1", name: "run_python", arguments: { code: "echo('a')" } },
-                    { type: "toolCall", id: "tool-2", name: "run_python", arguments: { code: "echo('b')" } }
+                    {
+                        type: "toolCall",
+                        id: "tool-1",
+                        name: "run_python",
+                        arguments: { code: "echo('a')", description: "Echo a" }
+                    },
+                    {
+                        type: "toolCall",
+                        id: "tool-2",
+                        name: "run_python",
+                        arguments: { code: "echo('b')", description: "Echo b" }
+                    }
                 ]
             },
             {
@@ -71,6 +89,7 @@ describe("agentLoopPendingPhaseResolve", () => {
             expect(pending.blockIndex).toBe(1);
             expect(pending.blocks).toEqual(["echo('a')", "echo('b')"]);
             expect(pending.blockToolCallIds).toEqual(["tool-1", "tool-2"]);
+            expect(pending.blockDescriptions).toEqual(["Echo a", "Echo b"]);
         }
     });
 

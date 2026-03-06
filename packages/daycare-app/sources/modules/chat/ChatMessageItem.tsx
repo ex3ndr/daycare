@@ -5,6 +5,7 @@ import type {
     AgentHistoryAssistantMessage,
     AgentHistoryNote,
     AgentHistoryRecord,
+    AgentHistoryRlmStart,
     AgentHistoryRlmToolCall,
     AgentHistoryUserMessage
 } from "./chatHistoryTypes";
@@ -16,6 +17,8 @@ export const ChatMessageItem = React.memo(({ record }: { record: AgentHistoryRec
             return <UserMessageItem record={record} />;
         case "assistant_message":
             return <AssistantMessageItem record={record} />;
+        case "rlm_start":
+            return <RunPythonStartItem record={record} />;
         case "rlm_tool_call":
             return <ToolCallItem record={record} />;
         case "note":
@@ -53,6 +56,20 @@ function ToolCallItem({ record }: { record: AgentHistoryRlmToolCall }) {
         <View style={styles.row}>
             <Text style={[styles.text, { color: theme.colors.onSurfaceVariant }]}>
                 [{record.toolName} #{record.toolCallCount}]
+            </Text>
+        </View>
+    );
+}
+
+function RunPythonStartItem({ record }: { record: AgentHistoryRlmStart }) {
+    const { theme } = useUnistyles();
+    if (!record.description?.trim()) {
+        return null;
+    }
+    return (
+        <View style={styles.row}>
+            <Text style={[styles.text, { color: theme.colors.onSurfaceVariant }]}>
+                [run_python] {record.description}
             </Text>
         </View>
     );

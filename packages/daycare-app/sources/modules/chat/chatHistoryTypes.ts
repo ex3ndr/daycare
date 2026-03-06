@@ -27,6 +27,12 @@ export type AgentHistoryRlmToolCall = {
     toolCallCount: number;
 };
 
+export type AgentHistoryRlmStart = {
+    type: "rlm_start";
+    at: number;
+    description?: string;
+};
+
 export type AgentHistoryNote = {
     type: "note";
     at: number;
@@ -35,7 +41,6 @@ export type AgentHistoryNote = {
 
 /** Record types we skip rendering. */
 export type AgentHistorySkipped =
-    | { type: "rlm_start"; at: number }
     | { type: "rlm_complete"; at: number }
     | { type: "rlm_tool_result"; at: number }
     | { type: "assistant_rewrite"; at: number };
@@ -43,6 +48,7 @@ export type AgentHistorySkipped =
 export type AgentHistoryRecord =
     | AgentHistoryUserMessage
     | AgentHistoryAssistantMessage
+    | AgentHistoryRlmStart
     | AgentHistoryRlmToolCall
     | AgentHistoryNote
     | AgentHistorySkipped;

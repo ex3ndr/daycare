@@ -52,7 +52,12 @@ describe("recordDisplayKind", () => {
         expect(recordDisplayKind(record)).toBe("note");
     });
 
-    it("returns null for rlm_start", () => {
+    it("returns 'tool' for rlm_start with a description", () => {
+        const record: AgentHistoryRecord = { type: "rlm_start", at: 1000, description: "Check cwd" };
+        expect(recordDisplayKind(record)).toBe("tool");
+    });
+
+    it("returns null for rlm_start without a description", () => {
         const record: AgentHistoryRecord = { type: "rlm_start", at: 1000 };
         expect(recordDisplayKind(record)).toBeNull();
     });

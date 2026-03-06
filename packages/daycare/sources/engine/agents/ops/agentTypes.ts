@@ -64,6 +64,7 @@ export type AgentHistoryRlmStartRecord = {
     toolCallId: string;
     code: string;
     preamble: string;
+    description?: string;
 };
 
 export type AgentHistoryRlmToolCallRecord = {
