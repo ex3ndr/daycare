@@ -1,4 +1,12 @@
 const variant = process.env.APP_ENV || "development";
+const defaultBackendUrl =
+    process.env.EXPO_PUBLIC_DAYCARE_DEFAULT_BACKEND_URL ||
+    process.env.DAYCARE_APP_DEFAULT_BACKEND_URL ||
+    "https://api.daycare.dev";
+const defaultTelegramInstanceId =
+    process.env.EXPO_PUBLIC_DAYCARE_DEFAULT_TELEGRAM_INSTANCE_ID ||
+    process.env.DAYCARE_APP_DEFAULT_TELEGRAM_INSTANCE_ID ||
+    "telegram";
 const name = {
     development: "Daycare (dev)",
     preview: "Daycare (preview)",
@@ -75,6 +83,8 @@ export default {
             useExperimentalModals: true
         },
         extra: {
+            defaultBackendUrl,
+            defaultTelegramInstanceId,
             router: {
                 root: "./sources/app"
             }
