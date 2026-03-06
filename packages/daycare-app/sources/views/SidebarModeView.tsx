@@ -5,7 +5,6 @@ import { ContentPanelLayout } from "@/components/layout/ContentPanelLayout";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { documentRootIdResolve } from "@/modules/documents/documentRootIdResolve";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
-import { useFilesStore } from "@/modules/files/filesContext";
 import { AgentsView } from "@/views/AgentsView";
 import { CostsView } from "@/views/CostsView";
 import { DevView } from "@/views/DevView";
@@ -13,7 +12,6 @@ import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 import { DocumentMetadataPanel } from "@/views/documents/DocumentMetadataPanel";
 import { DocumentsView } from "@/views/documents/DocumentsView";
 import { FragmentsView } from "@/views/FragmentsView";
-import { FilePreviewPanel } from "@/views/files/FilePreviewPanel";
 import { FilesView } from "@/views/files/FilesView";
 import { HomeView } from "@/views/HomeView";
 import { RoutinesView } from "@/views/RoutinesView";
@@ -39,6 +37,8 @@ const viewComponents: Record<AppMode, React.ComponentType> = {
 
 type SidebarModeViewProps = {
     mode: AppMode;
+    /** Override the default panel2 content (e.g. to pass props to a view component). */
+    panel2Override?: React.ReactElement;
 };
 
 /**
@@ -46,7 +46,7 @@ type SidebarModeViewProps = {
  * Only renders Panel2 (main view) and optional Panel3 (details) — no Panel1,
  * since the sidebar handles mode selection and sub-items.
  */
-export function SidebarModeView({ mode }: SidebarModeViewProps) {
+export function SidebarModeView({ mode, panel2Override }: SidebarModeViewProps) {
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
     const documentItems = useDocumentsStore((s) => s.items);
@@ -58,8 +58,6 @@ export function SidebarModeView({ mode }: SidebarModeViewProps) {
     const documentRootId = React.useMemo(() => documentRootIdResolve(documentItems), [documentItems]);
 
     const isDocuments = mode === "documents";
-    const isFiles = mode === "files";
-    const filesSelectedFile = useFilesStore((s) => s.selectedFile);
 
     React.useEffect(() => {
         if (isDocuments && baseUrl && token) {
@@ -88,14 +86,8 @@ export function SidebarModeView({ mode }: SidebarModeViewProps) {
     return (
         <>
             <ContentPanelLayout
-                panel2={<ViewComponent />}
-                panel3={
-                    isDocuments && selectedId ? (
-                        <DocumentMetadataPanel />
-                    ) : isFiles && filesSelectedFile ? (
-                        <FilePreviewPanel />
-                    ) : undefined
-                }
+                panel2={panel2Override ?? <ViewComponent />}
+                panel3={isDocuments && selectedId ? <DocumentMetadataPanel /> : undefined}
             />
             {isDocuments && (
                 <DocumentCreateDialog
