@@ -23,6 +23,7 @@ import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
 import type { FragmentsRepository } from "../../storage/fragmentsRepository.js";
 import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
+import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import type { TokenStatsFetchOptions } from "../routes/costs/costsRoutes.js";
@@ -61,6 +62,7 @@ export type AppServerOptions = {
     fragments: FragmentsRepository | null;
     keyValues: KeyValuesRepository | null;
     psql?: PsqlService | null;
+    observationLog: ObservationLogRepository | null;
     secrets: {
         list: (ctx: Context) => Promise<Secret[]>;
         add: (ctx: Context, secret: Secret) => Promise<void>;
@@ -94,6 +96,7 @@ export class AppServer {
     private readonly fragments: FragmentsRepository | null;
     private readonly keyValues: KeyValuesRepository | null;
     private readonly psql: PsqlService | null;
+    private readonly observationLog: ObservationLogRepository | null;
     private readonly secrets: AppServerOptions["secrets"];
     private readonly connectorTargetResolve: AppServerOptions["connectorTargetResolve"];
     private readonly logger = getLogger("api.app-server");
@@ -121,6 +124,7 @@ export class AppServer {
         this.fragments = options.fragments;
         this.keyValues = options.keyValues;
         this.psql = options.psql ?? null;
+        this.observationLog = options.observationLog;
         this.secrets = options.secrets;
         this.connectorTargetResolve = options.connectorTargetResolve;
     }
@@ -269,6 +273,7 @@ export class AppServer {
             fragments: this.fragments,
             keyValues: this.keyValues,
             psql: this.psql,
+            observationLog: this.observationLog,
             secrets: this.secrets
         });
         if (handled) {

@@ -9,6 +9,7 @@ import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
 import type { FragmentsRepository } from "../../storage/fragmentsRepository.js";
 import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
+import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import { agentsRouteHandle } from "./agents/agentsRoutes.js";
 import type { TokenStatsFetchOptions } from "./costs/costsRoutes.js";
@@ -18,6 +19,7 @@ import { documentsRouteHandle } from "./documents/documentsRoutes.js";
 import { filesRouteHandle } from "./files/filesRoutes.js";
 import { fragmentsRouteHandle } from "./fragments/fragmentsRoutes.js";
 import { kvRouteHandle } from "./kv/kvRoutes.js";
+import { observationsRouteHandle } from "./observations/observationsRoutes.js";
 import { profileRouteHandle } from "./profile/profileRoutes.js";
 import { promptsRouteHandle } from "./prompts/promptsRoutes.js";
 import type { RouteAgentCallbacks, RouteTaskCallbacks } from "./routeTypes.js";
@@ -45,6 +47,7 @@ export type ApiRouteContext = {
     fragments: FragmentsRepository | null;
     keyValues: KeyValuesRepository | null;
     psql: PsqlService | null;
+    observationLog: ObservationLogRepository | null;
     secrets: {
         list: (ctx: Context) => Promise<Secret[]>;
         add: (ctx: Context, secret: Secret) => Promise<void>;
@@ -161,6 +164,13 @@ export async function apiRouteHandle(
         return filesRouteHandle(request, response, pathname, {
             homeDir: userHome.home,
             sendJson: context.sendJson
+        });
+    }
+    if (pathname.startsWith("/observations")) {
+        return observationsRouteHandle(request, response, pathname, {
+            ctx: context.ctx,
+            sendJson: context.sendJson,
+            observationLog: context.observationLog
         });
     }
     if (pathname.startsWith("/databases")) {

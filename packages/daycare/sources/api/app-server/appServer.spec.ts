@@ -195,6 +195,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         documents: null,
         fragments: null,
         keyValues: storage.keyValues,
+        observationLog: storage.observationLog,
         secrets,
         connectorTargetResolve: async (target) => {
             const segments = target.split("/").filter((segment) => segment.length > 0);

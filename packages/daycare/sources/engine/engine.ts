@@ -645,6 +645,7 @@ export class Engine {
             fragments: this.storage.fragments,
             keyValues: this.storage.keyValues,
             psql: this.psqlService,
+            observationLog: this.storage.observationLog,
             secrets: this.secrets,
             connectorTargetResolve: (path) => this.connectorTargetResolve(path)
         });
