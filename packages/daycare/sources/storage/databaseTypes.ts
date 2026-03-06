@@ -476,8 +476,6 @@ export type ProcessDbRecord = {
     cwd: string;
     home: string | null;
     env: Record<string, string>;
-    packageManagers: string[];
-    allowedDomains: string[];
     allowLocalBinding: boolean;
     permissions: SessionPermissions;
     owner: ProcessOwnerDbRecord | null;

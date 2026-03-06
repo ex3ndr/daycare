@@ -114,8 +114,6 @@ function recordBuild(input: { id: string; userId: string; owner: { type: "plugin
         cwd: "/tmp",
         home: null,
         env: {},
-        packageManagers: [],
-        allowedDomains: [],
         allowLocalBinding: false,
         permissions: {
             workingDir: "/tmp",

@@ -37,8 +37,6 @@ describe("DockerContainers", () => {
         });
 
         const config = {
-            image: "daycare-sandbox",
-            tag: "latest",
             readOnly: false,
             unconfinedSecurity: false,
             capAdd: [],
@@ -87,8 +85,6 @@ describe("DockerContainers", () => {
 
         await facade.exec(
             {
-                image: "daycare-sandbox",
-                tag: "latest",
                 readOnly: false,
                 unconfinedSecurity: false,
                 capAdd: [],

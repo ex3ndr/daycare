@@ -19,4 +19,5 @@ Permissions are fixed by the system and cannot be changed at runtime. Work withi
 
 ### Exec Networking
 
-For `exec` to use outbound network access, include `allowedDomains` in the tool call.
+`exec` always runs inside the per-user Docker sandbox, and outbound network access is available without extra
+tool-call flags.

@@ -1,5 +1,4 @@
 import type { SessionPermissions } from "@/types";
-import type { SandboxPackageManager } from "./sandboxPackageManagers.js";
 
 export type SandboxReadArgs = {
     path: string;
@@ -60,8 +59,6 @@ export type SandboxExecArgs = {
     env?: Record<string, string | number | boolean>;
     secrets?: Record<string, string>;
     dotenv?: boolean | string;
-    packageManagers?: SandboxPackageManager[];
-    allowedDomains?: string[];
     signal?: AbortSignal;
 };
 
@@ -80,12 +77,8 @@ export type SandboxMount = {
 };
 
 export type SandboxDockerConfig = {
-    enabled: boolean;
-    image: string;
-    tag: string;
     socketPath?: string;
     runtime?: string;
-    enableWeakerNestedSandbox: boolean;
     readOnly: boolean;
     unconfinedSecurity: boolean;
     capAdd: string[];
@@ -100,5 +93,5 @@ export type SandboxConfig = {
     homeDir: string;
     permissions: SessionPermissions;
     mounts?: SandboxMount[];
-    docker?: SandboxDockerConfig;
+    docker: SandboxDockerConfig;
 };

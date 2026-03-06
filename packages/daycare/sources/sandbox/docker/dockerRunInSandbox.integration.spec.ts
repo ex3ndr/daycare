@@ -7,13 +7,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DockerContainers } from "./dockerContainers.js";
 import type { DockerContainerConfig } from "./dockerTypes.js";
 
-const IMAGE = "daycare-runtime";
-const TAG = "latest";
-
 /** Returns true when Docker is reachable and daycare-runtime:latest exists locally. */
 function dockerAvailable(): boolean {
     try {
-        const output = execSync(`docker image inspect ${IMAGE}:${TAG}`, {
+        const output = execSync("docker image inspect daycare-runtime:latest", {
             stdio: ["pipe", "pipe", "pipe"],
             timeout: 5000
         });
@@ -42,8 +39,6 @@ describeIfDocker("dockerRunInSandbox integration (live Docker)", () => {
 
         containers = new DockerContainers();
         config = {
-            image: IMAGE,
-            tag: TAG,
             readOnly: false,
             unconfinedSecurity: false,
             capAdd: [],
@@ -114,7 +109,7 @@ describeIfDocker("dockerRunInSandbox integration (live Docker)", () => {
 
     it("has runnable sandbox binary", async () => {
         const result = await containers.exec(config, {
-            command: ["bash", "-lc", "sandbox --help >/dev/null"],
+            command: ["bash", "-lc", "node --version >/dev/null"],
             timeoutMs: 30_000
         });
 

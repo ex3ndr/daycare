@@ -24,12 +24,8 @@ const sandbox = new Sandbox({
         { hostPath: examplesDir, mappedPath: "/shared/examples" }
     ],
     docker: {
-        enabled: true,
-        image: "daycare-sandbox",
-        tag: "latest",
         socketPath: "/var/run/docker.sock",
         runtime: "runsc",
-        enableWeakerNestedSandbox: false,
         readOnly: false,
         unconfinedSecurity: false,
         capAdd: [],
@@ -45,7 +41,7 @@ Inputs:
 - `workingDir`: derived from `permissions.workingDir` and cannot be overridden at construction
 - `permissions`: session permissions used by read/write checks
 - `mounts` (optional): extra mount points for virtual paths (e.g. `/shared/skills`). Home is always mounted at `/home` automatically.
-- `docker` (optional): enable Docker-wrapped `exec` with per-user container config
+- `docker`: required Docker execution config for the per-user container
 
 ## API
 
@@ -79,31 +75,38 @@ Behavior:
 ### `exec(args)`
 
 ```ts
-await sandbox.exec({ command, cwd, timeoutMs, env, dotenv, secrets, packageManagers, allowedDomains });
+await sandbox.exec({ command, cwd, timeoutMs, env, dotenv, secrets });
 ```
 
 Behavior:
-- validates allowed domains
 - resolves `cwd` inside workspace scope
 - optionally loads dotenv values (`dotenv: true` uses `cwd/.env`, string uses explicit path)
 - merges env in order: `process.env` -> dotenv -> explicit `env` -> resolved `secrets`
-- builds filesystem policy from permissions
 - always runs with `HOME = homeDir`
-- executes through `runInSandbox` (host mode) or `dockerRunInSandbox` (docker mode)
+- always executes through `dockerRunInSandbox`
+- runs `bash -lc <command>` inside the per-user Docker container
+- leaves outbound networking enabled; there is no per-command domain allowlist
+
+## Execution Flow
+
+```mermaid
+flowchart TD
+    A[Sandbox.exec] --> B[Resolve cwd and env]
+    B --> C[Map host paths to container mounts]
+    C --> D[dockerRunInSandbox]
+    D --> E[dockerContainerEnsure]
+    E --> F[Exec bash -lc command in daycare-runtime:latest container]
+```
 
 ## Docker Settings
 
-Enable Docker runtime in `settings.json`:
+Configure the Docker runtime in `settings.json`:
 
 ```json
 {
     "docker": {
-        "enabled": true,
-        "image": "daycare-sandbox",
-        "tag": "latest",
         "socketPath": "/var/run/docker.sock",
         "runtime": "runsc",
-        "enableWeakerNestedSandbox": false,
         "readOnly": false,
         "unconfinedSecurity": false,
         "capAdd": ["NET_ADMIN"],
@@ -114,6 +117,8 @@ Enable Docker runtime in `settings.json`:
     }
 }
 ```
+
+The Docker image is fixed in code to `daycare-runtime:latest`.
 
 Path mapping uses the generic mount list. Home is always `/home`, extra mounts use their `mappedPath`:
 - host: `/data/users/<userId>/home/...` → container: `/home/...`
@@ -126,5 +131,5 @@ Path mapping uses the generic mount list. Home is always `/home`, extra mounts u
 ```ts
 const text = await context.sandbox.read({ path: "notes.txt" });
 await context.sandbox.write({ path: "/tmp/out.txt", content: "ok" });
-const result = await context.sandbox.exec({ command: "ls", allowedDomains: ["example.com"] });
+const result = await context.sandbox.exec({ command: "ls -la" });
 ```

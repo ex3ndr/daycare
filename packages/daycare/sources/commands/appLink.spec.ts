@@ -45,10 +45,6 @@ describe("appLinkCommand", () => {
             authPath: "/tmp/auth.json",
             socketPath: "/tmp/daycare.sock",
             docker: {
-                enabled: false,
-                image: "none",
-                tag: "none",
-                enableWeakerNestedSandbox: false,
                 readOnly: false,
                 unconfinedSecurity: false,
                 capAdd: [],

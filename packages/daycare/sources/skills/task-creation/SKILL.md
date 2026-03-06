@@ -1,6 +1,6 @@
 ---
 name: task-creation
-description: Create and update robust Daycare tasks (task_create/task_update + task_trigger_add) with minimal Python orchestration, explicit parameter schemas, strict allowedDomains for every networked exec/process call, and performance-first skip() behavior. Use when users ask for cron/webhook automation, recurring checks, scheduled reports, or resilient background task workflows.
+description: Create and update robust Daycare tasks (task_create/task_update + task_trigger_add) with minimal Python orchestration, explicit parameter schemas, reproducible exec/process usage, and performance-first skip() behavior. Use when users ask for cron/webhook automation, recurring checks, scheduled reports, or resilient background task workflows.
 sandbox: true
 permissions:
   - "@read:~/"
@@ -17,7 +17,7 @@ Build task workflows that are small, deterministic, and cheap to run repeatedly.
 1. Keep task `code` short and orchestration-focused.
 2. Offload heavy or reusable logic to real scripts invoked via `exec`.
 3. Use `skip()` whenever the run does not require LLM reasoning.
-4. For every networked command, set explicit `allowedDomains` (never rely on defaults).
+4. Keep command inputs explicit and reproducible; do not hide behavior behind ad hoc shell state.
 5. Make tasks idempotent: safe to run multiple times without harmful side effects.
 
 ## Tooling Model
@@ -66,30 +66,29 @@ Good candidates to offload:
 - file generation pipelines
 - repeated business logic shared by multiple tasks
 
-### 4) Always set `allowedDomains` for networked exec
+### 4) Keep network usage explicit in commands
 
 Rules:
 
-1. Local-only commands: set `allowedDomains: []`.
-2. Network calls: list every required hostname explicitly.
-3. Do not use `["*"]` unless there is a documented hard requirement.
+1. Local-only commands should still be written so they are obviously local-only.
+2. Network calls should use direct, reviewable URLs and avoid hidden indirection.
+3. Prefer checked-in scripts when a command grows beyond one or two simple shell operations.
 
 Examples:
 
 ```python
 # Local-only
-res = exec(command="node ./scripts/build-digest.mjs", allowedDomains=[])
+res = exec(command="node ./scripts/build-digest.mjs")
 ```
 
 ```python
 # Networked
 res = exec(
-    command="curl -fsSL https://api.github.com/repos/org/repo/actions/runs?per_page=5",
-    allowedDomains=["api.github.com"]
+    command="curl -fsSL https://api.github.com/repos/org/repo/actions/runs?per_page=5"
 )
 ```
 
-If the command touches multiple services, include all domains in one list.
+If the command touches multiple services, keep them visible in the command or script source.
 
 ### 5) Use runtime JSON helpers for structured payloads
 
@@ -104,8 +103,7 @@ Example:
 
 ```python
 raw = exec(
-    command="curl -fsSL https://api.example.com/v1/incidents",
-    allowedDomains=["api.example.com"]
+    command="curl -fsSL https://api.example.com/v1/incidents"
 )
 incidents = json_parse(text=raw.output)["value"]
 
@@ -134,7 +132,7 @@ Before finishing:
 
 1. Task code is short and readable.
 2. Expensive logic is offloaded to scripts.
-3. All networked `exec` calls include exact `allowedDomains`.
+3. Commands are explicit about what they access and are easy to audit.
 4. No-op path calls `skip()` early.
 5. Trigger type matches user intent (cron vs webhook).
 6. `task_run` validation succeeded.
@@ -145,7 +143,7 @@ Before finishing:
 ### Mechanical monitor template
 
 ```python
-status = exec(command="node ./scripts/check-system.mjs", allowedDomains=[])
+status = exec(command="node ./scripts/check-system.mjs")
 if "NO_CHANGES" in status.output:
     skip()
 
@@ -157,8 +155,7 @@ skip()
 
 ```python
 data = exec(
-    command="curl -fsSL https://api.example.com/v1/incidents",
-    allowedDomains=["api.example.com"]
+    command="curl -fsSL https://api.example.com/v1/incidents"
 )
 print("Review incidents and produce a short triage summary.")
 print(data.output)

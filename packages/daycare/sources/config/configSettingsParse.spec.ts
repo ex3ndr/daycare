@@ -44,12 +44,8 @@ describe("configSettingsParse", () => {
     it("accepts full docker settings", () => {
         const parsed = configSettingsParse({
             docker: {
-                enabled: true,
-                image: "daycare-sandbox",
-                tag: "latest",
                 socketPath: "/var/run/docker.sock",
                 runtime: "runsc",
-                enableWeakerNestedSandbox: true,
                 readOnly: true,
                 unconfinedSecurity: true,
                 capAdd: ["NET_ADMIN"],
@@ -61,12 +57,8 @@ describe("configSettingsParse", () => {
         });
 
         expect(parsed.docker).toEqual({
-            enabled: true,
-            image: "daycare-sandbox",
-            tag: "latest",
             socketPath: "/var/run/docker.sock",
             runtime: "runsc",
-            enableWeakerNestedSandbox: true,
             readOnly: true,
             unconfinedSecurity: true,
             capAdd: ["NET_ADMIN"],
@@ -85,12 +77,12 @@ describe("configSettingsParse", () => {
     it("accepts partial docker settings", () => {
         const parsed = configSettingsParse({
             docker: {
-                enabled: true
+                runtime: "runsc"
             }
         });
 
         expect(parsed.docker).toEqual({
-            enabled: true
+            runtime: "runsc"
         });
     });
 

@@ -1,18 +1,13 @@
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 // bwrap is unavailable in GitHub Actions (RTM_NEWADDR: Operation not permitted)
 const itIfSandbox = process.env.CI ? it.skip : it;
 
-vi.mock("../../sandbox/sandboxDockerEnvironmentIs.js", () => ({
-    sandboxDockerEnvironmentIs: vi.fn()
-}));
-
 import type { SessionPermissions } from "@/types";
 import { getLogger } from "../../log.js";
-import { sandboxDockerEnvironmentIs } from "../../sandbox/sandboxDockerEnvironmentIs.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { Processes } from "./processes.js";
@@ -34,7 +29,6 @@ describe("Processes", () => {
             workingDir: workspaceDir,
             writeDirs: [workspaceDir]
         };
-        vi.mocked(sandboxDockerEnvironmentIs).mockResolvedValue(false);
         managers = [];
         storage = await storageOpenTest();
     });
@@ -53,90 +47,12 @@ describe("Processes", () => {
     });
 
     it(
-        "writes explicit network allowlist to sandbox config",
+        "starts a direct managed process and creates a log file",
         async () => {
             const manager = await createManager(baseDir);
             const created = await manager.create(
                 {
-                    command: `node -e "console.log('domains-enabled')"`,
-                    keepAlive: false,
-                    cwd: workspaceDir,
-                    userId: "user-1",
-                    allowedDomains: ["example.com"]
-                },
-                permissions
-            );
-
-            const settingsPath = path.join(baseDir, "processes", created.id, "sandbox.json");
-            const config = JSON.parse(await fs.readFile(settingsPath, "utf8")) as {
-                network?: { allowedDomains?: string[] };
-                allowUnixSockets?: string[];
-                enableWeakerNestedSandbox?: boolean;
-            };
-            expect(config.network?.allowedDomains).toEqual(["example.com"]);
-            expect(config.allowUnixSockets).toBeUndefined();
-            expect(config.enableWeakerNestedSandbox).toBeUndefined();
-        },
-        TEST_TIMEOUT_MS
-    );
-
-    it(
-        "enables weaker nested sandbox in process config when runtime is inside docker",
-        async () => {
-            vi.mocked(sandboxDockerEnvironmentIs).mockResolvedValueOnce(true);
-            const manager = await createManager(baseDir);
-            const created = await manager.create(
-                {
-                    command: `node -e "console.log('weaker-nested-enabled')"`,
-                    keepAlive: false,
-                    cwd: workspaceDir,
-                    userId: "user-1",
-                    allowedDomains: ["example.com"]
-                },
-                permissions
-            );
-
-            const settingsPath = path.join(baseDir, "processes", created.id, "sandbox.json");
-            const config = JSON.parse(await fs.readFile(settingsPath, "utf8")) as {
-                enableWeakerNestedSandbox?: boolean;
-            };
-            expect(config.enableWeakerNestedSandbox).toBe(true);
-        },
-        TEST_TIMEOUT_MS
-    );
-
-    it(
-        "adds allowLocalBinding when requested by process input",
-        async () => {
-            const manager = await createManager(baseDir);
-            const created = await manager.create(
-                {
-                    command: `node -e "console.log('local-bind-enabled')"`,
-                    keepAlive: false,
-                    cwd: workspaceDir,
-                    userId: "user-1",
-                    allowLocalBinding: true,
-                    allowedDomains: ["example.com"]
-                },
-                permissions
-            );
-
-            const settingsPath = path.join(baseDir, "processes", created.id, "sandbox.json");
-            const config = JSON.parse(await fs.readFile(settingsPath, "utf8")) as {
-                network?: { allowLocalBinding?: boolean };
-            };
-            expect(config.network?.allowLocalBinding).toBe(true);
-        },
-        TEST_TIMEOUT_MS
-    );
-
-    it(
-        "defaults process allowedDomains to an empty allowlist when omitted",
-        async () => {
-            const manager = await createManager(baseDir);
-            const created = await manager.create(
-                {
-                    command: `node -e "console.log('network-without-domains')"`,
+                    command: `node -e "console.log('started-directly')"`,
                     keepAlive: false,
                     cwd: workspaceDir,
                     userId: "user-1"
@@ -144,11 +60,54 @@ describe("Processes", () => {
                 permissions
             );
 
-            const settingsPath = path.join(baseDir, "processes", created.id, "sandbox.json");
-            const config = JSON.parse(await fs.readFile(settingsPath, "utf8")) as {
-                network?: { allowedDomains?: string[] };
-            };
-            expect(config.network?.allowedDomains).toEqual([]);
+            await sleep(1_000);
+            const content = await fs.readFile(created.logPath, "utf8");
+            expect(content).toContain("started-directly");
+        },
+        TEST_TIMEOUT_MS
+    );
+
+    it(
+        "applies HOME override when provided",
+        async () => {
+            const manager = await createManager(baseDir);
+            const homeDir = path.join(workspaceDir, "custom-home");
+            await fs.mkdir(homeDir, { recursive: true });
+            const created = await manager.create(
+                {
+                    command: `node -e "console.log(process.env.HOME)"`,
+                    keepAlive: false,
+                    cwd: workspaceDir,
+                    userId: "user-1",
+                    home: homeDir
+                },
+                permissions
+            );
+
+            await sleep(1_000);
+            const content = await fs.readFile(created.logPath, "utf8");
+            expect(content).toContain(homeDir);
+        },
+        TEST_TIMEOUT_MS
+    );
+
+    it(
+        "accepts allowLocalBinding without sandbox config generation",
+        async () => {
+            const manager = await createManager(baseDir);
+            const created = await manager.create(
+                {
+                    command: `node -e "setTimeout(() => process.exit(0), 100)"`,
+                    keepAlive: false,
+                    cwd: workspaceDir,
+                    userId: "user-1",
+                    allowLocalBinding: true
+                },
+                permissions
+            );
+
+            expect(created.pid).not.toBeNull();
+            await expect(fs.access(path.join(baseDir, "processes", created.id, "sandbox.json"))).rejects.toThrow();
         },
         TEST_TIMEOUT_MS
     );
@@ -162,8 +121,7 @@ describe("Processes", () => {
                     command: `node -e "setInterval(() => {}, 1000)"`,
                     keepAlive: false,
                     cwd: workspaceDir,
-                    userId: "user-1",
-                    allowedDomains: ["example.com"]
+                    userId: "user-1"
                 },
                 permissions
             );
@@ -203,8 +161,7 @@ describe("Processes", () => {
                     command,
                     keepAlive: true,
                     cwd: workspaceDir,
-                    userId: "user-1",
-                    allowedDomains: ["example.com"]
+                    userId: "user-1"
                 },
                 permissions
             );
@@ -230,8 +187,7 @@ describe("Processes", () => {
                     command: `node -e "console.log('hello-durable-log')"`,
                     keepAlive: false,
                     cwd: workspaceDir,
-                    userId: "user-1",
-                    allowedDomains: ["example.com"]
+                    userId: "user-1"
                 },
                 permissions
             );
@@ -267,8 +223,7 @@ describe("Processes", () => {
                     command,
                     keepAlive: true,
                     cwd: workspaceDir,
-                    userId: "user-1",
-                    allowedDomains: ["example.com"]
+                    userId: "user-1"
                 },
                 permissions
             );
@@ -298,8 +253,6 @@ describe("Processes", () => {
                 cwd: workspaceDir,
                 home: null,
                 env: {},
-                packageManagers: [],
-                allowedDomains: [],
                 allowLocalBinding: false,
                 permissions,
                 owner: null,
@@ -345,7 +298,6 @@ describe("Processes", () => {
                     keepAlive: true,
                     cwd: workspaceDir,
                     userId: "user-1",
-                    allowedDomains: ["example.com"],
                     owner: { type: "plugin", id: "plugin-a" }
                 },
                 permissions
@@ -356,7 +308,6 @@ describe("Processes", () => {
                     keepAlive: true,
                     cwd: workspaceDir,
                     userId: "user-1",
-                    allowedDomains: ["example.com"],
                     owner: { type: "plugin", id: "plugin-a" }
                 },
                 permissions
@@ -367,7 +318,6 @@ describe("Processes", () => {
                     keepAlive: true,
                     cwd: workspaceDir,
                     userId: "user-1",
-                    allowedDomains: ["example.com"],
                     owner: { type: "plugin", id: "plugin-b" }
                 },
                 permissions

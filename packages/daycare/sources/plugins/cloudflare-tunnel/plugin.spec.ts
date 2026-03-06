@@ -83,7 +83,6 @@ describe("cloudflare tunnel plugin", () => {
                 cwd: "/tmp/daycare/plugins/cloudflare-1",
                 home: "/tmp/daycare/plugins/cloudflare-1",
                 env: { TUNNEL_TOKEN: "token-123" },
-                allowedDomains: ["*.argotunnel.com", "*.cftunnel.com", "*.cloudflare.com"],
                 keepAlive: true,
                 owner: { type: "plugin", id: "cloudflare-1" },
                 userId: "user-1"

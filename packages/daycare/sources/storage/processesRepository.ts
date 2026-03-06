@@ -338,8 +338,6 @@ function recordParse(row: typeof processesTable.$inferSelect): ProcessDbRecord {
         cwd: row.cwd,
         home: row.home,
         env: jsonRecordParse(row.env),
-        packageManagers: jsonStringArrayParse(row.packageManagers),
-        allowedDomains: jsonStringArrayParse(row.allowedDomains),
         allowLocalBinding: row.allowLocalBinding,
         permissions: permissionsParse(row.permissions),
         owner: ownerParse(row.owner),
@@ -364,8 +362,6 @@ function processRecordClone(record: ProcessDbRecord): ProcessDbRecord {
     return {
         ...record,
         env: { ...record.env },
-        packageManagers: [...record.packageManagers],
-        allowedDomains: [...record.allowedDomains],
         permissions: {
             ...record.permissions,
             writeDirs: [...record.permissions.writeDirs],
@@ -395,8 +391,6 @@ function processVersionChanges(
         cwd: record.cwd,
         home: record.home,
         env: record.env,
-        packageManagers: record.packageManagers,
-        allowedDomains: record.allowedDomains,
         allowLocalBinding: record.allowLocalBinding,
         permissions: record.permissions,
         owner: record.owner,
@@ -437,8 +431,8 @@ function processRowUpdate(
         cwd: record.cwd,
         home: record.home,
         env: record.env,
-        packageManagers: record.packageManagers,
-        allowedDomains: record.allowedDomains,
+        packageManagers: [],
+        allowedDomains: [],
         allowLocalBinding: record.allowLocalBinding,
         permissions: record.permissions,
         owner: record.owner,
@@ -508,8 +502,6 @@ function processRecordMerge(current: ProcessDbRecord, data: Partial<ProcessDbRec
         cwd: data.cwd ?? current.cwd,
         home: data.home === undefined ? current.home : data.home,
         env: data.env ?? current.env,
-        packageManagers: data.packageManagers ?? current.packageManagers,
-        allowedDomains: data.allowedDomains ?? current.allowedDomains,
         allowLocalBinding: data.allowLocalBinding ?? current.allowLocalBinding,
         permissions: data.permissions ?? current.permissions,
         owner: data.owner === undefined ? current.owner : data.owner,
@@ -569,18 +561,6 @@ function jsonRecordParse(raw: unknown): Record<string, string> {
         return Object.fromEntries(entries);
     } catch {
         return {};
-    }
-}
-
-function jsonStringArrayParse(raw: unknown): string[] {
-    try {
-        const parsed = jsonValueParse(raw);
-        if (!Array.isArray(parsed)) {
-            return [];
-        }
-        return parsed.filter((entry): entry is string => typeof entry === "string");
-    } catch {
-        return [];
     }
 }
 

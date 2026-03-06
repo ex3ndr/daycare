@@ -12,6 +12,7 @@ import { getProviderDefinition } from "../providers/catalog.js";
 import { ProviderManager } from "../providers/manager.js";
 import { ModelRoles } from "../providers/modelRoles.js";
 import { dockerContainersStaleRemove } from "../sandbox/docker/dockerContainersStaleRemove.js";
+import { dockerImageIdResolve } from "../sandbox/docker/dockerImageIdResolve.js";
 import { PsqlService } from "../services/psql/PsqlService.js";
 import { psqlToolsBuild } from "../services/psql/psqlTools.js";
 import { databaseClose } from "../storage/databaseClose.js";
@@ -127,6 +128,7 @@ import { userHomeMigrate } from "./users/userHomeMigrate.js";
 import { Webhooks } from "./webhook/webhooks.js";
 
 const logger = getLogger("engine.runtime");
+const DAYCARE_RUNTIME_IMAGE_REF = "daycare-runtime:latest";
 const INCOMING_MESSAGES_DEBOUNCE_MS = 100;
 
 export type EngineOptions = {
@@ -678,16 +680,24 @@ export class Engine {
         await peopleRootDocumentEnsure(ownerCtx, this.storage);
         await documentRootDocumentEnsure(ownerCtx, this.storage);
         await userHomeMigrate(this.config.current, this.storage);
-        if (this.config.current.docker.enabled) {
-            const imageRef = `${this.config.current.docker.image}:${this.config.current.docker.tag}`;
-            try {
-                const docker = this.config.current.docker.socketPath
-                    ? new Docker({ socketPath: this.config.current.docker.socketPath })
-                    : new Docker();
-                await dockerContainersStaleRemove(docker, imageRef);
-            } catch (error) {
-                logger.warn({ imageRef, error }, "stale: Failed to remove stale Docker sandbox containers on startup");
-            }
+        const docker = this.config.current.docker.socketPath
+            ? new Docker({ socketPath: this.config.current.docker.socketPath })
+            : new Docker();
+        try {
+            await dockerImageIdResolve(docker);
+        } catch (error) {
+            throw new Error(
+                `Required Docker image ${DAYCARE_RUNTIME_IMAGE_REF} is missing. Build or pull it before starting Daycare.`,
+                { cause: error }
+            );
+        }
+        try {
+            await dockerContainersStaleRemove(docker, DAYCARE_RUNTIME_IMAGE_REF);
+        } catch (error) {
+            logger.warn(
+                { imageRef: DAYCARE_RUNTIME_IMAGE_REF, error },
+                "stale: Failed to remove stale Docker sandbox containers on startup"
+            );
         }
         await this.swarms.discover(ownerCtx.userId);
 

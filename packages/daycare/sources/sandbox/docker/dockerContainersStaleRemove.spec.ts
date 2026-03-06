@@ -59,7 +59,7 @@ describe("dockerContainersStaleRemove", () => {
             getContainer: vi.fn().mockImplementation((id: string) => byId.get(id))
         } as unknown as Docker;
 
-        await dockerContainersStaleRemove(docker, "daycare-sandbox:latest");
+        await dockerContainersStaleRemove(docker, "daycare-runtime:latest");
 
         expect(docker.listContainers).toHaveBeenCalledWith({
             all: true,
@@ -95,7 +95,7 @@ describe("dockerContainersStaleRemove", () => {
             getContainer: vi.fn().mockReturnValue(staleContainer)
         } as unknown as Docker;
 
-        await dockerContainersStaleRemove(docker, "daycare-sandbox:latest");
+        await dockerContainersStaleRemove(docker, "daycare-runtime:latest");
 
         expect(staleContainer.stop).toHaveBeenCalledTimes(1);
         expect(staleContainer.remove).toHaveBeenCalledTimes(1);

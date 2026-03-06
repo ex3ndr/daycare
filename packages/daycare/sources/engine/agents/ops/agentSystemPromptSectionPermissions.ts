@@ -23,8 +23,7 @@ export async function agentSystemPromptSectionPermissions(context: AgentSystemPr
         { name: "tmp" }
     ];
 
-    const dockerEnabled = context.agentSystem?.config?.current?.docker?.enabled ?? false;
-    const examplesDir = dockerEnabled ? "/shared/examples" : bundledExamplesDirResolve();
+    const examplesDir = context.agentSystem ? "/shared/examples" : bundledExamplesDirResolve();
     const template = await agentPromptBundledRead("SYSTEM_PERMISSIONS.md");
     const section = Handlebars.compile(template)({ homeDirs, examplesDir });
     return section.trim();

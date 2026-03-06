@@ -23,7 +23,7 @@ const DOCKER_IMAGE_ID_LABEL = "daycare.image.id";
  * Expects: imageRef points to the runtime image used for sandbox containers.
  */
 export async function dockerContainersStaleRemove(docker: Docker, imageRef: string): Promise<void> {
-    const currentImageId = await dockerImageIdResolve(docker, imageRef);
+    const currentImageId = await dockerImageIdResolve(docker);
     const containers = (await docker.listContainers({
         all: true,
         filters: {

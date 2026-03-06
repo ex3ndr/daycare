@@ -11,10 +11,10 @@ describe("dockerImageIdResolve", () => {
             getImage
         } as unknown as Docker;
 
-        const result = await dockerImageIdResolve(docker, "daycare-sandbox:latest");
+        const result = await dockerImageIdResolve(docker);
 
         expect(result).toBe("sha256:abc123");
-        expect(getImage).toHaveBeenCalledWith("daycare-sandbox:latest");
+        expect(getImage).toHaveBeenCalledWith("daycare-runtime:latest");
         expect(inspect).toHaveBeenCalledTimes(1);
     });
 });

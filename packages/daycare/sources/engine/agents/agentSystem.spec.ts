@@ -64,7 +64,7 @@ describe("AgentSystem", () => {
         } finally {
             delayedSignals?.stop();
             vi.useRealTimers();
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -94,7 +94,7 @@ describe("AgentSystem", () => {
         } finally {
             delayedSignals?.stop();
             vi.useRealTimers();
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -119,7 +119,7 @@ describe("AgentSystem", () => {
         } finally {
             delayedSignals?.stop();
             vi.useRealTimers();
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -143,7 +143,7 @@ describe("AgentSystem", () => {
         } finally {
             delayedSignals?.stop();
             vi.useRealTimers();
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -165,7 +165,7 @@ describe("AgentSystem", () => {
             expect(firstAgentId).toBe(secondAgentId);
             expect(firstAgentId).not.toBe(descriptor.id);
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -192,7 +192,7 @@ describe("AgentSystem", () => {
         } finally {
             delayedSignals?.stop();
             vi.useRealTimers();
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -222,13 +222,14 @@ describe("AgentSystem", () => {
             expect(state?.state).toBe("sleeping");
         } finally {
             delayedSignals?.stop();
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
     it("kills active subagents after poison-pill delivery and rejects queued completions", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
         let delayedSignals: DelayedSignals | null = null;
+        let harness: Awaited<ReturnType<typeof harnessCreate>> | null = null;
         try {
             let releaseFirstInference!: () => void;
             const firstInferenceGate = new Promise<void>((resolve) => {
@@ -246,28 +247,32 @@ describe("AgentSystem", () => {
                 complete
             } as unknown as InferenceRouter;
 
-            const harness = await harnessCreate(dir, { inferenceRouter });
-            delayedSignals = harness.delayedSignals;
+            const currentHarness = await harnessCreate(dir, { inferenceRouter });
+            harness = currentHarness;
+            delayedSignals = currentHarness.delayedSignals;
             await delayedSignals.start();
-            await harness.agentSystem.load();
-            await harness.agentSystem.start();
+            await currentHarness.agentSystem.load();
+            await currentHarness.agentSystem.start();
 
-            const agentId = await subagentCreate(harness.agentSystem, harness.eventBus);
+            const agentId = await subagentCreate(currentHarness.agentSystem, currentHarness.eventBus);
             await post(
-                harness.agentSystem,
+                currentHarness.agentSystem,
                 { agentId },
                 { type: "message", message: { text: "start long work" }, context: {} }
             );
-            await vi.waitFor(() => {
-                expect(complete.mock.calls.length).toBe(1);
-            });
+            await vi.waitFor(
+                () => {
+                    expect(complete.mock.calls.length).toBe(1);
+                },
+                { timeout: 10_000 }
+            );
 
-            await harness.signals.generate({
+            await currentHarness.signals.generate({
                 type: `agent:${agentId}:poison-pill`,
                 source: { type: "system", userId: "user-1" }
             });
             const queued = postAndAwait(
-                harness.agentSystem,
+                currentHarness.agentSystem,
                 { agentId },
                 { type: "reset", message: "queued after poison-pill" }
             );
@@ -275,23 +280,27 @@ describe("AgentSystem", () => {
             releaseFirstInference();
 
             await expect(queued).rejects.toThrow(`Agent is dead: ${agentId}`);
-            await vi.waitFor(() => {
-                const calls = complete.mock.calls.length;
-                expect(calls).toBeGreaterThanOrEqual(2);
-            });
+            await vi.waitFor(
+                () => {
+                    const calls = complete.mock.calls.length;
+                    expect(calls).toBeGreaterThanOrEqual(2);
+                },
+                { timeout: 10_000 }
+            );
             await expect(
-                postAndAwait(harness.agentSystem, { agentId }, { type: "reset", message: "dead check" })
+                postAndAwait(currentHarness.agentSystem, { agentId }, { type: "reset", message: "dead check" })
             ).rejects.toThrow(`Agent is dead: ${agentId}`);
             await vi.waitFor(async () => {
                 const state = await agentStateRead(
-                    harness.storage,
-                    await contextForAgentIdRequire(harness.agentSystem, agentId)
+                    currentHarness.storage,
+                    await contextForAgentIdRequire(currentHarness.agentSystem, agentId)
                 );
                 expect(state?.state).toBe("dead");
             });
         } finally {
             delayedSignals?.stop();
-            await rm(dir, { recursive: true, force: true });
+            await harness?.storage.connection.close().catch(() => undefined);
+            await tempDirRemove(dir);
         }
     });
 
@@ -334,7 +343,7 @@ describe("AgentSystem", () => {
             delayedSignalsA?.stop();
             delayedSignalsB?.stop();
             vi.useRealTimers();
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -370,7 +379,7 @@ describe("AgentSystem", () => {
             delayedSignalsA?.stop();
             delayedSignalsB?.stop();
             vi.useRealTimers();
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -409,7 +418,7 @@ describe("AgentSystem", () => {
             delayedSignalsA?.stop();
             delayedSignalsB?.stop();
             vi.useRealTimers();
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -434,7 +443,7 @@ describe("AgentSystem", () => {
             expect(ctx).toBeTruthy();
             expect(linked?.id).toBe(ctx!.userId);
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -471,7 +480,7 @@ describe("AgentSystem", () => {
             expect(state.permissions.workingDir).toBe(expectedDesktop);
             expect(state.permissions.writeDirs).toEqual([expectedHome]);
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -505,7 +514,7 @@ describe("AgentSystem", () => {
             expect(firstContext?.userId).toBeTruthy();
             expect(secondContext?.userId).toBe(firstContext?.userId);
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -549,7 +558,7 @@ describe("AgentSystem", () => {
 
             expect(subagentContext?.userId).toBe(parentContext.userId);
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -617,7 +626,7 @@ describe("AgentSystem", () => {
             const target = harness.agentSystem.agentFor(ownerCtx, "most-recent-foreground");
             expect(target).toBe("tg-agent");
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -638,7 +647,7 @@ describe("AgentSystem", () => {
             expect(persisted?.path).toBe("/swarm-user-1/agent/swarm");
             expect(persisted?.foreground).toBe(true);
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -668,7 +677,7 @@ describe("AgentSystem", () => {
             const persisted = await harness.storage.agents.findById(swarmAgentId);
             expect(persisted?.path).toBe(canonicalPath);
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -700,7 +709,7 @@ describe("AgentSystem", () => {
             expect(result.responseText).toBe("ok");
             expect(postSpy).not.toHaveBeenCalled();
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -771,7 +780,7 @@ describe("AgentSystem", () => {
                 item
             );
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -817,7 +826,7 @@ describe("AgentSystem", () => {
             expect(firstSpy).toHaveBeenCalledTimes(1);
             expect(secondSpy).toHaveBeenCalledTimes(0);
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 
@@ -836,7 +845,7 @@ describe("AgentSystem", () => {
             const state = await agentStateRead(harness.storage, agentCtx);
             expect(state?.state).toBe("dead");
         } finally {
-            await rm(dir, { recursive: true, force: true });
+            await tempDirRemove(dir);
         }
     });
 });
@@ -905,6 +914,25 @@ async function harnessCreate(
     agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
     agentSystem.setSignals(signals);
     return { config, storage, eventBus, signals, delayedSignals, agentSystem };
+}
+
+/**
+ * Removes a temp test directory, retrying transient ENOTEMPTY races from background file copies.
+ * Expects: dir belongs to the current test run only.
+ */
+async function tempDirRemove(dir: string): Promise<void> {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+        try {
+            await rm(dir, { recursive: true, force: true });
+            return;
+        } catch (error) {
+            const code = (error as NodeJS.ErrnoException).code;
+            if (code !== "ENOTEMPTY" || attempt === 4) {
+                throw error;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)));
+        }
+    }
 }
 
 async function subagentCreate(agentSystem: AgentSystem, eventBus: EngineEventBus): Promise<string> {

@@ -6,8 +6,6 @@ import { DOCKER_IMAGE_VERSION } from "./dockerImageVersion.js";
 import type { DockerContainerResolvedConfig } from "./dockerTypes.js";
 
 const baseConfig: DockerContainerResolvedConfig = {
-    image: "daycare-sandbox",
-    tag: "latest",
     socketPath: "/var/run/docker.sock",
     runtime: "runsc",
     readOnly: false,
@@ -23,7 +21,7 @@ const baseConfig: DockerContainerResolvedConfig = {
         { hostPath: "/tmp/daycare-examples", mappedPath: "/shared/examples" }
     ]
 };
-const IMAGE_REF = "daycare-sandbox:latest";
+const IMAGE_REF = "daycare-runtime:latest";
 const CURRENT_IMAGE_ID = "sha256:image-current";
 
 describe("dockerContainerEnsure", () => {

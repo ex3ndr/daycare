@@ -80,12 +80,8 @@ describe("configResolve", () => {
         const configPath = path.join("/tmp/daycare", "settings.json");
         const config = configResolve({}, configPath);
         expect(config.docker).toEqual({
-            enabled: false,
-            image: "daycare-sandbox",
-            tag: "latest",
             socketPath: undefined,
             runtime: undefined,
-            enableWeakerNestedSandbox: false,
             readOnly: false,
             unconfinedSecurity: false,
             capAdd: [],
@@ -102,19 +98,14 @@ describe("configResolve", () => {
         const config = configResolve(
             {
                 docker: {
-                    enabled: true,
-                    image: "custom-sandbox"
+                    runtime: "runsc"
                 }
             },
             configPath
         );
         expect(config.docker).toEqual({
-            enabled: true,
-            image: "custom-sandbox",
-            tag: "latest",
             socketPath: undefined,
-            runtime: undefined,
-            enableWeakerNestedSandbox: false,
+            runtime: "runsc",
             readOnly: false,
             unconfinedSecurity: false,
             capAdd: [],
@@ -130,12 +121,8 @@ describe("configResolve", () => {
         const config = configResolve(
             {
                 docker: {
-                    enabled: true,
-                    image: "daycare-sandbox",
-                    tag: "v2",
                     socketPath: "/var/run/docker.sock",
                     runtime: "runsc",
-                    enableWeakerNestedSandbox: true,
                     readOnly: true,
                     unconfinedSecurity: true,
                     capAdd: ["NET_ADMIN"],
@@ -145,12 +132,8 @@ describe("configResolve", () => {
             configPath
         );
         expect(config.docker).toEqual({
-            enabled: true,
-            image: "daycare-sandbox",
-            tag: "v2",
             socketPath: "/var/run/docker.sock",
             runtime: "runsc",
-            enableWeakerNestedSandbox: true,
             readOnly: true,
             unconfinedSecurity: true,
             capAdd: ["NET_ADMIN"],

@@ -12,18 +12,6 @@ const envSchema = Type.Record(
     Type.Union([Type.String(), Type.Number(), Type.Boolean()])
 );
 
-const packageManagerSchema = Type.Union([
-    Type.Literal("dart"),
-    Type.Literal("dotnet"),
-    Type.Literal("go"),
-    Type.Literal("java"),
-    Type.Literal("node"),
-    Type.Literal("php"),
-    Type.Literal("python"),
-    Type.Literal("ruby"),
-    Type.Literal("rust")
-]);
-
 const signalSchema = Type.Union([
     Type.Literal("SIGTERM"),
     Type.Literal("SIGINT"),
@@ -38,13 +26,7 @@ const processStartSchema = Type.Object(
         cwd: Type.Optional(Type.String({ minLength: 1 })),
         home: Type.Optional(Type.String({ minLength: 1 })),
         env: Type.Optional(envSchema),
-        keepAlive: Type.Optional(Type.Boolean()),
-        packageManagers: Type.Optional(Type.Array(packageManagerSchema, { minItems: 1 })),
-        allowedDomains: Type.Optional(
-            Type.Array(Type.String({ minLength: 1 }), {
-                description: "Explicit outbound network allowlist for the process. Use [] to block all domains."
-            })
-        )
+        keepAlive: Type.Optional(Type.Boolean())
     },
     { additionalProperties: false }
 );
@@ -100,7 +82,7 @@ export function buildProcessStartTool(processes: Processes): ToolDefinition {
         tool: {
             name: "process_start",
             description:
-                "Start a durable sandboxed process. The process survives engine restarts and can optionally auto-restart when keepAlive is true. Processes run with /tmp as writable path and global read access with a protected deny-list.",
+                "Start a durable managed process. The process survives engine restarts and can optionally auto-restart when keepAlive is true.",
             parameters: processStartSchema
         },
         returns: processToolReturns,

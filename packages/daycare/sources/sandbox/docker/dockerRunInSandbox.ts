@@ -1,12 +1,8 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
-
-import type { SandboxRuntimeConfig } from "@anthropic-ai/sandbox-runtime";
 
 import { getLogger } from "../../log.js";
 import { pathMountMapHostToMapped } from "../../utils/pathMountMapHostToMapped.js";
 import type { PathMountPoint } from "../../utils/pathMountTypes.js";
-import { shellQuote } from "../../utils/shellQuote.js";
 import { sandboxHomeRedefine } from "../sandboxHomeRedefine.js";
 import { dockerContainersShared } from "./dockerContainersShared.js";
 import type { DockerContainerConfig, DockerContainerExecResult } from "./dockerTypes.js";
@@ -14,7 +10,6 @@ import type { DockerContainerConfig, DockerContainerExecResult } from "./dockerT
 const logger = getLogger("sandbox.docker");
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_BUFFER_BYTES = 1_000_000;
-const SANDBOX_CONTAINER_PATH = "/usr/local/bin/sandbox";
 
 export type DockerRunInSandboxOptions = {
     cwd?: string;
@@ -28,19 +23,12 @@ export type DockerRunInSandboxOptions = {
     };
 };
 
-type SandboxRuntimeConfigWithOptionalGlobalNetwork = Omit<SandboxRuntimeConfig, "network"> & {
-    network: Omit<SandboxRuntimeConfig["network"], "allowedDomains"> & {
-        allowedDomains?: string[];
-    };
-};
-
 /**
- * Runs sandbox-runtime inside a per-user Docker container.
+ * Runs a command directly inside a per-user Docker container.
  * Expects: docker image is local and options.home is mounted to /home.
  */
 export async function dockerRunInSandbox(
     command: string,
-    config: SandboxRuntimeConfigWithOptionalGlobalNetwork,
     options: DockerRunInSandboxOptions
 ): Promise<{ stdout: string; stderr: string }> {
     const hostHomeDir = path.resolve(options.home);
@@ -50,89 +38,34 @@ export async function dockerRunInSandbox(
         hostHomeDir,
         mounts
     };
-
-    const runtimeConfig = runtimeConfigPathRewrite(config, mounts);
-    const settingsHostPath = path.join(
-        hostHomeDir,
-        ".tmp",
-        `daycare-srt-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.json`
-    );
     const { env } = await sandboxHomeRedefine({
         env: options.env ?? process.env,
         home: hostHomeDir
     });
     const containerEnv = dockerTmpEnvNormalize(envPathRewrite(env, mounts));
     const containerCwd = options.cwd ? containerPathRewriteStrict(options.cwd, mounts) : undefined;
-    const settingsContainerPath = pathMountMapHostToMapped({ mountPoints: mounts, hostPath: settingsHostPath });
-    if (!settingsContainerPath) {
-        throw new Error(`Path is not mappable to container mounts: ${settingsHostPath}`);
-    }
+    logger.debug(`exec: running in docker cwd=${containerCwd} command=${JSON.stringify(command)}`);
+    const result = await dockerContainersShared.exec(dockerConfig, {
+        command: ["bash", "-lc", command],
+        cwd: containerCwd,
+        env: containerEnv,
+        timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+        maxBufferBytes: options.maxBufferBytes ?? DEFAULT_MAX_BUFFER_BYTES,
+        signal: options.signal
+    });
 
-    await fs.mkdir(path.dirname(settingsHostPath), { recursive: true });
-    await fs.writeFile(settingsHostPath, JSON.stringify(runtimeConfig), "utf8");
-
-    try {
-        logger.debug(
-            `exec: running sandbox path=${SANDBOX_CONTAINER_PATH} cwd=${containerCwd} command=${JSON.stringify(command)}`
+    logger.debug(`exec: completed exitCode=${result.exitCode}`);
+    if (result.exitCode !== 0) {
+        logger.warn(
+            `exec: non-zero exit exitCode=${result.exitCode}` +
+                (result.stderr ? ` stderr=${result.stderr.slice(0, 500)}` : "")
         );
-
-        const result = await dockerContainersShared.exec(dockerConfig, {
-            command: [
-                "bash",
-                "-lc",
-                `${SANDBOX_CONTAINER_PATH} --settings ${settingsContainerPath} -- ${shellQuote(command)}`
-            ],
-            cwd: containerCwd,
-            env: containerEnv,
-            timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-            maxBufferBytes: options.maxBufferBytes ?? DEFAULT_MAX_BUFFER_BYTES,
-            signal: options.signal
-        });
-
-        logger.debug(`exec: completed exitCode=${result.exitCode}`);
-        if (result.exitCode !== 0) {
-            logger.warn(
-                `exec: non-zero exit exitCode=${result.exitCode}` +
-                    (result.stderr ? ` stderr=${result.stderr.slice(0, 500)}` : "")
-            );
-            throw dockerExecErrorBuild(result);
-        }
-
-        return {
-            stdout: result.stdout,
-            stderr: result.stderr
-        };
-    } finally {
-        await fs.rm(settingsHostPath, { force: true });
+        throw dockerExecErrorBuild(result);
     }
-}
-
-function runtimeConfigPathRewrite(
-    config: SandboxRuntimeConfigWithOptionalGlobalNetwork,
-    mounts: PathMountPoint[]
-): SandboxRuntimeConfigWithOptionalGlobalNetwork {
-    if (!config.filesystem) {
-        return config;
-    }
-
-    const allowWrite = Array.from(
-        new Set([
-            ...config.filesystem.allowWrite.map((entry) => containerPathRewrite(entry, mounts)),
-            "/tmp",
-            "/run",
-            "/var/tmp",
-            "/dev/shm"
-        ])
-    );
 
     return {
-        ...config,
-        filesystem: {
-            ...config.filesystem,
-            allowWrite,
-            denyRead: config.filesystem.denyRead.map((entry) => containerPathRewrite(entry, mounts)),
-            denyWrite: config.filesystem.denyWrite.map((entry) => containerPathRewrite(entry, mounts))
-        }
+        stdout: result.stdout,
+        stderr: result.stderr
     };
 }
 

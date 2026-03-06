@@ -9,7 +9,6 @@ import { cloudflareDomainResolve } from "./cloudflareDomainResolve.js";
 import { cloudflareTunnelCommandBuild } from "./cloudflareTunnelCommandBuild.js";
 
 const settingsSchema = z.object({}).passthrough();
-const CLOUDFLARED_ALLOWED_DOMAINS = ["*.argotunnel.com", "*.cftunnel.com", "*.cloudflare.com"];
 
 export const plugin = definePlugin({
     settingsSchema,
@@ -70,7 +69,6 @@ export const plugin = definePlugin({
                     cwd: api.dataDir,
                     home: api.dataDir,
                     env: { TUNNEL_TOKEN: token },
-                    allowedDomains: CLOUDFLARED_ALLOWED_DOMAINS,
                     keepAlive: true,
                     owner: processOwner,
                     userId

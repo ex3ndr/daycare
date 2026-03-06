@@ -6,12 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions } from "@/types";
 import { dockerRunInSandbox } from "./docker/dockerRunInSandbox.js";
-import { runInSandbox } from "./runtime.js";
 import { Sandbox } from "./sandbox.js";
-
-vi.mock("./runtime.js", () => ({
-    runInSandbox: vi.fn()
-}));
 
 vi.mock("./docker/dockerRunInSandbox.js", () => ({
     dockerRunInSandbox: vi.fn()
@@ -38,7 +33,6 @@ describe("Sandbox docker integration", () => {
             writeDirs: [homeDir]
         };
 
-        vi.mocked(runInSandbox).mockReset();
         vi.mocked(dockerRunInSandbox).mockReset();
     });
 
@@ -46,154 +40,49 @@ describe("Sandbox docker integration", () => {
         await fs.rm(rootDir, { recursive: true, force: true });
     });
 
-    it("uses host runtime when docker is not enabled", async () => {
-        vi.mocked(runInSandbox).mockResolvedValue({
-            stdout: "host",
-            stderr: ""
-        });
-
-        const sandbox = new Sandbox({
-            homeDir,
-            permissions
-        });
-
-        const result = await sandbox.exec({
-            command: "echo host",
-            allowedDomains: ["example.com"]
-        });
-
-        expect(result.failed).toBe(false);
-        expect(result.stdout).toBe("host");
-        expect(runInSandbox).toHaveBeenCalledTimes(1);
-        expect(vi.mocked(runInSandbox).mock.calls[0]?.[1]).not.toHaveProperty("enableWeakerNestedSandbox");
-        expect(dockerRunInSandbox).not.toHaveBeenCalled();
-    });
-
-    it("rethrows AbortError from runtime execution", async () => {
-        const abortError = new Error("Operation aborted.");
-        abortError.name = "AbortError";
-        vi.mocked(runInSandbox).mockRejectedValueOnce(abortError);
-
-        const sandbox = new Sandbox({
-            homeDir,
-            permissions
-        });
-
-        await expect(
-            sandbox.exec({
-                command: "echo host",
-                allowedDomains: [],
-                signal: new AbortController().signal
-            })
-        ).rejects.toMatchObject({ name: "AbortError" });
-    });
-
-    it("uses docker runtime when docker is enabled", async () => {
+    it("uses docker runtime for exec", async () => {
         vi.mocked(dockerRunInSandbox).mockResolvedValue({
             stdout: "docker",
             stderr: ""
         });
 
-        const sandbox = new Sandbox({
-            homeDir,
-            permissions,
-            mounts: [
-                { hostPath: skillsActiveDir, mappedPath: "/shared/skills" },
-                { hostPath: skillsActiveDir, mappedPath: "/shared/examples" }
-            ],
-            docker: {
-                enabled: true,
-                image: "daycare-sandbox",
-                tag: "latest",
-                enableWeakerNestedSandbox: false,
-                readOnly: false,
-                unconfinedSecurity: false,
-                capAdd: [],
-                capDrop: [],
-                allowLocalNetworkingForUsers: ["u123"],
-                isolatedDnsServers: ["9.9.9.9"],
-                localDnsServers: ["192.168.1.1"],
-                userId: "u123"
-            }
-        });
-
-        const result = await sandbox.exec({
-            command: "echo docker",
-            allowedDomains: ["example.com"]
-        });
+        const sandbox = sandboxBuild();
+        const result = await sandbox.exec({ command: "echo docker" });
 
         expect(result.failed).toBe(false);
         expect(result.stdout).toBe("docker");
         expect(dockerRunInSandbox).toHaveBeenCalledTimes(1);
-        expect(vi.mocked(dockerRunInSandbox).mock.calls[0]?.[1]).not.toHaveProperty("enableWeakerNestedSandbox");
-        expect(vi.mocked(dockerRunInSandbox).mock.calls[0]?.[2]?.docker).toMatchObject({
+        expect(vi.mocked(dockerRunInSandbox).mock.calls[0]?.[1]?.docker).toMatchObject({
             readOnly: false,
             unconfinedSecurity: false,
             capAdd: [],
             capDrop: [],
             allowLocalNetworkingForUsers: ["u123"],
             isolatedDnsServers: ["9.9.9.9"],
-            localDnsServers: ["192.168.1.1"]
+            localDnsServers: ["192.168.1.1"],
+            userId: "u123"
         });
-        expect(runInSandbox).not.toHaveBeenCalled();
     });
 
-    it("passes weaker nested sandbox flag when enabled in docker settings", async () => {
-        vi.mocked(dockerRunInSandbox).mockResolvedValue({
-            stdout: "docker",
-            stderr: ""
-        });
+    it("rethrows AbortError from docker execution", async () => {
+        const abortError = new Error("Operation aborted.");
+        abortError.name = "AbortError";
+        vi.mocked(dockerRunInSandbox).mockRejectedValueOnce(abortError);
 
-        const sandbox = new Sandbox({
-            homeDir,
-            permissions,
-            mounts: [
-                { hostPath: skillsActiveDir, mappedPath: "/shared/skills" },
-                { hostPath: skillsActiveDir, mappedPath: "/shared/examples" }
-            ],
-            docker: {
-                enabled: true,
-                image: "daycare-sandbox",
-                tag: "latest",
-                enableWeakerNestedSandbox: true,
-                readOnly: false,
-                unconfinedSecurity: false,
-                capAdd: [],
-                capDrop: [],
-                userId: "u123"
-            }
-        });
-
-        await sandbox.exec({
-            command: "echo docker",
-            allowedDomains: ["example.com"]
-        });
-
-        expect(vi.mocked(dockerRunInSandbox).mock.calls[0]?.[1]).toMatchObject({
-            enableWeakerNestedSandbox: true
-        });
+        const sandbox = sandboxBuild();
+        await expect(
+            sandbox.exec({
+                command: "echo docker",
+                signal: new AbortController().signal
+            })
+        ).rejects.toMatchObject({ name: "AbortError" });
     });
 
     it("rewrites container read paths back to host paths", async () => {
         const targetPath = path.join(homeDir, "documents", "notes.txt");
         await fs.writeFile(targetPath, "hello", "utf8");
 
-        const sandbox = new Sandbox({
-            homeDir,
-            permissions,
-            docker: {
-                enabled: true,
-                image: "daycare-sandbox",
-                tag: "latest",
-                enableWeakerNestedSandbox: false,
-                readOnly: false,
-                unconfinedSecurity: false,
-                capAdd: [],
-                capDrop: [],
-                userId: "u123"
-            }
-        });
-
+        const sandbox = sandboxBuild();
         const read = await sandbox.read({
             path: "/home/documents/notes.txt",
             raw: true
@@ -210,22 +99,7 @@ describe("Sandbox docker integration", () => {
     });
 
     it("rewrites container write paths back to host paths", async () => {
-        const sandbox = new Sandbox({
-            homeDir,
-            permissions,
-            docker: {
-                enabled: true,
-                image: "daycare-sandbox",
-                tag: "latest",
-                enableWeakerNestedSandbox: false,
-                readOnly: false,
-                unconfinedSecurity: false,
-                capAdd: [],
-                capDrop: [],
-                userId: "u123"
-            }
-        });
-
+        const sandbox = sandboxBuild();
         const result = await sandbox.write({
             path: "/home/documents/output.txt",
             content: "docker-write"
@@ -237,22 +111,7 @@ describe("Sandbox docker integration", () => {
     });
 
     it("expands ~/ write paths to container home before host rewrite", async () => {
-        const sandbox = new Sandbox({
-            homeDir,
-            permissions,
-            docker: {
-                enabled: true,
-                image: "daycare-sandbox",
-                tag: "latest",
-                enableWeakerNestedSandbox: false,
-                readOnly: false,
-                unconfinedSecurity: false,
-                capAdd: [],
-                capDrop: [],
-                userId: "u123"
-            }
-        });
-
+        const sandbox = sandboxBuild();
         const result = await sandbox.write({
             path: "~/documents/tilde-output.txt",
             content: "docker-tilde-write"
@@ -264,7 +123,6 @@ describe("Sandbox docker integration", () => {
     });
 
     it("resolves symlinked homeDir and produces correct displayPath", async () => {
-        // homeDir is a symlink; constructor should resolve it so display paths are stable.
         const realHome = path.join(rootDir, "real-home");
         await fs.mkdir(path.join(realHome, "desktop"), { recursive: true });
         await fs.mkdir(path.join(realHome, "documents"), { recursive: true });
@@ -280,17 +138,7 @@ describe("Sandbox docker integration", () => {
                 workingDir: path.join(symlinkHome, "desktop"),
                 writeDirs: [symlinkHome]
             },
-            docker: {
-                enabled: true,
-                image: "daycare-sandbox",
-                tag: "latest",
-                enableWeakerNestedSandbox: false,
-                readOnly: false,
-                unconfinedSecurity: false,
-                capAdd: [],
-                capDrop: [],
-                userId: "u123"
-            }
+            docker: dockerConfigBuild()
         });
 
         const read = await sandbox.read({ path: "/home/documents/notes.txt", raw: true });
@@ -298,4 +146,29 @@ describe("Sandbox docker integration", () => {
         expect(read.displayPath).toBe("~/documents/notes.txt");
         expect(read.displayPath).not.toContain(rootDir);
     });
+
+    function sandboxBuild() {
+        return new Sandbox({
+            homeDir,
+            permissions,
+            mounts: [
+                { hostPath: skillsActiveDir, mappedPath: "/shared/skills" },
+                { hostPath: skillsActiveDir, mappedPath: "/shared/examples" }
+            ],
+            docker: dockerConfigBuild()
+        });
+    }
+
+    function dockerConfigBuild() {
+        return {
+            readOnly: false,
+            unconfinedSecurity: false,
+            capAdd: [],
+            capDrop: [],
+            allowLocalNetworkingForUsers: ["u123"],
+            isolatedDnsServers: ["9.9.9.9"],
+            localDnsServers: ["192.168.1.1"],
+            userId: "u123"
+        };
+    }
 });

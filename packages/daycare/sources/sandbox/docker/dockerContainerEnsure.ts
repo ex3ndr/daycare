@@ -59,6 +59,7 @@ const DOCKER_TMPFS_VAR_TMP_ENABLED = "1";
 const DOCKER_TMPFS_VAR_RUN_ENABLED = "1";
 const DOCKER_TMPFS_DEV_SHM_ENABLED = "1";
 const DOCKER_SHM_SIZE_BYTES = 1024 * 1024 * 1024;
+const DAYCARE_RUNTIME_IMAGE_REF = "daycare-runtime:latest";
 
 /**
  * Ensures a long-lived sandbox container exists and is running for a user.
@@ -69,10 +70,10 @@ export async function dockerContainerEnsure(
     config: DockerContainerResolvedConfig
 ): Promise<Docker.Container> {
     const containerName = dockerContainerNameBuild(config.userId);
-    const imageRef = `${config.image}:${config.tag}`;
+    const imageRef = DAYCARE_RUNTIME_IMAGE_REF;
     const hostHomeDir = path.resolve(config.hostHomeDir);
     const extraMounts = config.mounts.filter((m) => m.mappedPath !== "/home");
-    const imageId = await dockerImageIdResolve(docker, imageRef);
+    const imageId = await dockerImageIdResolve(docker);
     const dnsProfile = dockerDnsProfileResolve({
         networkName: config.networkName,
         isolatedDnsServers: config.isolatedDnsServers,

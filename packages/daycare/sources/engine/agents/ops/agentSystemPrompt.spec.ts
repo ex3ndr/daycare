@@ -9,7 +9,6 @@ import { contextForAgent, contextForUser } from "../context.js";
 import { systemAgentPromptResolve } from "../system/systemAgentPromptResolve.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import { agentSystemPrompt } from "./agentSystemPrompt.js";
-import { bundledExamplesDirResolve } from "./bundledExamplesDirResolve.js";
 
 type AgentSystemPromptParameter = NonNullable<Parameters<typeof agentSystemPrompt>[0]>;
 
@@ -205,7 +204,7 @@ describe("agentSystemPrompt", () => {
             expect(rendered).toContain("set_agent_model");
             expect(rendered).toContain('- "small": Fastest and lowest-cost path for lightweight tasks.');
             expect(rendered).toContain('- "coding": Use for code generation');
-            expect(rendered).toContain(bundledExamplesDirResolve());
+            expect(rendered).toContain("/shared/examples");
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

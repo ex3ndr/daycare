@@ -401,19 +401,13 @@ function contextBuild(input?: {
         homeDir,
         permissions,
         mounts,
-        docker: input?.dockerEnabled
-            ? {
-                  enabled: true,
-                  image: "img",
-                  tag: "latest",
-                  enableWeakerNestedSandbox: false,
-                  readOnly: false,
-                  unconfinedSecurity: false,
-                  capAdd: [],
-                  capDrop: [],
-                  userId: "user-1"
-              }
-            : undefined
+        docker: {
+            readOnly: false,
+            unconfinedSecurity: false,
+            capAdd: [],
+            capDrop: [],
+            userId: "user-1"
+        }
     });
 
     return {

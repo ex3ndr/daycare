@@ -1373,24 +1373,18 @@ export class Agent {
                 ...(examplesDir ? [{ hostPath: examplesDir, mappedPath: "/shared/examples" }] : []),
                 ...extraMounts
             ],
-            docker: dockerSettings?.enabled
-                ? {
-                      enabled: true,
-                      image: dockerSettings.image,
-                      tag: dockerSettings.tag,
-                      socketPath: dockerSettings.socketPath,
-                      runtime: dockerSettings.runtime,
-                      enableWeakerNestedSandbox: dockerSettings.enableWeakerNestedSandbox,
-                      readOnly: dockerSettings.readOnly,
-                      unconfinedSecurity: dockerSettings.unconfinedSecurity,
-                      capAdd: dockerSettings.capAdd,
-                      capDrop: dockerSettings.capDrop,
-                      allowLocalNetworkingForUsers: dockerSettings.allowLocalNetworkingForUsers,
-                      isolatedDnsServers: dockerSettings.isolatedDnsServers,
-                      localDnsServers: dockerSettings.localDnsServers,
-                      userId: this.ctx.userId
-                  }
-                : undefined
+            docker: {
+                socketPath: dockerSettings?.socketPath,
+                runtime: dockerSettings?.runtime,
+                readOnly: dockerSettings?.readOnly ?? false,
+                unconfinedSecurity: dockerSettings?.unconfinedSecurity ?? false,
+                capAdd: dockerSettings?.capAdd ?? [],
+                capDrop: dockerSettings?.capDrop ?? [],
+                allowLocalNetworkingForUsers: dockerSettings?.allowLocalNetworkingForUsers,
+                isolatedDnsServers: dockerSettings?.isolatedDnsServers,
+                localDnsServers: dockerSettings?.localDnsServers,
+                userId: this.ctx.userId
+            }
         });
     }
 

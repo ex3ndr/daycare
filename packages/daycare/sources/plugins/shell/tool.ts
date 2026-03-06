@@ -95,31 +95,6 @@ const execSchema = Type.Object(
                 description:
                     "Loads environment variables from dotenv. Use true to load .env from cwd, or pass an explicit dotenv file path."
             })
-        ),
-        packageManagers: Type.Optional(
-            Type.Array(
-                Type.Union([
-                    Type.Literal("dart"),
-                    Type.Literal("dotnet"),
-                    Type.Literal("go"),
-                    Type.Literal("java"),
-                    Type.Literal("node"),
-                    Type.Literal("php"),
-                    Type.Literal("python"),
-                    Type.Literal("ruby"),
-                    Type.Literal("rust")
-                ]),
-                {
-                    minItems: 1,
-                    description: "Language ecosystem presets that auto-allow known package registry domains."
-                }
-            )
-        ),
-        allowedDomains: Type.Optional(
-            Type.Array(Type.String({ minLength: 1 }), {
-                description:
-                    'Explicit outbound network allowlist. Supports subdomain wildcards like *.example.com. Use [] to block all outbound domains. Use ["*"] to allow all domains, including apps with unusual networking behavior (for example untrusted TLS or ignoring HTTP_PROXY).'
-            })
         )
     },
     { additionalProperties: false }
@@ -366,7 +341,7 @@ export function buildExecTool(): ToolDefinition {
         tool: {
             name: "exec",
             description:
-                'Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Optional secrets inject saved secret env vars and override explicit env values. timeoutMs has a maximum of 300000ms (5 minutes). Exec uses the caller\'s granted write directories and global read access with a protected deny-list. Optional packageManagers language presets auto-allow ecosystem hosts (dart/dotnet/go/java/node/php/python/ruby/rust). Optional allowedDomains enables outbound access to specific domains (supports subdomain wildcards like *.example.com). Use ["*"] to allow all domains, which can help with complicated apps that require unusual networking behavior (for example untrusted TLS or not respecting HTTP_PROXY). Returns stdout/stderr and failure details.',
+                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Optional secrets inject saved secret env vars and override explicit env values. timeoutMs has a maximum of 300000ms (5 minutes). Exec uses the caller's granted write directories and global read access with a protected deny-list. Outbound networking is unrestricted. Returns stdout/stderr and failure details.",
             parameters: execSchema
         },
         returns: execReturns,
@@ -382,8 +357,6 @@ export function buildExecTool(): ToolDefinition {
                 env: payload.env,
                 secrets: resolvedSecrets,
                 dotenv: payload.dotenv,
-                packageManagers: payload.packageManagers,
-                allowedDomains: payload.allowedDomains ?? [],
                 signal: toolContext.abortSignal
             });
             const formattedOutput = formatExecStreams(result.stdout, result.stderr, result.failed);

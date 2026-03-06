@@ -8,7 +8,6 @@ import { findEntriesFormat } from "./findEntriesFormat.js";
 
 const FIND_DEFAULT_LIMIT = 1000;
 const FIND_MAX_OUTPUT_BYTES = 64 * 1024;
-const LOCALHOST_ALLOWED_DOMAINS = ["localhost"];
 
 const findSchema = Type.Object(
     {
@@ -56,7 +55,6 @@ export function buildFindTool(): ToolDefinition {
 
             const execResult = await toolContext.sandbox.exec({
                 command,
-                allowedDomains: LOCALHOST_ALLOWED_DOMAINS,
                 signal: toolContext.abortSignal
             });
 
@@ -98,15 +96,8 @@ export function buildFindTool(): ToolDefinition {
     };
 }
 
-function findPathNormalize(
-    searchPath: string,
-    toolContext: { sandbox: { homeDir: string; docker?: { enabled?: boolean } } }
-): string {
-    return sandboxReadPathNormalize(
-        searchPath,
-        toolContext.sandbox.homeDir,
-        toolContext.sandbox.docker?.enabled === true
-    );
+function findPathNormalize(searchPath: string, toolContext: { sandbox: { homeDir: string; docker?: object } }): string {
+    return sandboxReadPathNormalize(searchPath, toolContext.sandbox.homeDir, toolContext.sandbox.docker !== undefined);
 }
 
 function findCommandBuild(pattern: string, searchPath: string, limit: number): string {

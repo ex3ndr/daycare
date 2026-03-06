@@ -311,7 +311,14 @@ function contextBuild(input: {
 }): ToolExecutionContext {
     const sandbox = new Sandbox({
         homeDir: input.homeDir,
-        permissions: { workingDir: input.homeDir, writeDirs: [input.homeDir] }
+        permissions: { workingDir: input.homeDir, writeDirs: [input.homeDir] },
+        docker: {
+            readOnly: false,
+            unconfinedSecurity: false,
+            capAdd: [],
+            capDrop: [],
+            userId: "user-1"
+        }
     });
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],

@@ -8,7 +8,6 @@ import { grepResultsFormat } from "./grepResultsFormat.js";
 
 const GREP_DEFAULT_LIMIT = 100;
 const GREP_MAX_OUTPUT_BYTES = 64 * 1024;
-const LOCALHOST_ALLOWED_DOMAINS = ["localhost"];
 
 const grepSchema = Type.Object(
     {
@@ -59,7 +58,6 @@ export function buildGrepTool(): ToolDefinition {
 
             const execResult = await toolContext.sandbox.exec({
                 command,
-                allowedDomains: LOCALHOST_ALLOWED_DOMAINS,
                 signal: toolContext.abortSignal
             });
 
@@ -101,15 +99,8 @@ export function buildGrepTool(): ToolDefinition {
     };
 }
 
-function grepPathNormalize(
-    searchPath: string,
-    toolContext: { sandbox: { homeDir: string; docker?: { enabled?: boolean } } }
-): string {
-    return sandboxReadPathNormalize(
-        searchPath,
-        toolContext.sandbox.homeDir,
-        toolContext.sandbox.docker?.enabled === true
-    );
+function grepPathNormalize(searchPath: string, toolContext: { sandbox: { homeDir: string; docker?: object } }): string {
+    return sandboxReadPathNormalize(searchPath, toolContext.sandbox.homeDir, toolContext.sandbox.docker !== undefined);
 }
 
 function grepCommandBuild(payload: GrepArgs, searchPath: string, limit: number): string {

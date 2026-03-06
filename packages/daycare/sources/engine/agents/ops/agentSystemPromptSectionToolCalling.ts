@@ -16,8 +16,7 @@ export async function agentSystemPromptSectionToolCalling(context: AgentSystemPr
     const filteredTools = toolListAllowlistApply(availableTools, context);
     const isForeground = context.config?.foreground === true;
     const preferSayTool = isForeground && filteredTools.some((tool) => tool.name === "say");
-    const dockerEnabled = context.agentSystem?.config?.current?.docker?.enabled ?? false;
-    const examplesDir = dockerEnabled ? "/shared/examples" : bundledExamplesDirResolve();
+    const examplesDir = context.agentSystem ? "/shared/examples" : bundledExamplesDirResolve();
     const noToolsPrompt =
         filteredTools.length > 0 ? await rlmNoToolsPromptBuild(filteredTools, { isForeground, examplesDir }) : "";
     const template = await agentPromptBundledRead("SYSTEM_TOOLS.md");

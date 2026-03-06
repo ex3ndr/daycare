@@ -8,7 +8,6 @@ import { lsEntriesFormat } from "./lsEntriesFormat.js";
 
 const LS_DEFAULT_LIMIT = 500;
 const LS_MAX_OUTPUT_BYTES = 64 * 1024;
-const LOCALHOST_ALLOWED_DOMAINS = ["localhost"];
 
 const lsSchema = Type.Object(
     {
@@ -54,7 +53,6 @@ export function buildLsTool(): ToolDefinition {
 
             const execResult = await toolContext.sandbox.exec({
                 command,
-                allowedDomains: LOCALHOST_ALLOWED_DOMAINS,
                 signal: toolContext.abortSignal
             });
 
@@ -92,15 +90,8 @@ export function buildLsTool(): ToolDefinition {
     };
 }
 
-function lsPathNormalize(
-    targetPath: string,
-    toolContext: { sandbox: { homeDir: string; docker?: { enabled?: boolean } } }
-): string {
-    return sandboxReadPathNormalize(
-        targetPath,
-        toolContext.sandbox.homeDir,
-        toolContext.sandbox.docker?.enabled === true
-    );
+function lsPathNormalize(targetPath: string, toolContext: { sandbox: { homeDir: string; docker?: object } }): string {
+    return sandboxReadPathNormalize(targetPath, toolContext.sandbox.homeDir, toolContext.sandbox.docker !== undefined);
 }
 
 function lsCommandBuild(targetPath: string): string {

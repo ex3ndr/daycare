@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -6,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { SessionPermissions } from "@/types";
 import { Sandbox } from "./sandbox.js";
 
-const itIfSandbox = process.env.CI ? it.skip : it;
+const itIfDockerSandbox = dockerSandboxAvailable() ? it : it.skip;
 
 describe("Sandbox", () => {
     let rootDir: string;
@@ -34,7 +35,8 @@ describe("Sandbox", () => {
 
         sandbox = new Sandbox({
             homeDir,
-            permissions
+            permissions,
+            docker: dockerConfigBuild("user-1")
         });
     });
 
@@ -54,7 +56,8 @@ describe("Sandbox", () => {
             permissions: {
                 ...permissions,
                 workingDir: writeDir
-            }
+            },
+            docker: dockerConfigBuild("user-1")
         });
         expect(fromPermissions.workingDir).toBe(await fs.realpath(writeDir));
     });
@@ -239,69 +242,36 @@ describe("Sandbox", () => {
         expect(read.content.equals(Buffer.from([0, 1, 2, 3]))).toBe(true);
     });
 
-    itIfSandbox("keeps network blocked when allowedDomains are omitted", async () => {
+    itIfDockerSandbox("allows outbound network by default", async () => {
         const result = await sandbox.exec({
             command: `curl -s -I --max-time 10 "https://microsoft.com"`
         });
-        expect(result.failed).toBe(true);
-        expect(result.stdout).toContain("X-Proxy-Error: blocked-by-allowlist");
-    });
-
-    itIfSandbox('allows unrestricted network when allowedDomains includes "*"', async () => {
-        const result = await sandbox.exec({
-            command: `curl -s -I --max-time 10 "https://microsoft.com"`,
-            allowedDomains: ["*"]
-        });
         expect(result.failed).toBe(false);
         expect(result.stdout).toContain("HTTP/");
-        expect(result.stdout).not.toContain("X-Proxy-Error: blocked-by-allowlist");
-    });
-
-    itIfSandbox("executes command with explicit domains", async () => {
-        const result = await sandbox.exec({
-            command: "echo ok",
-            allowedDomains: ["example.com"]
-        });
-
-        expect(result.failed).toBe(false);
-        expect(result.stdout).toContain("ok");
-        expect(result.exitCode).toBe(0);
-    });
-
-    itIfSandbox("supports cwd override", async () => {
-        const cwd = path.join(sandbox.workingDir, "cwd");
-        await fs.mkdir(cwd, { recursive: true });
-
-        const result = await sandbox.exec({
-            command: "pwd",
-            cwd,
-            allowedDomains: ["example.com"]
-        });
-
-        expect(result.failed).toBe(false);
-        expect(result.cwd).toBe(cwd);
-    });
-
-    itIfSandbox("loads dotenv values, then env overrides, then secret overrides", async () => {
-        const dotenvPath = path.join(sandbox.workingDir, ".env");
-        await fs.writeFile(dotenvPath, ["DOTENV_ONLY=from-dotenv", "SHARED=from-dotenv"].join("\n"), "utf8");
-
-        const result = await sandbox.exec({
-            command:
-                "node -e \"process.stdout.write([process.env.DOTENV_ONLY ?? '', process.env.SHARED ?? '', process.env.EXPLICIT_ONLY ?? '', process.env.SECRET_ONLY ?? ''].join('|'))\"",
-            dotenv: true,
-            env: {
-                SHARED: "from-env",
-                EXPLICIT_ONLY: "from-env"
-            },
-            secrets: {
-                SHARED: "from-secret",
-                SECRET_ONLY: "from-secret"
-            },
-            allowedDomains: ["example.com"]
-        });
-
-        expect(result.failed).toBe(false);
-        expect(result.stdout.trim()).toBe("from-dotenv|from-secret|from-env|from-secret");
     });
 });
+
+function dockerConfigBuild(userId: string) {
+    return {
+        readOnly: false,
+        unconfinedSecurity: false,
+        capAdd: [],
+        capDrop: [],
+        userId
+    };
+}
+
+function dockerSandboxAvailable(): boolean {
+    if (process.env.CI) {
+        return false;
+    }
+    try {
+        execSync("docker image inspect daycare-runtime:latest", {
+            stdio: ["ignore", "ignore", "ignore"],
+            timeout: 5000
+        });
+        return true;
+    } catch {
+        return false;
+    }
+}

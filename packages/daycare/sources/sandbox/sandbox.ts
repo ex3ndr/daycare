@@ -12,12 +12,8 @@ import { pathMountMapMappedToHost } from "../utils/pathMountMapMappedToHost.js";
 import type { PathMountPoint } from "../utils/pathMountTypes.js";
 import { dockerRunInSandbox } from "./docker/dockerRunInSandbox.js";
 import { isWithinSecure, openSecure } from "./pathResolveSecure.js";
-import { runInSandbox } from "./runtime.js";
-import { sandboxAllowedDomainsResolve } from "./sandboxAllowedDomainsResolve.js";
-import { sandboxAllowedDomainsValidate } from "./sandboxAllowedDomainsValidate.js";
 import { sandboxCanRead } from "./sandboxCanRead.js";
 import { sandboxCanWrite } from "./sandboxCanWrite.js";
-import { sandboxFilesystemPolicyBuild } from "./sandboxFilesystemPolicyBuild.js";
 import { sandboxReadPathNormalize } from "./sandboxReadPathNormalize.js";
 import type {
     SandboxConfig,
@@ -50,7 +46,7 @@ export class Sandbox {
     readonly homeDir: string;
     readonly workingDir: string;
     readonly permissions: SessionPermissions;
-    readonly docker: SandboxDockerConfig | undefined;
+    readonly docker: SandboxDockerConfig;
     /** All mount points including home. Used for host↔sandbox path mapping. */
     readonly mounts: PathMountPoint[];
 
@@ -169,7 +165,7 @@ export class Sandbox {
             throw new Error("append and exclusive cannot both be true.");
         }
         const permissions = this.permissionsEffectiveResolve();
-        const normalized = sandboxReadPathNormalize(args.path, this.homeDir, this.docker?.enabled === true);
+        const normalized = sandboxReadPathNormalize(args.path, this.homeDir, true);
         const targetPath = this.resolveVirtualPath(normalized);
         sandboxPathAbsoluteEnsure(targetPath);
         await pathRejectIfSymlink(targetPath, "Cannot write to symbolic link.");
@@ -203,18 +199,11 @@ export class Sandbox {
     }
 
     /**
-     * Execute a shell command inside sandbox-runtime.
+     * Execute a shell command inside the per-user Docker sandbox.
      * Expects: args.command is non-empty.
      */
     async exec(args: SandboxExecArgs): Promise<SandboxExecResult> {
-        const permissions = this.permissionsEffectiveResolve();
         const cwd = sandboxExecCwdResolve(this.workingDir, args.cwd);
-        const resolvedAllowedDomains = sandboxAllowedDomainsResolve(args.allowedDomains, args.packageManagers);
-        const domainIssues = sandboxAllowedDomainsValidate(resolvedAllowedDomains);
-        if (domainIssues.length > 0) {
-            throw new Error(domainIssues.join(" "));
-        }
-        const allowedDomains = resolvedAllowedDomains.includes("*") ? undefined : resolvedAllowedDomains;
         const dotenvEnv = await sandboxExecDotenvLoad(cwd, args.dotenv);
         const envOverrides = envNormalize(args.env);
         const secretEnv = envNormalize(args.secrets);
@@ -224,52 +213,30 @@ export class Sandbox {
             ...(envOverrides ?? {}),
             ...(secretEnv ?? {})
         };
-        const filesystem = sandboxFilesystemPolicyBuild({
-            writeDirs: permissions.writeDirs,
-            workingDir: permissions.workingDir,
-            homeDir: this.homeDir
-        });
-
-        const useDocker = this.docker?.enabled === true;
-        logger.debug(`exec: command=${JSON.stringify(args.command)} cwd=${cwd} docker=${useDocker}`);
+        logger.debug(`exec: command=${JSON.stringify(args.command)} cwd=${cwd} docker=true`);
 
         try {
-            const runtimeConfig = {
-                filesystem,
-                network: {
-                    deniedDomains: [],
-                    ...(allowedDomains === undefined ? {} : { allowedDomains })
-                },
-                ...(this.docker?.enableWeakerNestedSandbox ? { enableWeakerNestedSandbox: true } : {})
-            };
-            const runtimeOptions = {
+            const result = await dockerRunInSandbox(args.command, {
                 cwd,
                 env,
                 home: this.homeDir,
                 timeoutMs: args.timeoutMs ?? DEFAULT_EXEC_TIMEOUT,
                 maxBufferBytes: MAX_EXEC_BUFFER,
-                signal: args.signal
-            };
-            const result = useDocker
-                ? await dockerRunInSandbox(args.command, runtimeConfig, {
-                      ...runtimeOptions,
-                      docker: {
-                          image: this.docker!.image,
-                          tag: this.docker!.tag,
-                          socketPath: this.docker!.socketPath,
-                          runtime: this.docker!.runtime,
-                          readOnly: this.docker!.readOnly,
-                          unconfinedSecurity: this.docker!.unconfinedSecurity,
-                          capAdd: this.docker!.capAdd,
-                          capDrop: this.docker!.capDrop,
-                          allowLocalNetworkingForUsers: this.docker!.allowLocalNetworkingForUsers,
-                          isolatedDnsServers: this.docker!.isolatedDnsServers,
-                          localDnsServers: this.docker!.localDnsServers,
-                          userId: this.docker!.userId,
-                          mounts: this.mounts
-                      }
-                  })
-                : await runInSandbox(args.command, runtimeConfig, runtimeOptions);
+                signal: args.signal,
+                docker: {
+                    socketPath: this.docker.socketPath,
+                    runtime: this.docker.runtime,
+                    readOnly: this.docker.readOnly,
+                    unconfinedSecurity: this.docker.unconfinedSecurity,
+                    capAdd: this.docker.capAdd,
+                    capDrop: this.docker.capDrop,
+                    allowLocalNetworkingForUsers: this.docker.allowLocalNetworkingForUsers,
+                    isolatedDnsServers: this.docker.isolatedDnsServers,
+                    localDnsServers: this.docker.localDnsServers,
+                    userId: this.docker.userId,
+                    mounts: this.mounts
+                }
+            });
             return {
                 stdout: sandboxText(result.stdout),
                 stderr: sandboxText(result.stderr),
@@ -319,7 +286,7 @@ export class Sandbox {
     }
 
     private async readInputPathResolve(rawPath: string): Promise<string> {
-        const normalized = sandboxReadPathNormalize(rawPath, this.homeDir, this.docker?.enabled === true);
+        const normalized = sandboxReadPathNormalize(rawPath, this.homeDir, true);
         const rewritten = this.resolveVirtualPath(normalized);
         const resolved = path.isAbsolute(rewritten) ? rewritten : path.resolve(this.workingDir, rewritten);
         if (await pathExists(resolved)) {
@@ -364,12 +331,9 @@ export class Sandbox {
 
     /**
      * The working directory as seen inside exec commands.
-     * In Docker mode this is the container-side path; in non-Docker mode the host path.
+     * This is always the container-side path.
      */
     get execWorkingDir(): string {
-        if (!this.docker?.enabled) {
-            return this.workingDir;
-        }
         const containerPath = pathMountMapHostToMapped({ mountPoints: this.mounts, hostPath: this.workingDir });
         if (!containerPath) {
             throw new Error("Working directory is not mappable to container mounts");
@@ -389,8 +353,11 @@ export class Sandbox {
         if (hostPath) {
             return hostPath;
         }
-        // Not a virtual mount path — in Docker mode this is an error
-        if (this.docker?.enabled) {
+        if (
+            this.mounts.some(
+                (mount) => targetPath === mount.mappedPath || targetPath.startsWith(`${mount.mappedPath}/`)
+            )
+        ) {
             throw new Error(`Path is not mapped to host filesystem: ${targetPath}`);
         }
         return targetPath;

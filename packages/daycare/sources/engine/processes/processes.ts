@@ -1,21 +1,14 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
-import type { SandboxRuntimeConfig } from "@anthropic-ai/sandbox-runtime";
 import { createId } from "@paralleldrive/cuid2";
 import type { Logger } from "pino";
 
-import type { Context, SandboxPackageManager, SessionPermissions } from "@/types";
-import { sandboxAllowedDomainsResolve } from "../../sandbox/sandboxAllowedDomainsResolve.js";
-import { sandboxAllowedDomainsValidate } from "../../sandbox/sandboxAllowedDomainsValidate.js";
+import type { Context, SessionPermissions } from "@/types";
 import { sandboxCanWrite } from "../../sandbox/sandboxCanWrite.js";
-import { sandboxDockerEnvironmentIs } from "../../sandbox/sandboxDockerEnvironmentIs.js";
-import { sandboxFilesystemPolicyBuild } from "../../sandbox/sandboxFilesystemPolicyBuild.js";
 import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
 import type { ProcessDbRecord } from "../../storage/databaseTypes.js";
 import type { ProcessesRepository, ProcessesRuntimeUpdate } from "../../storage/processesRepository.js";
-import { atomicWrite } from "../../utils/atomicWrite.js";
 import { envNormalize } from "../../utils/envNormalize.js";
 import { AsyncLock } from "../../utils/lock.js";
 import { resolveWorkspacePath } from "../permissions.js";
@@ -27,9 +20,6 @@ const PROCESS_STOP_POLL_MS = 200;
 const RESTART_BACKOFF_BASE_MS = 2_000;
 const RESTART_BACKOFF_MAX_MS = 60_000;
 const RESTART_STABLE_UPTIME_MS = 30_000;
-
-const nodeRequire = createRequire(import.meta.url);
-const sandboxCliPath = nodeRequire.resolve("@anthropic-ai/sandbox-runtime/dist/cli.js");
 
 const SIGNALS = ["SIGTERM", "SIGINT", "SIGHUP", "SIGKILL"] as const;
 
@@ -46,8 +36,6 @@ export type ProcessCreateInput = {
     cwd?: string;
     env?: Record<string, string | number | boolean>;
     home?: string;
-    packageManagers?: SandboxPackageManager[];
-    allowedDomains?: string[];
     keepAlive?: boolean;
     allowLocalBinding?: boolean;
     owner?: ProcessOwner;
@@ -80,8 +68,6 @@ type ProcessRecord = {
     cwd: string;
     home: string | null;
     env: Record<string, string>;
-    packageManagers: SandboxPackageManager[];
-    allowedDomains: string[];
     allowLocalBinding: boolean;
     permissions: SessionPermissions;
     owner: ProcessOwner | null;
@@ -102,7 +88,7 @@ type ProcessRecord = {
 };
 
 /**
- * Manages durable sandboxed background processes persisted in SQLite.
+ * Manages durable background processes persisted in SQLite.
  * Expects: all state writes happen through this facade to keep pid/status in sync.
  */
 export class Processes {
@@ -187,12 +173,6 @@ export class Processes {
             const cwd = input.cwd ? resolveWorkspacePath(workingDir, input.cwd) : workingDir;
             const home = input.home ? await sandboxCanWrite(permissions, input.home) : null;
 
-            const allowedDomains = sandboxAllowedDomainsResolve(input.allowedDomains, input.packageManagers);
-            const domainIssues = sandboxAllowedDomainsValidate(allowedDomains);
-            if (domainIssues.length > 0) {
-                throw new Error(domainIssues.join(" "));
-            }
-
             const envInput = envNormalize(input.env) ?? {};
             const id = createId();
             const recordDir = this.processDir(id);
@@ -210,8 +190,6 @@ export class Processes {
                 cwd,
                 home,
                 env: envInput,
-                packageManagers: [...(input.packageManagers ?? [])],
-                allowedDomains,
                 allowLocalBinding: input.allowLocalBinding === true,
                 permissions: clonePermissions(permissions),
                 owner: input.owner ? ownerNormalize(input.owner) : null,
@@ -484,22 +462,14 @@ export class Processes {
     }
 
     private async startRecordLocked(record: ProcessRecord, options: { incrementRestart: boolean }): Promise<void> {
-        const enableWeakerNestedSandbox = await sandboxDockerEnvironmentIs();
-        const sandboxConfig = buildSandboxConfig(
-            record.allowedDomains,
-            record.permissions,
-            record.allowLocalBinding,
-            enableWeakerNestedSandbox
-        );
-        await atomicWrite(record.settingsPath, JSON.stringify(sandboxConfig));
         const baseEnv = { ...process.env, ...record.env };
         const envResult = await sandboxHomeRedefine({ env: baseEnv, home: record.home ?? undefined });
 
         await fs.mkdir(path.dirname(record.logPath), { recursive: true });
         const logHandle = await fs.open(record.logPath, "a");
         const spawnResult = await spawnProcess({
-            command: process.execPath,
-            args: [sandboxCliPath, "--settings", record.settingsPath, "-c", record.command],
+            command: "/bin/bash",
+            args: ["-lc", record.command],
             cwd: record.cwd,
             env: envResult.env,
             logFd: logHandle.fd
@@ -635,26 +605,6 @@ export class Processes {
     }
 }
 
-function buildSandboxConfig(
-    allowedDomains: string[],
-    permissions: SessionPermissions,
-    allowLocalBinding: boolean,
-    enableWeakerNestedSandbox: boolean
-): SandboxRuntimeConfig {
-    return {
-        filesystem: sandboxFilesystemPolicyBuild({
-            writeDirs: permissions.writeDirs,
-            workingDir: permissions.workingDir
-        }),
-        network: {
-            allowedDomains,
-            deniedDomains: [],
-            ...(allowLocalBinding ? { allowLocalBinding: true } : {})
-        },
-        ...(enableWeakerNestedSandbox ? { enableWeakerNestedSandbox: true } : {})
-    };
-}
-
 function toProcessInfo(record: ProcessRecord): ProcessInfo {
     return {
         id: record.id,
@@ -698,20 +648,6 @@ function ownerIs(candidate: ProcessOwner | null, owner: ProcessOwner): boolean {
     return candidate.type === owner.type && candidate.id === owner.id;
 }
 
-function isPackageManager(value: unknown): value is SandboxPackageManager {
-    return (
-        value === "dart" ||
-        value === "dotnet" ||
-        value === "go" ||
-        value === "java" ||
-        value === "node" ||
-        value === "php" ||
-        value === "python" ||
-        value === "ruby" ||
-        value === "rust"
-    );
-}
-
 function normalizeRequiredUserId(userId: string): string {
     const normalized = userId.trim();
     if (!normalized) {
@@ -742,8 +678,6 @@ function processRecordFromDb(record: ProcessDbRecord): ProcessRecord {
         cwd: record.cwd,
         home: record.home,
         env: { ...record.env },
-        packageManagers: record.packageManagers.filter(isPackageManager),
-        allowedDomains: [...record.allowedDomains],
         allowLocalBinding: record.allowLocalBinding,
         permissions: clonePermissions(record.permissions),
         owner: record.owner ? ownerNormalize(record.owner) : null,
@@ -773,8 +707,6 @@ function processRecordToDb(record: ProcessRecord): ProcessDbRecord {
         cwd: record.cwd,
         home: record.home,
         env: { ...record.env },
-        packageManagers: [...record.packageManagers],
-        allowedDomains: [...record.allowedDomains],
         allowLocalBinding: record.allowLocalBinding,
         permissions: clonePermissions(record.permissions),
         owner: record.owner ? ownerNormalize(record.owner) : null,

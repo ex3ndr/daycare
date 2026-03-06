@@ -1,11 +1,9 @@
+import { execSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-// bwrap is unavailable in GitHub Actions (RTM_NEWADDR: Operation not permitted)
-const itIfSandbox = process.env.CI ? it.skip : it;
 
 import type { AgentState, SessionPermissions, ToolExecutionContext } from "@/types";
 import { Agent } from "../../engine/agents/agent.js";
@@ -19,6 +17,7 @@ const execToolCall = { id: "tool-call-1", name: "exec" };
 const readToolCall = { id: "tool-call-2", name: "read" };
 const readJsonToolCall = { id: "tool-call-3", name: "read_json" };
 const READ_LIMIT_TEST_BYTES = 51 * 1024;
+const itIfDockerSandbox = dockerSandboxAvailable() ? it : it.skip;
 
 describe("read tool allowed paths", () => {
     let workingDir: string;
@@ -165,7 +164,7 @@ describe("read tool allowed paths", () => {
     });
 });
 
-describe("exec tool allowedDomains", () => {
+describe("exec tool", () => {
     let workingDir: string;
 
     beforeEach(async () => {
@@ -176,21 +175,10 @@ describe("exec tool allowedDomains", () => {
         await fs.rm(workingDir, { recursive: true, force: true });
     });
 
-    it("accepts empty allowedDomains in exec schema", () => {
-        const tool = buildExecTool();
-        const parameters = tool.tool.parameters as {
-            properties?: {
-                allowedDomains?: { minItems?: number };
-            };
-        };
-
-        expect(parameters.properties?.allowedDomains?.minItems).toBeUndefined();
-    });
-
-    it("defaults missing allowedDomains to an empty list", async () => {
+    it("forwards command execution to sandbox", async () => {
         const tool = buildExecTool();
         const context = createContext(workingDir);
-        const exec = vi.fn(async (_args: { command: string; allowedDomains?: string[] }) => ({
+        const exec = vi.fn(async (_args: { command: string }) => ({
             stdout: "ok",
             stderr: "",
             failed: false,
@@ -204,28 +192,6 @@ describe("exec tool allowedDomains", () => {
         expect(result.toolMessage.isError).toBe(false);
         expect(result.typedResult.cwd).toBe(workingDir);
         expect(exec).toHaveBeenCalledOnce();
-        const firstCall = exec.mock.calls[0]?.[0];
-        expect(firstCall?.allowedDomains).toEqual([]);
-    });
-
-    it("forwards explicit empty allowedDomains list", async () => {
-        const tool = buildExecTool();
-        const context = createContext(workingDir);
-        const exec = vi.fn(async (_args: { command: string; allowedDomains?: string[] }) => ({
-            stdout: "ok",
-            stderr: "",
-            failed: false,
-            exitCode: 0,
-            signal: null,
-            cwd: workingDir
-        }));
-        context.sandbox.exec = exec;
-
-        const result = await tool.execute({ command: "echo ok", allowedDomains: [] }, context, execToolCall);
-        expect(result.toolMessage.isError).toBe(false);
-        expect(exec).toHaveBeenCalledOnce();
-        const firstCall = exec.mock.calls[0]?.[0];
-        expect(firstCall?.allowedDomains).toEqual([]);
     });
 
     it("forwards env and dotenv inputs to sandbox exec", async () => {
@@ -236,7 +202,6 @@ describe("exec tool allowedDomains", () => {
                 command: string;
                 env?: Record<string, string | number | boolean>;
                 dotenv?: boolean | string;
-                allowedDomains?: string[];
             }) => ({
                 stdout: "ok",
                 stderr: "",
@@ -273,16 +238,14 @@ describe("exec tool allowedDomains", () => {
         context.secrets = {
             resolve
         } as unknown as ToolExecutionContext["secrets"];
-        const exec = vi.fn(
-            async (_args: { command: string; secrets?: Record<string, string>; allowedDomains?: string[] }) => ({
-                stdout: "ok",
-                stderr: "",
-                failed: false,
-                exitCode: 0,
-                signal: null,
-                cwd: workingDir
-            })
-        );
+        const exec = vi.fn(async (_args: { command: string; secrets?: Record<string, string> }) => ({
+            stdout: "ok",
+            stderr: "",
+            failed: false,
+            exitCode: 0,
+            signal: null,
+            cwd: workingDir
+        }));
         context.sandbox.exec = exec;
 
         const result = await tool.execute(
@@ -325,7 +288,7 @@ describe("exec tool allowedDomains", () => {
         const tool = buildExecTool();
         const abortController = new AbortController();
         const context = createContext(workingDir, [], false, abortController.signal);
-        const exec = vi.fn(async (_args: { command: string; allowedDomains?: string[]; signal?: AbortSignal }) => ({
+        const exec = vi.fn(async (_args: { command: string; signal?: AbortSignal }) => ({
             stdout: "ok",
             stderr: "",
             failed: false,
@@ -335,49 +298,18 @@ describe("exec tool allowedDomains", () => {
         }));
         context.sandbox.exec = exec;
 
-        const result = await tool.execute(
-            { command: "echo ok", allowedDomains: ["example.com"] },
-            context,
-            execToolCall
-        );
+        const result = await tool.execute({ command: "echo ok" }, context, execToolCall);
         expect(result.toolMessage.isError).toBe(false);
         expect(exec).toHaveBeenCalledOnce();
         const firstCall = exec.mock.calls[0]?.[0];
         expect(firstCall?.signal).toBe(abortController.signal);
     });
 
-    it("forwards wildcard allowedDomains", async () => {
-        const tool = buildExecTool();
-        const context = createContext(workingDir);
-        const exec = vi.fn(async (_args: { command: string; allowedDomains?: string[] }) => ({
-            stdout: "ok",
-            stderr: "",
-            failed: false,
-            exitCode: 0,
-            signal: null,
-            cwd: workingDir
-        }));
-        context.sandbox.exec = exec;
-
-        const result = await tool.execute({ command: "echo ok", allowedDomains: ["*"] }, context, execToolCall);
-        expect(result.toolMessage.isError).toBe(false);
-        expect(exec).toHaveBeenCalledOnce();
-        const firstCall = exec.mock.calls[0]?.[0];
-        expect(firstCall?.allowedDomains).toEqual(["*"]);
-    });
-
-    itIfSandbox("executes command with explicit domains", async () => {
+    itIfDockerSandbox("executes command in the sandbox", async () => {
         const tool = buildExecTool();
         const context = createContext(workingDir);
 
-        const result = await tool.execute(
-            {
-                command: "echo ok",
-                allowedDomains: ["example.com"]
-            },
-            context,
-            execToolCall
-        );
+        const result = await tool.execute({ command: "echo ok" }, context, execToolCall);
         const text = toolMessageText(result.toolMessage.content);
         expect(result.toolMessage.isError).toBe(false);
         expect(text).toContain('"stdout": "ok"');
@@ -385,68 +317,7 @@ describe("exec tool allowedDomains", () => {
         expect("summary" in result.typedResult).toBe(false);
     });
 
-    itIfSandbox("allows reading outside workspace", async () => {
-        const tool = buildExecTool();
-        const context = createContext(workingDir);
-        const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "exec-tool-outside-"));
-        const outsideFile = path.join(outsideDir, "outside.txt");
-        await fs.writeFile(outsideFile, "outside-content", "utf8");
-        try {
-            const result = await tool.execute(
-                {
-                    command: `cat "${outsideFile}"`,
-                    allowedDomains: ["example.com"]
-                },
-                context,
-                execToolCall
-            );
-            const text = toolMessageText(result.toolMessage.content);
-            expect(result.toolMessage.isError).toBe(false);
-            expect(text).toContain("outside-content");
-        } finally {
-            await fs.rm(outsideDir, { recursive: true, force: true });
-        }
-    });
-
-    itIfSandbox("maps HOME to sandbox home path", async () => {
-        const tool = buildExecTool();
-        const context = createContext(workingDir, [workingDir]);
-
-        const result = await tool.execute(
-            {
-                command: "printf '%s' \"$HOME\"",
-                allowedDomains: ["example.com"]
-            },
-            context,
-            execToolCall
-        );
-        const text = toolMessageText(result.toolMessage.content);
-        const expectedHome = context.sandbox.homeDir;
-        expect(result.toolMessage.isError).toBe(false);
-        expect(text).toContain(`"stdout": "${expectedHome}"`);
-    });
-
-    itIfSandbox("denies writing to global /tmp when not write-granted", async () => {
-        const tool = buildExecTool();
-        const context = createContext(workingDir, [workingDir]);
-        const blockedPath = path.join("/tmp", `daycare-exec-denied-${createId()}`);
-        try {
-            const result = await tool.execute(
-                {
-                    command: `printf '%s' blocked > "${blockedPath}"`,
-                    allowedDomains: ["example.com"]
-                },
-                context,
-                execToolCall
-            );
-            expect(result.toolMessage.isError).toBe(true);
-            await expect(fs.access(blockedPath)).rejects.toThrow();
-        } finally {
-            await fs.rm(blockedPath, { force: true });
-        }
-    });
-
-    itIfSandbox("does not mutate tool context permissions", async () => {
+    itIfDockerSandbox("does not mutate tool context permissions", async () => {
         const tool = buildExecTool();
         const context = createContext(workingDir, [workingDir]);
         const original = {
@@ -454,14 +325,7 @@ describe("exec tool allowedDomains", () => {
             writeDirs: [...context.sandbox.permissions.writeDirs]
         };
 
-        const result = await tool.execute(
-            {
-                command: "echo ok",
-                allowedDomains: ["example.com"]
-            },
-            context,
-            execToolCall
-        );
+        const result = await tool.execute({ command: "echo ok" }, context, execToolCall);
         expect(result.toolMessage.isError).toBe(false);
         expect(context.sandbox.permissions).toEqual(original);
     });
@@ -591,7 +455,14 @@ function createContext(
     );
     const sandbox = new Sandbox({
         homeDir,
-        permissions: state.permissions
+        permissions: state.permissions,
+        docker: {
+            readOnly: false,
+            unconfinedSecurity: false,
+            capAdd: [],
+            capDrop: [],
+            userId: "user-1"
+        }
     });
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
@@ -622,4 +493,19 @@ function toolMessageText(content: Array<{ type: string; text?: string }>): strin
         .filter((item) => item.type === "text")
         .map((item) => item.text ?? "")
         .join("\n");
+}
+
+function dockerSandboxAvailable(): boolean {
+    if (process.env.CI) {
+        return false;
+    }
+    try {
+        execSync("docker image inspect daycare-runtime:latest", {
+            stdio: ["ignore", "ignore", "ignore"],
+            timeout: 5000
+        });
+        return true;
+    } catch {
+        return false;
+    }
 }

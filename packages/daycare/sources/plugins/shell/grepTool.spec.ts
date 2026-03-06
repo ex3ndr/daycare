@@ -116,12 +116,12 @@ function createContext(
     },
     options: { homeDir?: string; dockerEnabled?: boolean } = {}
 ) {
-    const exec = vi.fn(async (_args: { command: string; allowedDomains?: string[] }) => execResult);
+    const exec = vi.fn(async (_args: { command: string }) => execResult);
     const context = {
         sandbox: {
             execWorkingDir: "/workspace",
             homeDir: options.homeDir ?? "/home/test",
-            docker: options.dockerEnabled ? { enabled: true } : undefined,
+            docker: options.dockerEnabled ? {} : undefined,
             exec
         }
     } as unknown as ToolExecutionContext;

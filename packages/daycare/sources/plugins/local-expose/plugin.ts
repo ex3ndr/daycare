@@ -19,7 +19,6 @@ const settingsSchema = z
 
 type LocalExposeSettings = z.infer<typeof settingsSchema>;
 
-const LOCAL_FORWARDER_ALLOWED_DOMAINS = ["127.0.0.1", "localhost"];
 const LOCAL_FORWARDER_SCRIPT = `
 import http from "node:http";
 import { pipeline } from "node:stream/promises";
@@ -138,7 +137,6 @@ export const plugin = definePlugin({
                     keepAlive: true,
                     allowLocalBinding: true,
                     owner: processOwner,
-                    allowedDomains: LOCAL_FORWARDER_ALLOWED_DOMAINS,
                     userId
                 },
                 processPermissions

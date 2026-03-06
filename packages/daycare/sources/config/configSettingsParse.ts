@@ -50,12 +50,8 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
         .object({
             docker: z
                 .object({
-                    enabled: z.boolean().optional(),
-                    image: z.string().min(1).optional(),
-                    tag: z.string().min(1).optional(),
                     socketPath: z.string().min(1).optional(),
                     runtime: z.string().min(1).optional(),
-                    enableWeakerNestedSandbox: z.boolean().optional(),
                     readOnly: z.boolean().optional(),
                     unconfinedSecurity: z.boolean().optional(),
                     capAdd: z.array(z.string().min(1)).optional(),

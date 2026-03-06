@@ -82,12 +82,8 @@ export type AppServerSettings = {
 };
 
 export type DockerSettings = {
-    enabled?: boolean;
-    image?: string;
-    tag?: string;
     socketPath?: string;
     runtime?: string;
-    enableWeakerNestedSandbox?: boolean;
     readOnly?: boolean;
     unconfinedSecurity?: boolean;
     capAdd?: string[];
@@ -98,12 +94,8 @@ export type DockerSettings = {
 };
 
 export type ResolvedDockerSettings = {
-    enabled: boolean;
-    image: string;
-    tag: string;
     socketPath?: string;
     runtime?: string;
-    enableWeakerNestedSandbox: boolean;
     readOnly: boolean;
     unconfinedSecurity: boolean;
     capAdd: string[];

@@ -81,7 +81,6 @@ describe("local-expose plugin", () => {
                 owner: { type: "plugin", id: "local-expose-1" },
                 cwd: "/tmp/daycare/plugins/local-expose-1",
                 home: "/tmp/daycare/plugins/local-expose-1",
-                allowedDomains: ["127.0.0.1", "localhost"],
                 userId: "user-1"
             }),
             {

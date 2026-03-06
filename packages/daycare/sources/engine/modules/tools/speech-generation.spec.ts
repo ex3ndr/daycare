@@ -163,7 +163,14 @@ function contextBuild(workingDir: string): ToolExecutionContext {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: new Sandbox({
             homeDir: workingDir,
-            permissions
+            permissions,
+            docker: {
+                readOnly: false,
+                unconfinedSecurity: false,
+                capAdd: [],
+                capDrop: [],
+                userId: "user-1"
+            }
         }),
         auth: null as unknown as ToolExecutionContext["auth"],
         logger: console as unknown as ToolExecutionContext["logger"],

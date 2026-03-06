@@ -2,8 +2,6 @@ import type Docker from "dockerode";
 import type { PathMountPoint } from "../../utils/pathMountTypes.js";
 
 export type DockerContainerConfig = {
-    image: string;
-    tag: string;
     socketPath?: string;
     runtime?: string;
     readOnly: boolean;

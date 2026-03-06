@@ -6,8 +6,6 @@ import type { DockerSettings, ResolvedSettingsConfig, SettingsConfig } from "../
 import { freezeDeep } from "../utils/freezeDeep.js";
 import type { Config, ConfigOverrides } from "./configTypes.js";
 
-const DEFAULT_DOCKER_IMAGE = "daycare-sandbox";
-const DEFAULT_DOCKER_TAG = "latest";
 const DEFAULT_DOCKER_ISOLATED_DNS_SERVERS = ["1.1.1.1", "8.8.8.8"];
 
 /**
@@ -68,12 +66,8 @@ function resolveSettingsDefaults(settings: SettingsConfig): ResolvedSettingsConf
 
 function resolveDockerDefaults(docker: DockerSettings | undefined): ResolvedSettingsConfig["docker"] {
     return {
-        enabled: docker?.enabled ?? false,
-        image: docker?.image ?? DEFAULT_DOCKER_IMAGE,
-        tag: docker?.tag ?? DEFAULT_DOCKER_TAG,
         socketPath: docker?.socketPath,
         runtime: docker?.runtime,
-        enableWeakerNestedSandbox: docker?.enableWeakerNestedSandbox ?? false,
         readOnly: docker?.readOnly ?? false,
         unconfinedSecurity: docker?.unconfinedSecurity ?? false,
         capAdd: dockerCapabilityListNormalize(docker?.capAdd),
