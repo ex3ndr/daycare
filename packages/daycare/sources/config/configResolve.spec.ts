@@ -82,7 +82,7 @@ describe("configResolve", () => {
         expect(config.docker).toEqual({
             socketPath: undefined,
             runtime: undefined,
-            readOnly: false,
+            readOnly: true,
             unconfinedSecurity: false,
             capAdd: [],
             capDrop: [],
@@ -106,7 +106,7 @@ describe("configResolve", () => {
         expect(config.docker).toEqual({
             socketPath: undefined,
             runtime: "runsc",
-            readOnly: false,
+            readOnly: true,
             unconfinedSecurity: false,
             capAdd: [],
             capDrop: [],

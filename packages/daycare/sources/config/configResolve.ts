@@ -68,7 +68,7 @@ function resolveDockerDefaults(docker: DockerSettings | undefined): ResolvedSett
     return {
         socketPath: docker?.socketPath,
         runtime: docker?.runtime,
-        readOnly: docker?.readOnly ?? false,
+        readOnly: docker?.readOnly ?? true,
         unconfinedSecurity: docker?.unconfinedSecurity ?? false,
         capAdd: dockerCapabilityListNormalize(docker?.capAdd),
         capDrop: dockerCapabilityListNormalize(docker?.capDrop),
