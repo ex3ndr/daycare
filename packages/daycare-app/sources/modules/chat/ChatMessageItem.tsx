@@ -28,9 +28,10 @@ export const ChatMessageItem = React.memo(({ record }: { record: AgentHistoryRec
 function UserMessageItem({ record }: { record: AgentHistoryUserMessage }) {
     const { theme } = useUnistyles();
     return (
-        <View style={styles.row}>
-            <Text style={[styles.prompt, { color: theme.colors.primary }]}>{">"}</Text>
-            <Text style={[styles.text, { color: theme.colors.onSurface }]}>{record.text}</Text>
+        <View style={styles.userRow}>
+            <View style={[styles.userBubble, { backgroundColor: theme.colors.surfaceContainerHigh }]}>
+                <Text style={[styles.text, { color: theme.colors.onSurface }]}>{record.text}</Text>
+            </View>
         </View>
     );
 }
@@ -74,17 +75,22 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 2
     },
-    prompt: {
-        fontSize: 13,
-        fontFamily: "IBMPlexMono-Regular",
-        lineHeight: 20,
-        marginRight: 8
+    userRow: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        paddingHorizontal: 16,
+        paddingVertical: 2
+    },
+    userBubble: {
+        maxWidth: "80%",
+        borderRadius: 16,
+        paddingHorizontal: 14,
+        paddingVertical: 8
     },
     text: {
         fontSize: 13,
         fontFamily: "IBMPlexMono-Regular",
-        lineHeight: 20,
-        flex: 1
+        lineHeight: 20
     },
     noteText: {
         fontStyle: "italic"
