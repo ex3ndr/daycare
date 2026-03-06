@@ -113,3 +113,50 @@ The fragment catalog now includes a state-bound `TodoList` component for interac
 - supports row features: checkbox, title edit, icons, counter, pill, hint, toggle icon
 - supports inline separators in the same list via `type: "separator"`
 - emits: `move`, `press`, `toggle`, `toggleIcon`, `change`
+
+## Fragment Python
+
+Fragments can include an optional root-level `code` string with Python source executed in the app via `react-native-monty`.
+
+- `init()` returns the initial state object for the fragment. When present, it overrides `spec.state`.
+- Action functions such as `increment(state, params)` are invoked by `on` bindings and must return the next top-level state object.
+- Runtime limits are capped at `5` seconds and `10 MB` per execution.
+- If `code` is missing or blank, fragments fall back to static `spec.state ?? {}` behavior.
+
+Example:
+
+```json
+{
+    "root": "main",
+    "state": { "count": 0 },
+    "code": "def init():\n    return {\"count\": 1}\n\ndef increment(state, params):\n    return {\"count\": state[\"count\"] + params.get(\"amount\", 1)}",
+    "elements": {
+        "main": {
+            "type": "Button",
+            "props": { "label": "Increment" },
+            "on": {
+                "press": {
+                    "action": "increment",
+                    "params": { "amount": 1 }
+                }
+            },
+            "children": []
+        }
+    }
+}
+```
+
+```mermaid
+flowchart TD
+    A[Fragment spec] --> B{code present?}
+    B -- no --> C[createStateStore spec.state]
+    B -- yes --> D[load Monty runtime once]
+    D --> E{init defined?}
+    E -- no --> C
+    E -- yes --> F[run init()]
+    F --> G[createStateStore init result]
+    G --> H[build proxy handlers]
+    H --> I[UI action binding]
+    I --> J[run action(state, params)]
+    J --> K[merge returned top-level keys into state store]
+```

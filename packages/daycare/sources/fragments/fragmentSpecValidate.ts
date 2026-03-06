@@ -15,6 +15,7 @@ type Spec = {
     root?: unknown;
     elements?: unknown;
     state?: unknown;
+    code?: unknown;
 };
 
 type Element = {
@@ -63,6 +64,14 @@ export function fragmentSpecValidate(spec: unknown): FragmentSpecValidationResul
     if (elementKeys.size === 0) {
         issues.push({ severity: "error", message: "Spec 'elements' must not be empty." });
         return { valid: false, issues };
+    }
+
+    if (s.code !== undefined) {
+        if (typeof s.code !== "string") {
+            issues.push({ severity: "error", message: "Spec 'code' must be a string when provided." });
+        } else if (!s.code.trim()) {
+            issues.push({ severity: "warning", message: "Spec 'code' is empty and will be ignored." });
+        }
     }
 
     // Root must reference an existing element

@@ -93,4 +93,43 @@ describe("fragmentSpecValidate", () => {
         expect(result.issues[0]!.severity).toBe("warning");
         expect(result.issues[0]!.message).toContain("not reachable");
     });
+
+    it("accepts a valid code string", () => {
+        const result = fragmentSpecValidate({
+            root: "main",
+            code: 'def init():\n    return {"count": 0}',
+            elements: {
+                main: { type: "Text", props: { text: "hello" }, children: [] }
+            }
+        });
+        expect(result.valid).toBe(true);
+        expect(result.issues.filter((issue) => issue.severity === "error")).toHaveLength(0);
+    });
+
+    it("rejects non-string code", () => {
+        const result = fragmentSpecValidate({
+            root: "main",
+            code: 123,
+            elements: {
+                main: { type: "Text", props: { text: "hello" }, children: [] }
+            }
+        });
+        expect(result.valid).toBe(false);
+        expect(result.issues.some((issue) => issue.message.includes("'code' must be a string"))).toBe(true);
+    });
+
+    it("warns on empty code", () => {
+        const result = fragmentSpecValidate({
+            root: "main",
+            code: "   ",
+            elements: {
+                main: { type: "Text", props: { text: "hello" }, children: [] }
+            }
+        });
+        expect(result.valid).toBe(true);
+        expect(result.issues).toContainEqual({
+            severity: "warning",
+            message: "Spec 'code' is empty and will be ignored."
+        });
+    });
 });

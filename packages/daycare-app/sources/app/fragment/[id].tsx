@@ -1,10 +1,11 @@
-import { createStateStore, JSONUIProvider, Renderer, type Spec } from "@json-render/react-native";
+import { JSONUIProvider, Renderer, type Spec } from "@json-render/react-native";
 import { useLocalSearchParams } from "expo-router";
-import * as React from "react";
-import { ScrollView, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ItemList } from "@/components/ItemList";
 import { PageHeader } from "@/components/PageHeader";
 import { fragmentsRegistry } from "@/fragments/registry";
+import { useFragmentPython } from "@/fragments/useFragmentPython";
 import { useFragmentsStore } from "@/modules/fragments/fragmentsContext";
 
 export default function FragmentDetailScreen() {
@@ -12,24 +13,33 @@ export default function FragmentDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
 
     const fragment = useFragmentsStore((s) => s.fragments.find((f) => f.id === id) ?? null);
+    const fragmentPython = useFragmentPython((fragment?.spec as Spec | null) ?? null);
 
-    const stateStore = React.useMemo(() => {
-        if (!fragment) return null;
-        const spec = fragment.spec as Spec;
-        return createStateStore(spec.state ?? {});
-    }, [fragment]);
-
-    if (!fragment || !stateStore) return null;
+    if (!fragment) return null;
 
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.inner}>
                 <PageHeader title={fragment.title} icon="note" />
-                <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
-                    <JSONUIProvider store={stateStore} handlers={{}} registry={fragmentsRegistry}>
-                        <Renderer spec={fragment.spec as Spec} registry={fragmentsRegistry} />
-                    </JSONUIProvider>
-                </ScrollView>
+                {fragmentPython.status === "loading" ? (
+                    <View style={[styles.centered, styles.body]}>
+                        <ActivityIndicator color={theme.colors.primary} />
+                    </View>
+                ) : fragmentPython.status === "error" ? (
+                    <View style={[styles.centered, styles.body]}>
+                        <Text style={[styles.stateText, { color: theme.colors.error }]}>{fragmentPython.error}</Text>
+                    </View>
+                ) : (
+                    <ItemList style={styles.body} containerStyle={styles.bodyContent}>
+                        <JSONUIProvider
+                            store={fragmentPython.store}
+                            handlers={fragmentPython.handlers}
+                            registry={fragmentsRegistry}
+                        >
+                            <Renderer spec={fragment.spec as Spec} registry={fragmentsRegistry} />
+                        </JSONUIProvider>
+                    </ItemList>
+                )}
             </View>
         </View>
     );
@@ -50,5 +60,15 @@ const styles = StyleSheet.create((theme) => ({
     },
     bodyContent: {
         padding: 20
+    },
+    centered: {
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20
+    },
+    stateText: {
+        fontFamily: "IBMPlexSans-Regular",
+        fontSize: 14,
+        textAlign: "center"
     }
 }));

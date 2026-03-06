@@ -16,19 +16,53 @@ that can be embedded anywhere in the app.
 3. Use semantic color tokens whenever possible — never raw values for spacing or surfaces.
 4. Keep specs focused - one clear UI purpose per fragment.
 5. Always set `kitVersion` to "1" (current catalog version).
+6. Optional fragment Python belongs in `spec.code` as a non-empty string.
 
 ## Workflow
 
 1. Understand what UI the user wants.
 2. Design the component tree using available widgets.
-3. Call `fragment_create` with the spec.
-4. If updating an existing fragment, call `fragment_update` with the `fragmentId`.
+3. If the fragment needs dynamic logic, add `spec.code` with `init()` and/or named action functions.
+4. Call `fragment_create` with the spec.
+5. If updating an existing fragment, call `fragment_update` with the `fragmentId`.
 
 ## Available Tools
 
 - `fragment_create` - create a new fragment with `title`, `kitVersion`, `spec`, and optional `description`
 - `fragment_update` - update an existing fragment by `fragmentId` (partial fields: title, description, spec, kitVersion)
 - `fragment_archive` - archive a fragment by `fragmentId` (hides from listings, still renderable by direct reference)
+
+## Fragment Python
+
+Fragments may define `spec.code` with Python source for client-side execution.
+
+- `init()` takes no arguments and returns the initial state object.
+- Named action functions take `(state, params)` and return the next top-level state object.
+- Action names must match the `on` binding action name exactly.
+- Use `spec.state` only as a fallback when no `init()` is defined.
+- Keep code deterministic and side-effect free; execution is sandboxed with a `5s` time limit and `10 MB` memory cap.
+
+Example:
+
+```json
+{
+  "root": "main",
+  "code": "def init():\n    return {\"count\": 0}\n\ndef increment(state, params):\n    return {\"count\": state[\"count\"] + params.get(\"amount\", 1)}",
+  "elements": {
+    "main": {
+      "type": "Button",
+      "props": { "label": "Add" },
+      "on": {
+        "press": {
+          "action": "increment",
+          "params": { "amount": 1 }
+        }
+      },
+      "children": []
+    }
+  }
+}
+```
 
 ## Colors
 
