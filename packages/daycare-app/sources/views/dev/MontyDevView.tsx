@@ -1,4 +1,6 @@
+import { JSONUIProvider, Renderer, type Spec } from "@json-render/react-native";
 import * as React from "react";
+import { ActivityIndicator, Text, View } from "react-native";
 import {
     loadMonty,
     Monty,
@@ -9,6 +11,181 @@ import {
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
 import { ItemList } from "@/components/ItemList";
+import { fragmentsRegistry } from "@/fragments/registry";
+import { useFragmentPython } from "@/fragments/useFragmentPython";
+
+const counterExampleSpec: Spec & { code: string } = {
+    root: "root",
+    state: {
+        count: 0
+    },
+    code: [
+        "def init():",
+        '    return {"count": 2}',
+        "",
+        "def increment(state, params):",
+        '    return {"count": state.get("count", 0) + params.get("delta", 1)}',
+        "",
+        "def decrement(state, params):",
+        '    return {"count": state.get("count", 0) - params.get("delta", 1)}',
+        "",
+        "def reset(state, params):",
+        '    return {"count": params.get("value", 0)}'
+    ].join("\n"),
+    elements: {
+        root: {
+            type: "View",
+            props: { direction: "column", gap: "md", padding: "md" },
+            children: ["title", "value", "buttons"]
+        },
+        title: {
+            type: "Text",
+            props: {
+                text: "Counter from init()",
+                size: "sm",
+                color: "onSurfaceVariant"
+            },
+            children: []
+        },
+        value: {
+            type: "Heading",
+            props: {
+                text: { $template: `Count: \${/count}` },
+                level: "h3"
+            },
+            children: []
+        },
+        buttons: {
+            type: "View",
+            props: { direction: "row", gap: "sm" },
+            children: ["minus", "plus", "reset"]
+        },
+        minus: {
+            type: "Button",
+            props: { label: "-1", variant: "outlined", size: "sm" },
+            on: {
+                press: {
+                    action: "decrement",
+                    params: { delta: 1 }
+                }
+            },
+            children: []
+        },
+        plus: {
+            type: "Button",
+            props: { label: "+1", variant: "filled", size: "sm" },
+            on: {
+                press: {
+                    action: "increment",
+                    params: { delta: 1 }
+                }
+            },
+            children: []
+        },
+        reset: {
+            type: "Button",
+            props: { label: "Reset", variant: "text", size: "sm" },
+            on: {
+                press: {
+                    action: "reset",
+                    params: { value: 0 }
+                }
+            },
+            children: []
+        }
+    }
+};
+
+const modeExampleSpec: Spec & { code: string } = {
+    root: "root",
+    state: {
+        mode: "Focus",
+        accent: "primary",
+        message: "Heads down and ship."
+    },
+    code: [
+        "def init():",
+        '    return {"mode": "Focus", "accent": "primary", "message": "Heads down and ship."}',
+        "",
+        "def choose_mode(state, params):",
+        '    mode = params.get("mode", "Focus")',
+        '    if mode == "Review":',
+        '        return {"mode": "Review", "accent": "tertiary", "message": "Slow down and inspect edge cases."}',
+        '    if mode == "Ship":',
+        '        return {"mode": "Ship", "accent": "secondary", "message": "Everything ready. Push the release."}',
+        '    return {"mode": "Focus", "accent": "primary", "message": "Heads down and ship."}'
+    ].join("\n"),
+    elements: {
+        root: {
+            type: "View",
+            props: { direction: "column", gap: "md", padding: "md" },
+            children: ["title", "mode", "message", "buttons"]
+        },
+        title: {
+            type: "Text",
+            props: {
+                text: "Mode switch with params",
+                size: "sm",
+                color: "onSurfaceVariant"
+            },
+            children: []
+        },
+        mode: {
+            type: "Heading",
+            props: {
+                text: { $template: `Mode: \${/mode}` },
+                level: "h3",
+                color: { $state: "/accent" }
+            },
+            children: []
+        },
+        message: {
+            type: "Text",
+            props: {
+                text: { $state: "/message" }
+            },
+            children: []
+        },
+        buttons: {
+            type: "View",
+            props: { direction: "row", gap: "sm", wrap: true },
+            children: ["focus", "review", "ship"]
+        },
+        focus: {
+            type: "Button",
+            props: { label: "Focus", variant: "outlined", size: "sm" },
+            on: {
+                press: {
+                    action: "choose_mode",
+                    params: { mode: "Focus" }
+                }
+            },
+            children: []
+        },
+        review: {
+            type: "Button",
+            props: { label: "Review", variant: "outlined", size: "sm" },
+            on: {
+                press: {
+                    action: "choose_mode",
+                    params: { mode: "Review" }
+                }
+            },
+            children: []
+        },
+        ship: {
+            type: "Button",
+            props: { label: "Ship", variant: "filled", size: "sm" },
+            on: {
+                press: {
+                    action: "choose_mode",
+                    params: { mode: "Ship" }
+                }
+            },
+            children: []
+        }
+    }
+};
 
 type ProbeResult =
     | {
@@ -101,6 +278,38 @@ function montyProbeSubtitle(result: ProbeResult | null): string {
     return montyFormatOutput(result.output);
 }
 
+function FragmentPythonExample(props: { spec: Spec & { code?: string }; showDivider?: boolean }) {
+    const fragmentPython = useFragmentPython(props.spec);
+
+    if (fragmentPython.status === "loading") {
+        return (
+            <View style={{ padding: 16, alignItems: "center", justifyContent: "center" }}>
+                <ActivityIndicator />
+            </View>
+        );
+    }
+
+    if (fragmentPython.status === "error") {
+        return (
+            <View style={{ padding: 16 }}>
+                <Text>{fragmentPython.error}</Text>
+            </View>
+        );
+    }
+
+    return (
+        <View style={{ paddingVertical: 4 }}>
+            <JSONUIProvider
+                registry={fragmentsRegistry}
+                store={fragmentPython.store}
+                handlers={fragmentPython.handlers}
+            >
+                <Renderer spec={props.spec} registry={fragmentsRegistry} includeStandard={false} />
+            </JSONUIProvider>
+        </View>
+    );
+}
+
 /**
  * Lightweight smoke-test page for react-native-monty integration.
  */
@@ -184,6 +393,18 @@ export function MontyDevView() {
                     showChevron={false}
                     showDivider={false}
                 />
+            </ItemGroup>
+            <ItemGroup
+                title="Fragment Python: Counter"
+                footer="Exercises init() plus increment, decrement, and reset actions through the fragment runtime."
+            >
+                <FragmentPythonExample spec={counterExampleSpec} />
+            </ItemGroup>
+            <ItemGroup
+                title="Fragment Python: Mode Switch"
+                footer="Exercises action params and multi-key state updates through fragment Python handlers."
+            >
+                <FragmentPythonExample spec={modeExampleSpec} />
             </ItemGroup>
         </ItemList>
     );
