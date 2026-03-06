@@ -89,9 +89,27 @@ export type SandboxDockerConfig = {
     userId: string;
 };
 
+export type SandboxOpenSandboxConfig = {
+    domain: string;
+    apiKey?: string;
+    image: string;
+    userId: string;
+    timeoutSeconds: number;
+};
+
+export type SandboxBackendConfig =
+    | {
+          type: "docker";
+          docker: SandboxDockerConfig;
+      }
+    | {
+          type: "opensandbox";
+          opensandbox: SandboxOpenSandboxConfig;
+      };
+
 export type SandboxConfig = {
     homeDir: string;
     permissions: SessionPermissions;
     mounts?: SandboxMount[];
-    docker: SandboxDockerConfig;
+    backend: SandboxBackendConfig;
 };

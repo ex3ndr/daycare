@@ -34,6 +34,7 @@ import { agentModelOverrideApply } from "./ops/agentModelOverrideApply.js";
 import { agentPathTargetResolve } from "./ops/agentPathTargetResolve.js";
 import { agentPromptFilesEnsure } from "./ops/agentPromptFilesEnsure.js";
 import { agentPromptPathsResolve } from "./ops/agentPromptPathsResolve.js";
+import { agentSandboxBackendConfigBuild } from "./ops/agentSandboxBackendConfigBuild.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { type AgentSystemPromptContext, agentSystemPrompt } from "./ops/agentSystemPrompt.js";
 import { agentSystemPromptWrite } from "./ops/agentSystemPromptWrite.js";
@@ -1362,7 +1363,6 @@ export class Agent {
     }
 
     private sandboxBuild(): Sandbox {
-        const dockerSettings = this.agentSystem.config?.current?.settings?.docker;
         const examplesDir = bundledExamplesDirResolve();
         const extraMounts = this.agentSystem.extraMountsForUserId(this.ctx.userId);
         return new Sandbox({
@@ -1373,18 +1373,7 @@ export class Agent {
                 ...(examplesDir ? [{ hostPath: examplesDir, mappedPath: "/shared/examples" }] : []),
                 ...extraMounts
             ],
-            docker: {
-                socketPath: dockerSettings?.socketPath,
-                runtime: dockerSettings?.runtime,
-                readOnly: dockerSettings?.readOnly ?? true,
-                unconfinedSecurity: dockerSettings?.unconfinedSecurity ?? false,
-                capAdd: dockerSettings?.capAdd ?? [],
-                capDrop: dockerSettings?.capDrop ?? [],
-                allowLocalNetworkingForUsers: dockerSettings?.allowLocalNetworkingForUsers,
-                isolatedDnsServers: dockerSettings?.isolatedDnsServers,
-                localDnsServers: dockerSettings?.localDnsServers,
-                userId: this.ctx.userId
-            }
+            backend: agentSandboxBackendConfigBuild(this.agentSystem.config.current.settings, this.ctx.userId)
         });
     }
 

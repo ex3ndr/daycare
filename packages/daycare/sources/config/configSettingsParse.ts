@@ -62,6 +62,21 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                 })
                 .passthrough()
                 .optional(),
+            sandbox: z
+                .object({
+                    backend: z.enum(["docker", "opensandbox"]).optional()
+                })
+                .passthrough()
+                .optional(),
+            opensandbox: z
+                .object({
+                    domain: z.string().min(1).optional(),
+                    apiKey: z.string().min(1).optional(),
+                    image: z.string().min(1).optional(),
+                    timeoutSeconds: z.number().int().positive().optional()
+                })
+                .passthrough()
+                .optional(),
             engine: z
                 .object({
                     socketPath: z.string().min(1).optional(),

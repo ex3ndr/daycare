@@ -83,12 +83,15 @@ function contextBuild(workingDir: string): ToolExecutionContext {
         sandbox: new Sandbox({
             homeDir: workingDir,
             permissions,
-            docker: {
-                readOnly: false,
-                unconfinedSecurity: false,
-                capAdd: [],
-                capDrop: [],
-                userId: "user-1"
+            backend: {
+                type: "docker",
+                docker: {
+                    readOnly: false,
+                    unconfinedSecurity: false,
+                    capAdd: [],
+                    capDrop: [],
+                    userId: "user-1"
+                }
             }
         }),
         auth: null as unknown as ToolExecutionContext["auth"],

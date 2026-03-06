@@ -2,11 +2,18 @@ import path from "node:path";
 
 import { resolveEngineSocketPath } from "../engine/ipc/socket.js";
 import { DEFAULT_DAYCARE_DIR } from "../paths.js";
-import type { DockerSettings, ResolvedSettingsConfig, SettingsConfig } from "../settings.js";
+import type {
+    DockerSettings,
+    OpenSandboxSettings,
+    ResolvedSettingsConfig,
+    SandboxSettings,
+    SettingsConfig
+} from "../settings.js";
 import { freezeDeep } from "../utils/freezeDeep.js";
 import type { Config, ConfigOverrides } from "./configTypes.js";
 
 const DEFAULT_DOCKER_ISOLATED_DNS_SERVERS = ["1.1.1.1", "8.8.8.8"];
+const DEFAULT_OPENSANDBOX_TIMEOUT_SECONDS = 600;
 
 /**
  * Resolves derived paths and defaults into an immutable Config snapshot.
@@ -50,6 +57,9 @@ function resolveSettingsDefaults(settings: SettingsConfig): ResolvedSettingsConf
     const emergencyContextLimit = settings.agents?.emergencyContextLimit ?? 200_000;
     const appReviewerEnabled = settings.security?.appReviewerEnabled ?? false;
     const docker = resolveDockerDefaults(settings.docker);
+    const sandbox = resolveSandboxDefaults(settings.sandbox);
+    const opensandbox = resolveOpenSandboxDefaults(settings.opensandbox);
+    sandboxOpenSandboxConfigAssert(sandbox.backend, opensandbox);
     return {
         ...settings,
         agents: {
@@ -60,7 +70,9 @@ function resolveSettingsDefaults(settings: SettingsConfig): ResolvedSettingsConf
             ...settings.security,
             appReviewerEnabled
         },
-        docker
+        docker,
+        sandbox,
+        opensandbox
     };
 }
 
@@ -133,4 +145,44 @@ function configDatabaseUrlResolve(input: string | undefined): string | null {
         return null;
     }
     return trimmed;
+}
+
+function resolveSandboxDefaults(sandbox: SandboxSettings | undefined): ResolvedSettingsConfig["sandbox"] {
+    return {
+        backend: sandbox?.backend ?? "docker"
+    };
+}
+
+function resolveOpenSandboxDefaults(
+    opensandbox: OpenSandboxSettings | undefined
+): ResolvedSettingsConfig["opensandbox"] {
+    return {
+        domain: configStringOrUndefined(opensandbox?.domain),
+        apiKey: configStringOrUndefined(opensandbox?.apiKey),
+        image: configStringOrUndefined(opensandbox?.image),
+        timeoutSeconds: opensandbox?.timeoutSeconds ?? DEFAULT_OPENSANDBOX_TIMEOUT_SECONDS
+    };
+}
+
+function sandboxOpenSandboxConfigAssert(
+    backend: ResolvedSettingsConfig["sandbox"]["backend"],
+    opensandbox: ResolvedSettingsConfig["opensandbox"]
+): void {
+    if (backend !== "opensandbox") {
+        return;
+    }
+    if (!opensandbox.domain) {
+        throw new Error("settings.opensandbox.domain is required when sandbox.backend is opensandbox.");
+    }
+    if (!opensandbox.image) {
+        throw new Error("settings.opensandbox.image is required when sandbox.backend is opensandbox.");
+    }
+}
+
+function configStringOrUndefined(input: string | undefined): string | undefined {
+    if (!input) {
+        return undefined;
+    }
+    const trimmed = input.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
 }

@@ -1,6 +1,6 @@
-# Sandbox Docker Runtime
+# Sandbox Docker Backend
 
-The sandbox Docker runtime is the only execution path for `Sandbox.exec()`.
+The Docker backend is the default execution path for `Sandbox.exec()`.
 
 ## What Runs Where
 
@@ -17,6 +17,9 @@ Configure the Docker runtime in `settings.json`:
 
 ```json
 {
+    "sandbox": {
+        "backend": "docker"
+    },
     "docker": {
         "socketPath": "/var/run/docker.sock",
         "runtime": "runsc",
@@ -47,14 +50,14 @@ Defaults when omitted:
 
 ```mermaid
 flowchart TD
-    A[Sandbox.exec] --> B[dockerRunInSandbox]
+    A[Sandbox.exec] --> B[DockerExecBackend]
     B --> C[dockerContainerEnsure]
     C --> D[dockerNetworksEnsure]
     D --> E[docker exec bash -lc command]
     E --> F[stdout and stderr returned to Sandbox.exec]
 ```
 
-`dockerRunInSandbox()` rewrites mount-backed host paths into container paths before execution and normalizes
+`DockerExecBackend` rewrites mount-backed host paths into container paths before execution and normalizes
 `TMPDIR`, `TMP`, and `TEMP` to `/tmp`.
 
 ## Docker Network Isolation

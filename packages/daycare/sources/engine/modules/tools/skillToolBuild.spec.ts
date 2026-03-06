@@ -401,12 +401,15 @@ function contextBuild(input?: {
         homeDir,
         permissions,
         mounts,
-        docker: {
-            readOnly: false,
-            unconfinedSecurity: false,
-            capAdd: [],
-            capDrop: [],
-            userId: "user-1"
+        backend: {
+            type: "docker",
+            docker: {
+                readOnly: false,
+                unconfinedSecurity: false,
+                capAdd: [],
+                capDrop: [],
+                userId: "user-1"
+            }
         }
     });
 

@@ -312,12 +312,15 @@ function contextBuild(input: {
     const sandbox = new Sandbox({
         homeDir: input.homeDir,
         permissions: { workingDir: input.homeDir, writeDirs: [input.homeDir] },
-        docker: {
-            readOnly: false,
-            unconfinedSecurity: false,
-            capAdd: [],
-            capDrop: [],
-            userId: "user-1"
+        backend: {
+            type: "docker",
+            docker: {
+                readOnly: false,
+                unconfinedSecurity: false,
+                capAdd: [],
+                capDrop: [],
+                userId: "user-1"
+            }
         }
     });
     return {

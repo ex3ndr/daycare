@@ -108,6 +108,40 @@ describe("configSettingsParse", () => {
         expect(parsed.docker?.localDnsServers).toEqual(["192.168.1.1"]);
     });
 
+    it("accepts opensandbox backend settings", () => {
+        const parsed = configSettingsParse({
+            sandbox: {
+                backend: "opensandbox"
+            },
+            opensandbox: {
+                domain: "https://sandbox.example.com",
+                apiKey: "secret",
+                image: "ubuntu",
+                timeoutSeconds: 300
+            }
+        });
+
+        expect(parsed.sandbox).toEqual({
+            backend: "opensandbox"
+        });
+        expect(parsed.opensandbox).toEqual({
+            domain: "https://sandbox.example.com",
+            apiKey: "secret",
+            image: "ubuntu",
+            timeoutSeconds: 300
+        });
+    });
+
+    it("rejects unknown sandbox backends", () => {
+        expect(() =>
+            configSettingsParse({
+                sandbox: {
+                    backend: "invalid"
+                }
+            })
+        ).toThrow();
+    });
+
     it("accepts model role and flavor overrides", () => {
         const parsed = configSettingsParse({
             models: {

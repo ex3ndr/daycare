@@ -36,7 +36,10 @@ describe("Sandbox", () => {
         sandbox = new Sandbox({
             homeDir,
             permissions,
-            docker: dockerConfigBuild("user-1")
+            backend: {
+                type: "docker",
+                docker: dockerConfigBuild("user-1")
+            }
         });
     });
 
@@ -57,7 +60,10 @@ describe("Sandbox", () => {
                 ...permissions,
                 workingDir: writeDir
             },
-            docker: dockerConfigBuild("user-1")
+            backend: {
+                type: "docker",
+                docker: dockerConfigBuild("user-1")
+            }
         });
         expect(fromPermissions.workingDir).toBe(await fs.realpath(writeDir));
     });

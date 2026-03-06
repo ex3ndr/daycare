@@ -1456,6 +1456,9 @@ describe("Agent", () => {
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const agentSystem = {
+                config: {
+                    current: config
+                },
                 extraMountsForUserId: () => []
             } as unknown as AgentSystem;
 
@@ -2341,6 +2344,9 @@ describe("Agent", () => {
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const agentSystem = {
+                config: {
+                    current: config
+                },
                 extraMountsForUserId: () => []
             } as unknown as AgentSystem;
 

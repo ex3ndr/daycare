@@ -10,14 +10,15 @@ import { envNormalize } from "../utils/envNormalize.js";
 import { pathMountMapHostToMapped } from "../utils/pathMountMapHostToMapped.js";
 import { pathMountMapMappedToHost } from "../utils/pathMountMapMappedToHost.js";
 import type { PathMountPoint } from "../utils/pathMountTypes.js";
-import { dockerRunInSandbox } from "./docker/dockerRunInSandbox.js";
 import { isWithinSecure, openSecure } from "./pathResolveSecure.js";
 import { sandboxCanRead } from "./sandboxCanRead.js";
 import { sandboxCanWrite } from "./sandboxCanWrite.js";
+import { sandboxExecBackendBuild } from "./sandboxExecBackendBuild.js";
+import type { SandboxExecBackend } from "./sandboxExecBackendTypes.js";
+import { sandboxHomeRedefine } from "./sandboxHomeRedefine.js";
 import { sandboxReadPathNormalize } from "./sandboxReadPathNormalize.js";
 import type {
     SandboxConfig,
-    SandboxDockerConfig,
     SandboxExecArgs,
     SandboxExecResult,
     SandboxReadArgs,
@@ -46,16 +47,18 @@ export class Sandbox {
     readonly homeDir: string;
     readonly workingDir: string;
     readonly permissions: SessionPermissions;
-    readonly docker: SandboxDockerConfig;
     /** All mount points including home. Used for host↔sandbox path mapping. */
     readonly mounts: PathMountPoint[];
+    private readonly execBackend: SandboxExecBackend;
+    private readonly execBackendType: SandboxConfig["backend"]["type"];
 
     constructor(config: SandboxConfig) {
         this.homeDir = realpathSyncSafe(config.homeDir);
         this.workingDir = realpathSyncSafe(config.permissions.workingDir);
         this.permissions = config.permissions;
-        this.docker = config.docker;
         this.mounts = sandboxMountsBuild(this.homeDir, config.mounts);
+        this.execBackend = sandboxExecBackendBuild(config.backend, this.homeDir, this.mounts);
+        this.execBackendType = config.backend.type;
     }
 
     /**
@@ -199,7 +202,7 @@ export class Sandbox {
     }
 
     /**
-     * Execute a shell command inside the per-user Docker sandbox.
+     * Execute a shell command inside the configured sandbox backend.
      * Expects: args.command is non-empty.
      */
     async exec(args: SandboxExecArgs): Promise<SandboxExecResult> {
@@ -213,36 +216,24 @@ export class Sandbox {
             ...(envOverrides ?? {}),
             ...(secretEnv ?? {})
         };
-        logger.debug(`exec: command=${JSON.stringify(args.command)} cwd=${cwd} docker=true`);
+        const sandboxEnv = (await sandboxHomeRedefine({ env, home: this.homeDir })).env;
+        logger.debug(`exec: command=${JSON.stringify(args.command)} cwd=${cwd} backend=${this.execBackendType}`);
 
         try {
-            const result = await dockerRunInSandbox(args.command, {
+            const result = await this.execBackend.exec({
+                command: args.command,
                 cwd,
-                env,
-                home: this.homeDir,
+                env: sandboxEnv,
                 timeoutMs: args.timeoutMs ?? DEFAULT_EXEC_TIMEOUT,
                 maxBufferBytes: MAX_EXEC_BUFFER,
-                signal: args.signal,
-                docker: {
-                    socketPath: this.docker.socketPath,
-                    runtime: this.docker.runtime,
-                    readOnly: this.docker.readOnly,
-                    unconfinedSecurity: this.docker.unconfinedSecurity,
-                    capAdd: this.docker.capAdd,
-                    capDrop: this.docker.capDrop,
-                    allowLocalNetworkingForUsers: this.docker.allowLocalNetworkingForUsers,
-                    isolatedDnsServers: this.docker.isolatedDnsServers,
-                    localDnsServers: this.docker.localDnsServers,
-                    userId: this.docker.userId,
-                    mounts: this.mounts
-                }
+                signal: args.signal
             });
             return {
                 stdout: sandboxText(result.stdout),
                 stderr: sandboxText(result.stderr),
-                exitCode: 0,
+                exitCode: result.exitCode,
                 signal: null,
-                failed: false,
+                failed: result.exitCode !== 0,
                 cwd
             };
         } catch (error) {

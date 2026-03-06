@@ -449,6 +449,27 @@ function createContext(
         state,
         new AgentInbox(agentId),
         {
+            config: {
+                current: {
+                    settings: {
+                        docker: {
+                            readOnly: false,
+                            unconfinedSecurity: false,
+                            capAdd: [],
+                            capDrop: [],
+                            allowLocalNetworkingForUsers: [],
+                            isolatedDnsServers: ["1.1.1.1", "8.8.8.8"],
+                            localDnsServers: []
+                        },
+                        sandbox: {
+                            backend: "docker"
+                        },
+                        opensandbox: {
+                            timeoutSeconds: 600
+                        }
+                    }
+                }
+            },
             extraMountsForUserId: () => []
         } as unknown as Parameters<typeof Agent.restore>[5],
         new UserHome(path.join(workingDir, "users"), "user-1")
@@ -456,12 +477,15 @@ function createContext(
     const sandbox = new Sandbox({
         homeDir,
         permissions: state.permissions,
-        docker: {
-            readOnly: false,
-            unconfinedSecurity: false,
-            capAdd: [],
-            capDrop: [],
-            userId: "user-1"
+        backend: {
+            type: "docker",
+            docker: {
+                readOnly: false,
+                unconfinedSecurity: false,
+                capAdd: [],
+                capDrop: [],
+                userId: "user-1"
+            }
         }
     });
     return {

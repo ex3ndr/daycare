@@ -5,12 +5,8 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions } from "@/types";
-import { dockerRunInSandbox } from "./docker/dockerRunInSandbox.js";
+import { dockerContainersShared } from "./docker/dockerContainersShared.js";
 import { Sandbox } from "./sandbox.js";
-
-vi.mock("./docker/dockerRunInSandbox.js", () => ({
-    dockerRunInSandbox: vi.fn()
-}));
 
 describe("Sandbox docker integration", () => {
     let rootDir: string;
@@ -33,7 +29,7 @@ describe("Sandbox docker integration", () => {
             writeDirs: [homeDir]
         };
 
-        vi.mocked(dockerRunInSandbox).mockReset();
+        vi.spyOn(dockerContainersShared, "exec").mockReset();
     });
 
     afterEach(async () => {
@@ -41,9 +37,10 @@ describe("Sandbox docker integration", () => {
     });
 
     it("uses docker runtime for exec", async () => {
-        vi.mocked(dockerRunInSandbox).mockResolvedValue({
+        const execSpy = vi.spyOn(dockerContainersShared, "exec").mockResolvedValue({
             stdout: "docker",
-            stderr: ""
+            stderr: "",
+            exitCode: 0
         });
 
         const sandbox = sandboxBuild();
@@ -51,23 +48,28 @@ describe("Sandbox docker integration", () => {
 
         expect(result.failed).toBe(false);
         expect(result.stdout).toBe("docker");
-        expect(dockerRunInSandbox).toHaveBeenCalledTimes(1);
-        expect(vi.mocked(dockerRunInSandbox).mock.calls[0]?.[1]?.docker).toMatchObject({
-            readOnly: false,
-            unconfinedSecurity: false,
-            capAdd: [],
-            capDrop: [],
-            allowLocalNetworkingForUsers: ["u123"],
-            isolatedDnsServers: ["9.9.9.9"],
-            localDnsServers: ["192.168.1.1"],
-            userId: "u123"
-        });
+        expect(execSpy).toHaveBeenCalledTimes(1);
+        expect(execSpy).toHaveBeenCalledWith(
+            expect.objectContaining({
+                readOnly: false,
+                unconfinedSecurity: false,
+                capAdd: [],
+                capDrop: [],
+                allowLocalNetworkingForUsers: ["u123"],
+                isolatedDnsServers: ["9.9.9.9"],
+                localDnsServers: ["192.168.1.1"],
+                userId: "u123"
+            }),
+            expect.objectContaining({
+                command: ["bash", "-lc", "echo docker"]
+            })
+        );
     });
 
     it("rethrows AbortError from docker execution", async () => {
         const abortError = new Error("Operation aborted.");
         abortError.name = "AbortError";
-        vi.mocked(dockerRunInSandbox).mockRejectedValueOnce(abortError);
+        vi.spyOn(dockerContainersShared, "exec").mockRejectedValueOnce(abortError);
 
         const sandbox = sandboxBuild();
         await expect(
@@ -138,7 +140,10 @@ describe("Sandbox docker integration", () => {
                 workingDir: path.join(symlinkHome, "desktop"),
                 writeDirs: [symlinkHome]
             },
-            docker: dockerConfigBuild()
+            backend: {
+                type: "docker",
+                docker: dockerConfigBuild()
+            }
         });
 
         const read = await sandbox.read({ path: "/home/documents/notes.txt", raw: true });
@@ -155,7 +160,10 @@ describe("Sandbox docker integration", () => {
                 { hostPath: skillsActiveDir, mappedPath: "/shared/skills" },
                 { hostPath: skillsActiveDir, mappedPath: "/shared/examples" }
             ],
-            docker: dockerConfigBuild()
+            backend: {
+                type: "docker",
+                docker: dockerConfigBuild()
+            }
         });
     }
 

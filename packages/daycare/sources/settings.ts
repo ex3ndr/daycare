@@ -93,6 +93,19 @@ export type DockerSettings = {
     localDnsServers?: string[];
 };
 
+export type SandboxBackendType = "docker" | "opensandbox";
+
+export type SandboxSettings = {
+    backend?: SandboxBackendType;
+};
+
+export type OpenSandboxSettings = {
+    domain?: string;
+    apiKey?: string;
+    image?: string;
+    timeoutSeconds?: number;
+};
+
 export type ResolvedDockerSettings = {
     socketPath?: string;
     runtime?: string;
@@ -105,14 +118,32 @@ export type ResolvedDockerSettings = {
     localDnsServers: string[];
 };
 
-export type ResolvedSettingsConfig = Omit<SettingsConfig, "agents" | "security" | "docker"> & {
+export type ResolvedSandboxSettings = {
+    backend: SandboxBackendType;
+};
+
+export type ResolvedOpenSandboxSettings = {
+    domain?: string;
+    apiKey?: string;
+    image?: string;
+    timeoutSeconds: number;
+};
+
+export type ResolvedSettingsConfig = Omit<
+    SettingsConfig,
+    "agents" | "security" | "docker" | "sandbox" | "opensandbox"
+> & {
     agents: Required<AgentSettings>;
     security: Required<SecuritySettings>;
     docker: ResolvedDockerSettings;
+    sandbox: ResolvedSandboxSettings;
+    opensandbox: ResolvedOpenSandboxSettings;
 };
 
 export type SettingsConfig = {
     docker?: DockerSettings;
+    sandbox?: SandboxSettings;
+    opensandbox?: OpenSandboxSettings;
     engine?: {
         socketPath?: string;
         dataDir?: string;

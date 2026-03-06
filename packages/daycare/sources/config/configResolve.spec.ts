@@ -189,4 +189,63 @@ describe("configResolve", () => {
         expect(config.docker.isolatedDnsServers).toEqual(["9.9.9.9", "1.1.1.1"]);
         expect(config.docker.localDnsServers).toEqual(["192.168.1.1", "8.8.8.8"]);
     });
+
+    it("defaults sandbox backend to docker", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+        const config = configResolve({}, configPath);
+
+        expect(config.settings.sandbox).toEqual({
+            backend: "docker"
+        });
+        expect(config.settings.opensandbox).toEqual({
+            domain: undefined,
+            apiKey: undefined,
+            image: undefined,
+            timeoutSeconds: 600
+        });
+    });
+
+    it("resolves opensandbox settings when selected", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+        const config = configResolve(
+            {
+                sandbox: {
+                    backend: "opensandbox"
+                },
+                opensandbox: {
+                    domain: "https://sandbox.example.com",
+                    apiKey: "secret",
+                    image: "ubuntu",
+                    timeoutSeconds: 300
+                }
+            },
+            configPath
+        );
+
+        expect(config.settings.sandbox.backend).toBe("opensandbox");
+        expect(config.settings.opensandbox).toEqual({
+            domain: "https://sandbox.example.com",
+            apiKey: "secret",
+            image: "ubuntu",
+            timeoutSeconds: 300
+        });
+    });
+
+    it("rejects opensandbox backend without required settings", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+
+        expect(() =>
+            configResolve(
+                {
+                    sandbox: {
+                        backend: "opensandbox"
+                    },
+                    opensandbox: {
+                        image: "ubuntu"
+                    }
+                },
+                configPath
+            )
+        ).toThrow("settings.opensandbox.domain is required when sandbox.backend is opensandbox.");
+    });
 });

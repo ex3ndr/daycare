@@ -103,6 +103,27 @@ function createContext(workingDir: string): ToolExecutionContext {
         state,
         new AgentInbox(agentId),
         {
+            config: {
+                current: {
+                    settings: {
+                        docker: {
+                            readOnly: false,
+                            unconfinedSecurity: false,
+                            capAdd: [],
+                            capDrop: [],
+                            allowLocalNetworkingForUsers: [],
+                            isolatedDnsServers: ["1.1.1.1", "8.8.8.8"],
+                            localDnsServers: []
+                        },
+                        sandbox: {
+                            backend: "docker"
+                        },
+                        opensandbox: {
+                            timeoutSeconds: 600
+                        }
+                    }
+                }
+            },
             extraMountsForUserId: () => []
         } as unknown as Parameters<typeof Agent.restore>[5],
         new UserHome(path.join(workingDir, "users"), "user-1")
