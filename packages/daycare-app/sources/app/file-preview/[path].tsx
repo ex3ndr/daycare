@@ -1,5 +1,4 @@
 import { Octicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import { useLocalSearchParams } from "expo-router";
 import * as React from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
@@ -10,6 +9,7 @@ import { filesFetchPreview } from "@/modules/files/filesFetchPreview";
 import { filesPathDecode } from "@/modules/files/filesPathEncode";
 import type { FilePreview } from "@/modules/files/filesTypes";
 import { filesFormatSize } from "@/views/files/filesFormatSize";
+import { ImageViewer } from "@/views/files/ImageViewer";
 
 export default function FilePreviewScreen() {
     const { theme } = useUnistyles();
@@ -62,18 +62,14 @@ export default function FilePreviewScreen() {
                         </Text>
                     </View>
                 ) : preview.mimeType.startsWith("image/") ? (
-                    <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+                    <View style={styles.body}>
                         <View style={styles.fileMeta}>
                             <Text style={[styles.metaText, { color: theme.colors.onSurfaceVariant }]}>
                                 {filesFormatSize(preview.size)} &middot; {preview.mimeType}
                             </Text>
                         </View>
-                        <Image
-                            source={{ uri: `data:${preview.mimeType};base64,${preview.content}` }}
-                            style={styles.image}
-                            contentFit="contain"
-                        />
-                    </ScrollView>
+                        <ImageViewer uri={`data:${preview.mimeType};base64,${preview.content}`} />
+                    </View>
                 ) : preview.encoding === "utf8" ? (
                     <View style={styles.body}>
                         <View style={styles.fileMeta}>
@@ -116,9 +112,6 @@ const styles = StyleSheet.create((theme) => ({
     body: {
         flex: 1
     },
-    bodyContent: {
-        padding: 20
-    },
     centered: {
         flex: 1,
         alignItems: "center",
@@ -137,11 +130,6 @@ const styles = StyleSheet.create((theme) => ({
     },
     metaText: {
         fontSize: 13
-    },
-    image: {
-        width: "100%",
-        aspectRatio: 1,
-        borderRadius: 8
     },
     textContent: {
         padding: 20
