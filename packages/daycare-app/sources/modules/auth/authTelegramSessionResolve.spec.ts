@@ -59,8 +59,10 @@ describe("authTelegramSessionResolve", () => {
         expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it("returns null when backend query param is missing", async () => {
-        const fetchMock = vi.fn();
+    it("uses default backend and telegram instance id when launch params omit both", async () => {
+        const fetchMock = vi.fn(async () => ({
+            json: async () => ({ ok: true, userId: "default-user", token: "jwt-default" })
+        }));
         vi.stubGlobal("fetch", fetchMock);
         vi.stubGlobal("window", {
             location: { href: "https://app.test?foo=bar" }
@@ -68,22 +70,32 @@ describe("authTelegramSessionResolve", () => {
         vi.mocked(isTMA).mockReturnValue(true);
         vi.mocked(tmaInitData).mockReturnValue("init-data");
 
-        await expect(authTelegramSessionResolve()).resolves.toBeNull();
-        expect(fetchMock).not.toHaveBeenCalled();
+        await expect(authTelegramSessionResolve()).resolves.toEqual({
+            baseUrl: "https://api.daycare.dev",
+            token: "jwt-default"
+        });
+        expect(fetchMock).toHaveBeenCalledWith("https://api.daycare.dev/auth/telegram", {
+            method: "POST",
+            headers: {
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({
+                initData: "init-data",
+                telegramInstanceId: "telegram"
+            })
+        });
     });
 
     it("returns session and calls tmaReady when auth exchange succeeds", async () => {
+        const fetchMock = vi.fn(async () => ({
+            json: async () => ({ ok: true, userId: "123", token: "jwt-1" })
+        }));
         vi.stubGlobal("window", {
             location: {
                 href: "https://app.test?backend=https%3A%2F%2Fapi.example.com%2F&telegramInstanceId=telegram-main"
             }
         } as unknown as Window);
-        vi.stubGlobal(
-            "fetch",
-            vi.fn(async () => ({
-                json: async () => ({ ok: true, userId: "123", token: "jwt-1" })
-            }))
-        );
+        vi.stubGlobal("fetch", fetchMock);
         vi.mocked(isTMA).mockReturnValue(true);
         vi.mocked(tmaInitData).mockReturnValue("init-data");
 
@@ -92,6 +104,16 @@ describe("authTelegramSessionResolve", () => {
             token: "jwt-1"
         });
         expect(tmaReady).toHaveBeenCalledTimes(1);
+        expect(fetchMock).toHaveBeenCalledWith("https://api.example.com/auth/telegram", {
+            method: "POST",
+            headers: {
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({
+                initData: "init-data",
+                telegramInstanceId: "telegram-main"
+            })
+        });
     });
 
     it("resolves session from launch params when href has no backend", async () => {

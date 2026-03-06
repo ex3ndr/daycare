@@ -36,7 +36,8 @@ describe("authTelegramWebAppContextParse", () => {
 
         expect(result).toEqual({
             backendUrl: "https://query.example.com",
-            initData: "init-data-value"
+            initData: "init-data-value",
+            telegramInstanceId: "telegram"
         });
     });
 
@@ -54,8 +55,26 @@ describe("authTelegramWebAppContextParse", () => {
         });
     });
 
-    it("returns null when backend param is missing from all sources", () => {
-        expect(authTelegramWebAppContextParse("https://app.example.com?foo=bar", "init-data-value")).toBeNull();
+    it("uses default backend and telegram instance id when launch params omit both", () => {
+        expect(authTelegramWebAppContextParse("https://app.example.com?foo=bar", "init-data-value")).toEqual({
+            backendUrl: "https://api.daycare.dev",
+            initData: "init-data-value",
+            telegramInstanceId: "telegram"
+        });
+    });
+
+    it("uses default telegram instance id when backend is provided without it", () => {
+        expect(
+            authTelegramWebAppContextParse("https://app.example.com?backend=https%3A%2F%2Fapi.example.com", "init-data")
+        ).toEqual({
+            backendUrl: "https://api.example.com",
+            initData: "init-data",
+            telegramInstanceId: "telegram"
+        });
+    });
+
+    it("returns null when backend param is present but invalid", () => {
+        expect(authTelegramWebAppContextParse("https://app.example.com?backend=not-a-url", "init-data")).toBeNull();
     });
 
     it("returns null when initData is empty", () => {

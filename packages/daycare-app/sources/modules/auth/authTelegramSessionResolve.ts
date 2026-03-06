@@ -9,7 +9,7 @@ import { tmaReady } from "@/modules/tma/tmaReady";
 /**
  * Resolves a Telegram WebApp session from the current browser page.
  * Uses @tma.js/bridge to detect TMA environment and retrieve initData.
- * Expects: `backend` query param is present in the active URL when inside TMA.
+ * Expects: Telegram WebApp initData is available when inside TMA.
  */
 export async function authTelegramSessionResolve(): Promise<AuthSession | null> {
     if (typeof window === "undefined") {
@@ -40,7 +40,7 @@ export async function authTelegramSessionResolve(): Promise<AuthSession | null> 
         `[daycare-app] tma-auth: context=${telegramContext ? "parsed" : "failed"} href=${window.location.href}`
     );
     if (!telegramContext) {
-        console.warn("[daycare-app] tma-auth: failed - missing backend query param");
+        console.warn("[daycare-app] tma-auth: failed - invalid auth context");
         return null;
     }
 

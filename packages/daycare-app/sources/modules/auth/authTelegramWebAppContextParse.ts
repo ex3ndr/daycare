@@ -1,13 +1,16 @@
 export type AuthTelegramWebAppContext = {
     backendUrl: string;
     initData: string;
-    telegramInstanceId?: string;
+    telegramInstanceId: string;
 };
+
+const DEFAULT_BACKEND_URL = "https://api.daycare.dev";
+const DEFAULT_TELEGRAM_INSTANCE_ID = "telegram";
 
 /**
  * Parses Telegram WebApp auth context from URL, launch params, and initData.
  * Checks query params, hash fragment, and raw TMA launch params (which preserve the original URL).
- * Expects: backend URL in `backend` param and initData is the raw Telegram WebApp payload.
+ * Expects: initData is the raw Telegram WebApp payload.
  */
 export function authTelegramWebAppContextParse(
     href: string,
@@ -29,13 +32,13 @@ export function authTelegramWebAppContextParse(
         }
     }
 
-    const backendUrl = backendUrlNormalize(params.get("backend"));
+    const backendUrl = backendUrlResolve(params.get("backend"));
     if (!backendUrl) {
         return null;
     }
 
     const telegramInstanceIdRaw = params.get("telegramInstanceId")?.trim() ?? "";
-    const telegramInstanceId = telegramInstanceIdRaw.length > 0 ? telegramInstanceIdRaw : undefined;
+    const telegramInstanceId = telegramInstanceIdRaw.length > 0 ? telegramInstanceIdRaw : DEFAULT_TELEGRAM_INSTANCE_ID;
     return {
         backendUrl,
         initData,
@@ -80,4 +83,12 @@ function backendUrlNormalize(value: string | null): string | null {
     } catch {
         return null;
     }
+}
+
+function backendUrlResolve(value: string | null): string | null {
+    const trimmed = value?.trim() ?? "";
+    if (!trimmed) {
+        return DEFAULT_BACKEND_URL;
+    }
+    return backendUrlNormalize(trimmed);
 }
