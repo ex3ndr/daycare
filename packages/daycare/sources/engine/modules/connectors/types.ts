@@ -42,6 +42,7 @@ export type ConnectorMessageButton =
 
 export type MessageContext = {
     messageId?: string;
+    connectorTargetId?: string;
     timezone?: string;
     enrichments?: MessageContextEnrichment[];
 };

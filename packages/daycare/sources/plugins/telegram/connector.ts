@@ -156,7 +156,8 @@ export class TelegramConnector implements Connector {
             const telegramUserId = String(senderId);
             const path = agentPath(`${agentPathConnector(telegramUserId, "telegram")}/${channelId}/${telegramUserId}`);
             const context: MessageContext = {
-                messageId: message.message_id ? String(message.message_id) : undefined
+                messageId: message.message_id ? String(message.message_id) : undefined,
+                connectorTargetId: telegramUserId
             };
 
             if (isCommand && rawText) {
@@ -220,7 +221,8 @@ export class TelegramConnector implements Connector {
             const telegramUserId = String(senderId);
             const path = agentPath(`${agentPathConnector(telegramUserId, "telegram")}/${channelId}/${telegramUserId}`);
             const context: MessageContext = {
-                messageId: callbackQuery.message?.message_id ? String(callbackQuery.message.message_id) : undefined
+                messageId: callbackQuery.message?.message_id ? String(callbackQuery.message.message_id) : undefined,
+                connectorTargetId: telegramUserId
             };
             const payload: ConnectorMessage = {
                 text: callbackQuery.data

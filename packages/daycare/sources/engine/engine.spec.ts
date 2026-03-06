@@ -772,7 +772,7 @@ describe("Engine message batching", () => {
         }
     });
 
-    it("normalizes private telegram channel/user suffixes to a single connector key", async () => {
+    it("uses connectorTargetId from context for connector user lookup without rewriting the path", async () => {
         vi.useFakeTimers();
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         try {
@@ -803,13 +803,23 @@ describe("Engine message batching", () => {
                 throw new Error("Expected message handler to be registered");
             }
 
-            await handler({ text: "hello" }, { messageId: "1" }, "/user-7/telegram/123/123" as AgentPath);
+            await handler(
+                { text: "hello" },
+                { messageId: "1", connectorTargetId: "123" },
+                "/user-7/telegram/123/123" as AgentPath
+            );
             await vi.advanceTimersByTimeAsync(100);
 
             expect(postSpy).toHaveBeenCalledTimes(1);
+            const call = postSpy.mock.calls[0];
+            if (!call) {
+                throw new Error("Expected post call");
+            }
+            const ctx = call[0] as { userId: string };
+            const target = call[1] as { path: string };
             const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
-            expect(user.connectorKeys.map((entry) => entry.connectorKey)).toContain("telegram:123");
-            expect(user.connectorKeys.map((entry) => entry.connectorKey)).not.toContain("telegram:123/123");
+            expect(user.id).toBe(ctx.userId);
+            expect(target.path).toBe(`/${ctx.userId}/telegram/123/123`);
 
             await engine.modules.connectors.unregisterAll("test");
             await engine.shutdown();

@@ -211,7 +211,7 @@ export class Engine {
             onFlush: async (items) => {
                 await this.runConnectorCallback("message", async () => {
                     for (const item of items) {
-                        const resolved = await this.pathCanonicalize(item.path);
+                        const resolved = await this.pathCanonicalize(item.path, item.context);
                         logger.debug(
                             `receive: Connector message received: path=${resolved.path} merged=${item.count} text=${item.message.text?.length ?? 0}chars files=${item.message.files?.length ?? 0}`
                         );
@@ -241,7 +241,7 @@ export class Engine {
         this.modules = new ModuleRegistry({
             onMessage: async (message, context, target) =>
                 this.runConnectorCallback("message", async () => {
-                    const resolved = await this.targetCanonicalize(target);
+                    const resolved = await this.targetCanonicalize(target, context);
                     const ctx = resolved.ctx;
                     const messageContext = await this.messageContextWithTimezone(ctx, context);
                     const normalized = await this.messageFilesToDownloads(ctx, message);
@@ -249,7 +249,7 @@ export class Engine {
                 }),
             onCommand: async (command, context, target) =>
                 this.runConnectorCallback("command", async () => {
-                    const resolved = await this.targetCanonicalize(target);
+                    const resolved = await this.targetCanonicalize(target, context);
                     const connectorTarget = await this.connectorTargetResolve(resolved.path);
                     const isConnector = connectorTarget !== null;
                     const connector = connectorTarget?.connector ?? "unknown";
@@ -953,15 +953,21 @@ export class Engine {
         }
     }
 
-    private async targetCanonicalize(target: ConnectorTarget): Promise<{ ctx: Context; path: AgentPath }> {
-        return this.pathCanonicalize(target);
+    private async targetCanonicalize(
+        target: ConnectorTarget,
+        context?: MessageContext
+    ): Promise<{ ctx: Context; path: AgentPath }> {
+        return this.pathCanonicalize(target, context);
     }
 
     /**
      * Resolves runtime user context from an incoming path.
      * Expects: paths are rooted under /<userId>/... for user-scoped agents.
      */
-    private async pathCanonicalize(path: AgentPath): Promise<{ ctx: Context; path: AgentPath }> {
+    private async pathCanonicalize(
+        path: AgentPath,
+        context?: Pick<MessageContext, "connectorTargetId">
+    ): Promise<{ ctx: Context; path: AgentPath }> {
         await this.migrationReady;
         const connectorPath = connectorPathResolve(path);
         if (!connectorPath) {
@@ -979,9 +985,9 @@ export class Engine {
         }
 
         // Connector callbacks may still arrive with external ids; normalize them.
-        const lookupTargetIds = connectorPathLookupTargetIds(connectorPath);
+        const lookupTargetIds = connectorPathLookupTargetIds(connectorPath, context?.connectorTargetId);
         const existing = await connectorPathUserFindByTargets(this.storage, connectorPath.connector, lookupTargetIds);
-        const primaryTargetId = connectorPathPrimaryTargetIdResolve(connectorPath);
+        const primaryTargetId = lookupTargetIds[0];
         if (!primaryTargetId) {
             throw new Error(`Connector target is required for path: ${path}`);
         }
@@ -1206,31 +1212,28 @@ async function connectorPathUserFindByTargets(
     return null;
 }
 
-function connectorPathLookupTargetIds(connectorPath: ConnectorPath): string[] {
+function connectorPathLookupTargetIds(connectorPath: ConnectorPath, connectorTargetId?: string): string[] {
     const targetIds: string[] = [];
+    const contextTargetId = connectorTargetId?.trim() ?? "";
+    if (contextTargetId) {
+        targetIds.push(contextTargetId);
+    }
     const targetId = connectorPath.targetId?.trim() ?? "";
     if (!targetId) {
         const ownerId = connectorPath.ownerId.trim();
-        if (ownerId) {
+        if (ownerId && !targetIds.includes(ownerId)) {
             targetIds.push(ownerId);
         }
         return targetIds;
     }
-    targetIds.push(targetId);
+    if (!targetIds.includes(targetId)) {
+        targetIds.push(targetId);
+    }
     const legacyFallback = connectorPathLegacyTargetFallback(targetId);
     if (legacyFallback && !targetIds.includes(legacyFallback)) {
         targetIds.push(legacyFallback);
     }
     return targetIds;
-}
-
-function connectorPathPrimaryTargetIdResolve(connectorPath: ConnectorPath): string | null {
-    const targetId = connectorPath.targetId?.trim() ?? "";
-    if (!targetId) {
-        const ownerId = connectorPath.ownerId.trim();
-        return ownerId || null;
-    }
-    return connectorPathLegacyTargetFallback(targetId) ?? targetId;
 }
 
 function connectorPathLegacyTargetFallback(targetId: string): string | null {

@@ -99,7 +99,7 @@ describe("TelegramConnector commands", () => {
         expect(commandHandler).toHaveBeenCalledTimes(1);
         const [command, context, target] = commandHandler.mock.calls[0] as [string, MessageContext, string];
         expect(command).toBe("/reset");
-        expect(context).toMatchObject({ messageId: "55" });
+        expect(context).toMatchObject({ messageId: "55", connectorTargetId: "123" });
         expect(target).toBe("/123/telegram/123/123");
     });
 
@@ -170,7 +170,7 @@ describe("TelegramConnector callback queries", () => {
         expect(messageHandler).toHaveBeenCalledTimes(1);
         const [payload, context, target] = messageHandler.mock.calls[0] as [{ text: string }, MessageContext, string];
         expect(payload.text).toBe("approve_request");
-        expect(context).toMatchObject({ messageId: "66" });
+        expect(context).toMatchObject({ messageId: "66", connectorTargetId: "123" });
         expect(target).toBe("/123/telegram/123/123");
     });
 
@@ -304,7 +304,7 @@ describe("TelegramConnector incoming documents", () => {
                 size: 128
             }
         ]);
-        expect(context).toMatchObject({ messageId: "55" });
+        expect(context).toMatchObject({ messageId: "55", connectorTargetId: "123" });
         expect(target).toBe("/123/telegram/123/123");
     });
 
@@ -409,7 +409,7 @@ describe("TelegramConnector incoming voice", () => {
                 size: 256
             }
         ]);
-        expect(context).toMatchObject({ messageId: "57" });
+        expect(context).toMatchObject({ messageId: "57", connectorTargetId: "123" });
         expect(target).toBe("/123/telegram/123/123");
     });
 });
