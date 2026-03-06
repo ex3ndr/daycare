@@ -2,9 +2,11 @@ import { Octicons } from "@expo/vector-icons";
 import { Slot } from "expo-router";
 import * as React from "react";
 import { Pressable, View } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { AppSidebar, SIDEBAR_WIDTH } from "@/components/AppSidebar";
+import { AppSidebar, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from "@/components/AppSidebar";
+import { CHAT_COLLAPSED_WIDTH, CHAT_PANEL_WIDTH, ChatPanel } from "@/components/ChatPanel";
 import { Drawer } from "@/components/Drawer";
 
 export default function AppLayout() {
@@ -18,39 +20,88 @@ export default function AppLayout() {
     return <DesktopLayout />;
 }
 
-/** Desktop: sidebar card on the left, content fills the rest. */
+/** Desktop: sidebar on left, content in center, chat panel on right. */
 function DesktopLayout() {
     const { theme } = useUnistyles();
     const insets = useSafeAreaInsets();
+    const sidebarWidth = useSharedValue(SIDEBAR_COLLAPSED_WIDTH);
+    const labelsOpacity = useSharedValue(0);
+    const [sidebarCollapsed, setSidebarCollapsed] = React.useState(true);
+
+    const toggleSidebar = React.useCallback(() => {
+        setSidebarCollapsed((prev) => {
+            const next = !prev;
+            sidebarWidth.value = withTiming(next ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH, { duration: 200 });
+            labelsOpacity.value = withTiming(next ? 0 : 1, { duration: 120 });
+            return next;
+        });
+    }, [sidebarWidth, labelsOpacity]);
+
+    const sidebarAnimatedStyle = useAnimatedStyle(() => ({
+        width: sidebarWidth.value
+    }));
+
+    // Chat panel state
+    const chatWidth = useSharedValue(CHAT_COLLAPSED_WIDTH);
+    const chatLabelsOpacity = useSharedValue(0);
+
+    const toggleChat = React.useCallback(() => {
+        const isCollapsed = chatWidth.value <= CHAT_COLLAPSED_WIDTH;
+        chatWidth.value = withTiming(isCollapsed ? CHAT_PANEL_WIDTH : CHAT_COLLAPSED_WIDTH, { duration: 200 });
+        chatLabelsOpacity.value = withTiming(isCollapsed ? 1 : 0, { duration: 120 });
+    }, [chatWidth, chatLabelsOpacity]);
+
+    const chatAnimatedStyle = useAnimatedStyle(() => ({
+        width: chatWidth.value
+    }));
+
+    const cardMargins = {
+        marginTop: 8 + insets.top,
+        marginBottom: 8 + insets.bottom
+    };
+    const cardShadow = `0px 1px 2px ${theme.colors.shadow}0D, 0px 1px 3px ${theme.colors.shadow}14`;
 
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
-            <View
+            <Animated.View
                 style={[
                     styles.sidebarCard,
+                    sidebarAnimatedStyle,
                     {
-                        marginTop: 8 + insets.top,
-                        marginBottom: 8 + insets.bottom,
+                        ...cardMargins,
                         backgroundColor: theme.colors.surface,
-                        boxShadow: `0px 1px 2px ${theme.colors.shadow}0D, 0px 1px 3px ${theme.colors.shadow}14`
+                        boxShadow: cardShadow
                     }
                 ]}
             >
-                <AppSidebar />
-            </View>
+                <AppSidebar
+                    onToggleCollapse={toggleSidebar}
+                    labelsOpacity={labelsOpacity}
+                    sidebarWidth={sidebarWidth}
+                    collapsed={sidebarCollapsed}
+                />
+            </Animated.View>
             <View
                 style={[
                     styles.contentCard,
-                    {
-                        marginTop: 8 + insets.top,
-                        marginBottom: 8 + insets.bottom,
-                        backgroundColor: theme.colors.surface,
-                        boxShadow: `0px 1px 2px ${theme.colors.shadow}0D, 0px 1px 3px ${theme.colors.shadow}14`
-                    }
+                    { ...cardMargins, backgroundColor: theme.colors.surface, boxShadow: cardShadow }
                 ]}
             >
                 <Slot />
             </View>
+            <Animated.View
+                style={[
+                    styles.chatCard,
+                    chatAnimatedStyle,
+                    {
+                        ...cardMargins,
+                        backgroundColor: theme.colors.surface,
+                        boxShadow: cardShadow
+                    }
+                ]}
+            >
+                <ChatPanel onToggleCollapse={toggleChat} labelsOpacity={chatLabelsOpacity} panelWidth={chatWidth} />
+            </Animated.View>
         </View>
     );
 }
@@ -110,7 +161,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8
     },
     sidebarCard: {
-        width: SIDEBAR_WIDTH,
         borderTopLeftRadius: 16,
         borderBottomLeftRadius: 16,
         borderTopRightRadius: 8,
@@ -120,11 +170,16 @@ const styles = StyleSheet.create({
     },
     contentCard: {
         flex: 1,
+        borderRadius: 8,
+        overflow: "hidden"
+    },
+    chatCard: {
         borderTopLeftRadius: 8,
         borderBottomLeftRadius: 8,
         borderTopRightRadius: 16,
         borderBottomRightRadius: 16,
-        overflow: "hidden"
+        overflow: "hidden",
+        flexShrink: 0
     },
     content: {
         flex: 1
