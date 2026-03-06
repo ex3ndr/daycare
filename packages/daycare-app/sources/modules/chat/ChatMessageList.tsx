@@ -62,6 +62,7 @@ const styles = StyleSheet.create({
         fontFamily: "IBMPlexMono-Regular"
     },
     listContent: {
-        paddingVertical: 8
+        paddingVertical: 12,
+        gap: 2
     }
 });

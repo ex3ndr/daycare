@@ -25,6 +25,7 @@ export type AgentHistoryRlmToolCall = {
     at: number;
     toolName: string;
     toolCallCount: number;
+    toolArgs?: unknown;
 };
 
 export type AgentHistoryRlmStart = {
