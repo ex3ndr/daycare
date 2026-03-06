@@ -39,7 +39,6 @@ export function ChatInput({ onSend }: ChatInputProps) {
             style={[
                 styles.container,
                 {
-                    backgroundColor: theme.colors.surfaceContainerLowest,
                     borderTopColor: theme.colors.outlineVariant
                 }
             ]}

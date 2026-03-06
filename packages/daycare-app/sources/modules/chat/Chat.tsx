@@ -105,7 +105,7 @@ export function Chat({ agentId, systemPrompt, name, description }: ChatProps) {
     const loading = initializing || session.loading;
 
     return (
-        <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLowest }]}>
+        <View style={styles.root}>
             {error ? (
                 <View style={styles.errorContainer}>
                     <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
@@ -121,9 +121,12 @@ export function Chat({ agentId, systemPrompt, name, description }: ChatProps) {
     );
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create((theme) => ({
     root: {
-        flex: 1
+        flex: 1,
+        maxWidth: theme.layout.maxWidth,
+        width: "100%",
+        alignSelf: "center"
     },
     listContainer: {
         flex: 1
@@ -137,4 +140,4 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontFamily: "IBMPlexMono-Regular"
     }
-});
+}));

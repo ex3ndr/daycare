@@ -22,11 +22,9 @@ export const ChatMessageList = React.memo(({ records, loading }: ChatMessageList
         []
     );
 
-    const bg = { backgroundColor: theme.colors.surfaceContainerLowest };
-
     if (loading && records.length === 0) {
         return (
-            <View style={[styles.centered, bg]}>
+            <View style={styles.centered}>
                 <ActivityIndicator color={theme.colors.primary} />
             </View>
         );
@@ -34,7 +32,7 @@ export const ChatMessageList = React.memo(({ records, loading }: ChatMessageList
 
     if (records.length === 0) {
         return (
-            <View style={[styles.centered, bg]}>
+            <View style={styles.centered}>
                 <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>waiting for input...</Text>
             </View>
         );
@@ -42,7 +40,6 @@ export const ChatMessageList = React.memo(({ records, loading }: ChatMessageList
 
     return (
         <FlatList
-            style={bg}
             data={sorted}
             inverted
             keyExtractor={keyExtractor}
