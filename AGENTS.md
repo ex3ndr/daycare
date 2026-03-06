@@ -89,6 +89,7 @@
 - **Device checks:** before testing, verify connected real devices (iOS/Android) before reaching for simulators/emulators.
 - **Multi-agent safety:** do **not** create/apply/drop `git stash` entries unless explicitly requested (this includes `git pull --rebase --autostash`). Assume other agents may be working; keep unrelated WIP untouched and avoid cross-cutting state changes.
 - **Multi-agent safety:** when the user says "push", you may `git pull --rebase` to integrate latest changes (never discard other agents' work). When the user says "commit", scope to your changes only. When the user says "commit all", commit everything in grouped chunks.
+- **Multi-agent safety:** when the user says "sync to main", rebase the current branch on `main`, run `yarn lint`, and push `HEAD` to the `main` branch even if the worktree is currently on a different branch. Do not switch branches unless the user explicitly asks for that.
 - **Lint discipline:** after every rebase, always run `yarn lint`; if it reports issues, run `yarn lint:fix` and manually fix anything remaining. Do not leave lint issues unresolved.
 - **Multi-agent safety:** do **not** create/remove/modify `git worktree` checkouts (or edit `.worktrees/*`) unless explicitly requested.
 - **Multi-agent safety:** do **not** switch branches / check out a different branch unless explicitly requested.
