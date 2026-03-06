@@ -15,6 +15,7 @@ import type { TokenStatsFetchOptions } from "./costs/costsRoutes.js";
 import { costsRouteHandle } from "./costs/costsRoutes.js";
 import { databasesRouteHandle } from "./databases/databasesRoutes.js";
 import { documentsRouteHandle } from "./documents/documentsRoutes.js";
+import { filesRouteHandle } from "./files/filesRoutes.js";
 import { fragmentsRouteHandle } from "./fragments/fragmentsRoutes.js";
 import { kvRouteHandle } from "./kv/kvRoutes.js";
 import { profileRouteHandle } from "./profile/profileRoutes.js";
@@ -153,6 +154,13 @@ export async function apiRouteHandle(
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody,
             keyValues: context.keyValues
+        });
+    }
+    if (pathname.startsWith("/files")) {
+        const userHome = new UserHome(context.usersDir, context.ctx.userId);
+        return filesRouteHandle(request, response, pathname, {
+            homeDir: userHome.home,
+            sendJson: context.sendJson
         });
     }
     if (pathname.startsWith("/databases")) {

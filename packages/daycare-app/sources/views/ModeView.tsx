@@ -17,6 +17,7 @@ import { DocumentMetadataPanel } from "@/views/documents/DocumentMetadataPanel";
 import { DocumentsView } from "@/views/documents/DocumentsView";
 import { DocumentTreePanel } from "@/views/documents/DocumentTreePanel";
 import { FragmentsView } from "@/views/FragmentsView";
+import { FilesView } from "@/views/files/FilesView";
 import { HomeView } from "@/views/HomeView";
 import { RoutinesView } from "@/views/RoutinesView";
 import { SettingsView } from "@/views/SettingsView";
@@ -47,6 +48,7 @@ const leftItems: Record<
         { id: "co1", title: "This Month", subtitle: "$142.50" },
         { id: "co2", title: "Last Month", subtitle: "$161.80" }
     ],
+    files: [],
     skills: [],
     tools: [],
     dev: [
@@ -65,6 +67,7 @@ const viewComponents: Record<AppMode, React.ComponentType> = {
     routines: RoutinesView,
     costs: CostsView,
     documents: DocumentsView,
+    files: FilesView,
     skills: SkillsView,
     tools: ToolsView,
     dev: DevView,

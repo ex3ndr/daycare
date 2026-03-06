@@ -5,6 +5,7 @@ import { ContentPanelLayout } from "@/components/layout/ContentPanelLayout";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { documentRootIdResolve } from "@/modules/documents/documentRootIdResolve";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
+import { useFilesStore } from "@/modules/files/filesContext";
 import { AgentsView } from "@/views/AgentsView";
 import { CostsView } from "@/views/CostsView";
 import { DevView } from "@/views/DevView";
@@ -12,6 +13,8 @@ import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 import { DocumentMetadataPanel } from "@/views/documents/DocumentMetadataPanel";
 import { DocumentsView } from "@/views/documents/DocumentsView";
 import { FragmentsView } from "@/views/FragmentsView";
+import { FilePreviewPanel } from "@/views/files/FilePreviewPanel";
+import { FilesView } from "@/views/files/FilesView";
 import { HomeView } from "@/views/HomeView";
 import { RoutinesView } from "@/views/RoutinesView";
 import { SettingsView } from "@/views/SettingsView";
@@ -27,6 +30,7 @@ const viewComponents: Record<AppMode, React.ComponentType> = {
     routines: RoutinesView,
     costs: CostsView,
     documents: DocumentsView,
+    files: FilesView,
     skills: SkillsView,
     tools: ToolsView,
     dev: DevView,
@@ -54,6 +58,8 @@ export function SidebarModeView({ mode }: SidebarModeViewProps) {
     const documentRootId = React.useMemo(() => documentRootIdResolve(documentItems), [documentItems]);
 
     const isDocuments = mode === "documents";
+    const isFiles = mode === "files";
+    const filesSelectedFile = useFilesStore((s) => s.selectedFile);
 
     React.useEffect(() => {
         if (isDocuments && baseUrl && token) {
@@ -83,7 +89,13 @@ export function SidebarModeView({ mode }: SidebarModeViewProps) {
         <>
             <ContentPanelLayout
                 panel2={<ViewComponent />}
-                panel3={isDocuments && selectedId ? <DocumentMetadataPanel /> : undefined}
+                panel3={
+                    isDocuments && selectedId ? (
+                        <DocumentMetadataPanel />
+                    ) : isFiles && filesSelectedFile ? (
+                        <FilePreviewPanel />
+                    ) : undefined
+                }
             />
             {isDocuments && (
                 <DocumentCreateDialog
