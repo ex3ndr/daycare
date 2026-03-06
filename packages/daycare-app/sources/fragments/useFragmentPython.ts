@@ -1,7 +1,10 @@
 import { createStateStore, type Spec, type StateStore } from "@json-render/react-native";
 import * as React from "react";
+import { useAuthStore } from "@/modules/auth/authContext";
+import { montyFragmentExternalFunctionsBuild } from "./montyFragmentExternalFunctionsBuild";
 import { montyFragmentHandlersBuild } from "./montyFragmentHandlersBuild";
-import { montyFragmentInit } from "./montyFragmentRun";
+import { montyFragmentAction, montyFragmentInit } from "./montyFragmentRun";
+import { montyFragmentStateApply } from "./montyFragmentStateApply";
 import { montyEnsureLoaded } from "./montyLoad";
 
 type FragmentPythonHandlers = Record<string, (params: Record<string, unknown>) => unknown>;
@@ -12,8 +15,7 @@ type FragmentPythonSpec = Spec & {
 };
 
 export type FragmentPythonState =
-    | { status: "loading" }
-    | { status: "ready"; store: StateStore; handlers: FragmentPythonHandlers }
+    | { status: "ready"; store: StateStore; handlers: FragmentPythonHandlers; busy: boolean }
     | { status: "error"; error: string };
 
 /**
@@ -21,19 +23,21 @@ export type FragmentPythonState =
  * Expects: spec is a fragment spec object or null while the fragment record is unavailable.
  */
 export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPythonState {
+    const baseUrl = useAuthStore((state) => state.baseUrl);
+    const token = useAuthStore((state) => state.token);
     const fallbackState = React.useMemo(() => fragmentStateNormalize(spec?.state), [spec]);
+    const code = typeof spec?.code === "string" && spec.code.trim() ? spec.code : null;
+    const fallbackStore = React.useMemo(() => createStateStore(fallbackState), [fallbackState]);
     const fallbackReady = React.useMemo<FragmentPythonState>(() => {
         return {
             status: "ready",
-            store: createStateStore(fallbackState),
-            handlers: {}
+            store: fallbackStore,
+            handlers: {},
+            busy: Boolean(code)
         };
-    }, [fallbackState]);
-    const code = typeof spec?.code === "string" && spec.code.trim() ? spec.code : null;
+    }, [code, fallbackStore]);
 
-    const [runtimeState, setRuntimeState] = React.useState<FragmentPythonState>(() => {
-        return code ? { status: "loading" } : fallbackReady;
-    });
+    const [runtimeState, setRuntimeState] = React.useState<FragmentPythonState>(() => fallbackReady);
 
     React.useEffect(() => {
         if (!code) {
@@ -42,12 +46,64 @@ export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPyth
         }
 
         let active = true;
-        setRuntimeState({ status: "loading" });
+        let pendingCount = 1;
+        const externalFunctions = montyFragmentExternalFunctionsBuild({
+            store: fallbackStore,
+            baseUrl,
+            token
+        });
+        const setBusyState = () => {
+            setRuntimeState((state) =>
+                state.status === "ready" && state.store === fallbackStore
+                    ? {
+                          ...state,
+                          busy: pendingCount > 0
+                      }
+                    : state
+            );
+        };
+        const executeAction = async (actionName: string, params: Record<string, unknown>) => {
+            pendingCount += 1;
+            if (active) {
+                setBusyState();
+            }
+
+            try {
+                await montyEnsureLoaded();
+                const result = await montyFragmentAction(code, actionName, params, { externalFunctions });
+                if (!result.ok) {
+                    console.warn(`[daycare-app] fragment-python action=${actionName} error=${result.error}`);
+                    return;
+                }
+                if (isRecord(result.value)) {
+                    montyFragmentStateApply(fallbackStore, result.value);
+                }
+            } catch (error) {
+                console.warn(
+                    `[daycare-app] fragment-python action=${actionName} error=${
+                        error instanceof Error ? error.message : String(error)
+                    }`
+                );
+            } finally {
+                pendingCount -= 1;
+                if (active) {
+                    setBusyState();
+                }
+            }
+        };
+        const handlers = montyFragmentHandlersBuild(executeAction);
+
+        setRuntimeState({
+            status: "ready",
+            store: fallbackStore,
+            handlers,
+            busy: true
+        });
 
         void (async () => {
             try {
                 await montyEnsureLoaded();
-                const initResult = montyFragmentInit(code);
+                const initResult = await montyFragmentInit(code, { externalFunctions });
                 if (initResult && !initResult.ok) {
                     if (active) {
                         setRuntimeState({ status: "error", error: initResult.error });
@@ -55,16 +111,8 @@ export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPyth
                     return;
                 }
 
-                const initialState = initResult?.ok ? initResult.value : fallbackState;
-                const store = createStateStore(initialState);
-                const handlers = montyFragmentHandlersBuild(code, store);
-
-                if (active) {
-                    setRuntimeState({
-                        status: "ready",
-                        store,
-                        handlers
-                    });
+                if (initResult?.ok && isRecord(initResult.value)) {
+                    montyFragmentStateApply(fallbackStore, initResult.value);
                 }
             } catch (error) {
                 if (active) {
@@ -73,17 +121,18 @@ export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPyth
                         error: error instanceof Error ? error.message : String(error)
                     });
                 }
+            } finally {
+                pendingCount -= 1;
+                if (active) {
+                    setBusyState();
+                }
             }
         })();
 
         return () => {
             active = false;
         };
-    }, [code, fallbackReady, fallbackState]);
-
-    if (!code) {
-        return fallbackReady;
-    }
+    }, [baseUrl, code, fallbackReady, fallbackStore, token]);
 
     return runtimeState;
 }
@@ -93,4 +142,8 @@ function fragmentStateNormalize(value: unknown): Record<string, unknown> {
         return {};
     }
     return value as Record<string, unknown>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
 }

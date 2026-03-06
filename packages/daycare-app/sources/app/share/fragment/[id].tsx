@@ -1,8 +1,9 @@
 import { JSONUIProvider, Renderer, type Spec } from "@json-render/react-native";
 import { useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { ItemList } from "@/components/ItemList";
+import { FragmentBusyIndicator } from "@/fragments/FragmentBusyIndicator";
 import { fragmentsRegistry } from "@/fragments/registry";
 import { useFragmentPython } from "@/fragments/useFragmentPython";
 import { useFragmentsStore } from "@/modules/fragments/fragmentsContext";
@@ -18,24 +19,23 @@ export default function ShareFragmentScreen() {
 
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surface }]}>
-            {fragmentPython.status === "loading" ? (
-                <View style={[styles.centered, styles.body]}>
-                    <ActivityIndicator color={theme.colors.primary} />
-                </View>
-            ) : fragmentPython.status === "error" ? (
+            {fragmentPython.status === "error" ? (
                 <View style={[styles.centered, styles.body]}>
                     <Text style={[styles.stateText, { color: theme.colors.error }]}>{fragmentPython.error}</Text>
                 </View>
             ) : (
-                <ItemList style={styles.body} containerStyle={styles.bodyContent}>
-                    <JSONUIProvider
-                        store={fragmentPython.store}
-                        handlers={fragmentPython.handlers}
-                        registry={fragmentsRegistry}
-                    >
-                        <Renderer spec={fragment.spec as Spec} registry={fragmentsRegistry} />
-                    </JSONUIProvider>
-                </ItemList>
+                <View style={styles.body}>
+                    <ItemList style={styles.body} containerStyle={styles.bodyContent}>
+                        <JSONUIProvider
+                            store={fragmentPython.store}
+                            handlers={fragmentPython.handlers}
+                            registry={fragmentsRegistry}
+                        >
+                            <Renderer spec={fragment.spec as Spec} registry={fragmentsRegistry} />
+                        </JSONUIProvider>
+                    </ItemList>
+                    {fragmentPython.busy ? <FragmentBusyIndicator /> : null}
+                </View>
             )}
         </View>
     );
@@ -46,7 +46,8 @@ const styles = StyleSheet.create({
         flex: 1
     },
     body: {
-        flex: 1
+        flex: 1,
+        position: "relative"
     },
     bodyContent: {
         padding: 20

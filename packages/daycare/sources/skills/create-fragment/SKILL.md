@@ -36,10 +36,13 @@ that can be embedded anywhere in the app.
 
 Fragments may define `spec.code` with Python source for client-side execution.
 
-- `init()` takes no arguments and returns the initial state object.
-- Named action functions take `(state, params)` and return the next top-level state object.
+- `init()` takes no arguments. It may be `def` or `async def`.
+- Named action functions take `(params)`. Read current state with `get_state()`.
+- To change state, call `apply({...})` or `apply(lambda state: {...})`.
+- `apply(...)` deep-merges the returned object into the fragment state.
+- `query_database(db_id, sql, params=[])` is available as an async function for authenticated fragments.
 - Action names must match the `on` binding action name exactly.
-- Use `spec.state` only as a fallback when no `init()` is defined.
+- Use `spec.state` as the initial fallback before Python runs.
 - Fragment saves are Monty-verified, so syntax errors and missing custom action symbols are rejected before persistence.
 - Keep code deterministic and side-effect free; execution is sandboxed with a `5s` time limit and `10 MB` memory cap.
 
@@ -48,7 +51,7 @@ Example:
 ```json
 {
   "root": "main",
-  "code": "def init():\n    return {\"count\": 0}\n\ndef increment(state, params):\n    return {\"count\": state[\"count\"] + params.get(\"amount\", 1)}",
+  "code": "def init():\n    apply({\"count\": 0})\n\ndef increment(params):\n    apply(lambda state: {\"count\": state[\"count\"] + params.get(\"amount\", 1)})",
   "elements": {
     "main": {
       "type": "Button",

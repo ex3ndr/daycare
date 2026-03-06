@@ -1,64 +1,93 @@
-import { Monty, MontyRuntimeError, MontySyntaxError } from "react-native-monty";
+import { Monty, MontyRuntimeError, MontySyntaxError, runMontyAsync } from "react-native-monty";
 
-export type MontyFragmentResult = { ok: true; value: Record<string, unknown> } | { ok: false; error: string };
+type MontyExternalFunction = (...args: unknown[]) => unknown | Promise<unknown>;
+
+export type MontyFragmentResult = { ok: true; value: unknown } | { ok: false; error: string };
+
+export type MontyFragmentRunOptions = {
+    externalFunctions?: Record<string, MontyExternalFunction>;
+};
 
 const FRAGMENT_LIMITS = {
     maxDurationSecs: 5,
     maxMemory: 10 * 1024 * 1024
 } as const;
 
-const INIT_PATTERN = /\bdef\s+init\s*\(/;
+const INIT_PATTERN = /\b(?:async\s+def|def)\s+init\s*\(/;
+const FRAGMENT_RUNTIME_HELPERS = `
+async def __fragment_await_if_needed__(value):
+    try:
+        return await value
+    except TypeError as error:
+        if "can't be awaited" not in str(error):
+            raise
+        return value
+
+async def __fragment_call__(func, *args):
+    return await __fragment_await_if_needed__(func(*args))
+
+def apply(change):
+    current = get_state()
+    try:
+        updates = change(current)
+    except TypeError as error:
+        if "not callable" not in str(error):
+            raise
+        updates = change
+    if updates is None:
+        return current
+    if not isinstance(updates, dict):
+        raise TypeError("apply() expects a dict or callable returning a dict")
+    _apply_state(updates)
+    return get_state()
+`;
 
 /**
- * Runs fragment Python `init()` and returns the initial state object.
+ * Runs fragment Python `init()` and returns its value when present.
  * Expects: code is Python source for a fragment; returns null when no init() is defined.
  */
-export function montyFragmentInit(code: string): MontyFragmentResult | null {
+export async function montyFragmentInit(
+    code: string,
+    options?: MontyFragmentRunOptions
+): Promise<MontyFragmentResult | null> {
     if (!INIT_PATTERN.test(code)) {
         return null;
     }
 
-    return montyFragmentRun(code, "init()", undefined);
+    return montyFragmentRun(code, "await __fragment_call__(init)", undefined, options);
 }
 
 /**
- * Runs a named fragment Python action with the current state and action params.
+ * Runs a named fragment Python action with action params.
  * Expects: actionName matches a Python function defined in code.
  */
-export function montyFragmentAction(
+export async function montyFragmentAction(
     code: string,
     actionName: string,
-    state: Record<string, unknown>,
-    params: Record<string, unknown>
-): MontyFragmentResult {
-    return montyFragmentRun(code, `${actionName}(state, params)`, {
-        state,
-        params
-    });
+    params: Record<string, unknown>,
+    options?: MontyFragmentRunOptions
+): Promise<MontyFragmentResult> {
+    return montyFragmentRun(code, `await __fragment_call__(${actionName}, params)`, { params }, options);
 }
 
-function montyFragmentRun(
+async function montyFragmentRun(
     code: string,
     expression: string,
-    inputs: Record<string, unknown> | undefined
-): MontyFragmentResult {
+    inputs: Record<string, unknown> | undefined,
+    options?: MontyFragmentRunOptions
+): Promise<MontyFragmentResult> {
     try {
-        const program = new Monty(`${code}\n\n${expression}`, {
+        const program = new Monty(`${FRAGMENT_RUNTIME_HELPERS}\n${code}\n\n${expression}`, {
             scriptName: "fragment.py",
             inputs: inputs ? Object.keys(inputs) : undefined
         });
         const value = montyFragmentValueNormalize(
-            program.run({
+            await runMontyAsync(program, {
                 inputs,
+                externalFunctions: options?.externalFunctions,
                 limits: FRAGMENT_LIMITS
             })
         );
-        if (!isRecord(value)) {
-            return {
-                ok: false,
-                error: "Fragment Python must return an object."
-            };
-        }
         return {
             ok: true,
             value

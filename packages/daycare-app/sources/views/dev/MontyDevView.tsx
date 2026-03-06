@@ -1,6 +1,6 @@
 import { JSONUIProvider, Renderer, type Spec } from "@json-render/react-native";
 import * as React from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import {
     loadMonty,
     Monty,
@@ -11,6 +11,7 @@ import {
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
 import { ItemList } from "@/components/ItemList";
+import { FragmentBusyIndicator } from "@/fragments/FragmentBusyIndicator";
 import { fragmentsRegistry } from "@/fragments/registry";
 import { useFragmentPython } from "@/fragments/useFragmentPython";
 
@@ -21,16 +22,16 @@ const counterExampleSpec: Spec & { code: string } = {
     },
     code: [
         "def init():",
-        '    return {"count": 2}',
+        '    apply({"count": 2})',
         "",
-        "def increment(state, params):",
-        '    return {"count": state.get("count", 0) + params.get("delta", 1)}',
+        "def increment(params):",
+        '    apply(lambda state: {"count": state.get("count", 0) + params.get("delta", 1)})',
         "",
-        "def decrement(state, params):",
-        '    return {"count": state.get("count", 0) - params.get("delta", 1)}',
+        "def decrement(params):",
+        '    apply(lambda state: {"count": state.get("count", 0) - params.get("delta", 1)})',
         "",
-        "def reset(state, params):",
-        '    return {"count": params.get("value", 0)}'
+        "def reset(params):",
+        '    apply({"count": params.get("value", 0)})'
     ].join("\n"),
     elements: {
         root: {
@@ -105,15 +106,17 @@ const modeExampleSpec: Spec & { code: string } = {
     },
     code: [
         "def init():",
-        '    return {"mode": "Focus", "accent": "primary", "message": "Heads down and ship."}',
+        '    apply({"mode": "Focus", "accent": "primary", "message": "Heads down and ship."})',
         "",
-        "def choose_mode(state, params):",
+        "def choose_mode(params):",
         '    mode = params.get("mode", "Focus")',
         '    if mode == "Review":',
-        '        return {"mode": "Review", "accent": "tertiary", "message": "Slow down and inspect edge cases."}',
+        '        apply({"mode": "Review", "accent": "tertiary", "message": "Slow down and inspect edge cases."})',
+        "        return",
         '    if mode == "Ship":',
-        '        return {"mode": "Ship", "accent": "secondary", "message": "Everything ready. Push the release."}',
-        '    return {"mode": "Focus", "accent": "primary", "message": "Heads down and ship."}'
+        '        apply({"mode": "Ship", "accent": "secondary", "message": "Everything ready. Push the release."})',
+        "        return",
+        '    apply({"mode": "Focus", "accent": "primary", "message": "Heads down and ship."})'
     ].join("\n"),
     elements: {
         root: {
@@ -281,14 +284,6 @@ function montyProbeSubtitle(result: ProbeResult | null): string {
 function FragmentPythonExample(props: { spec: Spec & { code?: string }; showDivider?: boolean }) {
     const fragmentPython = useFragmentPython(props.spec);
 
-    if (fragmentPython.status === "loading") {
-        return (
-            <View style={{ padding: 16, alignItems: "center", justifyContent: "center" }}>
-                <ActivityIndicator />
-            </View>
-        );
-    }
-
     if (fragmentPython.status === "error") {
         return (
             <View style={{ padding: 16 }}>
@@ -298,7 +293,7 @@ function FragmentPythonExample(props: { spec: Spec & { code?: string }; showDivi
     }
 
     return (
-        <View style={{ paddingVertical: 4 }}>
+        <View style={{ paddingVertical: 4, position: "relative" }}>
             <JSONUIProvider
                 registry={fragmentsRegistry}
                 store={fragmentPython.store}
@@ -306,6 +301,7 @@ function FragmentPythonExample(props: { spec: Spec & { code?: string }; showDivi
             >
                 <Renderer spec={props.spec} registry={fragmentsRegistry} includeStandard={false} />
             </JSONUIProvider>
+            {fragmentPython.busy ? <FragmentBusyIndicator /> : null}
         </View>
     );
 }
