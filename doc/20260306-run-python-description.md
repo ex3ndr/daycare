@@ -18,5 +18,6 @@ flowchart LR
 ## Notes
 
 - `description` is optional and ignored when blank.
+- The system prompt now explicitly asks the model to provide `description` for most non-trivial `run_python` calls.
 - Existing `run_python` executions without a description continue to work unchanged.
 - The chat UI still skips `rlm_start` records that do not carry a description.
