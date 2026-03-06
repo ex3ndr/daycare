@@ -103,7 +103,7 @@ describe("TelegramConnector commands", () => {
         expect(target).toBe("/123/telegram/123/123");
     });
 
-    it("routes group commands with channel/user target suffix", async () => {
+    it("ignores group commands", async () => {
         const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         const connector = new TelegramConnector({
             token: "token",
@@ -129,9 +129,7 @@ describe("TelegramConnector commands", () => {
             text: "/reset"
         });
 
-        expect(commandHandler).toHaveBeenCalledTimes(1);
-        const target = commandHandler.mock.calls[0]?.[2] as string;
-        expect(target).toBe("/456/telegram/-100321/456");
+        expect(commandHandler).not.toHaveBeenCalled();
     });
 });
 
@@ -211,6 +209,39 @@ describe("TelegramConnector callback queries", () => {
             "999",
             "🚫 You are not authorized to use this bot. Please contact the system administrator to request access."
         );
+    });
+
+    it("ignores callback queries from group chats", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            mode: "public",
+            allowedUids: [],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+        const messageHandler = vi.fn(async (_message, _context, _target) => undefined);
+        connector.onMessage(messageHandler);
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        const callbackQueryHandler = bot!.handlers.get("callback_query")?.[0];
+        await callbackQueryHandler?.({
+            id: "callback-group-1",
+            from: { id: 123 },
+            data: "approve_request",
+            message: {
+                message_id: 68,
+                chat: { id: -100321, type: "group" }
+            }
+        });
+
+        expect(bot!.answerCallbackQuery).toHaveBeenCalledWith("callback-group-1");
+        expect(messageHandler).not.toHaveBeenCalled();
     });
 });
 
