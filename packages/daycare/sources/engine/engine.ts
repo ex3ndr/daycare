@@ -206,7 +206,8 @@ export class Engine {
         });
         this.authStore = new AuthStore(this.config.current);
         this.processes = new Processes(this.config.current.dataDir, getLogger("engine.processes"), {
-            repository: this.storage.processes
+            repository: this.storage.processes,
+            docker: this.config.current.docker
         });
         this.incomingMessages = new IncomingMessages({
             delayMs: INCOMING_MESSAGES_DEBOUNCE_MS,

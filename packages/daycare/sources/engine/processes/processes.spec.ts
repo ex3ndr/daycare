@@ -1,13 +1,12 @@
+import { spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-// bwrap is unavailable in GitHub Actions (RTM_NEWADDR: Operation not permitted)
-const itIfSandbox = process.env.CI ? it.skip : it;
-
 import type { SessionPermissions } from "@/types";
 import { getLogger } from "../../log.js";
+import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { Processes } from "./processes.js";
@@ -91,6 +90,24 @@ describe("Processes", () => {
         TEST_TIMEOUT_MS
     );
 
+    it("assigns a dedicated process home when none is provided", async () => {
+        const manager = await createManager(baseDir);
+        const created = await manager.create(
+            {
+                command: `node -e "console.log(process.env.HOME)"`,
+                keepAlive: false,
+                cwd: workspaceDir,
+                userId: "user-1"
+            },
+            permissions
+        );
+
+        await sleep(1_000);
+        const content = await fs.readFile(created.logPath, "utf8");
+        expect(created.home).toBe(path.join(baseDir, "processes", created.id, "home"));
+        expect(content).toContain(path.join(baseDir, "processes", created.id, "home"));
+    });
+
     it(
         "accepts allowLocalBinding without sandbox config generation",
         async () => {
@@ -140,7 +157,7 @@ describe("Processes", () => {
         TEST_TIMEOUT_MS
     );
 
-    itIfSandbox(
+    it(
         "restarts keepAlive processes when they exit",
         async () => {
             const manager = await createManager(baseDir);
@@ -178,7 +195,7 @@ describe("Processes", () => {
         TEST_TIMEOUT_MS
     );
 
-    itIfSandbox(
+    it(
         "returns log file path via process get",
         async () => {
             const manager = await createManager(baseDir);
@@ -203,7 +220,7 @@ describe("Processes", () => {
         TEST_TIMEOUT_MS
     );
 
-    itIfSandbox(
+    it(
         "applies exponential backoff for repeatedly failing keepAlive processes",
         async () => {
             const manager = await createManager(baseDir);
@@ -341,7 +358,8 @@ describe("Processes", () => {
     async function createManager(dir: string, options: { bootTimeMs?: number | null } = {}): Promise<Processes> {
         const manager = new Processes(dir, getLogger("test.processes"), {
             repository: storage.processes,
-            bootTimeProvider: options.bootTimeMs === undefined ? undefined : async () => options.bootTimeMs ?? null
+            bootTimeProvider: options.bootTimeMs === undefined ? undefined : async () => options.bootTimeMs ?? null,
+            runtime: processRuntimeHostBuild()
         });
         managers.push(manager);
         await manager.load();
@@ -357,4 +375,98 @@ function sleep(ms: number): Promise<void> {
 
 function escapeForNodeString(value: string): string {
     return value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+}
+
+function processRuntimeHostBuild() {
+    return {
+        start: async (record: {
+            command: string;
+            cwd: string;
+            env: Record<string, string>;
+            home: string | null;
+            logPath: string;
+        }) => {
+            const baseEnv = { ...process.env, ...record.env };
+            const envResult = await sandboxHomeRedefine({ env: baseEnv, home: record.home ?? undefined });
+            await fs.mkdir(path.dirname(record.logPath), { recursive: true });
+            const logHandle = await fs.open(record.logPath, "a");
+            const child = spawn("/bin/bash", ["-lc", record.command], {
+                cwd: record.cwd,
+                env: envResult.env,
+                detached: true,
+                stdio: ["ignore", logHandle.fd, logHandle.fd]
+            });
+
+            await new Promise<void>((resolve, reject) => {
+                child.once("error", reject);
+                child.once("spawn", () => resolve());
+            }).finally(async () => {
+                await logHandle.close();
+            });
+
+            if (!child.pid) {
+                throw new Error("Failed to capture process pid.");
+            }
+
+            child.unref();
+            return child.pid;
+        },
+        isRunning: async (record: { pid: number | null }) => {
+            if (record.pid === null) {
+                return false;
+            }
+            return processIsRunning(record.pid);
+        },
+        stop: async (record: { pid: number | null }, signal: "SIGTERM" | "SIGINT" | "SIGHUP" | "SIGKILL") => {
+            if (record.pid === null) {
+                return;
+            }
+            killProcessTree(record.pid, signal);
+            await waitForStop(record.pid, 8_000);
+        },
+        remove: async () => {}
+    };
+}
+
+function processIsRunning(pid: number): boolean {
+    try {
+        process.kill(pid, 0);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function killProcessTree(pid: number, signal: "SIGTERM" | "SIGINT" | "SIGHUP" | "SIGKILL"): void {
+    try {
+        process.kill(-pid, signal);
+        return;
+    } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code !== "ESRCH" && code !== "EPERM") {
+            throw error;
+        }
+    }
+
+    try {
+        process.kill(pid, signal);
+    } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code !== "ESRCH") {
+            throw error;
+        }
+    }
+}
+
+async function waitForStop(pid: number, timeoutMs: number): Promise<void> {
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+        if (!processIsRunning(pid)) {
+            return;
+        }
+        await sleep(200);
+    }
+    if (processIsRunning(pid)) {
+        killProcessTree(pid, "SIGKILL");
+    }
 }

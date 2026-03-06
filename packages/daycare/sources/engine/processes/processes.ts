@@ -1,25 +1,36 @@
-import { type ChildProcess, spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
+import Docker from "dockerode";
 import type { Logger } from "pino";
 
 import type { Context, SessionPermissions } from "@/types";
+import { dockerDnsProfileResolve } from "../../sandbox/docker/dockerDnsProfileResolve.js";
+import { dockerNetworkNameResolveForUser } from "../../sandbox/docker/dockerNetworkNameResolveForUser.js";
+import { dockerNetworksEnsure } from "../../sandbox/docker/dockerNetworksEnsure.js";
 import { sandboxCanWrite } from "../../sandbox/sandboxCanWrite.js";
 import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
+import type { ResolvedDockerSettings } from "../../settings.js";
 import type { ProcessDbRecord } from "../../storage/databaseTypes.js";
 import type { ProcessesRepository, ProcessesRuntimeUpdate } from "../../storage/processesRepository.js";
 import { envNormalize } from "../../utils/envNormalize.js";
 import { AsyncLock } from "../../utils/lock.js";
+import { pathMountMapHostToMapped } from "../../utils/pathMountMapHostToMapped.js";
+import type { PathMountPoint } from "../../utils/pathMountTypes.js";
+import { shellQuote } from "../../utils/shellQuote.js";
 import { resolveWorkspacePath } from "../permissions.js";
 import { processBootTimeRead } from "./processBootTimeRead.js";
 
 const MONITOR_INTERVAL_MS = 2_000;
-const PROCESS_STOP_TIMEOUT_MS = 8_000;
 const PROCESS_STOP_POLL_MS = 200;
 const RESTART_BACKOFF_BASE_MS = 2_000;
 const RESTART_BACKOFF_MAX_MS = 60_000;
 const RESTART_STABLE_UPTIME_MS = 30_000;
+const PROCESS_CONTAINER_PREFIX = "daycare-process";
+const DAYCARE_RUNTIME_IMAGE_REF = "daycare-runtime:latest";
+const DOCKER_SHM_SIZE_BYTES = 1024 * 1024 * 1024;
+const DOCKER_STOP_TIMEOUT_MS = 8_000;
+const DOCKER_SECURITY_OPT_UNCONFINED = ["seccomp=unconfined", "apparmor=unconfined"] as const;
 
 const SIGNALS = ["SIGTERM", "SIGINT", "SIGHUP", "SIGKILL"] as const;
 
@@ -87,6 +98,13 @@ type ProcessRecord = {
     logPath: string;
 };
 
+type ProcessRuntime = {
+    start(record: ProcessRecord): Promise<number | null>;
+    isRunning(record: ProcessRecord): Promise<boolean>;
+    stop(record: ProcessRecord, signal: ProcessSignal): Promise<void>;
+    remove(record: ProcessRecord): Promise<void>;
+};
+
 /**
  * Manages durable background processes persisted in SQLite.
  * Expects: all state writes happen through this facade to keep pid/status in sync.
@@ -96,13 +114,13 @@ export class Processes {
     private readonly recordsDir: string;
     private readonly lock = new AsyncLock();
     private readonly logger: Logger;
+    private readonly runtime: ProcessRuntime;
     private readonly bootTimeProvider: () => Promise<number | null>;
     private readonly repository: Pick<
         ProcessesRepository,
         "create" | "findAll" | "findById" | "update" | "updateRuntime" | "delete" | "deleteByOwner"
     >;
     private readonly records = new Map<string, ProcessRecord>();
-    private readonly children = new Map<string, ChildProcess>();
     private currentBootTimeMs: number | null = null;
     private currentBootTimeKnown = false;
     private monitorHandle: NodeJS.Timeout | null = null;
@@ -112,10 +130,12 @@ export class Processes {
         logger: Logger,
         options: {
             bootTimeProvider?: () => Promise<number | null>;
+            docker?: ResolvedDockerSettings;
             repository: Pick<
                 ProcessesRepository,
                 "create" | "findAll" | "findById" | "update" | "updateRuntime" | "delete" | "deleteByOwner"
             >;
+            runtime?: ProcessRuntime;
         }
     ) {
         this.baseDir = path.resolve(baseDir);
@@ -123,6 +143,9 @@ export class Processes {
         this.logger = logger;
         this.bootTimeProvider = options.bootTimeProvider ?? processBootTimeRead;
         this.repository = options.repository;
+        this.runtime =
+            options.runtime ??
+            (options.docker ? processRuntimeBuild(options.docker) : processRuntimeUnavailableBuild());
     }
 
     async load(): Promise<void> {
@@ -171,11 +194,10 @@ export class Processes {
             }
 
             const cwd = input.cwd ? resolveWorkspacePath(workingDir, input.cwd) : workingDir;
-            const home = input.home ? await sandboxCanWrite(permissions, input.home) : null;
-
             const envInput = envNormalize(input.env) ?? {};
             const id = createId();
             const recordDir = this.processDir(id);
+            const home = input.home ? await sandboxCanWrite(permissions, input.home) : path.join(recordDir, "home");
             const settingsPath = path.join(recordDir, "sandbox.json");
             const logPath = path.join(recordDir, "process.log");
             const bootTimeMs = await this.resolveCurrentBootTimeMsLocked();
@@ -360,7 +382,7 @@ export class Processes {
 
     private async refreshRecordStatusLocked(): Promise<void> {
         for (const record of this.records.values()) {
-            const running = record.pid !== null && isProcessRunning(record.pid);
+            const running = record.pid !== null && (await this.runtime.isRunning(record));
             if (running) {
                 const now = Date.now();
                 if (record.desiredState === "stopped") {
@@ -455,37 +477,15 @@ export class Processes {
         record.desiredState = "stopped";
         await this.stopRecordLocked(record, signal);
         this.records.delete(record.id);
-        this.children.delete(record.id);
+        await this.runtime.remove(record);
         await this.repository.delete(record.id);
         await fs.rm(this.processDir(record.id), { recursive: true, force: true });
         this.logger.info({ processId: record.id, signal }, "remove: Process removed");
     }
 
     private async startRecordLocked(record: ProcessRecord, options: { incrementRestart: boolean }): Promise<void> {
-        const baseEnv = { ...process.env, ...record.env };
-        const envResult = await sandboxHomeRedefine({ env: baseEnv, home: record.home ?? undefined });
-
         await fs.mkdir(path.dirname(record.logPath), { recursive: true });
-        const logHandle = await fs.open(record.logPath, "a");
-        const spawnResult = await spawnProcess({
-            command: "/bin/bash",
-            args: ["-lc", record.command],
-            cwd: record.cwd,
-            env: envResult.env,
-            logFd: logHandle.fd
-        }).finally(async () => {
-            await logHandle.close();
-        });
-
-        const child = spawnResult.child;
-        const pid = child.pid;
-        if (!pid) {
-            throw new Error("Failed to capture process pid.");
-        }
-
-        child.unref();
-        this.children.set(record.id, child);
-        this.attachChildListeners(record.id, child);
+        const pid = await this.runtime.start(record);
 
         const now = Date.now();
         record.bootTimeMs = await this.resolveCurrentBootTimeMsLocked();
@@ -508,40 +508,8 @@ export class Processes {
         );
     }
 
-    private attachChildListeners(processId: string, child: ChildProcess): void {
-        child.on("exit", () => {
-            void this.lock
-                .inLock(async () => {
-                    const record = this.records.get(processId);
-                    if (!record) {
-                        return;
-                    }
-                    if (record.pid !== child.pid) {
-                        return;
-                    }
-                    this.children.delete(processId);
-                    record.pid = null;
-                    record.lastExitedAt = Date.now();
-                    if (record.desiredState === "stopped") {
-                        record.status = "stopped";
-                    } else {
-                        record.status = "exited";
-                    }
-                    record.updatedAt = Date.now();
-                    await this.writeRecordLocked(record);
-                })
-                .catch((error) => {
-                    this.logger.warn({ error, processId }, "error: Process exit handler failed");
-                });
-        });
-    }
-
     private async stopRecordLocked(record: ProcessRecord, signal: ProcessSignal): Promise<void> {
-        const pid = record.pid;
-        if (pid !== null) {
-            killProcessTree(pid, signal);
-            await waitForStop(pid, PROCESS_STOP_TIMEOUT_MS);
-        }
+        await this.runtime.stop(record, signal);
 
         const now = Date.now();
         record.pid = null;
@@ -550,7 +518,6 @@ export class Processes {
         record.restartFailureCount = 0;
         record.lastExitedAt = now;
         record.updatedAt = now;
-        this.children.delete(record.id);
 
         this.logger.info({ processId: record.id, signal }, "stop: Process stopped");
     }
@@ -601,7 +568,6 @@ export class Processes {
         record.lastExitedAt = Date.now();
         record.updatedAt = Date.now();
         record.nextRestartAt = null;
-        this.children.delete(record.id);
     }
 }
 
@@ -745,76 +711,9 @@ function processRuntimeState(record: ProcessRecord): ProcessesRuntimeUpdate {
     };
 }
 
-function isProcessRunning(pid: number): boolean {
-    try {
-        process.kill(pid, 0);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-function killProcessTree(pid: number, signal: ProcessSignal): void {
-    try {
-        process.kill(-pid, signal);
-        return;
-    } catch (error) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code !== "ESRCH" && code !== "EPERM") {
-            throw error;
-        }
-    }
-
-    try {
-        process.kill(pid, signal);
-    } catch (error) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code !== "ESRCH") {
-            throw error;
-        }
-    }
-}
-
-async function waitForStop(pid: number, timeoutMs: number): Promise<void> {
-    const started = Date.now();
-    while (Date.now() - started < timeoutMs) {
-        if (!isProcessRunning(pid)) {
-            return;
-        }
-        await sleep(PROCESS_STOP_POLL_MS);
-    }
-    if (isProcessRunning(pid)) {
-        killProcessTree(pid, "SIGKILL");
-    }
-}
-
 function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);
-    });
-}
-
-async function spawnProcess(options: {
-    command: string;
-    args: string[];
-    cwd: string;
-    env: NodeJS.ProcessEnv;
-    logFd: number;
-}): Promise<{ child: ChildProcess }> {
-    const child = spawn(options.command, options.args, {
-        cwd: options.cwd,
-        env: options.env,
-        detached: true,
-        stdio: ["ignore", options.logFd, options.logFd]
-    });
-
-    return new Promise((resolve, reject) => {
-        child.once("error", (error) => {
-            reject(error);
-        });
-        child.once("spawn", () => {
-            resolve({ child });
-        });
     });
 }
 
@@ -845,4 +744,265 @@ function restartBackoffMs(restartFailureCount: number): number {
     const exponent = Math.max(0, restartFailureCount - 1);
     const delay = RESTART_BACKOFF_BASE_MS * 2 ** exponent;
     return Math.min(delay, RESTART_BACKOFF_MAX_MS);
+}
+
+function processRuntimeBuild(dockerSettings: ResolvedDockerSettings): ProcessRuntime {
+    const docker = dockerSettings.socketPath ? new Docker({ socketPath: dockerSettings.socketPath }) : new Docker();
+    let networksReady = false;
+
+    return {
+        start: async (record) => {
+            await dockerNetworksEnsureIfNeeded();
+            const container = await processContainerCreate(docker, dockerSettings, record);
+            await container.start();
+            const details = await processContainerInspect(container);
+            return details.State?.Pid ?? null;
+        },
+        isRunning: async (record) => {
+            const container = docker.getContainer(processContainerName(record.id));
+            try {
+                const details = await processContainerInspect(container);
+                return details.State?.Running === true;
+            } catch (error) {
+                if (dockerErrorCodeResolve(error) === 404) {
+                    return false;
+                }
+                throw error;
+            }
+        },
+        stop: async (record, signal) => {
+            const container = docker.getContainer(processContainerName(record.id));
+            await processContainerStopAndRemove(container, signal);
+        },
+        remove: async (record) => {
+            const container = docker.getContainer(processContainerName(record.id));
+            await processContainerForceRemove(container);
+        }
+    };
+
+    async function dockerNetworksEnsureIfNeeded(): Promise<void> {
+        if (networksReady) {
+            return;
+        }
+        await dockerNetworksEnsure(docker);
+        networksReady = true;
+    }
+}
+
+function processRuntimeUnavailableBuild(): ProcessRuntime {
+    const errorBuild = () => new Error("Docker settings are required for process runtime.");
+    return {
+        start: async () => {
+            throw errorBuild();
+        },
+        isRunning: async () => {
+            throw errorBuild();
+        },
+        stop: async () => {
+            throw errorBuild();
+        },
+        remove: async () => {
+            throw errorBuild();
+        }
+    };
+}
+
+type DockerError = {
+    statusCode?: number;
+};
+
+type ProcessContainerInspect = {
+    State?: {
+        Running?: boolean;
+        Pid?: number;
+    };
+};
+
+async function processContainerCreate(
+    docker: Docker,
+    dockerSettings: ResolvedDockerSettings,
+    record: ProcessRecord
+): Promise<Docker.Container> {
+    const processDir = path.dirname(record.logPath);
+    const mounts = processMountsResolve(record, processDir);
+    const homeHostPath = record.home ?? path.join(processDir, "home");
+    pathMapRequired(mounts, homeHostPath);
+    const cwdContainerPath = pathMapRequired(mounts, record.cwd);
+    const logContainerPath = pathMapRequired(mounts, record.logPath);
+    const baseEnv = { ...process.env, ...record.env };
+    const envResult = await sandboxHomeRedefine({ env: baseEnv, home: homeHostPath });
+    const env = envPathRewrite(envResult.env, mounts);
+    const containerName = processContainerName(record.id);
+    const networkName = dockerNetworkNameResolveForUser(
+        record.userId,
+        dockerSettings.allowLocalNetworkingForUsers ?? []
+    );
+    const dnsProfile = dockerDnsProfileResolve({
+        networkName,
+        isolatedDnsServers: dockerSettings.isolatedDnsServers,
+        localDnsServers: dockerSettings.localDnsServers
+    });
+    const shellCommand = `(${record.command}) >> ${shellQuote(logContainerPath)} 2>&1`;
+
+    await processContainerForceRemove(docker.getContainer(containerName));
+
+    return docker.createContainer({
+        name: containerName,
+        Image: DAYCARE_RUNTIME_IMAGE_REF,
+        WorkingDir: cwdContainerPath,
+        Cmd: ["bash", "-lc", shellCommand],
+        Env: dockerEnvBuild(env),
+        Labels: {
+            "daycare.process.id": record.id,
+            "daycare.process.user": record.userId
+        },
+        HostConfig: {
+            Binds: processBindsResolve(mounts),
+            NetworkMode: networkName,
+            ShmSize: DOCKER_SHM_SIZE_BYTES,
+            Tmpfs: {
+                "/tmp": "rw",
+                "/run": "rw",
+                "/var/tmp": "rw",
+                "/var/run": "rw"
+            },
+            ...(dnsProfile.dnsServers ? { Dns: dnsProfile.dnsServers } : {}),
+            ...(dockerSettings.runtime ? { Runtime: dockerSettings.runtime } : {}),
+            ...(dockerSettings.readOnly ? { ReadonlyRootfs: true } : {}),
+            ...(dockerSettings.capAdd.length > 0 ? { CapAdd: dockerSettings.capAdd } : {}),
+            ...(dockerSettings.capDrop.length > 0 ? { CapDrop: dockerSettings.capDrop } : {}),
+            ...(dockerSettings.unconfinedSecurity ? { SecurityOpt: [...DOCKER_SECURITY_OPT_UNCONFINED] } : {})
+        }
+    });
+}
+
+async function processContainerInspect(container: Docker.Container): Promise<ProcessContainerInspect> {
+    return (await container.inspect()) as ProcessContainerInspect;
+}
+
+async function processContainerStopAndRemove(container: Docker.Container, signal: ProcessSignal): Promise<void> {
+    try {
+        const details = await processContainerInspect(container);
+        if (details.State?.Running) {
+            await container.kill({ signal });
+            await processContainerWaitForStop(container, DOCKER_STOP_TIMEOUT_MS);
+        }
+    } catch (error) {
+        if (dockerErrorCodeResolve(error) !== 404) {
+            throw error;
+        }
+    }
+
+    await processContainerForceRemove(container);
+}
+
+async function processContainerForceRemove(container: Docker.Container): Promise<void> {
+    try {
+        await container.remove({ force: true });
+    } catch (error) {
+        if (dockerErrorCodeResolve(error) !== 404) {
+            throw error;
+        }
+    }
+}
+
+async function processContainerWaitForStop(container: Docker.Container, timeoutMs: number): Promise<void> {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+        try {
+            const details = await processContainerInspect(container);
+            if (!details.State?.Running) {
+                return;
+            }
+        } catch (error) {
+            if (dockerErrorCodeResolve(error) === 404) {
+                return;
+            }
+            throw error;
+        }
+        await sleep(PROCESS_STOP_POLL_MS);
+    }
+
+    try {
+        await container.kill({ signal: "SIGKILL" });
+    } catch (error) {
+        if (dockerErrorCodeResolve(error) !== 404 && dockerErrorCodeResolve(error) !== 409) {
+            throw error;
+        }
+    }
+}
+
+function processMountsResolve(record: ProcessRecord, processDir: string): PathMountPoint[] {
+    const mounts: PathMountPoint[] = [
+        { hostPath: processDir, mappedPath: "/process" },
+        { hostPath: record.home ?? path.join(processDir, "home"), mappedPath: "/home" }
+    ];
+
+    const workspaceDir = record.permissions.workingDir;
+    if (workspaceDir) {
+        mounts.push({ hostPath: workspaceDir, mappedPath: "/workspace" });
+    }
+
+    return mountPointsDeduplicate(mounts);
+}
+
+function mountPointsDeduplicate(mounts: PathMountPoint[]): PathMountPoint[] {
+    const result: PathMountPoint[] = [];
+    const seen = new Set<string>();
+    for (const mount of mounts) {
+        const key = `${path.resolve(mount.hostPath)}::${mount.mappedPath}`;
+        if (seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+        result.push({
+            hostPath: path.resolve(mount.hostPath),
+            mappedPath: mount.mappedPath
+        });
+    }
+    return result;
+}
+
+function processBindsResolve(mounts: PathMountPoint[]): string[] {
+    return mounts.map((mount) => {
+        const writable = mount.mappedPath === "/process" || mount.mappedPath === "/home";
+        return writable ? `${mount.hostPath}:${mount.mappedPath}` : `${mount.hostPath}:${mount.mappedPath}:ro`;
+    });
+}
+
+function pathMapRequired(mounts: PathMountPoint[], hostPath: string): string {
+    const mapped = pathMountMapHostToMapped({ mountPoints: mounts, hostPath });
+    if (!mapped) {
+        throw new Error(`Path is not mounted into process container: ${hostPath}`);
+    }
+    return mapped;
+}
+
+function envPathRewrite(env: NodeJS.ProcessEnv, mounts: PathMountPoint[]): NodeJS.ProcessEnv {
+    const rewritten: NodeJS.ProcessEnv = {};
+    for (const [key, value] of Object.entries(env)) {
+        if (typeof value !== "string") {
+            continue;
+        }
+        if (!path.isAbsolute(value)) {
+            rewritten[key] = value;
+            continue;
+        }
+        rewritten[key] = pathMountMapHostToMapped({ mountPoints: mounts, hostPath: value }) ?? value;
+    }
+    return rewritten;
+}
+
+function dockerEnvBuild(env: NodeJS.ProcessEnv): string[] {
+    return Object.entries(env)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => `${key}=${value}`);
+}
+
+function processContainerName(processId: string): string {
+    return `${PROCESS_CONTAINER_PREFIX}-${processId}`;
+}
+
+function dockerErrorCodeResolve(error: unknown): number | null {
+    return typeof (error as DockerError).statusCode === "number" ? ((error as DockerError).statusCode ?? null) : null;
 }
