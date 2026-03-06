@@ -35,51 +35,51 @@ export function ChatInput({ onSend }: ChatInputProps) {
     );
 
     return (
-        <View
-            style={[
-                styles.container,
-                {
-                    borderTopColor: theme.colors.outlineVariant
-                }
-            ]}
-        >
-            <Text style={[styles.prompt, { color: theme.colors.primary }]}>{">"}</Text>
-            <TextInput
-                style={[styles.input, { color: theme.colors.onSurface }]}
-                placeholderTextColor={theme.colors.onSurfaceVariant}
-                value={text}
-                onChangeText={setText}
-                onKeyPress={handleKeyPress}
-                multiline
-                maxLength={10000}
-                submitBehavior="newline"
-            />
-            <Pressable
-                onPress={handleSend}
-                disabled={!hasText}
-                style={[
-                    styles.sendButton,
-                    { backgroundColor: hasText ? theme.colors.primary : theme.colors.outlineVariant }
-                ]}
-            >
-                <Octicons
-                    name="arrow-up"
-                    size={14}
-                    color={hasText ? theme.colors.onPrimary : theme.colors.onSurfaceVariant}
+        <View style={styles.wrapper}>
+            <View style={[styles.panel, { backgroundColor: theme.colors.surfaceContainerHigh }]}>
+                <Text style={[styles.prompt, { color: theme.colors.primary }]}>{">"}</Text>
+                <TextInput
+                    style={[styles.input, { color: theme.colors.onSurface }]}
+                    placeholderTextColor={theme.colors.onSurfaceVariant}
+                    value={text}
+                    onChangeText={setText}
+                    onKeyPress={handleKeyPress}
+                    multiline
+                    maxLength={10000}
+                    submitBehavior="newline"
                 />
-            </Pressable>
+                <Pressable
+                    onPress={handleSend}
+                    disabled={!hasText}
+                    style={[
+                        styles.sendButton,
+                        { backgroundColor: hasText ? theme.colors.primary : theme.colors.outlineVariant }
+                    ]}
+                >
+                    <Octicons
+                        name="arrow-up"
+                        size={14}
+                        color={hasText ? theme.colors.onPrimary : theme.colors.onSurfaceVariant}
+                    />
+                </Pressable>
+            </View>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
+const styles = StyleSheet.create((theme) => ({
+    wrapper: {
+        paddingHorizontal: 12,
+        paddingTop: 8,
+        paddingBottom: theme.layout.isMobileLayout ? 8 : 24
+    },
+    panel: {
         flexDirection: "row",
         alignItems: "flex-end",
         paddingHorizontal: 12,
         paddingVertical: 6,
         gap: 8,
-        borderTopWidth: StyleSheet.hairlineWidth
+        borderRadius: 16
     },
     prompt: {
         fontSize: 13,
@@ -103,4 +103,4 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         marginBottom: 4
     }
-});
+}));
