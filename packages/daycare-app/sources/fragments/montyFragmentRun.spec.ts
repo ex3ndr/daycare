@@ -109,6 +109,17 @@ describe("montyFragmentRun", () => {
         });
     });
 
+    it("normalizes Monty map results into plain objects", () => {
+        montyMockState.runImpl.mockReturnValue(new Map([["count", 5]]));
+
+        const result = montyFragmentInit('def init():\n    return {"count": 5}');
+
+        expect(result).toEqual({
+            ok: true,
+            value: { count: 5 }
+        });
+    });
+
     it("formats runtime errors", () => {
         montyMockState.runImpl.mockImplementation(() => {
             throw new montyMockState.MockMontyRuntimeError("bad state");

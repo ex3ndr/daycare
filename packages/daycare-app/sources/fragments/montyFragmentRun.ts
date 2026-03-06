@@ -47,10 +47,12 @@ function montyFragmentRun(
             scriptName: "fragment.py",
             inputs: inputs ? Object.keys(inputs) : undefined
         });
-        const value = program.run({
-            inputs,
-            limits: FRAGMENT_LIMITS
-        });
+        const value = montyFragmentValueNormalize(
+            program.run({
+                inputs,
+                limits: FRAGMENT_LIMITS
+            })
+        );
         if (!isRecord(value)) {
             return {
                 ok: false,
@@ -81,4 +83,35 @@ function montyFormatError(error: unknown): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function montyFragmentValueNormalize(value: unknown): unknown {
+    if (typeof value === "bigint") {
+        if (value <= BigInt(Number.MAX_SAFE_INTEGER) && value >= BigInt(Number.MIN_SAFE_INTEGER)) {
+            return Number(value);
+        }
+        return value.toString();
+    }
+
+    if (value instanceof Map) {
+        const result: Record<string, unknown> = {};
+        for (const [key, item] of value.entries()) {
+            result[String(key)] = montyFragmentValueNormalize(item);
+        }
+        return result;
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((entry) => montyFragmentValueNormalize(entry));
+    }
+
+    if (!isRecord(value)) {
+        return value;
+    }
+
+    const result: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) {
+        result[key] = montyFragmentValueNormalize(item);
+    }
+    return result;
 }
