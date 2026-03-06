@@ -63,4 +63,23 @@ describe("montyFragmentHandlersBuild", () => {
 
         warn.mockRestore();
     });
+
+    it("keeps state unchanged when Monty cannot import a module", () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const store = createStateStore({ count: 2 });
+        mockState.montyFragmentAction.mockReturnValue({
+            ok: false,
+            error: "ModuleNotFoundError: No module named 'random'"
+        });
+
+        const handlers = montyFragmentHandlersBuild("import random", store);
+        handlers.random_num({});
+
+        expect(warn).toHaveBeenCalledWith(
+            "[daycare-app] fragment-python action=random_num error=ModuleNotFoundError: No module named 'random'"
+        );
+        expect(store.getSnapshot()).toEqual({ count: 2 });
+
+        warn.mockRestore();
+    });
 });
