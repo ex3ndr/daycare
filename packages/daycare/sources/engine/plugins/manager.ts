@@ -3,7 +3,6 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { ZodError } from "zod";
 import type {
-    ExposeProviderRegistrationApi,
     PluginApi,
     PluginInstance,
     PluginModule,
@@ -36,7 +35,6 @@ export type PluginManagerOptions = {
     pluginCatalog: Map<string, PluginDefinition>;
     inferenceRouter: InferenceRouter;
     processes: Processes;
-    exposes: ExposeProviderRegistrationApi;
     mode?: "runtime" | "validate";
     engineEvents?: EngineEventBus;
     webhooks?: Webhooks;
@@ -63,7 +61,6 @@ export class PluginManager {
     private onEvent: ((event: PluginEvent) => void) | null;
     private inference: PluginInferenceService;
     private processes: Processes;
-    private exposes: ExposeProviderRegistrationApi;
     private webhooks: Webhooks | null = null;
     private loaded = new Map<string, LoadedPlugin>();
     private logger = getLogger("plugins.manager");
@@ -78,7 +75,6 @@ export class PluginManager {
         this.engineEvents = options.engineEvents;
         this.onEvent = options.onEvent ?? null;
         this.processes = options.processes;
-        this.exposes = options.exposes;
         this.webhooks = options.webhooks ?? null;
         this.inference = new PluginInferenceService({
             router: options.inferenceRouter,
@@ -287,7 +283,6 @@ export class PluginManager {
             tmpDir,
             usersDir: this.config.current.usersDir,
             registrar,
-            exposes: this.exposes,
             fileStore: this.fileStore,
             inference: this.inference.createClient(instanceId),
             processes: this.processes,

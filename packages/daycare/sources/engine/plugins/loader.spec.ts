@@ -65,11 +65,6 @@ export const plugin = {
             tmpDir: path.join(dir, "tmp"),
             usersDir: path.join(dir, "users"),
             registrar: {} as never,
-            exposes: {
-                registerProvider: async () => undefined,
-                unregisterProvider: async () => undefined,
-                listProviders: () => []
-            },
             fileStore: {} as never,
             inference: {
                 complete: async () => {

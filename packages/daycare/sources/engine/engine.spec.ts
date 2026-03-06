@@ -325,7 +325,6 @@ describe("Engine startup plugin hooks", () => {
             vi.spyOn(engine.pluginManager, "reload").mockResolvedValue();
             vi.spyOn(engine.appServer, "start").mockResolvedValue();
             vi.spyOn(engine.channels, "load").mockResolvedValue();
-            vi.spyOn(engine.exposes, "start").mockResolvedValue();
             vi.spyOn(engine.pluginManager, "preStartAll").mockResolvedValue();
             vi.spyOn(engine.agentSystem, "start").mockResolvedValue();
             vi.spyOn(engine.crons, "start").mockResolvedValue();
@@ -333,7 +332,6 @@ describe("Engine startup plugin hooks", () => {
             vi.spyOn(engine.pluginManager, "postStartAll").mockResolvedValue();
             vi.spyOn(engine.appServer, "stop").mockResolvedValue();
             vi.spyOn(engine.modules.connectors, "unregisterAll").mockResolvedValue();
-            vi.spyOn(engine.exposes, "stop").mockResolvedValue();
             vi.spyOn(engine.pluginManager, "unloadAll").mockResolvedValue();
 
             await engine.start();
@@ -390,26 +388,6 @@ describe("Engine Docker stale container cleanup", () => {
         } finally {
             imageIdSpy.mockRestore();
             staleRemoveSpy.mockRestore();
-            await rm(dir, { recursive: true, force: true });
-        }
-    });
-});
-
-describe("Engine expose lifecycle", () => {
-    it("starts and stops expose module with engine lifecycle", async () => {
-        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
-        try {
-            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
-            const engine = new Engine({ config, eventBus: new EngineEventBus() });
-            const startSpy = vi.spyOn(engine.exposes, "start").mockResolvedValue(undefined);
-            const stopSpy = vi.spyOn(engine.exposes, "stop").mockResolvedValue(undefined);
-
-            await engine.start();
-            await engine.shutdown();
-
-            expect(startSpy).toHaveBeenCalledTimes(1);
-            expect(stopSpy).toHaveBeenCalledTimes(1);
-        } finally {
             await rm(dir, { recursive: true, force: true });
         }
     });

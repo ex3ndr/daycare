@@ -401,30 +401,6 @@ export const channelMessagesTable = pgTable(
     (table) => [index("idx_channel_messages_channel_created").on(table.channelId, table.createdAt)]
 );
 
-export const exposeEndpointsTable = pgTable(
-    "expose_endpoints",
-    {
-        id: text("id").notNull(),
-        version: integer("version").notNull().default(1),
-        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
-        validTo: bigint("valid_to", { mode: "number" }),
-        userId: text("user_id").notNull(),
-        target: jsonb("target").notNull(),
-        provider: text("provider").notNull(),
-        domain: text("domain").notNull(),
-        mode: text("mode").notNull(),
-        auth: jsonb("auth"),
-        createdAt: bigint("created_at", { mode: "number" }).notNull(),
-        updatedAt: bigint("updated_at", { mode: "number" }).notNull()
-    },
-    (table) => [
-        primaryKey({ columns: [table.id, table.version] }),
-        index("idx_expose_endpoints_domain").on(table.domain),
-        index("idx_expose_endpoints_user").on(table.userId),
-        index("idx_expose_endpoints_id_valid_to").on(table.id, table.validTo)
-    ]
-);
-
 export const processesTable = pgTable(
     "processes",
     {
@@ -649,7 +625,6 @@ export const schema = {
     channelsTable,
     channelMembersTable,
     channelMessagesTable,
-    exposeEndpointsTable,
     processesTable,
     connectionsTable,
     systemPromptsTable,

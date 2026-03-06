@@ -12,7 +12,6 @@ import type { StorageDatabase } from "./databaseOpen.js";
 import type { CreateAgentInput, CreateUserInput, UserWithConnectorKeysDbRecord } from "./databaseTypes.js";
 import { DelayedSignalsRepository } from "./delayedSignalsRepository.js";
 import { DocumentsRepository } from "./documentsRepository.js";
-import { ExposeEndpointsRepository } from "./exposeEndpointsRepository.js";
 import { FragmentsRepository } from "./fragmentsRepository.js";
 import { HistoryRepository } from "./historyRepository.js";
 import { InboxRepository } from "./inboxRepository.js";
@@ -52,7 +51,6 @@ export class Storage {
     readonly channels: ChannelsRepository;
     readonly channelMessages: ChannelMessagesRepository;
     readonly connections: ConnectionsRepository;
-    readonly exposeEndpoints: ExposeEndpointsRepository;
     readonly processes: ProcessesRepository;
     readonly systemPrompts: SystemPromptsRepository;
     readonly swarmContacts: SwarmContactsRepository;
@@ -86,7 +84,6 @@ export class Storage {
         this.channels = new ChannelsRepository(db);
         this.channelMessages = new ChannelMessagesRepository(db);
         this.connections = new ConnectionsRepository(db);
-        this.exposeEndpoints = new ExposeEndpointsRepository(db);
         this.processes = new ProcessesRepository(db);
         this.systemPrompts = new SystemPromptsRepository(db);
         this.swarmContacts = new SwarmContactsRepository(db);

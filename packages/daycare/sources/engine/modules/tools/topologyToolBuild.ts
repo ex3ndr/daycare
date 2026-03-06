@@ -5,7 +5,6 @@ import type { ToolDefinition, ToolResultContract } from "@/types";
 import { contextForUser } from "../../agents/context.js";
 import type { Channels } from "../../channels/channels.js";
 import type { Crons } from "../../cron/crons.js";
-import type { Exposes } from "../../expose/exposes.js";
 import type { Secrets } from "../../secrets/secrets.js";
 import type { Signals } from "../../signals/signals.js";
 
@@ -84,18 +83,6 @@ const topologyChannelSchema = Type.Object(
     { additionalProperties: false }
 );
 
-const topologyExposeSchema = Type.Object(
-    {
-        id: Type.String(),
-        domain: Type.String(),
-        target: Type.String(),
-        provider: Type.String(),
-        mode: Type.String(),
-        authenticated: Type.Boolean()
-    },
-    { additionalProperties: false }
-);
-
 const topologySecretSchema = Type.Object(
     {
         name: Type.String(),
@@ -145,7 +132,6 @@ const topologyResultSchema = Type.Object(
         tasks: Type.Array(topologyTaskSchema),
         signalSubscriptions: Type.Array(topologySignalSubscriptionSchema),
         channels: Type.Array(topologyChannelSchema),
-        exposes: Type.Array(topologyExposeSchema),
         secrets: Type.Array(topologySecretSchema),
         subusers: Type.Array(topologySubuserSchema),
         friends: Type.Array(topologyFriendSchema),
@@ -154,7 +140,6 @@ const topologyResultSchema = Type.Object(
         cronCount: Type.Number(),
         signalSubscriptionCount: Type.Number(),
         channelCount: Type.Number(),
-        exposeCount: Type.Number(),
         secretCount: Type.Number(),
         friendCount: Type.Number()
     },
@@ -208,15 +193,6 @@ type TopologyChannel = {
     members: Array<{ agentId: string; username: string }>;
 };
 
-type TopologyExpose = {
-    id: string;
-    domain: string;
-    target: string;
-    provider: string;
-    mode: string;
-    authenticated: boolean;
-};
-
 type TopologySecret = {
     name: string;
     displayName: string;
@@ -253,7 +229,6 @@ type TopologyResult = {
     tasks: TopologyTask[];
     signalSubscriptions: TopologySignalSubscription[];
     channels: TopologyChannel[];
-    exposes: TopologyExpose[];
     secrets: TopologySecret[];
     subusers: TopologySubuser[];
     friends: TopologyFriend[];
@@ -262,7 +237,6 @@ type TopologyResult = {
     cronCount: number;
     signalSubscriptionCount: number;
     channelCount: number;
-    exposeCount: number;
     secretCount: number;
     friendCount: number;
 };
@@ -280,7 +254,6 @@ export function topologyTool(
     crons: Crons,
     signals: Signals,
     channels: Pick<Channels, "listForUserIds">,
-    _exposes: Pick<Exposes, "list">,
     secrets: Pick<Secrets, "list"> = { list: async () => [] }
 ): ToolDefinition<typeof schema, TopologyResult> {
     return {
@@ -434,26 +407,6 @@ export function topologyTool(
                         }))
                 }));
 
-            const visibleExposeEndpointChunks = await Promise.all(
-                visibleUserIds.map((userId) => storage.exposeEndpoints.findMany(contextForUser({ userId })))
-            );
-            const visibleExposeEndpoints = visibleExposeEndpointChunks.flat();
-
-            const exposeSummary: TopologyExpose[] = visibleExposeEndpoints
-                .slice()
-                .sort((left, right) => left.createdAt - right.createdAt)
-                .map((endpoint) => ({
-                    id: endpoint.id,
-                    domain: endpoint.domain,
-                    target:
-                        endpoint.target.type === "port"
-                            ? `port:${endpoint.target.port}`
-                            : `unix:${endpoint.target.path}`,
-                    provider: endpoint.provider,
-                    mode: endpoint.mode,
-                    authenticated: Boolean(endpoint.auth)
-                }));
-
             // Keep secrets scoped to caller ctx so topology and exec use the same visibility model.
             const secretEntries = await secrets.list(toolContext.ctx);
             const secretByName = new Map<string, TopologySecret>();
@@ -492,7 +445,6 @@ export function topologyTool(
                 tasks,
                 signalSubscriptions: signalSubscriptionsSummary,
                 channels: channelsSummary,
-                exposes: exposeSummary,
                 secrets: secretSummary,
                 subusers,
                 friends,
@@ -501,7 +453,6 @@ export function topologyTool(
                 cronCount: cronTriggers.length,
                 signalSubscriptionCount: signalSubscriptionsSummary.length,
                 channelCount: channelsSummary.length,
-                exposeCount: exposeSummary.length,
                 secretCount: secretSummary.length,
                 friendCount: friends.length
             };

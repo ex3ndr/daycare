@@ -226,22 +226,6 @@ CREATE TABLE "channel_messages" (
     "created_at" bigint NOT NULL
 );
 
-CREATE TABLE "expose_endpoints" (
-    "id" text NOT NULL,
-    "version" integer DEFAULT 1 NOT NULL,
-    "valid_from" bigint NOT NULL,
-    "valid_to" bigint,
-    "user_id" text NOT NULL,
-    "target" jsonb NOT NULL,
-    "provider" text NOT NULL,
-    "domain" text NOT NULL,
-    "mode" text NOT NULL,
-    "auth" jsonb,
-    "created_at" bigint NOT NULL,
-    "updated_at" bigint NOT NULL,
-    CONSTRAINT "expose_endpoints_id_version_pk" PRIMARY KEY("id", "version")
-);
-
 CREATE TABLE "processes" (
     "id" text NOT NULL,
     "version" integer DEFAULT 1 NOT NULL,
@@ -403,10 +387,6 @@ CREATE UNIQUE INDEX "channel_members_channel_agent_unique" ON "channel_members" 
 CREATE INDEX "idx_channel_members_channel" ON "channel_members" USING btree ("channel_id");
 
 CREATE INDEX "idx_channel_messages_channel_created" ON "channel_messages" USING btree ("channel_id", "created_at");
-
-CREATE INDEX "idx_expose_endpoints_domain" ON "expose_endpoints" USING btree ("domain");
-CREATE INDEX "idx_expose_endpoints_user" ON "expose_endpoints" USING btree ("user_id");
-CREATE INDEX "idx_expose_endpoints_id_valid_to" ON "expose_endpoints" USING btree ("id", "valid_to");
 
 CREATE INDEX "idx_processes_owner" ON "processes" USING btree ("owner");
 CREATE INDEX "idx_processes_user" ON "processes" USING btree ("user_id");

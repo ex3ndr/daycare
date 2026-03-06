@@ -62,11 +62,6 @@ async function createApi<TSettings>(
         tmpDir: path.join(dir, "tmp"),
         usersDir: path.join(dir, "users"),
         registrar,
-        exposes: {
-            registerProvider: async () => undefined,
-            unregisterProvider: async () => undefined,
-            listProviders: () => []
-        },
         fileStore,
         inference,
         processes: new Processes(dir, getLogger(`test.processes.${instanceId}`), {

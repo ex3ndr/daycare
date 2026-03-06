@@ -81,11 +81,6 @@ describeIf("nano-banana-pro image generation", () => {
                 tmpDir: path.join(dir, "tmp"),
                 usersDir: path.join(dir, "users"),
                 registrar,
-                exposes: {
-                    registerProvider: async () => undefined,
-                    unregisterProvider: async () => undefined,
-                    listProviders: () => []
-                },
                 fileStore,
                 inference,
                 processes: new Processes(dir, getLogger("test.processes.nano-banana-pro"), {

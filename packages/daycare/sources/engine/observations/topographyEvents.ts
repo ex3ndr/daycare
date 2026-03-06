@@ -8,7 +8,6 @@ export const TOPO_SOURCE_CRONS = "system:crons";
 export const TOPO_SOURCE_WEBHOOKS = "system:webhooks";
 export const TOPO_SOURCE_SIGNALS = "system:signals";
 export const TOPO_SOURCE_CHANNELS = "system:channels";
-export const TOPO_SOURCE_EXPOSES = "system:exposes";
 export const TOPO_SOURCE_SECRETS = "system:secrets";
 export const TOPO_SOURCE_SUBUSERS = "system:subusers";
 export const TOPO_SOURCE_FRIENDS = "system:friends";
@@ -20,7 +19,6 @@ export type TopographyObservationSource =
     | typeof TOPO_SOURCE_WEBHOOKS
     | typeof TOPO_SOURCE_SIGNALS
     | typeof TOPO_SOURCE_CHANNELS
-    | typeof TOPO_SOURCE_EXPOSES
     | typeof TOPO_SOURCE_SECRETS
     | typeof TOPO_SOURCE_SUBUSERS
     | typeof TOPO_SOURCE_FRIENDS;
@@ -44,9 +42,6 @@ export const TOPO_EVENT_TYPES = {
     CHANNEL_DELETED: "channel:deleted",
     CHANNEL_MEMBER_JOINED: "channel:member_joined",
     CHANNEL_MEMBER_LEFT: "channel:member_left",
-    EXPOSE_CREATED: "expose:created",
-    EXPOSE_REMOVED: "expose:removed",
-    EXPOSE_UPDATED: "expose:updated",
     SECRET_ADDED: "secret:added",
     SECRET_REMOVED: "secret:removed",
     SUBUSER_CREATED: "subuser:created",
@@ -185,32 +180,6 @@ export type ChannelMemberLeftData = {
     username: string;
 };
 
-export type ExposeCreatedData = {
-    exposeId: string;
-    userId: string;
-    domain: string;
-    target: string;
-    provider: string;
-    mode: string;
-    authenticated: boolean;
-};
-
-export type ExposeRemovedData = {
-    exposeId: string;
-    userId: string;
-    domain: string;
-};
-
-export type ExposeUpdatedData = {
-    exposeId: string;
-    userId: string;
-    domain: string;
-    target: string;
-    provider: string;
-    mode: string;
-    authenticated: boolean;
-};
-
 export type SecretAddedData = {
     userId: string;
     name: string;
@@ -292,9 +261,6 @@ export type TopographyObservationDataByType = {
     "channel:deleted": ChannelDeletedData;
     "channel:member_joined": ChannelMemberJoinedData;
     "channel:member_left": ChannelMemberLeftData;
-    "expose:created": ExposeCreatedData;
-    "expose:removed": ExposeRemovedData;
-    "expose:updated": ExposeUpdatedData;
     "secret:added": SecretAddedData;
     "secret:removed": SecretRemovedData;
     "subuser:created": SubuserCreatedData;

@@ -321,11 +321,6 @@ function createPluginApi(settings: SystemFeedbackSettings): {
             registerTool: vi.fn(),
             unregisterTool: vi.fn()
         },
-        exposes: {
-            registerProvider: vi.fn(async () => undefined),
-            unregisterProvider: vi.fn(async () => undefined),
-            listProviders: () => []
-        },
         fileStore: {},
         inference: {
             complete: async () => {

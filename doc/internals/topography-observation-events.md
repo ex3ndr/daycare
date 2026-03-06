@@ -10,7 +10,6 @@ Topology mutations now emit structured observation-log events across core facade
 - `webhook`: `added`, `deleted`
 - `signal`: `subscribed`, `unsubscribed`
 - `channel`: `created`, `deleted`, `member_joined`, `member_left`
-- `expose`: `created`, `updated`, `removed`
 - `secret`: `added`, `removed`
 - `subuser`: `created`, `configured`
 - `friend`: `requested`, `accepted`, `removed`, `subuser_shared`, `subuser_unshared`
@@ -26,7 +25,6 @@ graph TD
     Engine --> Webhooks[Webhooks]
     Engine --> Signals[Signals]
     Engine --> Channels[Channels]
-    Engine --> Exposes[Exposes]
     Engine --> Secrets[Secrets]
     Engine --> Subusers[Subusers]
     Engine --> Friends[Friends]
@@ -38,7 +36,6 @@ graph TD
     Webhooks --> Emit
     Signals --> Emit
     Channels --> Emit
-    Exposes --> Emit
     Secrets --> Emit
     Subusers --> Emit
     Friends --> Emit

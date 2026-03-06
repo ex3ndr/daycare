@@ -1,12 +1,4 @@
-import type {
-    AgentKind,
-    AgentLifecycleState,
-    AgentPath,
-    ExposeEndpointAuth,
-    ExposeMode,
-    ExposeTarget,
-    SessionPermissions
-} from "@/types";
+import type { AgentKind, AgentLifecycleState, AgentPath, SessionPermissions } from "@/types";
 import type { TaskParameter } from "../engine/modules/tasks/taskParameterTypes.js";
 import type { SignalSource } from "../engine/signals/signalTypes.js";
 import type { ModelRoleKey } from "../settings.js";
@@ -396,36 +388,6 @@ export type ChannelMessageDbRecord = {
     text: string;
     mentions: string[];
     createdAt: number;
-};
-
-export type DatabaseExposeEndpointRow = {
-    id: string;
-    version: number;
-    valid_from: number;
-    valid_to: number | null;
-    user_id: string;
-    target: unknown;
-    provider: string;
-    domain: string;
-    mode: ExposeMode;
-    auth: unknown | null;
-    created_at: number;
-    updated_at: number;
-};
-
-export type ExposeEndpointDbRecord = {
-    id: string;
-    version?: number;
-    validFrom?: number;
-    validTo?: number | null;
-    userId: string;
-    target: ExposeTarget;
-    provider: string;
-    domain: string;
-    mode: ExposeMode;
-    auth: ExposeEndpointAuth | null;
-    createdAt: number;
-    updatedAt: number;
 };
 
 export type DatabaseProcessRow = {

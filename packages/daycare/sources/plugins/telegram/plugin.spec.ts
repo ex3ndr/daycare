@@ -98,11 +98,6 @@ function pluginApiBuild(
                 registerConnector,
                 unregisterConnector
             } as never,
-            exposes: {
-                registerProvider: async () => undefined,
-                unregisterProvider: async () => undefined,
-                listProviders: () => []
-            },
             fileStore: {} as never,
             inference: {} as never,
             processes: {} as never,

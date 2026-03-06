@@ -1,6 +1,6 @@
 import type { Logger } from "pino";
 import type { ZodType } from "zod";
-import type { AgentConfig, AgentPath, ExposeProviderRegistrationApi } from "@/types";
+import type { AgentConfig, AgentPath } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import type { PluginInstanceSettings, SettingsConfig } from "../../settings.js";
 import type { Context } from "../agents/context.js";
@@ -21,7 +21,6 @@ export type PluginApi<TSettings = unknown> = {
     tmpDir: string;
     usersDir: string;
     registrar: PluginRegistrar;
-    exposes: ExposeProviderRegistrationApi;
     fileStore: FileFolder;
     inference: PluginInference;
     processes: Processes;

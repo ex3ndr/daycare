@@ -18,7 +18,6 @@ flowchart TD
     Topology --> Tasks["tasks[]"]
     Topology --> Signals["signalSubscriptions[]"]
     Topology --> Channels["channels[]"]
-    Topology --> Exposes["exposes[]"]
     Topology --> Subusers["subusers[] (child users, including swarms)"]
     Topology --> Friends["friends[]"]
 

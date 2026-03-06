@@ -34,7 +34,6 @@ import { Channels } from "./channels/channels.js";
 import { ConfigModule } from "./config/configModule.js";
 import { Crons } from "./cron/crons.js";
 import { documentRootDocumentEnsure } from "./document/documentRootDocumentEnsure.js";
-import { Exposes } from "./expose/exposes.js";
 import { FileFolder } from "./files/fileFolder.js";
 import { Friends } from "./friends/friends.js";
 import type { EngineEventBus } from "./ipc/events.js";
@@ -59,10 +58,6 @@ import { documentPatchToolBuild } from "./modules/tools/documentPatchToolBuild.j
 import { documentReadToolBuild } from "./modules/tools/documentReadToolBuild.js";
 import { documentSearchToolBuild } from "./modules/tools/documentSearchToolBuild.js";
 import { documentWriteToolBuild } from "./modules/tools/documentWriteToolBuild.js";
-import { exposeCreateToolBuild } from "./modules/tools/exposeCreateToolBuild.js";
-import { exposeListToolBuild } from "./modules/tools/exposeListToolBuild.js";
-import { exposeRemoveToolBuild } from "./modules/tools/exposeRemoveToolBuild.js";
-import { exposeUpdateToolBuild } from "./modules/tools/exposeUpdateToolBuild.js";
 import { fragmentArchiveToolBuild } from "./modules/tools/fragmentArchiveToolBuild.js";
 import { fragmentCreateToolBuild } from "./modules/tools/fragmentCreateToolBuild.js";
 import { fragmentListToolBuild } from "./modules/tools/fragmentListToolBuild.js";
@@ -159,7 +154,6 @@ export class Engine {
     readonly eventBus: EngineEventBus;
     readonly swarms: Swarms;
     readonly secrets: Secrets;
-    readonly exposes: Exposes;
     readonly friends: Friends;
     private readonly memoryWorker: MemoryWorker;
     private readonly reloadSync: InvalidateSync;
@@ -234,13 +228,6 @@ export class Engine {
             }
         });
         logger.debug(`init: AuthStore initialized`);
-        this.exposes = new Exposes({
-            config: this.config,
-            eventBus: this.eventBus,
-            exposeEndpoints: this.storage.exposeEndpoints,
-            observationLog: this.storage.observationLog
-        });
-
         this.modules = new ModuleRegistry({
             onMessage: async (message, context, target) =>
                 this.runConnectorCallback("message", async () => {
@@ -339,7 +326,6 @@ export class Engine {
             pluginCatalog: buildPluginCatalog(),
             inferenceRouter: this.inferenceRouter,
             processes: this.processes,
-            exposes: this.exposes,
             engineEvents: this.eventBus,
             onEvent: (event) => {
                 this.agentSystem.eventBus.emit("plugin.event", event);
@@ -722,7 +708,6 @@ export class Engine {
         await this.appServer.start();
 
         await this.channels.load();
-        await this.exposes.start();
 
         logger.debug("register: Registering core tools");
         this.modules.tools.register("core", buildTaskCreateTool());
@@ -749,10 +734,7 @@ export class Engine {
         this.modules.tools.register("core", secretRemoveToolBuild());
         this.modules.tools.register("core", secretCopyToolBuild());
         this.modules.tools.register("core", userProfileUpdateTool());
-        this.modules.tools.register(
-            "core",
-            topologyTool(this.crons, this.signals, this.channels, this.exposes, this.secrets)
-        );
+        this.modules.tools.register("core", topologyTool(this.crons, this.signals, this.channels, this.secrets));
         this.modules.tools.register("core", sessionHistoryToolBuild());
         this.modules.tools.register("core", permanentAgentToolBuild());
         this.modules.tools.register("core", swarmCreateToolBuild(this.swarms));
@@ -777,10 +759,6 @@ export class Engine {
         this.modules.tools.register("core", signalEventsCsvToolBuild(this.signals));
         this.modules.tools.register("core", buildSignalSubscribeTool(this.signals));
         this.modules.tools.register("core", buildSignalUnsubscribeTool(this.signals));
-        this.modules.tools.register("core", exposeCreateToolBuild(this.exposes));
-        this.modules.tools.register("core", exposeRemoveToolBuild(this.exposes));
-        this.modules.tools.register("core", exposeUpdateToolBuild(this.exposes));
-        this.modules.tools.register("core", exposeListToolBuild(this.exposes));
         this.modules.tools.register("core", observationQueryToolBuild(this.storage.observationLog));
         this.modules.tools.register("core", documentReadToolBuild());
         this.modules.tools.register("core", documentAppendToolBuild());
@@ -827,7 +805,6 @@ export class Engine {
         this.webhooks.stop();
         this.delayedSignals.stop();
         this.processes.unload();
-        await this.exposes.stop();
         await this.pluginManager.unloadAll();
         await databaseClose(this.storage.connection);
     }

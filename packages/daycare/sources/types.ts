@@ -35,17 +35,6 @@ export type {
     ChannelMessage,
     ChannelSignalData
 } from "./engine/channels/channelTypes.js";
-// Expose
-export type {
-    ExposeCreateInput,
-    ExposeEndpoint,
-    ExposeEndpointAuth,
-    ExposeMode,
-    ExposeProviderRegistrationApi,
-    ExposeTarget,
-    ExposeTunnelProvider,
-    ExposeUpdateInput
-} from "./engine/expose/exposeTypes.js";
 // Connectors
 export type {
     CommandHandler,
@@ -98,7 +87,6 @@ export {
     TOPO_SOURCE_AGENTS,
     TOPO_SOURCE_CHANNELS,
     TOPO_SOURCE_CRONS,
-    TOPO_SOURCE_EXPOSES,
     TOPO_SOURCE_FRIENDS,
     TOPO_SOURCE_SECRETS,
     TOPO_SOURCE_SIGNALS,

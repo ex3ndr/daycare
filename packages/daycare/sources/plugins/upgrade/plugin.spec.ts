@@ -125,11 +125,6 @@ describe("upgrade plugin commands", () => {
             auth: {},
             dataDir: "/tmp/daycare",
             registrar,
-            exposes: {
-                registerProvider: async () => undefined,
-                unregisterProvider: async () => undefined,
-                listProviders: () => []
-            },
             fileStore: {},
             inference: { complete: async () => undefined },
             processes: {},
@@ -182,11 +177,6 @@ describe("upgrade plugin commands", () => {
             auth: {},
             dataDir: "/tmp/daycare",
             registrar,
-            exposes: {
-                registerProvider: async () => undefined,
-                unregisterProvider: async () => undefined,
-                listProviders: () => []
-            },
             fileStore: {},
             inference: { complete: async () => undefined },
             processes: {},
@@ -261,11 +251,6 @@ describe("upgrade plugin commands", () => {
             auth: {},
             dataDir: "/tmp/daycare",
             registrar,
-            exposes: {
-                registerProvider: async () => undefined,
-                unregisterProvider: async () => undefined,
-                listProviders: () => []
-            },
             fileStore: {},
             inference: { complete: async () => undefined },
             processes: {},
@@ -310,11 +295,6 @@ describe("upgrade plugin commands", () => {
             auth: {},
             dataDir: "/tmp/daycare",
             registrar,
-            exposes: {
-                registerProvider: async () => undefined,
-                unregisterProvider: async () => undefined,
-                listProviders: () => []
-            },
             fileStore: {},
             inference: { complete: async () => undefined },
             processes: {},
@@ -355,11 +335,6 @@ describe("upgrade plugin commands", () => {
             auth: {},
             dataDir: "/tmp/daycare",
             registrar,
-            exposes: {
-                registerProvider: async () => undefined,
-                unregisterProvider: async () => undefined,
-                listProviders: () => []
-            },
             fileStore: {},
             inference: { complete: async () => undefined },
             processes: {},
@@ -396,11 +371,6 @@ describe("upgrade plugin commands", () => {
             auth: {},
             dataDir: "/tmp/daycare",
             registrar,
-            exposes: {
-                registerProvider: async () => undefined,
-                unregisterProvider: async () => undefined,
-                listProviders: () => []
-            },
             fileStore: {},
             inference: { complete: async () => undefined },
             processes: {},

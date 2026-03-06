@@ -120,11 +120,6 @@ describe("elevenlabs plugin", () => {
             tmpDir: path.join(dir, "tmp"),
             usersDir: path.join(dir, "users"),
             registrar,
-            exposes: {
-                registerProvider: async () => undefined,
-                unregisterProvider: async () => undefined,
-                listProviders: () => []
-            },
             fileStore: new FileFolder(path.join(config.dataDir, "files")),
             inference: {
                 complete: async () => {
@@ -259,11 +254,6 @@ describe("elevenlabs plugin", () => {
             tmpDir: path.join(dir, "tmp"),
             usersDir: path.join(dir, "users"),
             registrar,
-            exposes: {
-                registerProvider: async () => undefined,
-                unregisterProvider: async () => undefined,
-                listProviders: () => []
-            },
             fileStore: new FileFolder(path.join(config.dataDir, "files")),
             inference: {
                 complete: async () => {
@@ -351,11 +341,6 @@ describe("elevenlabs plugin", () => {
             tmpDir: path.join(dir, "tmp"),
             usersDir: path.join(dir, "users"),
             registrar,
-            exposes: {
-                registerProvider: async () => undefined,
-                unregisterProvider: async () => undefined,
-                listProviders: () => []
-            },
             fileStore: new FileFolder(path.join(config.dataDir, "files")),
             inference: {
                 complete: async () => {
@@ -479,11 +464,6 @@ describe("elevenlabs plugin", () => {
             tmpDir: path.join(dir, "tmp"),
             usersDir: path.join(dir, "users"),
             registrar,
-            exposes: {
-                registerProvider: async () => undefined,
-                unregisterProvider: async () => undefined,
-                listProviders: () => []
-            },
             fileStore: new FileFolder(path.join(config.dataDir, "files")),
             inference: {
                 complete: async () => {

@@ -82,11 +82,6 @@ async function createManager(
             pluginCatalog: catalog,
             inferenceRouter,
             processes: processesRuntime,
-            exposes: {
-                registerProvider: async () => undefined,
-                unregisterProvider: async () => undefined,
-                listProviders: () => []
-            },
             onEvent
         })
     };

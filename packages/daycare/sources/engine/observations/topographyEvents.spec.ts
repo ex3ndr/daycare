@@ -5,7 +5,6 @@ import {
     TOPO_SOURCE_AGENTS,
     TOPO_SOURCE_CHANNELS,
     TOPO_SOURCE_CRONS,
-    TOPO_SOURCE_EXPOSES,
     TOPO_SOURCE_FRIENDS,
     TOPO_SOURCE_SECRETS,
     TOPO_SOURCE_SIGNALS,
@@ -26,7 +25,6 @@ type TopographyEmitCase<TType extends TopographyObservationType> = {
         | typeof TOPO_SOURCE_WEBHOOKS
         | typeof TOPO_SOURCE_SIGNALS
         | typeof TOPO_SOURCE_CHANNELS
-        | typeof TOPO_SOURCE_EXPOSES
         | typeof TOPO_SOURCE_SECRETS
         | typeof TOPO_SOURCE_SUBUSERS
         | typeof TOPO_SOURCE_FRIENDS;
@@ -235,46 +233,6 @@ describe("topographyObservationEmit", () => {
                         username: "alice"
                     },
                     scopeIds: ["user-1", "channel-1"]
-                }),
-                topographyEmitCase({
-                    type: TOPO_EVENT_TYPES.EXPOSE_CREATED,
-                    source: TOPO_SOURCE_EXPOSES,
-                    message: "Expose created: app.example.com",
-                    details: "details",
-                    data: {
-                        exposeId: "expose-1",
-                        userId: "user-1",
-                        domain: "app.example.com",
-                        target: "port:3000",
-                        provider: "provider-a",
-                        mode: "public",
-                        authenticated: true
-                    },
-                    scopeIds: ["user-1"]
-                }),
-                topographyEmitCase({
-                    type: TOPO_EVENT_TYPES.EXPOSE_REMOVED,
-                    source: TOPO_SOURCE_EXPOSES,
-                    message: "Expose removed: app.example.com",
-                    details: "details",
-                    data: { exposeId: "expose-1", userId: "user-1", domain: "app.example.com" },
-                    scopeIds: ["user-1"]
-                }),
-                topographyEmitCase({
-                    type: TOPO_EVENT_TYPES.EXPOSE_UPDATED,
-                    source: TOPO_SOURCE_EXPOSES,
-                    message: "Expose updated: app.example.com",
-                    details: "details",
-                    data: {
-                        exposeId: "expose-1",
-                        userId: "user-1",
-                        domain: "app.example.com",
-                        target: "port:3000",
-                        provider: "provider-a",
-                        mode: "public",
-                        authenticated: false
-                    },
-                    scopeIds: ["user-1"]
                 }),
                 topographyEmitCase({
                     type: TOPO_EVENT_TYPES.SECRET_ADDED,

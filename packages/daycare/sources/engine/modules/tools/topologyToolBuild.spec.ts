@@ -46,19 +46,6 @@ type TopologyStorageMock = {
             ownerUserId: string
         ) => Promise<Array<{ userAId: string; userBId: string; requestedA: boolean; requestedB: boolean }>>;
     };
-    exposeEndpoints: {
-        findMany: (ctx: { userId: string }) => Promise<
-            Array<{
-                id: string;
-                domain: string;
-                target: { type: "port"; port: number } | { type: "unix"; path: string };
-                provider: string;
-                mode: string;
-                auth: unknown;
-                createdAt: number;
-            }>
-        >;
-    };
 };
 
 function createToolContext(options: {
@@ -146,9 +133,6 @@ function createToolContext(options: {
         connections: {
             findFriends: async () => [],
             findConnectionsWithSubusersOf: async () => []
-        },
-        exposeEndpoints: {
-            findMany: async () => []
         }
     };
 
@@ -161,14 +145,11 @@ function createToolContext(options: {
     const channels = {
         listForUserIds: () => []
     };
-    const exposes = {
-        list: async () => []
-    };
     const secrets = {
         list: async () => []
     };
 
-    const tool = topologyTool(crons as never, signals as never, channels as never, exposes as never, secrets as never);
+    const tool = topologyTool(crons as never, signals as never, channels as never, secrets as never);
     const context: ToolExecutionContext = {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: null as unknown as ToolExecutionContext["sandbox"],

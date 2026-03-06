@@ -50,11 +50,6 @@ Topography events are defined in `observations/topographyEvents.ts` and emitted 
 - `channel:member_joined` — `{ channelId, userId, name, agentId, username }`
 - `channel:member_left` — `{ channelId, userId, name, agentId, username }`
 
-### `system:exposes`
-- `expose:created` — `{ exposeId, userId, domain, target, provider, mode, authenticated }`
-- `expose:removed` — `{ exposeId, userId, domain }`
-- `expose:updated` — `{ exposeId, userId, domain, target, provider, mode, authenticated }`
-
 ### `system:secrets`
 - `secret:added` — `{ userId, name, displayName, variableNames }`
 - `secret:removed` — `{ userId, name, displayName }`
