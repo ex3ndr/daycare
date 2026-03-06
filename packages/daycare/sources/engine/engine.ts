@@ -981,7 +981,7 @@ export class Engine {
         // Connector callbacks may still arrive with external ids; normalize them.
         const lookupTargetIds = connectorPathLookupTargetIds(connectorPath);
         const existing = await connectorPathUserFindByTargets(this.storage, connectorPath.connector, lookupTargetIds);
-        const primaryTargetId = lookupTargetIds[0];
+        const primaryTargetId = connectorPathPrimaryTargetIdResolve(connectorPath);
         if (!primaryTargetId) {
             throw new Error(`Connector target is required for path: ${path}`);
         }
@@ -1222,6 +1222,15 @@ function connectorPathLookupTargetIds(connectorPath: ConnectorPath): string[] {
         targetIds.push(legacyFallback);
     }
     return targetIds;
+}
+
+function connectorPathPrimaryTargetIdResolve(connectorPath: ConnectorPath): string | null {
+    const targetId = connectorPath.targetId?.trim() ?? "";
+    if (!targetId) {
+        const ownerId = connectorPath.ownerId.trim();
+        return ownerId || null;
+    }
+    return connectorPathLegacyTargetFallback(targetId) ?? targetId;
 }
 
 function connectorPathLegacyTargetFallback(targetId: string): string | null {
