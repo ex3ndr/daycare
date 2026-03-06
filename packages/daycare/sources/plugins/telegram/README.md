@@ -40,8 +40,9 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
   - `sendReplies` is enabled, or
   - `sendRepliesInGroups` is enabled and target chat is group/supergroup.
 - Sends images with `sendPhoto`, videos with `sendVideo`, voice notes with `sendVoice` when `sendAs: "voice"`, and other files with `sendDocument`.
-- Supports inline URL buttons (`url`) and callback buttons (`callback_data`) on text messages.
-- Adds `openApp=1` to URL button links targeting `https://daycare.dev` or the configured app frontend URL so those buttons can trigger app-open behavior.
+- Supports inline callback buttons (`callback_data`) and URL buttons on text messages.
+- Renders Daycare app-origin buttons as Telegram `web_app` buttons in private chats so they open inside the Mini App window with Telegram auth context.
+- Falls back to normal `url` buttons for group chats and non-Daycare origins.
 - Supports typing indicators and emoji reactions.
 
 ## Slash commands

@@ -1040,7 +1040,7 @@ describe("TelegramConnector file uploads", () => {
         });
     });
 
-    it("adds openApp flag for daycare.dev URL buttons", async () => {
+    it("uses web_app buttons for default daycare frontend links in private chats", async () => {
         const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         const connector = new TelegramConnector({
             token: "token",
@@ -1067,7 +1067,9 @@ describe("TelegramConnector file uploads", () => {
                     [
                         {
                             text: "Open",
-                            url: "https://daycare.dev/auth?openApp=1#token"
+                            web_app: {
+                                url: "https://daycare.dev/auth#token"
+                            }
                         }
                     ]
                 ]
@@ -1075,7 +1077,7 @@ describe("TelegramConnector file uploads", () => {
         });
     });
 
-    it("adds openApp flag for configured app frontend URL buttons", async () => {
+    it("uses web_app buttons for configured app frontend links in private chats", async () => {
         const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         const connector = new TelegramConnector({
             token: "token",
@@ -1103,7 +1105,47 @@ describe("TelegramConnector file uploads", () => {
                     [
                         {
                             text: "Open",
-                            url: "https://app.example.com/auth?openApp=1#token"
+                            web_app: {
+                                url: "https://app.example.com/auth#token"
+                            }
+                        }
+                    ]
+                ]
+            }
+        });
+    });
+
+    it("keeps app links as normal URL buttons in group chats", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            mode: "public",
+            allowedUids: [],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            webAppUrl: "https://app.example.com/?backend=https%3A%2F%2Fapi.example.com",
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await connector.sendMessage("-100321/123", {
+            text: "Open configured app",
+            buttons: [{ type: "url", text: "Open", url: "https://app.example.com/auth#token" }]
+        });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        const sendCall = bot!.sendMessage.mock.calls[0];
+        expect(sendCall?.[0]).toBe("-100321");
+        expect(sendCall?.[2]).toMatchObject({
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        {
+                            text: "Open",
+                            url: "https://app.example.com/auth#token"
                         }
                     ]
                 ]

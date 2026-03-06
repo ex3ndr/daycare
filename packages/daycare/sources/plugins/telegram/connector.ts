@@ -20,7 +20,7 @@ import type { FileFolder } from "../../engine/files/fileFolder.js";
 import { getLogger } from "../../log.js";
 import { markdownToTelegramHtml } from "./markdownToTelegramHtml.js";
 import { telegramMessageSplit } from "./telegramMessageSplit.js";
-import { telegramUrlOpenAppFlag } from "./telegramUrlOpenAppFlag.js";
+import { telegramWebAppUrlMatch } from "./telegramWebAppUrlMatch.js";
 
 export type TelegramConnectorOptions = {
     token: string;
@@ -300,7 +300,7 @@ export class TelegramConnector implements Connector {
             await this.sendTextWithFallback(chatId, message.text ?? "", {
                 ...messageReplyOptionsBuild(message, chatId, this.sendReplies, this.sendRepliesInGroups),
                 ...(message.buttons?.length
-                    ? { reply_markup: messageButtonsBuild(message.buttons, this.webAppUrl) }
+                    ? { reply_markup: messageButtonsBuild(message.buttons, targetId, this.webAppUrl) }
                     : {})
             });
             logger.debug(`send: Text message sent targetId=${targetId} chatId=${chatId}`);
@@ -1074,25 +1074,38 @@ function targetIdIsGroupChat(targetId: string): boolean {
 
 function messageButtonsBuild(
     buttons: NonNullable<ConnectorMessage["buttons"]>,
+    targetId: string,
     webAppUrl: string | null
 ): TelegramBot.InlineKeyboardMarkup {
     return {
-        inline_keyboard: buttons.map((button) => {
-            if (button.type === "callback") {
-                return [
-                    {
-                        text: button.text,
-                        callback_data: button.callback
-                    }
-                ];
+        inline_keyboard: buttons.map((button) => [messageButtonBuild(button, targetId, webAppUrl)])
+    };
+}
+
+function messageButtonBuild(
+    button: NonNullable<ConnectorMessage["buttons"]>[number],
+    targetId: string,
+    webAppUrl: string | null
+): TelegramBot.InlineKeyboardButton {
+    if (button.type === "callback") {
+        return {
+            text: button.text,
+            callback_data: button.callback
+        };
+    }
+
+    if (!targetIdIsGroupChat(targetId) && telegramWebAppUrlMatch(button.url, webAppUrl)) {
+        return {
+            text: button.text,
+            web_app: {
+                url: button.url
             }
-            return [
-                {
-                    text: button.text,
-                    url: telegramUrlOpenAppFlag(button.url, webAppUrl)
-                }
-            ];
-        })
+        };
+    }
+
+    return {
+        text: button.text,
+        url: button.url
     };
 }
 

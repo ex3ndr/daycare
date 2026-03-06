@@ -1,16 +1,13 @@
 import { APP_AUTH_DEFAULT_ENDPOINT } from "../../api/app-server/appAuthLinkTool.js";
 
-const TELEGRAM_OPEN_APP_QUERY_PARAM = "openApp";
-const TELEGRAM_OPEN_APP_QUERY_VALUE = "1";
-
 /**
- * Adds Telegram app-open URL flag for Daycare frontend links.
- * Expects: url is absolute; webAppUrl is optional configured Telegram app frontend URL.
+ * Checks whether a URL targets the Daycare app origin used for Telegram Mini App launches.
+ * Expects: url is absolute when a match is expected; webAppUrl is optional configured Mini App URL.
  */
-export function telegramUrlOpenAppFlag(url: string, webAppUrl?: string | null): string {
+export function telegramWebAppUrlMatch(url: string, webAppUrl?: string | null): boolean {
     const parsedUrl = parseUrl(url);
     if (!parsedUrl) {
-        return url;
+        return false;
     }
 
     const allowedOrigins = new Set<string>();
@@ -23,12 +20,7 @@ export function telegramUrlOpenAppFlag(url: string, webAppUrl?: string | null): 
         allowedOrigins.add(configuredAppOrigin);
     }
 
-    if (!allowedOrigins.has(parsedUrl.origin)) {
-        return url;
-    }
-
-    parsedUrl.searchParams.set(TELEGRAM_OPEN_APP_QUERY_PARAM, TELEGRAM_OPEN_APP_QUERY_VALUE);
-    return parsedUrl.toString();
+    return allowedOrigins.has(parsedUrl.origin);
 }
 
 function parseUrl(value: string): URL | null {
