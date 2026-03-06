@@ -25,11 +25,11 @@ export function configResolve(settings: SettingsConfig, settingsPath: string, ov
     const configDir = path.dirname(resolvedSettingsPath);
     const dataDir = path.resolve(resolvedSettings.engine?.dataDir ?? DEFAULT_DAYCARE_DIR);
     const agentsDir = path.join(dataDir, "agents");
-    const usersDir = path.join(configDir, "users");
+    const usersDir = path.join(dataDir, "users");
     const databasePath = path.resolve(resolvedSettings.engine?.db?.path ?? path.join(dataDir, "daycare.db"));
     const databaseUrl = configDatabaseUrlResolve(resolvedSettings.engine?.db?.url);
     const databaseAutoMigrate = resolvedSettings.engine?.db?.autoMigrate ?? true;
-    const authPath = path.join(dataDir, "auth.json");
+    const authPath = path.join(configDir, "auth.json");
     const socketPath = resolveEngineSocketPath(resolvedSettings.engine?.socketPath);
     const frozenSettings = freezeDeep(structuredClone(resolvedSettings));
     const verbose = overrides.verbose ?? false;

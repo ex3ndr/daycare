@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { configResolve } from "./configResolve.js";
 
 describe("configResolve", () => {
-    it("resolves runtime directories with usersDir under configDir", () => {
+    it("resolves runtime directories with usersDir under dataDir and authPath under configDir", () => {
         const configPath = path.join("/tmp/daycare", "settings.json");
         const config = configResolve(
             {
@@ -18,8 +18,9 @@ describe("configResolve", () => {
 
         expect(config.dataDir).toBe(path.resolve("/tmp/daycare/.daycare"));
         expect(config.agentsDir).toBe(path.resolve("/tmp/daycare/.daycare/agents"));
-        expect(config.usersDir).toBe(path.resolve("/tmp/daycare/users"));
+        expect(config.usersDir).toBe(path.resolve("/tmp/daycare/.daycare/users"));
         expect(config.db.path).toBe(path.resolve("/tmp/daycare/.daycare/daycare.db"));
+        expect(config.authPath).toBe(path.resolve("/tmp/daycare/auth.json"));
     });
 
     it("resolves engine.db.path from settings", () => {
