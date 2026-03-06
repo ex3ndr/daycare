@@ -121,6 +121,7 @@ Fragments can include an optional root-level `code` string with Python source ex
 - `init()` returns the initial state object for the fragment. When present, it overrides `spec.state`.
 - Action functions such as `increment(state, params)` are invoked by `on` bindings and must return the next top-level state object.
 - Runtime limits are capped at `5` seconds and `10 MB` per execution.
+- Fragment saves are verified with backend Monty parsing, and any referenced custom action names must resolve successfully before create/update is accepted.
 - If `code` is missing or blank, fragments fall back to static `spec.state ?? {}` behavior.
 
 Example:

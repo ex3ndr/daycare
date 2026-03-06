@@ -95,4 +95,31 @@ describe("fragmentsCreate", () => {
         });
         expect(failed).toEqual({ ok: false, error: "Fragment id already exists: fragment-1" });
     });
+
+    it("rejects broken fragment python code", async () => {
+        const ctx = contextForUser({ userId: "user-1" });
+
+        const result = await fragmentsCreate({
+            ctx,
+            body: {
+                id: "fragment-1",
+                kitVersion: "1",
+                title: "Broken Card",
+                spec: {
+                    root: "main",
+                    code: "def init(:\n    return {}",
+                    elements: {
+                        main: { type: "View", props: {}, children: [] }
+                    }
+                }
+            },
+            fragments: {} as never
+        });
+
+        expect(result.ok).toBe(false);
+        if (result.ok) {
+            throw new Error("Expected broken fragment python to be rejected.");
+        }
+        expect(result.error).toContain("Fragment Python syntax error.");
+    });
 });

@@ -84,4 +84,41 @@ describe("fragmentUpdateToolBuild", () => {
             storage.connection.close();
         }
     });
+
+    it("rejects broken fragment python during updates", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+            await storage.fragments.create(ctx, {
+                id: "fragment-1",
+                kitVersion: "1",
+                title: "Profile Card",
+                description: "Original",
+                spec: { root: "main", elements: { main: { type: "Text", props: { text: "old" }, children: [] } } },
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            const tool = fragmentUpdateToolBuild();
+
+            await expect(
+                tool.execute(
+                    {
+                        fragmentId: "fragment-1",
+                        spec: {
+                            root: "main",
+                            code: "def init(:\n    return {}",
+                            elements: {
+                                main: { type: "View", props: {}, children: [] }
+                            }
+                        }
+                    },
+                    contextBuild(storage),
+                    toolCall
+                )
+            ).rejects.toThrow("Fragment Python syntax error.");
+        } finally {
+            storage.connection.close();
+        }
+    });
 });

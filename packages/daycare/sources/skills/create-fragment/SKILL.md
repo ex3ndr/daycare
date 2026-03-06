@@ -40,6 +40,7 @@ Fragments may define `spec.code` with Python source for client-side execution.
 - Named action functions take `(state, params)` and return the next top-level state object.
 - Action names must match the `on` binding action name exactly.
 - Use `spec.state` only as a fallback when no `init()` is defined.
+- Fragment saves are Monty-verified, so syntax errors and missing custom action symbols are rejected before persistence.
 - Keep code deterministic and side-effect free; execution is sandboxed with a `5s` time limit and `10 MB` memory cap.
 
 Example:

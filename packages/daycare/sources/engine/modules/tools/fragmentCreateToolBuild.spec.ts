@@ -84,4 +84,31 @@ describe("fragmentCreateToolBuild", () => {
             storage.connection.close();
         }
     });
+
+    it("rejects broken fragment python code", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const tool = fragmentCreateToolBuild();
+
+            await expect(
+                tool.execute(
+                    {
+                        title: "Broken Card",
+                        kitVersion: "1",
+                        spec: {
+                            root: "main",
+                            code: "def init(:\n    return {}",
+                            elements: {
+                                main: { type: "View", props: {}, children: [] }
+                            }
+                        }
+                    },
+                    contextBuild(storage),
+                    toolCall
+                )
+            ).rejects.toThrow("Fragment Python syntax error.");
+        } finally {
+            storage.connection.close();
+        }
+    });
 });

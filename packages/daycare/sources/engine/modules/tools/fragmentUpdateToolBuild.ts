@@ -1,6 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import { fragmentCodeVerify } from "../../../fragments/fragmentCodeVerify.js";
 import { fragmentSpecIssuesFormat, fragmentSpecValidate } from "../../../fragments/fragmentSpecValidate.js";
 import type { FragmentUpdateInput } from "../../../storage/fragmentsRepository.js";
 
@@ -86,6 +87,10 @@ export function fragmentUpdateToolBuild(): ToolDefinition {
                 const validation = fragmentSpecValidate(spec);
                 if (!validation.valid) {
                     throw new Error(`Invalid spec:\n${fragmentSpecIssuesFormat(validation.issues)}`);
+                }
+                const codeError = fragmentCodeVerify(spec);
+                if (codeError) {
+                    throw new Error(codeError);
                 }
                 changes.spec = spec;
             }

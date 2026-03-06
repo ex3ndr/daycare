@@ -89,4 +89,29 @@ describe("fragmentsUpdate", () => {
         });
         expect(missing).toEqual({ ok: false, error: "Fragment not found: missing" });
     });
+
+    it("rejects broken fragment python during spec updates", async () => {
+        const ctx = contextForUser({ userId: "user-1" });
+
+        const result = await fragmentsUpdate({
+            ctx,
+            id: "fragment-1",
+            body: {
+                spec: {
+                    root: "main",
+                    code: "def init(:\n    return {}",
+                    elements: {
+                        main: { type: "View", props: {}, children: [] }
+                    }
+                }
+            },
+            fragments: {} as never
+        });
+
+        expect(result.ok).toBe(false);
+        if (result.ok) {
+            throw new Error("Expected broken fragment python to be rejected.");
+        }
+        expect(result.error).toContain("Fragment Python syntax error.");
+    });
 });
