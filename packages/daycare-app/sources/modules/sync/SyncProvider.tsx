@@ -2,6 +2,8 @@ import type { PropsWithChildren, ReactNode } from "react";
 import * as React from "react";
 import { useAgentsStore } from "@/modules/agents/agentsContext";
 import { useAuthStore } from "@/modules/auth/authContext";
+import { useObservationsStore } from "@/modules/observations/observationsContext";
+import { useTasksStore } from "@/modules/tasks/tasksContext";
 import { useSyncStore } from "./syncContext";
 
 /**
@@ -18,6 +20,8 @@ export function SyncProvider({ children }: PropsWithChildren): ReactNode {
     const disconnect = useSyncStore((s) => s.disconnect);
     const syncStatus = useSyncStore((s) => s.status);
     const fetchAgents = useAgentsStore((s) => s.fetch);
+    const fetchObservations = useObservationsStore((s) => s.fetch);
+    const fetchTasks = useTasksStore((s) => s.fetch);
 
     // Connect/disconnect based on auth state
     React.useEffect(() => {
@@ -31,12 +35,14 @@ export function SyncProvider({ children }: PropsWithChildren): ReactNode {
         };
     }, [authState, baseUrl, token, connect, disconnect]);
 
-    // Refetch agents when sync becomes connected (initial connect or reconnect)
+    // Refetch stores when sync becomes connected (initial connect or reconnect)
     React.useEffect(() => {
         if (syncStatus === "connected" && baseUrl && token) {
             void fetchAgents(baseUrl, token);
+            void fetchObservations(baseUrl, token);
+            void fetchTasks(baseUrl, token);
         }
-    }, [syncStatus, baseUrl, token, fetchAgents]);
+    }, [syncStatus, baseUrl, token, fetchAgents, fetchObservations, fetchTasks]);
 
     return <>{children}</>;
 }
