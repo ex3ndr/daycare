@@ -26,7 +26,7 @@ export type FragmentPythonState =
 export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPythonState {
     const baseUrl = useAuthStore((state) => state.baseUrl);
     const token = useAuthStore((state) => state.token);
-    const { workspaceId, loaded } = useWorkspace();
+    const { workspaceId } = useWorkspace();
     const fallbackState = React.useMemo(() => fragmentStateNormalize(spec?.state), [spec]);
     const code = typeof spec?.code === "string" && spec.code.trim() ? spec.code : null;
     const fallbackStore = React.useMemo(() => createStateStore(fallbackState), [fallbackState]);
@@ -42,7 +42,7 @@ export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPyth
     const [runtimeState, setRuntimeState] = React.useState<FragmentPythonState>(() => fallbackReady);
 
     React.useEffect(() => {
-        if (!code || !loaded) {
+        if (!code) {
             setRuntimeState(fallbackReady);
             return;
         }
@@ -149,7 +149,7 @@ export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPyth
         return () => {
             active = false;
         };
-    }, [workspaceId, loaded, baseUrl, code, fallbackReady, fallbackStore, token]);
+    }, [workspaceId, baseUrl, code, fallbackReady, fallbackStore, token]);
 
     return runtimeState;
 }

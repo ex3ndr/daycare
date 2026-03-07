@@ -2,7 +2,7 @@ import { Redirect, Slot, usePathname } from "expo-router";
 import { workspaceRouteIdResolve } from "@/modules/workspaces/workspaceIdResolve";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
-export default function WorkspaceLayout() {
+export default function WorkspaceModalLayout() {
     const pathname = usePathname();
     const loaded = useWorkspacesStore((state) => state.loaded);
     const workspaces = useWorkspacesStore((state) => state.workspaces);

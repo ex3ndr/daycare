@@ -20,7 +20,7 @@ export function SettingsView() {
     const token = useAuthStore((s) => s.token);
     const userId = useAuthStore((s) => s.userId);
     const logout = useAuthStore((s) => s.logout);
-    const { workspaceId, loaded } = useWorkspace();
+    const { workspaceId } = useWorkspace();
 
     const profile = useProfileStore((s) => s.profile);
     const loading = useProfileStore((s) => s.loading);
@@ -42,7 +42,7 @@ export function SettingsView() {
     }, [baseUrl, token, fetchProfile]);
 
     useEffect(() => {
-        if (!baseUrl || !token || !loaded) {
+        if (!baseUrl || !token) {
             setSecrets(null);
             setSecretsLoading(false);
             setSecretsError(null);
@@ -79,7 +79,7 @@ export function SettingsView() {
         return () => {
             active = false;
         };
-    }, [baseUrl, token, workspaceId, loaded]);
+    }, [baseUrl, token, workspaceId]);
 
     const connectEmailRequest = async () => {
         const normalizedEmail = email.trim().toLowerCase();

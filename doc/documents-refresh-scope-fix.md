@@ -6,7 +6,7 @@ scope requests to the wrong workspace.
 
 The fix removes `activeId` and `setActive` from the app workspace store and replaces them with a route-backed
 `WorkspaceProvider`. Screens now read the current workspace from context, workspace-scoped modals live under
-`/:workspace/...` paths, and the context stays `null` until the workspace list is loaded.
+`/:workspace/...` paths, and workspace layouts handle loading / no-access guards before any workspace consumers render.
 
 If a route requests a workspace that is not accessible after loading, the app redirects to a dedicated
 `/workspace-not-found` screen instead of silently falling back to another workspace.
@@ -15,11 +15,12 @@ If a route requests a workspace that is not accessible after loading, the app re
 flowchart TD
     A[Current URL] --> B[WorkspaceProvider]
     C[Workspace list] --> B
-    B --> E{Workspace list loaded?}
-    E -->|No| F[Context returns null]
-    E -->|Yes and access granted| G[Current workspace context]
-    E -->|Yes and no access| H[/workspace-not-found]
-    G --> I[Documents view]
-    G --> J[Files / routines / fragments modals]
-    G --> K[Sync and chat APIs]
+    B --> E[Workspace layout guard]
+    C --> E
+    E -->|Loading| F[Render nothing]
+    E -->|No access| G[/workspace-not-found]
+    E -->|Access granted| H[Current workspace context]
+    H --> I[Documents view]
+    H --> J[Files / routines / fragments modals]
+    H --> K[Sync and chat APIs]
 ```

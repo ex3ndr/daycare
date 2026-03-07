@@ -1,5 +1,5 @@
 import { Octicons } from "@expo/vector-icons";
-import { Navigator, type ScreenProps } from "expo-router";
+import { Navigator, Redirect, type ScreenProps, usePathname } from "expo-router";
 import * as React from "react";
 import { Pressable, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -14,6 +14,8 @@ import {
 } from "@/components/AppSidebar";
 import { CHAT_COLLAPSED_WIDTH, CHAT_PANEL_WIDTH, ChatPanel } from "@/components/ChatPanel";
 import { Drawer } from "@/components/Drawer";
+import { workspaceRouteIdResolve } from "@/modules/workspaces/workspaceIdResolve";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
 const SIDEBAR_KEY = "daycare:sidebar-collapsed";
 const CHAT_KEY = "daycare:chat-collapsed";
@@ -41,7 +43,18 @@ function panelStateWrite(key: string, collapsed: boolean): void {
 
 export default function AppLayout() {
     const { theme } = useUnistyles();
+    const pathname = usePathname();
+    const loaded = useWorkspacesStore((state) => state.loaded);
+    const workspaces = useWorkspacesStore((state) => state.workspaces);
+    const routeWorkspaceId = React.useMemo(() => workspaceRouteIdResolve(pathname), [pathname]);
     const isMobile = theme.layout.isMobileLayout;
+
+    if (!loaded) {
+        return null;
+    }
+    if (routeWorkspaceId && !workspaces.some((workspace) => workspace.userId === routeWorkspaceId)) {
+        return <Redirect href="/workspace-not-found" />;
+    }
 
     if (isMobile) {
         return <MobileLayout />;

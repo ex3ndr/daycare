@@ -13,12 +13,12 @@ import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 export default function FragmentDetailScreen() {
     const { theme } = useUnistyles();
     const { id } = useLocalSearchParams<{ id: string }>();
-    const { workspaceId, loaded } = useWorkspace();
+    useWorkspace();
 
     const fragment = useFragmentsStore((s) => s.fragments.find((f) => f.id === id) ?? null);
     const fragmentPython = useFragmentPython((fragment?.spec as Spec | null) ?? null);
 
-    if (!loaded || !workspaceId || !fragment) return null;
+    if (!fragment) return null;
 
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surface }]}>

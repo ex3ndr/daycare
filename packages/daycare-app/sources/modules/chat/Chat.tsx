@@ -27,7 +27,7 @@ export function Chat({ agentId, systemPrompt, name, description }: ChatProps) {
     const { theme } = useUnistyles();
     const baseUrl = useAuthStore((state) => state.baseUrl);
     const token = useAuthStore((state) => state.token);
-    const { workspaceId, loaded } = useWorkspace();
+    const { workspaceId } = useWorkspace();
 
     const open = useChatStore((state) => state.open);
     const create = useChatStore((state) => state.create);
@@ -57,7 +57,7 @@ export function Chat({ agentId, systemPrompt, name, description }: ChatProps) {
     }, [agentId]);
 
     React.useEffect(() => {
-        if (!baseUrl || !token || !loaded) {
+        if (!baseUrl || !token) {
             return;
         }
 
@@ -85,10 +85,10 @@ export function Chat({ agentId, systemPrompt, name, description }: ChatProps) {
             .finally(() => {
                 setInitializing(false);
             });
-    }, [baseUrl, token, workspaceId, loaded, agentId, systemPrompt, name, description, createdAgentId, open, create]);
+    }, [baseUrl, token, workspaceId, agentId, systemPrompt, name, description, createdAgentId, open, create]);
 
     React.useEffect(() => {
-        if (!baseUrl || !token || !loaded || !resolvedAgentId) {
+        if (!baseUrl || !token || !resolvedAgentId) {
             return;
         }
 
@@ -99,16 +99,16 @@ export function Chat({ agentId, systemPrompt, name, description }: ChatProps) {
         return () => {
             clearInterval(interval);
         };
-    }, [baseUrl, token, workspaceId, loaded, resolvedAgentId, poll]);
+    }, [baseUrl, token, workspaceId, resolvedAgentId, poll]);
 
     const onSend = React.useCallback(
         async (text: string) => {
-            if (!baseUrl || !token || !loaded || !resolvedAgentId) {
+            if (!baseUrl || !token || !resolvedAgentId) {
                 return;
             }
             await send(baseUrl, token, workspaceId, resolvedAgentId, text);
         },
-        [baseUrl, token, workspaceId, loaded, resolvedAgentId, send]
+        [baseUrl, token, workspaceId, resolvedAgentId, send]
     );
 
     const error = configurationError ?? initializationError ?? session.error;

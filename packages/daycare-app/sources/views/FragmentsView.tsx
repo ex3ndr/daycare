@@ -13,7 +13,7 @@ export function FragmentsView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const { workspaceId, loaded } = useWorkspace();
+    const { workspaceId } = useWorkspace();
 
     const fragments = useFragmentsStore((s) => s.fragments);
     const loading = useFragmentsStore((s) => s.loading);
@@ -21,10 +21,10 @@ export function FragmentsView() {
     const fetchFragments = useFragmentsStore((s) => s.fetch);
 
     React.useEffect(() => {
-        if (baseUrl && token && loaded) {
+        if (baseUrl && token) {
             void fetchFragments(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, workspaceId, loaded, fetchFragments]);
+    }, [baseUrl, token, workspaceId, fetchFragments]);
 
     if (loading && fragments.length === 0) {
         return (

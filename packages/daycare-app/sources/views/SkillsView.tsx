@@ -24,7 +24,7 @@ export function SkillsView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const { workspaceId, loaded } = useWorkspace();
+    const { workspaceId } = useWorkspace();
 
     const skills = useSkillsStore((s) => s.skills);
     const loading = useSkillsStore((s) => s.loading);
@@ -32,10 +32,10 @@ export function SkillsView() {
     const fetchSkills = useSkillsStore((s) => s.fetch);
 
     useEffect(() => {
-        if (baseUrl && token && loaded) {
+        if (baseUrl && token) {
             void fetchSkills(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, workspaceId, loaded, fetchSkills]);
+    }, [baseUrl, token, workspaceId, fetchSkills]);
 
     if (loading && skills.length === 0) {
         return (

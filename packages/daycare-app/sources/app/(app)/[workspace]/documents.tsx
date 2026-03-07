@@ -11,7 +11,7 @@ import { DocumentsView } from "@/views/documents/DocumentsView";
 export default function DocumentsRoute() {
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const { workspaceId, loaded } = useWorkspace();
+    const { workspaceId } = useWorkspace();
     const documentItems = useDocumentsStore((s) => s.items);
     const fetchDocuments = useDocumentsStore((s) => s.fetch);
     const createDocument = useDocumentsStore((s) => s.createDocument);
@@ -20,10 +20,10 @@ export default function DocumentsRoute() {
     const documentRootId = React.useMemo(() => documentRootIdResolve(documentItems), [documentItems]);
 
     React.useEffect(() => {
-        if (baseUrl && token && loaded) {
+        if (baseUrl && token) {
             void fetchDocuments(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, workspaceId, loaded, fetchDocuments]);
+    }, [baseUrl, token, workspaceId, fetchDocuments]);
 
     const _handleCreatePress = React.useCallback((parentId?: string | null) => {
         setCreateParentId(parentId ?? null);

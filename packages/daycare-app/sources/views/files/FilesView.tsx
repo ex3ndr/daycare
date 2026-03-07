@@ -30,7 +30,7 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
     const router = useRouter();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const { workspaceId, loaded } = useWorkspace();
+    const { workspaceId } = useWorkspace();
 
     const roots = useFilesStore((s) => s.roots);
     const rootsLoading = useFilesStore((s) => s.loading);
@@ -44,14 +44,14 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
 
     // Fetch roots on mount
     React.useEffect(() => {
-        if (baseUrl && token && loaded) {
+        if (baseUrl && token) {
             void fetchRoots(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, workspaceId, loaded, fetchRoots]);
+    }, [baseUrl, token, workspaceId, fetchRoots]);
 
     // Fetch directory entries when dirPath changes
     React.useEffect(() => {
-        if (!dirPath || !baseUrl || !token || !loaded) return;
+        if (!dirPath || !baseUrl || !token) return;
         setLoading(true);
         setError(null);
         filesFetchDir(baseUrl, token, workspaceId, dirPath)
@@ -63,7 +63,7 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
                 setError(err instanceof Error ? err.message : "Failed to list directory.");
                 setLoading(false);
             });
-    }, [dirPath, baseUrl, token, workspaceId, loaded]);
+    }, [dirPath, baseUrl, token, workspaceId]);
 
     const wsPrefix = workspaceId ? `/${workspaceId}` : "";
 
