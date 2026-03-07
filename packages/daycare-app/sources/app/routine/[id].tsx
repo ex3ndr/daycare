@@ -14,22 +14,22 @@ export default function RoutineDetailScreen() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const { workspaceId } = useWorkspace();
+    const { workspaceId, loaded } = useWorkspace();
     const selectTask = useTasksStore((s) => s.selectTask);
     const detailLoading = useTasksStore((s) => s.detailLoading);
     const task = useTasksStore((s) => s.tasks.find((t) => t.id === id));
 
     // Select the task on mount, clear on unmount.
     React.useEffect(() => {
-        if (baseUrl && token && id) {
+        if (baseUrl && token && id && loaded) {
             selectTask(baseUrl, token, workspaceId, id);
         }
         return () => {
-            if (baseUrl && token) {
+            if (baseUrl && token && loaded) {
                 selectTask(baseUrl, token, workspaceId, null);
             }
         };
-    }, [baseUrl, token, workspaceId, id, selectTask]);
+    }, [baseUrl, token, workspaceId, loaded, id, selectTask]);
 
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surface }]}>

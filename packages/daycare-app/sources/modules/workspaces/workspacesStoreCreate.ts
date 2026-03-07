@@ -4,6 +4,8 @@ import { workspacesFetch } from "./workspacesFetch";
 
 export type WorkspacesStore = {
     workspaces: WorkspaceListItem[];
+    loading: boolean;
+    loaded: boolean;
     fetch: (baseUrl: string, token: string) => Promise<void>;
 };
 
@@ -14,9 +16,12 @@ export type WorkspacesStore = {
 export function workspacesStoreCreate() {
     return create<WorkspacesStore>((set) => ({
         workspaces: [],
+        loading: false,
+        loaded: false,
         fetch: async (baseUrl, token) => {
+            set({ loading: true });
             const workspaces = await workspacesFetch(baseUrl, token);
-            set({ workspaces });
+            set({ workspaces, loading: false, loaded: true });
         }
     }));
 }

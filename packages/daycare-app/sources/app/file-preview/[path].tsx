@@ -17,7 +17,7 @@ export default function FilePreviewScreen() {
     const { path: encodedPath } = useLocalSearchParams<{ path: string }>();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const { workspaceId } = useWorkspace();
+    const { workspaceId, loaded } = useWorkspace();
 
     const filePath = encodedPath ? filesPathDecode(encodedPath) : null;
     const fileName = filePath?.split("/").pop() ?? "File";
@@ -27,7 +27,7 @@ export default function FilePreviewScreen() {
     const [error, setError] = React.useState<string | null>(null);
 
     React.useEffect(() => {
-        if (!filePath || !baseUrl || !token) return;
+        if (!filePath || !baseUrl || !token || !loaded) return;
         setLoading(true);
         setError(null);
         filesFetchPreview(baseUrl, token, workspaceId, filePath)
@@ -39,7 +39,7 @@ export default function FilePreviewScreen() {
                 setError(err instanceof Error ? err.message : "Failed to read file.");
                 setLoading(false);
             });
-    }, [filePath, baseUrl, token, workspaceId]);
+    }, [filePath, baseUrl, token, workspaceId, loaded]);
 
     if (!filePath) return null;
 

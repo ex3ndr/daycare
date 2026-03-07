@@ -37,7 +37,7 @@ export function CostsView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const { workspaceId } = useWorkspace();
+    const { workspaceId, loaded } = useWorkspace();
 
     const period = useCostsStore((s) => s.period);
     const rows = useCostsStore((s) => s.rows);
@@ -48,19 +48,19 @@ export function CostsView() {
 
     // biome-ignore lint/correctness/useExhaustiveDependencies: period triggers re-fetch; store reads it internally
     useEffect(() => {
-        if (baseUrl && token) {
+        if (baseUrl && token && loaded) {
             void fetchCosts(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, workspaceId, fetchCosts, period]);
+    }, [baseUrl, token, workspaceId, loaded, fetchCosts, period]);
 
     const agents = useAgentsStore((s) => s.agents);
     const fetchAgents = useAgentsStore((s) => s.fetch);
 
     useEffect(() => {
-        if (baseUrl && token) {
+        if (baseUrl && token && loaded) {
             void fetchAgents(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, workspaceId, fetchAgents]);
+    }, [baseUrl, token, workspaceId, loaded, fetchAgents]);
 
     // Map agentId -> display name
     const agentNames = useMemo(() => {

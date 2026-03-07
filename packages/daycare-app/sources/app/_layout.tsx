@@ -143,6 +143,7 @@ export default function RootLayout() {
                                                 <Stack.Screen name="routine/[id]" options={modalScreenOptions} />
                                                 <Stack.Screen name="file-preview/[path]" options={modalScreenOptions} />
                                                 <Stack.Screen name="share" />
+                                                <Stack.Screen name="workspace-not-found" />
                                             </Stack.Protected>
                                             <Stack.Protected guard={authState === "unauthenticated"}>
                                                 <Stack.Screen name="(auth)" />

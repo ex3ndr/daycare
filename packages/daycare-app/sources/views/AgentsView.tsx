@@ -220,7 +220,7 @@ export function AgentsView() {
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
 
-    const { workspaceId } = useWorkspace();
+    const { workspaceId, loaded } = useWorkspace();
 
     const agents = useAgentsStore((s) => s.agents);
     const loading = useAgentsStore((s) => s.loading);
@@ -228,10 +228,10 @@ export function AgentsView() {
     const fetchAgents = useAgentsStore((s) => s.fetch);
 
     useEffect(() => {
-        if (baseUrl && token) {
+        if (baseUrl && token && loaded) {
             void fetchAgents(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, workspaceId, fetchAgents]);
+    }, [baseUrl, token, workspaceId, loaded, fetchAgents]);
 
     const handleAgentPress = useCallback(
         (agentId: string) => {

@@ -578,7 +578,7 @@ function montyDevServerExamplesCreate(databaseId: string): FragmentExample[] {
 export function MontyDevView() {
     const baseUrl = useAuthStore((state) => state.baseUrl);
     const token = useAuthStore((state) => state.token);
-    const { workspaceId } = useWorkspace();
+    const { workspaceId, loaded } = useWorkspace();
     const [running, setRunning] = React.useState(false);
     const [runtimeStatus, setRuntimeStatus] = React.useState<"idle" | "loading" | "ready" | "error">("idle");
     const [runtimeError, setRuntimeError] = React.useState<string | null>(null);
@@ -615,7 +615,7 @@ export function MontyDevView() {
     }, [runChecks]);
 
     React.useEffect(() => {
-        if (!baseUrl || !token) {
+        if (!baseUrl || !token || !loaded) {
             setFixtureState({ status: "idle" });
             return;
         }
@@ -646,7 +646,7 @@ export function MontyDevView() {
         return () => {
             active = false;
         };
-    }, [workspaceId, baseUrl, token]);
+    }, [workspaceId, loaded, baseUrl, token]);
 
     const runtimeSubtitle = runtimeError ?? (runtimeStatus === "loading" ? "Loading runtime..." : undefined);
     const fragmentExamples = React.useMemo(() => {

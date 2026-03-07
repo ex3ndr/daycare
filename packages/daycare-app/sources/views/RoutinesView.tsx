@@ -64,7 +64,7 @@ export function RoutinesView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const { workspaceId } = useWorkspace();
+    const { workspaceId, loaded } = useWorkspace();
 
     const tasks = useTasksStore((s) => s.tasks);
     const triggers = useTasksStore((s) => s.triggers);
@@ -73,10 +73,10 @@ export function RoutinesView() {
     const fetchTasks = useTasksStore((s) => s.fetch);
 
     useEffect(() => {
-        if (baseUrl && token) {
+        if (baseUrl && token && loaded) {
             void fetchTasks(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, workspaceId, fetchTasks]);
+    }, [baseUrl, token, workspaceId, loaded, fetchTasks]);
 
     // Index triggers by taskId for efficient lookup
     const triggersByTask = useMemo(() => {

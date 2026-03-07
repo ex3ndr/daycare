@@ -14,13 +14,12 @@ export function workspaceRouteIdResolve(pathname: string): string | null {
 }
 
 /**
- * Resolves the current workspace id for app requests.
- * Expects: route or query workspace should win; otherwise falls back to self or the first workspace.
+ * Resolves the requested workspace id from either the route or modal query param.
+ * Expects: route workspace should win over query workspace when both are present.
  */
-export function workspaceCurrentIdResolve(
+export function workspaceRequestedIdResolve(
     routeWorkspaceId: string | null,
-    searchWorkspace: string | string[] | undefined,
-    workspaces: WorkspaceListItem[]
+    searchWorkspace: string | string[] | undefined
 ): string | null {
     if (routeWorkspaceId) {
         return routeWorkspaceId;
@@ -35,6 +34,26 @@ export function workspaceCurrentIdResolve(
         if (firstWorkspace) {
             return firstWorkspace;
         }
+    }
+
+    return null;
+}
+
+/**
+ * Resolves the current workspace id for app requests once access is known.
+ * Expects: returns null until the workspace list is loaded and the requested workspace is validated.
+ */
+export function workspaceCurrentIdResolve(
+    requestedWorkspaceId: string | null,
+    workspaces: WorkspaceListItem[],
+    loaded: boolean
+): string | null {
+    if (!loaded) {
+        return null;
+    }
+
+    if (requestedWorkspaceId) {
+        return workspaces.some((workspace) => workspace.userId === requestedWorkspaceId) ? requestedWorkspaceId : null;
     }
 
     return workspaces.find((workspace) => workspace.isSelf)?.userId ?? workspaces[0]?.userId ?? null;

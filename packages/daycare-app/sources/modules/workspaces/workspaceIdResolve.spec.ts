@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { workspaceCurrentIdResolve, workspaceRouteIdResolve } from "./workspaceIdResolve";
+import { workspaceCurrentIdResolve, workspaceRequestedIdResolve, workspaceRouteIdResolve } from "./workspaceIdResolve";
 import type { WorkspaceListItem } from "./workspacesFetch";
 
 const selfWorkspace: WorkspaceListItem = {
@@ -32,22 +32,34 @@ describe("workspaceRouteIdResolve", () => {
     });
 });
 
-describe("workspaceCurrentIdResolve", () => {
+describe("workspaceRequestedIdResolve", () => {
     it("prefers the workspace from the route", () => {
-        expect(workspaceCurrentIdResolve("team", undefined, [selfWorkspace])).toBe("team");
+        expect(workspaceRequestedIdResolve("team", undefined)).toBe("team");
     });
 
     it("falls back to the workspace query param", () => {
-        expect(workspaceCurrentIdResolve(null, "team", [selfWorkspace])).toBe("team");
-        expect(workspaceCurrentIdResolve(null, ["", "team"], [selfWorkspace])).toBe("team");
+        expect(workspaceRequestedIdResolve(null, "team")).toBe("team");
+        expect(workspaceRequestedIdResolve(null, ["", "team"])).toBe("team");
+    });
+});
+
+describe("workspaceCurrentIdResolve", () => {
+    it("returns null until workspaces are loaded", () => {
+        expect(workspaceCurrentIdResolve("team", [selfWorkspace, teamWorkspace], false)).toBeNull();
+        expect(workspaceCurrentIdResolve(null, [selfWorkspace], false)).toBeNull();
     });
 
-    it("falls back to the personal workspace when no route workspace exists", () => {
-        expect(workspaceCurrentIdResolve(null, undefined, [teamWorkspace, selfWorkspace])).toBe("self");
+    it("returns the requested workspace only when it is accessible", () => {
+        expect(workspaceCurrentIdResolve("team", [selfWorkspace, teamWorkspace], true)).toBe("team");
+        expect(workspaceCurrentIdResolve("missing", [selfWorkspace, teamWorkspace], true)).toBeNull();
+    });
+
+    it("falls back to the personal workspace when no specific workspace is requested", () => {
+        expect(workspaceCurrentIdResolve(null, [teamWorkspace, selfWorkspace], true)).toBe("self");
     });
 
     it("falls back to the first workspace when there is no personal workspace", () => {
-        expect(workspaceCurrentIdResolve(null, undefined, [teamWorkspace])).toBe("team");
-        expect(workspaceCurrentIdResolve(null, undefined, [])).toBeNull();
+        expect(workspaceCurrentIdResolve(null, [teamWorkspace], true)).toBe("team");
+        expect(workspaceCurrentIdResolve(null, [], true)).toBeNull();
     });
 });

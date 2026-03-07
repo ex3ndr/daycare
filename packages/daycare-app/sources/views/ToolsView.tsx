@@ -22,7 +22,7 @@ export function ToolsView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const { workspaceId } = useWorkspace();
+    const { workspaceId, loaded } = useWorkspace();
 
     const tools = useToolsStore((s) => s.tools);
     const loading = useToolsStore((s) => s.loading);
@@ -30,10 +30,10 @@ export function ToolsView() {
     const fetchTools = useToolsStore((s) => s.fetch);
 
     useEffect(() => {
-        if (baseUrl && token) {
+        if (baseUrl && token && loaded) {
             void fetchTools(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, workspaceId, fetchTools]);
+    }, [baseUrl, token, workspaceId, loaded, fetchTools]);
 
     if (loading && tools.length === 0) {
         return (
