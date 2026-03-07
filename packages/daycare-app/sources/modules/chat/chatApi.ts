@@ -43,6 +43,21 @@ export async function chatCreate(
 }
 
 /**
+ * Resolves (or creates) the direct messaging agent for the current user.
+ * Expects: baseUrl/token are valid authenticated values.
+ */
+export async function chatDirectResolve(baseUrl: string, token: string): Promise<string> {
+    const response = await fetch(`${baseUrl}/agents/direct`, {
+        headers: { authorization: `Bearer ${token}` }
+    });
+    const data = (await response.json()) as { ok?: boolean; agentId?: string; error?: string };
+    if (data.ok !== true || typeof data.agentId !== "string") {
+        throw new Error(data.error ?? "Failed to resolve direct agent");
+    }
+    return data.agentId;
+}
+
+/**
  * Fetches full history for a chat agent.
  * Expects: baseUrl/token/agentId are valid.
  */

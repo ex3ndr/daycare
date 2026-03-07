@@ -1,6 +1,6 @@
 import { Octicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Platform, Pressable, Text, TextInput, View } from "react-native";
+import { Platform, Pressable, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 
 export type ChatInputProps = {
@@ -8,7 +8,7 @@ export type ChatInputProps = {
 };
 
 /**
- * Terminal-style message input — monospace prompt with send button.
+ * Rounded message input with send button.
  */
 export function ChatInput({ onSend }: ChatInputProps) {
     const { theme } = useUnistyles();
@@ -22,7 +22,6 @@ export function ChatInput({ onSend }: ChatInputProps) {
         setText("");
     }, [text, onSend]);
 
-    // Enter-to-send on web, shift+enter for newline
     const handleKeyPress = React.useCallback(
         (e: { nativeEvent: { key: string; shiftKey?: boolean } }) => {
             if (Platform.OS === "web" && e.nativeEvent.key === "Enter" && !e.nativeEvent.shiftKey) {
@@ -36,10 +35,18 @@ export function ChatInput({ onSend }: ChatInputProps) {
 
     return (
         <View style={styles.wrapper}>
-            <View style={[styles.panel, { backgroundColor: theme.colors.surfaceContainerHigh }]}>
-                <Text style={[styles.prompt, { color: theme.colors.primary }]}>{">"}</Text>
+            <View
+                style={[
+                    styles.panel,
+                    {
+                        backgroundColor: theme.colors.surfaceContainerHigh,
+                        borderColor: theme.colors.outlineVariant
+                    }
+                ]}
+            >
                 <TextInput
                     style={[styles.input, { color: theme.colors.onSurface }]}
+                    placeholder="Message..."
                     placeholderTextColor={theme.colors.onSurfaceVariant}
                     value={text}
                     onChangeText={setText}
@@ -71,21 +78,16 @@ const styles = StyleSheet.create((theme) => ({
     wrapper: {
         paddingHorizontal: 12,
         paddingTop: 8,
-        paddingBottom: theme.layout.isMobileLayout ? 8 : 24
+        paddingBottom: theme.layout.isMobileLayout ? 8 : 16
     },
     panel: {
         flexDirection: "row",
         alignItems: "flex-end",
-        paddingHorizontal: 12,
+        paddingLeft: 16,
+        paddingRight: 6,
         paddingVertical: 6,
-        gap: 8,
-        borderRadius: 16
-    },
-    prompt: {
-        fontSize: 13,
-        fontFamily: "IBMPlexMono-Regular",
-        lineHeight: 20,
-        marginBottom: 6
+        borderRadius: 24,
+        borderWidth: 1
     },
     input: {
         flex: 1,
@@ -96,11 +98,10 @@ const styles = StyleSheet.create((theme) => ({
         lineHeight: 20
     },
     sendButton: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         alignItems: "center",
-        justifyContent: "center",
-        marginBottom: 4
+        justifyContent: "center"
     }
 }));

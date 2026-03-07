@@ -1,9 +1,11 @@
 import * as React from "react";
 import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { useAgentsStore } from "@/modules/agents/agentsContext";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { ChatInput } from "./ChatInput";
 import { ChatMessageList } from "./ChatMessageList";
+import { ChatThinkingBar } from "./ChatThinkingBar";
 import { useChat, useChatStore } from "./chatContext";
 
 const CHAT_POLL_INTERVAL_MS = 3000;
@@ -38,6 +40,12 @@ export function Chat({ agentId, systemPrompt, name, description }: ChatProps) {
     const resolvedAgentId = agentId ?? createdAgentId;
     const session = useChat(resolvedAgentId);
     const configurationError = !agentId && !systemPrompt ? CHAT_CONFIGURATION_ERROR : null;
+
+    const agentLifecycle = useAgentsStore((s) => {
+        if (!resolvedAgentId) return null;
+        return s.agents.find((a) => a.agentId === resolvedAgentId)?.lifecycle ?? null;
+    });
+    const thinking = agentLifecycle === "active" || session.sending;
 
     React.useEffect(() => {
         if (agentId) {
@@ -115,6 +123,8 @@ export function Chat({ agentId, systemPrompt, name, description }: ChatProps) {
             <View style={styles.listContainer}>
                 <ChatMessageList records={session.history} loading={loading} />
             </View>
+
+            <ChatThinkingBar thinking={thinking} />
 
             {resolvedAgentId ? <ChatInput onSend={onSend} /> : null}
         </View>

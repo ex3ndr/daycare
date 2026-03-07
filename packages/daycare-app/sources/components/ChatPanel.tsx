@@ -3,6 +3,9 @@ import * as React from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { useAuthStore } from "@/modules/auth/authContext";
+import { Chat } from "@/modules/chat/Chat";
+import { chatDirectResolve } from "@/modules/chat/chatApi";
 
 export const CHAT_PANEL_WIDTH = 320;
 export const CHAT_COLLAPSED_WIDTH = 56;
@@ -17,11 +20,27 @@ type ChatPanelProps = {
 };
 
 /**
- * Chat panel — placeholder for future chat integration.
+ * Chat panel — renders the direct messaging channel.
  * Always renders at full CHAT_PANEL_WIDTH; parent clips via overflow: hidden + animated width.
  */
 export const ChatPanel = React.memo<ChatPanelProps>(({ onToggleCollapse, labelsOpacity, panelWidth }) => {
     const { theme } = useUnistyles();
+    const baseUrl = useAuthStore((s) => s.baseUrl);
+    const token = useAuthStore((s) => s.token);
+    const authState = useAuthStore((s) => s.state);
+
+    const [directAgentId, setDirectAgentId] = React.useState<string | null>(null);
+    const resolvingRef = React.useRef(false);
+
+    React.useEffect(() => {
+        if (authState !== "authenticated" || !baseUrl || !token || resolvingRef.current) return;
+        resolvingRef.current = true;
+        void chatDirectResolve(baseUrl, token)
+            .then(setDirectAgentId)
+            .finally(() => {
+                resolvingRef.current = false;
+            });
+    }, [authState, baseUrl, token]);
 
     const labelsAnimatedStyle = useAnimatedStyle(() => ({
         opacity: labelsOpacity ? labelsOpacity.value : 1
@@ -54,7 +73,7 @@ export const ChatPanel = React.memo<ChatPanelProps>(({ onToggleCollapse, labelsO
             >
                 <Octicons name="comment-discussion" size={20} color={theme.colors.onSurfaceVariant} />
                 <Animated.View style={[styles.headerLabels, labelsAnimatedStyle]}>
-                    <Text style={[styles.title, { color: theme.colors.onSurface }]}>Chat</Text>
+                    <Text style={[styles.title, { color: theme.colors.onSurface }]}>Direct</Text>
                 </Animated.View>
                 <Animated.View
                     style={[styles.collapseButton, { backgroundColor: theme.colors.surface }, collapseButtonStyle]}
@@ -68,7 +87,7 @@ export const ChatPanel = React.memo<ChatPanelProps>(({ onToggleCollapse, labelsO
                     </Animated.View>
                 </Animated.View>
             </Pressable>
-            <View style={styles.content} />
+            <View style={styles.content}>{directAgentId ? <Chat agentId={directAgentId} /> : null}</View>
         </View>
     );
 });
