@@ -1,6 +1,5 @@
 import { Octicons } from "@expo/vector-icons";
 import { createId } from "@paralleldrive/cuid2";
-import { Image } from "expo-image";
 import { usePathname, useRouter } from "expo-router";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -330,6 +329,8 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         const selectedItem = extractItemFromPath(pathname);
 
         const activeId = useWorkspacesStore((s) => s.activeId);
+        const workspaces = useWorkspacesStore((s) => s.workspaces);
+        const activeWorkspace = workspaces.find((ws) => ws.userId === activeId);
 
         // Documents store
         const baseUrl = useAuthStore((s) => s.baseUrl);
@@ -400,24 +401,20 @@ export const AppSidebar = React.memo<AppSidebarProps>(
 
         return (
             <View style={[styles.sidebar, { backgroundColor: theme.colors.surface }]}>
-                {/* Logo header — entire row is pressable to toggle collapse */}
+                {/* Workspace header — entire row is pressable to toggle collapse */}
                 <Pressable
                     onPress={onToggleCollapse}
                     style={styles.header}
                     onHoverIn={() => (headerHovered.value = withTiming(1, { duration: 150 }))}
                     onHoverOut={() => (headerHovered.value = withTiming(0, { duration: 150 }))}
                 >
-                    <Image
-                        source={
-                            theme.dark
-                                ? require("@/assets/images/logo-white.png")
-                                : require("@/assets/images/logo-black.png")
-                        }
-                        style={{ width: 20, height: 20 }}
-                        contentFit="contain"
-                    />
+                    <Text style={styles.headerEmoji}>
+                        {activeWorkspace?.isSelf ? "\uD83D\uDD12" : (activeWorkspace?.emoji ?? "\uD83D\uDCE6")}
+                    </Text>
                     <Animated.View style={[styles.headerLabels, labelsAnimatedStyle]}>
-                        <Text style={[styles.title, { color: theme.colors.onSurface }]}>Daycare</Text>
+                        <Text style={[styles.title, { color: theme.colors.onSurface }]} numberOfLines={1}>
+                            {activeWorkspace?.isSelf ? "Personal" : (activeWorkspace?.firstName ?? "Workspace")}
+                        </Text>
                     </Animated.View>
                     <Animated.View
                         style={[styles.collapseButton, { backgroundColor: theme.colors.surface }, collapseButtonStyle]}
@@ -620,6 +617,9 @@ const styles = StyleSheet.create({
         paddingLeft: 20,
         paddingRight: 8,
         height: 56
+    },
+    headerEmoji: {
+        fontSize: 18
     },
     title: {
         fontSize: 18,

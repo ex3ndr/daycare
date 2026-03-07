@@ -14,6 +14,7 @@ import {
 } from "@/components/AppSidebar";
 import { CHAT_COLLAPSED_WIDTH, CHAT_PANEL_WIDTH, ChatPanel } from "@/components/ChatPanel";
 import { Drawer } from "@/components/Drawer";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
 const SIDEBAR_KEY = "daycare:sidebar-collapsed";
 const CHAT_KEY = "daycare:chat-collapsed";
@@ -48,6 +49,7 @@ export default function AppLayout() {
 function DesktopLayout() {
     const { theme } = useUnistyles();
     const insets = useSafeAreaInsets();
+    const activeId = useWorkspacesStore((s) => s.activeId);
     const initialSidebarCollapsed = React.useMemo(() => panelStateRead(SIDEBAR_KEY, true), []);
     const sidebarWidth = useSharedValue(initialSidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH);
     const labelsOpacity = useSharedValue(initialSidebarCollapsed ? 0 : 1);
@@ -116,7 +118,7 @@ function DesktopLayout() {
                     { ...cardMargins, backgroundColor: theme.colors.surface, boxShadow: cardShadow }
                 ]}
             >
-                <Slot />
+                <Slot key={activeId ?? "default"} />
             </View>
             <Animated.View
                 style={[
@@ -139,6 +141,7 @@ function DesktopLayout() {
 function MobileLayout() {
     const { theme } = useUnistyles();
     const insets = useSafeAreaInsets();
+    const activeId = useWorkspacesStore((s) => s.activeId);
     const [drawerOpen, setDrawerOpen] = React.useState(false);
 
     const openDrawer = React.useCallback(() => setDrawerOpen(true), []);
@@ -164,7 +167,7 @@ function MobileLayout() {
                 position="left"
             >
                 <View style={styles.content}>
-                    <Slot />
+                    <Slot key={activeId ?? "default"} />
                 </View>
             </Drawer>
 
