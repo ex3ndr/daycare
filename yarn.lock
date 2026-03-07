@@ -5878,6 +5878,14 @@ beautiful-mermaid@^0.1.3:
   dependencies:
     "@dagrejs/dagre" "^1.1.8"
 
+beautiful-mermaid@^1.1.3:
+  version "1.1.3"
+  resolved "https://registry.yarnpkg.com/beautiful-mermaid/-/beautiful-mermaid-1.1.3.tgz#33622aacd24f3cf37d61a1912673a4710ed90461"
+  integrity sha512-TItrtrAyHp1vwFfFVYauWGrquouk/6SS21Aq3RsxindSYZODcN4xYrPZD6BiZRU+o5mKJzDPz9MUSMvELdylyg==
+  dependencies:
+    elkjs "^0.11.0"
+    entities "^7.0.1"
+
 better-auth@^1.5.4:
   version "1.5.4"
   resolved "https://registry.yarnpkg.com/better-auth/-/better-auth-1.5.4.tgz#fd9c050618b4e15d5147d59eaf86f2783d890e7c"
@@ -6898,6 +6906,11 @@ electron-to-chromium@^1.5.263:
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.5.282.tgz#6695816e5b170210d6aa07561546ed7d97347630"
   integrity sha512-FCPkJtpst28UmFzd903iU7PdeVTfY0KAeJy+Lk0GLZRwgwYHn/irRcaCbQQOmr5Vytc/7rcavsYLvTM8RiHYhQ==
 
+elkjs@^0.11.0:
+  version "0.11.1"
+  resolved "https://registry.yarnpkg.com/elkjs/-/elkjs-0.11.1.tgz#d27fcdbbf5a8aeeff80420d17d1666f78cfc8544"
+  integrity sha512-zxxR9k+rx5ktMwT/FwyLdPCrq7xN6e4VGGHH8hA01vVYKjTFik7nHOxBnAYtrgYUB1RpAiLvA1/U2YraWxyKKg==
+
 emoji-regex@^8.0.0:
   version "8.0.0"
   resolved "https://registry.yarnpkg.com/emoji-regex/-/emoji-regex-8.0.0.tgz#e818fd69ce5ccfcb404594f842963bf53164cc37"
@@ -6932,6 +6945,11 @@ enquirer@^2.4.1:
   dependencies:
     ansi-colors "^4.1.1"
     strip-ansi "^6.0.1"
+
+entities@^7.0.1:
+  version "7.0.1"
+  resolved "https://registry.yarnpkg.com/entities/-/entities-7.0.1.tgz#26e8a88889db63417dcb9a1e79a3f1bc92b5976b"
+  integrity sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==
 
 error-kid@^1.0.1, error-kid@^1.0.2:
   version "1.0.2"
@@ -9162,6 +9180,11 @@ marked@^17.0.1:
   version "17.0.1"
   resolved "https://registry.yarnpkg.com/marked/-/marked-17.0.1.tgz#9db34197ac145e5929572ee49ef701e37ee9b2e6"
   integrity sha512-boeBdiS0ghpWcSwoNm/jJBwdpFaMnZWRzjA6SkUMYb40SVaN1x7mmfGKp0jvexGcx+7y2La5zRZsYFZI6Qpypg==
+
+marked@^17.0.4:
+  version "17.0.4"
+  resolved "https://registry.yarnpkg.com/marked/-/marked-17.0.4.tgz#38293b06b0605db39107803f3398938bbbed1b28"
+  integrity sha512-NOmVMM+KAokHMvjWmC5N/ZOvgmSWuqJB8FoYI019j4ogb/PeRMKoKIjReZ2w3376kkA8dSJIP8uD993Kxc0iRQ==
 
 marky@^1.2.2:
   version "1.3.0"

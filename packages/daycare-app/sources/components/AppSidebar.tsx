@@ -1,17 +1,12 @@
 import { Octicons } from "@expo/vector-icons";
-import { createId } from "@paralleldrive/cuid2";
 import { usePathname, useRouter } from "expo-router";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { useAuthStore } from "@/modules/auth/authContext";
-import { documentRootIdResolve } from "@/modules/documents/documentRootIdResolve";
-import { useDocumentsStore } from "@/modules/documents/documentsContext";
 import { type AppMode, appModes } from "@/modules/navigation/appModes";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 import type { WorkspaceListItem } from "@/modules/workspaces/workspacesFetch";
-import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 
 export const SIDEBAR_WIDTH = 240;
 export const SIDEBAR_COLLAPSED_WIDTH = 56;
@@ -332,31 +327,6 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         const workspaces = useWorkspacesStore((s) => s.workspaces);
         const activeWorkspace = workspaces.find((ws) => ws.userId === activeId);
 
-        // Documents store
-        const baseUrl = useAuthStore((s) => s.baseUrl);
-        const token = useAuthStore((s) => s.token);
-        const documents = useDocumentsStore((s) => s.items);
-        const fetchDocuments = useDocumentsStore((s) => s.fetch);
-        const createDocument = useDocumentsStore((s) => s.createDocument);
-        const documentsSelected = useDocumentsStore((s) => s.selectedId);
-        const selectDocument = useDocumentsStore((s) => s.select);
-
-        const [createDialogVisible, setCreateDialogVisible] = React.useState(false);
-
-        // Fetch documents when the documents mode is active
-        React.useEffect(() => {
-            if (activeMode === "documents" && baseUrl && token) {
-                void fetchDocuments(baseUrl, token, activeId);
-            }
-        }, [activeMode, baseUrl, token, activeId, fetchDocuments]);
-
-        // Root documents are shown directly in the sidebar so system, memory, and people are visible.
-        const documentRootId = React.useMemo(() => documentRootIdResolve(documents), [documents]);
-
-        const sidebarDocs = React.useMemo(() => {
-            return documents.filter((d) => d.parentId === null).sort((a, b) => a.title.localeCompare(b.title));
-        }, [documents]);
-
         const wsPrefix = workspace ? `/${workspace}` : "";
 
         const handleModePress = React.useCallback(
@@ -373,30 +343,6 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                 onNavigate?.();
             },
             [router, onNavigate, wsPrefix]
-        );
-
-        const handleDocumentPress = React.useCallback(
-            (docId: string) => {
-                selectDocument(docId);
-                router.replace(`${wsPrefix}/documents` as any);
-                onNavigate?.();
-            },
-            [selectDocument, router, onNavigate, wsPrefix]
-        );
-
-        const handleCreateDocument = React.useCallback(
-            (input: { title: string; slug: string; parentId: string | null }) => {
-                if (!baseUrl || !token) return;
-                const parentId = input.parentId ?? documentRootId;
-                if (!parentId) return;
-                void createDocument(baseUrl, token, activeId, {
-                    id: createId(),
-                    title: input.title,
-                    slug: input.slug,
-                    parentId
-                });
-            },
-            [baseUrl, token, activeId, createDocument, documentRootId]
         );
 
         return (
@@ -438,10 +384,8 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                         >
                             {group.map((seg) => {
                                 const isActive = activeMode === seg.mode;
-                                const isDocumentsMode = seg.mode === "documents";
                                 const items = modeItems[seg.mode];
-                                const hasStaticItems = items.length > 0;
-                                const hasItems = hasStaticItems || (isDocumentsMode && isActive);
+                                const hasItems = items.length > 0;
 
                                 return (
                                     <View key={seg.mode}>
@@ -496,64 +440,8 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                                             </Animated.View>
                                         </Pressable>
 
-                                        {/* Documents sub-items (dynamic from store) */}
-                                        {!collapsed && isDocumentsMode && isActive && (
-                                            <View style={styles.subItems}>
-                                                {sidebarDocs.map((doc) => {
-                                                    const isSelected = documentsSelected === doc.id;
-                                                    return (
-                                                        <Pressable
-                                                            key={doc.id}
-                                                            testID={`sidebar-doc-${doc.id}`}
-                                                            onPress={() => handleDocumentPress(doc.id)}
-                                                            style={[
-                                                                styles.subItemRow,
-                                                                isSelected && {
-                                                                    backgroundColor: theme.colors.surfaceContainerHigh
-                                                                }
-                                                            ]}
-                                                        >
-                                                            <Text
-                                                                style={[
-                                                                    styles.subItemLabel,
-                                                                    {
-                                                                        color: isSelected
-                                                                            ? theme.colors.onSurface
-                                                                            : theme.colors.onSurfaceVariant
-                                                                    }
-                                                                ]}
-                                                                numberOfLines={1}
-                                                            >
-                                                                {doc.title}
-                                                            </Text>
-                                                        </Pressable>
-                                                    );
-                                                })}
-                                                <Pressable
-                                                    testID="sidebar-doc-create"
-                                                    onPress={() => setCreateDialogVisible(true)}
-                                                    style={styles.subItemRow}
-                                                >
-                                                    <Octicons
-                                                        name="plus"
-                                                        size={14}
-                                                        color={theme.colors.onSurfaceVariant}
-                                                        style={styles.createIcon}
-                                                    />
-                                                    <Text
-                                                        style={[
-                                                            styles.subItemLabel,
-                                                            { color: theme.colors.onSurfaceVariant }
-                                                        ]}
-                                                    >
-                                                        New Document
-                                                    </Text>
-                                                </Pressable>
-                                            </View>
-                                        )}
-
                                         {/* Static sub-items for other modes */}
-                                        {!collapsed && !isDocumentsMode && isActive && hasStaticItems && (
+                                        {!collapsed && isActive && hasItems && (
                                             <View style={styles.subItems}>
                                                 {items.map((item) => {
                                                     const isSelected = selectedItem === item.id;
@@ -592,14 +480,6 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                         </View>
                     ))}
                 </ScrollView>
-
-                {/* Document create dialog */}
-                <DocumentCreateDialog
-                    visible={createDialogVisible}
-                    parentId={documentRootId}
-                    onClose={() => setCreateDialogVisible(false)}
-                    onCreate={handleCreateDocument}
-                />
             </View>
         );
     }

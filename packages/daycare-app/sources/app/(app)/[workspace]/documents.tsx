@@ -6,7 +6,6 @@ import { documentRootIdResolve } from "@/modules/documents/documentRootIdResolve
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
-import { DocumentMetadataPanel } from "@/views/documents/DocumentMetadataPanel";
 import { DocumentsView } from "@/views/documents/DocumentsView";
 
 export default function DocumentsRoute() {
@@ -14,7 +13,6 @@ export default function DocumentsRoute() {
     const token = useAuthStore((s) => s.token);
     const activeId = useWorkspacesStore((s) => s.activeId);
     const documentItems = useDocumentsStore((s) => s.items);
-    const selectedId = useDocumentsStore((s) => s.selectedId);
     const fetchDocuments = useDocumentsStore((s) => s.fetch);
     const createDocument = useDocumentsStore((s) => s.createDocument);
     const [createDialogVisible, setCreateDialogVisible] = React.useState(false);
@@ -49,10 +47,7 @@ export default function DocumentsRoute() {
 
     return (
         <>
-            <ContentPanelLayout
-                panel2={<DocumentsView />}
-                panel3={selectedId ? <DocumentMetadataPanel /> : undefined}
-            />
+            <ContentPanelLayout panel2={<DocumentsView onCreatePress={_handleCreatePress} />} />
             <DocumentCreateDialog
                 visible={createDialogVisible}
                 parentId={createParentId ?? documentRootId}
