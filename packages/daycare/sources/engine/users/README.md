@@ -28,7 +28,7 @@ This module provides per-user filesystem isolation under `config.usersDir`:
 Versioned system prompts now live in the document store:
 
 ```text
-~/system/
+doc://system/
   soul
   user
   agents
@@ -52,7 +52,7 @@ flowchart TD
     F --> G[Agent session permissions + skills active read access]
     B --> H[Agent files facade: home/downloads, home/desktop, home/tmp]
     A --> I[documentSystemDocsEnsure]
-    I --> J[~/system/{soul,user,agents,tools}]
+    I --> J[doc://system/{soul,user,agents,tools}]
 ```
 
 ## Migration Flow
@@ -71,9 +71,9 @@ sequenceDiagram
     else no marker
         Migrate->>DB: resolve/create owner user
         Migrate->>FS: ensure owner UserHome
-        Migrate->>DB: ensure ~/system documents
+        Migrate->>DB: ensure doc://system documents
         Migrate->>FS: read legacy knowledge files if present
-        Migrate->>DB: update ~/system child documents
+        Migrate->>DB: update doc://system child documents
         Migrate->>FS: write users/.migrated
         Migrate-->>Engine: complete
     end

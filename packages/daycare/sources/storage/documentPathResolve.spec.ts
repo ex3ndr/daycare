@@ -21,7 +21,7 @@ describe("documentPathResolve", () => {
         };
 
         const resolved = await documentPathResolve(ctx, "doc-events", repo);
-        expect(resolved).toBe("~/memory/daily/events");
+        expect(resolved).toBe("doc://memory/daily/events");
     });
 
     it("returns null when document is missing", async () => {

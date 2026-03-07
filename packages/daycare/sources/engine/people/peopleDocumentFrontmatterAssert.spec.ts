@@ -21,7 +21,7 @@ describe("peopleDocumentFrontmatterAssert", () => {
         }
     });
 
-    it("requires firstName frontmatter for documents inside ~/people", async () => {
+    it("requires firstName frontmatter for documents inside doc://people", async () => {
         const storage = await storageOpenTest();
         try {
             const ctx = contextForUser({ userId: "user-1" });
@@ -111,7 +111,7 @@ describe("peopleDocumentFrontmatterAssert", () => {
         }
     });
 
-    it("does not require person frontmatter for the ~/people root document", async () => {
+    it("does not require person frontmatter for the doc://people root document", async () => {
         const storage = await storageOpenTest();
         try {
             const ctx = contextForUser({ userId: "user-1" });

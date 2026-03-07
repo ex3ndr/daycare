@@ -16,7 +16,7 @@ type DocumentMutationMemoryScopeRepo = {
 };
 
 /**
- * Ensures memory-agents mutate only documents under the `~/memory` subtree.
+ * Ensures memory-agents mutate only documents under the `doc://memory` subtree.
  * Expects: callers pass an existing document id resolved in the current user scope.
  */
 export async function documentMutationMemoryScopeAssert(
@@ -35,6 +35,6 @@ export async function documentMutationMemoryScopeAssert(
 
     const root = chain[0];
     if (!root || root.slug !== MEMORY_ROOT_SLUG) {
-        throw new Error("Memory agents can only write inside the ~/memory document tree.");
+        throw new Error("Memory agents can only write inside the doc://memory document tree.");
     }
 }

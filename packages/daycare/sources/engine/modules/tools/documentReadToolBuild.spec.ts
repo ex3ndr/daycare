@@ -53,7 +53,7 @@ describe("documentReadToolBuild", () => {
             expect(result.typedResult.found).toBe(true);
             expect(result.typedResult.documentId).toBe("memory");
             expect(result.typedResult.summary).toContain("# Memory");
-            expect(result.typedResult.summary).toContain("**path**: `~/memory`");
+            expect(result.typedResult.summary).toContain("**path**: `doc://memory`");
             expect(result.typedResult.summary).toContain("## Children");
             expect(result.typedResult.summary).toContain("Daily");
             expect(result.typedResult.summary).toContain("## Body");
@@ -62,7 +62,7 @@ describe("documentReadToolBuild", () => {
         }
     });
 
-    it("reads by path and includes full tree for ~/memory", async () => {
+    it("reads by path and includes full tree for doc://memory", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -88,7 +88,7 @@ describe("documentReadToolBuild", () => {
             });
 
             const tool = documentReadToolBuild();
-            const result = await tool.execute({ path: "~/memory" }, contextBuild(storage, readVersions), toolCall);
+            const result = await tool.execute({ path: "doc://memory" }, contextBuild(storage, readVersions), toolCall);
 
             expect(result.typedResult.found).toBe(true);
             expect(result.typedResult.summary).toContain("## Memory Tree");
@@ -140,7 +140,7 @@ describe("documentReadToolBuild", () => {
         const readVersions = new Map<string, number>();
         try {
             const tool = documentReadToolBuild();
-            const result = await tool.execute({ path: "~/missing" }, contextBuild(storage, readVersions), toolCall);
+            const result = await tool.execute({ path: "doc://missing" }, contextBuild(storage, readVersions), toolCall);
 
             expect(result.typedResult.found).toBe(false);
             expect(result.typedResult.summary).toContain("not found");
@@ -186,7 +186,7 @@ describe("documentReadToolBuild", () => {
 
             const tool = documentReadToolBuild();
             const result = await tool.execute(
-                { path: "~/memory/user/prefs" },
+                { path: "doc://memory/user/prefs" },
                 contextBuild(storage, readVersions),
                 toolCall
             );

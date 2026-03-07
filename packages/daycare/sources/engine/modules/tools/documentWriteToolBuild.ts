@@ -50,7 +50,7 @@ export function documentWriteToolBuild(): ToolDefinition {
             name: "document_write",
             description:
                 "Create or update a document. Omit documentId to create. " +
-                "Provide parentId or parentPath (~/a/b) to place the document in the tree. " +
+                "Provide parentId or parentPath (doc://a/b) to place the document in the tree. " +
                 "When setting a parent, first call document_read for the full parent chain in this session.",
             parameters: schema
         },
@@ -160,7 +160,7 @@ async function parentIdFromPathResolve(
     if (normalized === undefined) {
         return undefined;
     }
-    if (!normalized || normalized === "~" || normalized === "~/") {
+    if (!normalized || normalized === "doc://") {
         return null;
     }
 
@@ -195,7 +195,7 @@ async function parentChainReadAssert(
         if (!entry) {
             continue;
         }
-        const path = `~/${chain
+        const path = `doc://${chain
             .slice(0, index + 1)
             .map((item) => item.slug)
             .join("/")}`;
@@ -238,7 +238,7 @@ async function memoryAgentDocumentTreeWriteAssert(
     );
     if (parentId === null) {
         if (slug !== MEMORY_ROOT_SLUG) {
-            throw new Error("Memory agents can only write inside the ~/memory document tree.");
+            throw new Error("Memory agents can only write inside the doc://memory document tree.");
         }
         return;
     }
@@ -249,7 +249,7 @@ async function memoryAgentDocumentTreeWriteAssert(
     }
     const root = chain[0];
     if (!root || root.slug !== MEMORY_ROOT_SLUG) {
-        throw new Error("Memory agents can only write inside the ~/memory document tree.");
+        throw new Error("Memory agents can only write inside the doc://memory document tree.");
     }
 }
 

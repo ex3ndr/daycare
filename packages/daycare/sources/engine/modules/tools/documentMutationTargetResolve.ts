@@ -13,7 +13,7 @@ type DocumentMutationTargetResolveRepo = {
 };
 
 /**
- * Resolves a mutation target document from an explicit id or `~/...` path.
+ * Resolves a mutation target document from an explicit id or `doc://...` path.
  * Expects: exactly one selector is provided and points to an existing document.
  */
 export async function documentMutationTargetResolve(
@@ -32,7 +32,7 @@ export async function documentMutationTargetResolve(
 
     let targetDocumentId = documentId ?? null;
     if (!targetDocumentId && path) {
-        if (path === "~" || path === "~/") {
+        if (path === "doc://") {
             throw new Error("Path must point to a document, not the root listing.");
         }
         targetDocumentId = await documentPathFind(ctx, path, documents);

@@ -65,7 +65,7 @@ describe("documentAppendToolBuild", () => {
             });
 
             const tool = documentAppendToolBuild();
-            await tool.execute({ path: "~/notes", text: " world" }, contextBuild(storage), toolCall);
+            await tool.execute({ path: "doc://notes", text: " world" }, contextBuild(storage), toolCall);
 
             const updated = await storage.documents.findById(ctx, "doc-1");
             expect(updated?.body).toBe("hello world");
@@ -79,7 +79,7 @@ describe("documentAppendToolBuild", () => {
         try {
             const tool = documentAppendToolBuild();
             await expect(
-                tool.execute({ documentId: "doc-1", path: "~/notes", text: "x" }, contextBuild(storage), toolCall)
+                tool.execute({ documentId: "doc-1", path: "doc://notes", text: "x" }, contextBuild(storage), toolCall)
             ).rejects.toThrow("Provide either documentId or path, not both.");
 
             await expect(tool.execute({ text: "x" }, contextBuild(storage), toolCall)).rejects.toThrow(
@@ -90,7 +90,7 @@ describe("documentAppendToolBuild", () => {
         }
     });
 
-    it("enforces memory-agent scope to ~/memory", async () => {
+    it("enforces memory-agent scope to doc://memory", async () => {
         const storage = await storageOpenTest();
         try {
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
@@ -107,7 +107,7 @@ describe("documentAppendToolBuild", () => {
             const tool = documentAppendToolBuild();
             await expect(
                 tool.execute({ documentId: "doc-1", text: " world" }, contextBuild(storage, "memory"), toolCall)
-            ).rejects.toThrow("Memory agents can only write inside the ~/memory document tree.");
+            ).rejects.toThrow("Memory agents can only write inside the doc://memory document tree.");
         } finally {
             storage.connection.close();
         }

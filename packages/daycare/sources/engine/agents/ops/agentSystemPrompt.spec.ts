@@ -326,7 +326,7 @@ async function systemPromptDocumentsWrite(
     for (const doc of docs) {
         const existing = await storage.documents.findBySlugAndParent(ctx, doc.slug, system.id);
         if (!existing) {
-            throw new Error(`Missing ~/system/${doc.slug} in test.`);
+            throw new Error(`Missing doc://system/${doc.slug} in test.`);
         }
         await storage.documents.update(ctx, existing.id, {
             body: doc.body,

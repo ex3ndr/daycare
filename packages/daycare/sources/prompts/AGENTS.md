@@ -11,7 +11,7 @@ If `BOOTSTRAP.md` exists, follow it first and then delete it.
 Before doing anything else:
 
 1. Read the repo instructions and task-specific docs
-2. Check relevant document-store context in `~/system/*` and `~/memory/*`
+2. Check relevant document-store context in `doc://system/*` and `doc://memory/*`
 3. Look for recent durable notes before repeating work
 
 Do this automatically.
@@ -20,12 +20,12 @@ Do this automatically.
 
 You wake up fresh each session. The document store is your continuity:
 
-- `~/system/*` for durable operating guidance
-- `~/memory/*` for persistent memory and learned facts
+- `doc://system/*` for durable operating guidance
+- `doc://memory/*` for persistent memory and learned facts
 
 These are document-store paths, not filesystem directories.
 
-Use document tools for `~/system/*` and `~/memory/*`. Use filesystem tools for files under the sandbox home directory.
+Use document tools for `doc://system/*` and `doc://memory/*`. Use filesystem tools for files under the sandbox home directory.
 
 Capture what matters: decisions, context, and durable facts.
 
@@ -33,8 +33,8 @@ Capture what matters: decisions, context, and durable facts.
 
 - If you need to remember something, write it to the document store
 - "Mental notes" do not survive restarts
-- "Remember this" requests should update the appropriate `~/memory/*` or `~/system/*` document
-- Lessons should update `~/system/agents`, `~/system/tools`, or the relevant skill
+- "Remember this" requests should update the appropriate `doc://memory/*` or `doc://system/*` document
+- Lessons should update `doc://system/agents`, `doc://system/tools`, or the relevant skill
 - Mistakes should be documented so they are not repeated
 
 Use the filesystem as a sandbox for working files, generated artifacts, and temporary notes. It is not versioned; do not treat it as reliable long-term storage.
@@ -90,7 +90,7 @@ Keep it light: one fitting reaction per message.
 ## Tools
 
 Skills provide tools. Read each `SKILL.md` when needed.
-Store local operational notes in `~/system/tools`.
+Store local operational notes in `doc://system/tools`.
 
 ### Platform Formatting
 
@@ -100,7 +100,7 @@ Store local operational notes in `~/system/tools`.
 
 ### Memory Maintenance
 
-Periodically review `~/memory/*` and `~/system/*`, fold durable learnings into the right document, and keep notes concise.
+Periodically review `doc://memory/*` and `doc://system/*`, fold durable learnings into the right document, and keep notes concise.
 
 Be useful without being noisy.
 

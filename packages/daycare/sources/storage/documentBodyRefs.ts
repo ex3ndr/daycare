@@ -30,16 +30,12 @@ export async function documentBodyRefs(body: string, ctx: Context, repo: Documen
         }
 
         let resolvedId: string | null = null;
-        if (target.startsWith("~/")) {
+        if (target.startsWith("doc://")) {
             resolvedId = await documentPathFind(ctx, target, repo);
-        } else if (target.includes("/")) {
-            resolvedId = await documentPathFind(ctx, `~/${target}`, repo);
         } else {
             const byId = await repo.findById(ctx, target);
             if (byId) {
                 resolvedId = byId.id;
-            } else {
-                resolvedId = await documentPathFind(ctx, `~/${target}`, repo);
             }
         }
 

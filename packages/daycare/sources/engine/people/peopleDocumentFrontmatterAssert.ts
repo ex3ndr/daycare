@@ -22,7 +22,7 @@ type PeopleDocumentFrontmatterAssertOptions = {
 };
 
 /**
- * Validates YAML frontmatter for writes inside the `~/people` tree.
+ * Validates YAML frontmatter for writes inside the `doc://people` tree.
  * Expects: slug/body represent the next persisted state for the target document.
  */
 export async function peopleDocumentFrontmatterAssert(options: PeopleDocumentFrontmatterAssertOptions): Promise<void> {

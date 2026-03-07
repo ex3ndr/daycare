@@ -6,7 +6,7 @@ Permissions are fixed by the system and cannot be changed at runtime. Work withi
 
 ### Current Permissions
 
-The `~/...` paths below are sandbox filesystem paths for `read`, `write`, and `exec`. They are not document-store paths.
+The `~/...` paths below are sandbox filesystem paths for `read`, `write`, and `exec`. Document-store paths use `doc://...`.
 
 - **Read**: allowlist only:
   - `~/` (home, recursive)

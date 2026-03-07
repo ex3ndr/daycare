@@ -42,8 +42,8 @@ export function documentReadToolBuild(): ToolDefinition {
         tool: {
             name: "document_read",
             description:
-                "Read a document by documentId or path (~/a/b). Omit both to list root documents. " +
-                "When reading ~/memory, includes a full subtree overview.",
+                "Read a document by documentId or path (doc://a/b). Omit both to list root documents. " +
+                "When reading doc://memory, includes a full subtree overview.",
             parameters: schema
         },
         returns,
@@ -68,7 +68,7 @@ export function documentReadToolBuild(): ToolDefinition {
             let targetDocumentId: string | null = null;
             if (documentId) {
                 targetDocumentId = documentId;
-            } else if (path === "~" || path === "~/") {
+            } else if (path === "doc://") {
                 const summary = await documentRootsSummaryBuild(toolContext.ctx, storage.documents);
                 return toolResultBuild(toolCall, { found: true, summary });
             } else if (path) {
@@ -176,7 +176,7 @@ async function documentSummaryBuild(
 
     lines.push("", "## Body", "", document.body);
 
-    if (path === "~/memory") {
+    if (path === "doc://memory") {
         const subtreeLines = await documentSubtreeSummaryBuild(ctx, document.id, documents);
         lines.push("", "## Memory Tree", "", ...subtreeLines);
     }

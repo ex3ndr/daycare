@@ -68,7 +68,7 @@ async function knowledgeFilesMigrate(
 ): Promise<void> {
     const system = await storage.documents.findBySlugAndParent(ctx, "system", null);
     if (!system) {
-        throw new Error("Missing ~/system root during userHome migration.");
+        throw new Error("Missing doc://system root during userHome migration.");
     }
 
     const legacyKnowledgeDir = path.join(ownerHome.home, "knowledge");
@@ -90,7 +90,7 @@ async function knowledgeFilesMigrate(
 
         const document = await storage.documents.findBySlugAndParent(ctx, file.slug, system.id);
         if (!document) {
-            throw new Error(`Missing ~/system/${file.slug} during userHome migration.`);
+            throw new Error(`Missing doc://system/${file.slug} during userHome migration.`);
         }
 
         await storage.documents.update(ctx, document.id, {

@@ -5,20 +5,25 @@ export type DocumentPathFindRepo = {
 };
 
 /**
- * Resolves a `~/a/b/c` document path to a document id.
+ * Resolves a `doc://a/b/c` document path to a document id.
  * Expects: `repo.findBySlugAndParent` only returns active documents for `ctx.userId`.
  */
 export async function documentPathFind(ctx: Context, path: string, repo: DocumentPathFindRepo): Promise<string | null> {
     const normalized = path.trim();
-    if (!normalized.startsWith("~/")) {
+    if (!normalized.startsWith("doc://")) {
         return null;
     }
 
-    const segments = normalized
-        .slice(2)
-        .split("/")
-        .map((segment) => segment.trim())
-        .filter((segment) => segment.length > 0);
+    const remainder = normalized.slice("doc://".length);
+    if (!remainder || remainder.startsWith("/")) {
+        return null;
+    }
+
+    const rawSegments = remainder.split("/");
+    const segments = rawSegments.map((segment) => segment.trim());
+    if (segments.some((segment) => segment.length === 0)) {
+        return null;
+    }
     if (segments.length === 0) {
         return null;
     }

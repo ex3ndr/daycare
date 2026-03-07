@@ -33,7 +33,7 @@ const SYSTEM_DOCS = [
 ] as const;
 
 /**
- * Ensures the root `~/system` document and core child prompt documents exist.
+ * Ensures the root `doc://system` document and core child prompt documents exist.
  * Expects: storage migrations are applied and ctx.userId is valid.
  */
 export async function documentSystemDocsEnsure(

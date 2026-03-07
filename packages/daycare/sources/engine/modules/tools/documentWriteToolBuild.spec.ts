@@ -114,7 +114,7 @@ describe("documentWriteToolBuild", () => {
             });
 
             const readTool = documentReadToolBuild();
-            await readTool.execute({ path: "~/memory" }, contextBuild(storage, readVersions), readToolCall);
+            await readTool.execute({ path: "doc://memory" }, contextBuild(storage, readVersions), readToolCall);
 
             const tool = documentWriteToolBuild();
             const result = await tool.execute(
@@ -123,7 +123,7 @@ describe("documentWriteToolBuild", () => {
                     title: "User",
                     description: "User facts",
                     body: "Prefers concise answers.",
-                    parentPath: "~/memory"
+                    parentPath: "doc://memory"
                 },
                 contextBuild(storage, readVersions),
                 toolCall
@@ -159,7 +159,7 @@ describe("documentWriteToolBuild", () => {
                         title: "User",
                         description: "User facts",
                         body: "x",
-                        parentPath: "~/missing"
+                        parentPath: "doc://missing"
                     },
                     contextBuild(storage, readVersions),
                     toolCall
@@ -174,7 +174,7 @@ describe("documentWriteToolBuild", () => {
                         description: "User facts",
                         body: "x",
                         parentId: "different-parent",
-                        parentPath: "~/memory"
+                        parentPath: "doc://memory"
                     },
                     contextBuild(storage, readVersions),
                     toolCall
@@ -242,7 +242,7 @@ describe("documentWriteToolBuild", () => {
                         title: "Prefs",
                         description: "Prefs",
                         body: "",
-                        parentPath: "~/memory/user"
+                        parentPath: "doc://memory/user"
                     },
                     contextBuild(storage, readVersions),
                     toolCall
@@ -279,7 +279,7 @@ describe("documentWriteToolBuild", () => {
             });
 
             const readTool = documentReadToolBuild();
-            await readTool.execute({ path: "~/memory/user" }, contextBuild(storage, readVersions), readToolCall);
+            await readTool.execute({ path: "doc://memory/user" }, contextBuild(storage, readVersions), readToolCall);
             await storage.documents.update(ctx, "user", { body: "changed", updatedAt: 3 });
 
             const tool = documentWriteToolBuild();
@@ -290,7 +290,7 @@ describe("documentWriteToolBuild", () => {
                         title: "Prefs",
                         description: "Prefs",
                         body: "",
-                        parentPath: "~/memory/user"
+                        parentPath: "doc://memory/user"
                     },
                     contextBuild(storage, readVersions),
                     toolCall
@@ -317,13 +317,13 @@ describe("documentWriteToolBuild", () => {
                     contextBuild(storage, readVersions, "memory"),
                     toolCall
                 )
-            ).rejects.toThrow("Memory agents can only write inside the ~/memory document tree.");
+            ).rejects.toThrow("Memory agents can only write inside the doc://memory document tree.");
         } finally {
             storage.connection.close();
         }
     });
 
-    it("requires firstName frontmatter for documents under ~/people", async () => {
+    it("requires firstName frontmatter for documents under doc://people", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -339,7 +339,7 @@ describe("documentWriteToolBuild", () => {
             });
 
             const readTool = documentReadToolBuild();
-            await readTool.execute({ path: "~/people" }, contextBuild(storage, readVersions), readToolCall);
+            await readTool.execute({ path: "doc://people" }, contextBuild(storage, readVersions), readToolCall);
 
             const tool = documentWriteToolBuild();
             await expect(
@@ -349,7 +349,7 @@ describe("documentWriteToolBuild", () => {
                         title: "Ada",
                         description: "Person profile",
                         body: "# Ada",
-                        parentPath: "~/people"
+                        parentPath: "doc://people"
                     },
                     contextBuild(storage, readVersions),
                     toolCall
@@ -360,7 +360,7 @@ describe("documentWriteToolBuild", () => {
         }
     });
 
-    it("accepts valid frontmatter for documents under ~/people", async () => {
+    it("accepts valid frontmatter for documents under doc://people", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -376,7 +376,7 @@ describe("documentWriteToolBuild", () => {
             });
 
             const readTool = documentReadToolBuild();
-            await readTool.execute({ path: "~/people" }, contextBuild(storage, readVersions), readToolCall);
+            await readTool.execute({ path: "doc://people" }, contextBuild(storage, readVersions), readToolCall);
 
             const tool = documentWriteToolBuild();
             const result = await tool.execute(
@@ -385,7 +385,7 @@ describe("documentWriteToolBuild", () => {
                     title: "Ada",
                     description: "Person profile",
                     body: "---\nfirstName: Ada\nlastName: Lovelace\n---\nMathematician.",
-                    parentPath: "~/people"
+                    parentPath: "doc://people"
                 },
                 contextBuild(storage, readVersions),
                 toolCall
@@ -398,7 +398,7 @@ describe("documentWriteToolBuild", () => {
         }
     });
 
-    it("allows memory-agent writes under ~/memory", async () => {
+    it("allows memory-agent writes under doc://memory", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -414,7 +414,11 @@ describe("documentWriteToolBuild", () => {
             });
 
             const readTool = documentReadToolBuild();
-            await readTool.execute({ path: "~/memory" }, contextBuild(storage, readVersions, "memory"), readToolCall);
+            await readTool.execute(
+                { path: "doc://memory" },
+                contextBuild(storage, readVersions, "memory"),
+                readToolCall
+            );
 
             const tool = documentWriteToolBuild();
             const result = await tool.execute(
@@ -423,7 +427,7 @@ describe("documentWriteToolBuild", () => {
                     title: "User",
                     description: "User facts",
                     body: "Prefers concise answers.",
-                    parentPath: "~/memory"
+                    parentPath: "doc://memory"
                 },
                 contextBuild(storage, readVersions, "memory"),
                 toolCall
@@ -436,7 +440,7 @@ describe("documentWriteToolBuild", () => {
         }
     });
 
-    it("rejects memory-agent updates for documents outside ~/memory", async () => {
+    it("rejects memory-agent updates for documents outside doc://memory", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -464,7 +468,7 @@ describe("documentWriteToolBuild", () => {
                     contextBuild(storage, readVersions, "memory"),
                     toolCall
                 )
-            ).rejects.toThrow("Memory agents can only write inside the ~/memory document tree.");
+            ).rejects.toThrow("Memory agents can only write inside the doc://memory document tree.");
         } finally {
             storage.connection.close();
         }

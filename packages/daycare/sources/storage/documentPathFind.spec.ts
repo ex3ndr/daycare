@@ -18,8 +18,9 @@ describe("documentPathFind", () => {
             }
         };
 
-        const resolved = await documentPathFind(ctx, "~/memory/daily/events", repo);
+        const resolved = await documentPathFind(ctx, "doc://memory/daily/events", repo);
         expect(resolved).toBe("doc-events");
+        expect(await documentPathFind(ctx, "~/memory/daily/events", repo)).toBeNull();
     });
 
     it("returns null for invalid or partial paths", async () => {
@@ -29,7 +30,7 @@ describe("documentPathFind", () => {
         };
 
         expect(await documentPathFind(ctx, "memory/daily", repo)).toBeNull();
-        expect(await documentPathFind(ctx, "~/", repo)).toBeNull();
-        expect(await documentPathFind(ctx, "~/memory", repo)).toBeNull();
+        expect(await documentPathFind(ctx, "doc://", repo)).toBeNull();
+        expect(await documentPathFind(ctx, "doc://memory", repo)).toBeNull();
     });
 });

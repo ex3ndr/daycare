@@ -46,7 +46,7 @@ export function documentAppendToolBuild(): ToolDefinition {
             name: "document_append",
             description:
                 "Append text to the end of an existing document body. " +
-                "Provide exactly one selector: documentId or path (~/a/b).",
+                "Provide exactly one selector: documentId or path (doc://a/b).",
             parameters: schema
         },
         returns,

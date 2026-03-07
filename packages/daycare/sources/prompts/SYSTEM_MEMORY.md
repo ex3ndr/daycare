@@ -1,16 +1,16 @@
 ## Memory
 
 Versioned system documents:
-- SOUL `~/system/soul`
-- USER `~/system/user`
-- AGENTS `~/system/agents`
-- TOOLS `~/system/tools`
+- SOUL `doc://system/soul`
+- USER `doc://system/user`
+- AGENTS `doc://system/agents`
+- TOOLS `doc://system/tools`
 
-These `~/...` references are document-store paths, not filesystem paths. Use document tools such as `document_read`, `document_write`, `document_patch`, `document_append`, and `document_search` for them.
+These `doc://...` references are document-store paths, not filesystem paths. Use document tools such as `document_read`, `document_write`, `document_patch`, `document_append`, and `document_search` for them.
 
-Do not treat `~/system/*` or `~/memory/*` as files inside the sandbox home directory.
+Do not treat `doc://system/*` or `doc://memory/*` as files inside the sandbox home directory.
 
-Update `~/system/user` for stable user facts/preferences. Update `~/system/soul` for behavioral refinements. Update `~/system/agents` for workspace operating rules and recurring routines. Update `~/system/tools` when you learn non-obvious tool behavior.
+Update `doc://system/user` for stable user facts/preferences. Update `doc://system/soul` for behavioral refinements. Update `doc://system/agents` for workspace operating rules and recurring routines. Update `doc://system/tools` when you learn non-obvious tool behavior.
 
 Prefer the document store for valuable information. Documents are versioned and durable. The filesystem is useful for working files, but it is not versioned and can be overwritten.
 

@@ -4,7 +4,7 @@ import { contextForUser } from "../agents/context.js";
 import { peopleRootDocumentEnsure } from "./peopleRootDocumentEnsure.js";
 
 describe("peopleRootDocumentEnsure", () => {
-    it("creates ~/people when missing and is idempotent", async () => {
+    it("creates doc://people when missing and is idempotent", async () => {
         const storage = await storageOpenTest();
         try {
             const ctx = contextForUser({ userId: "user-1" });

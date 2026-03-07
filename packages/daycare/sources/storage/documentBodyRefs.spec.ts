@@ -19,13 +19,31 @@ describe("documentBodyRefs", () => {
         };
 
         const body = [
-            "See [[doc-id]] and [[~/memory/daily]].",
-            "Also [[memory/daily|daily notes]] and [[missing]].",
+            "See [[doc-id]] and [[doc://memory/daily]].",
+            "Also [[doc://memory/daily|daily notes]] and [[missing]].",
             "Duplicate [[doc-id]] should be ignored."
         ].join(" ");
 
         const refs = await documentBodyRefs(body, ctx, repo);
         expect(refs).toEqual(["doc-id", "doc-daily"]);
+    });
+
+    it("requires doc:// for wiki-link path targets", async () => {
+        const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+        const pathToId = new Map<string, string>([
+            ["null:memory", "doc-memory"],
+            ["doc-memory:daily", "doc-daily"]
+        ]);
+        const repo: DocumentBodyRefsRepo = {
+            findById: async () => null,
+            findBySlugAndParent: async (_ctx, slug, parentId) => {
+                const id = pathToId.get(`${parentId ?? "null"}:${slug}`);
+                return id ? { id } : null;
+            }
+        };
+
+        const refs = await documentBodyRefs("[[memory/daily]] [[~/memory/daily]] [[doc://memory/daily]]", ctx, repo);
+        expect(refs).toEqual(["doc-daily"]);
     });
 
     it("returns empty list when no links resolve", async () => {

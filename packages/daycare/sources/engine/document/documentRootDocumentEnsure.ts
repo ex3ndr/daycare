@@ -6,7 +6,7 @@ import { agentPromptBundledRead } from "../agents/ops/agentPromptBundledRead.js"
 const DOCUMENT_ROOT_SLUG = "document";
 
 /**
- * Ensures the app root `~/document` exists for the provided user context.
+ * Ensures the app root `doc://document` exists for the provided user context.
  * Expects: storage migrations are applied and ctx.userId is valid.
  */
 export async function documentRootDocumentEnsure(

@@ -74,7 +74,7 @@ describe("documentPatchToolBuild", () => {
             const tool = documentPatchToolBuild();
             const result = await tool.execute(
                 {
-                    path: "~/notes",
+                    path: "doc://notes",
                     patch: {
                         search: "cat",
                         replace: "dog",
@@ -160,7 +160,7 @@ describe("documentPatchToolBuild", () => {
         }
     });
 
-    it("enforces memory-agent scope to ~/memory", async () => {
+    it("enforces memory-agent scope to doc://memory", async () => {
         const storage = await storageOpenTest();
         try {
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
@@ -187,7 +187,7 @@ describe("documentPatchToolBuild", () => {
                     contextBuild(storage, "memory"),
                     toolCall
                 )
-            ).rejects.toThrow("Memory agents can only write inside the ~/memory document tree.");
+            ).rejects.toThrow("Memory agents can only write inside the doc://memory document tree.");
         } finally {
             storage.connection.close();
         }

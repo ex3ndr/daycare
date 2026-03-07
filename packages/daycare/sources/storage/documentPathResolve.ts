@@ -6,7 +6,7 @@ export type DocumentPathResolveRepo = {
 };
 
 /**
- * Builds a `~/a/b/c` path for a document by walking the active parent chain.
+ * Builds a `doc://a/b/c` path for a document by walking the active parent chain.
  * Expects: parent links form an acyclic chain for each active document version.
  */
 export async function documentPathResolve(
@@ -38,5 +38,5 @@ export async function documentPathResolve(
         currentId = await repo.findParentId(ctx, current.id);
     }
 
-    return `~/${segments.join("/")}`;
+    return `doc://${segments.join("/")}`;
 }

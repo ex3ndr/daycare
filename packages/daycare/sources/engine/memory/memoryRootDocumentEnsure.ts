@@ -6,7 +6,7 @@ import { agentPromptBundledRead } from "../agents/ops/agentPromptBundledRead.js"
 const MEMORY_ROOT_SLUG = "memory";
 
 /**
- * Ensures the root `~/memory` document exists for the provided user context.
+ * Ensures the root `doc://memory` document exists for the provided user context.
  * Expects: storage migrations are applied and ctx.userId is valid.
  */
 export async function memoryRootDocumentEnsure(

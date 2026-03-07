@@ -81,11 +81,11 @@ export async function workspaceCreate(input: WorkspaceCreateInput): Promise<Work
 
     const system = await input.storage.documents.findBySlugAndParent(workspaceCtx, "system", null);
     if (!system) {
-        throw new Error("Missing ~/system root for workspace.");
+        throw new Error("Missing doc://system root for workspace.");
     }
     const soul = await input.storage.documents.findBySlugAndParent(workspaceCtx, "soul", system.id);
     if (!soul) {
-        throw new Error("Missing ~/system/soul document for workspace.");
+        throw new Error("Missing doc://system/soul document for workspace.");
     }
     await input.storage.documents.update(workspaceCtx, soul.id, {
         body: `${systemPrompt}\n`,
