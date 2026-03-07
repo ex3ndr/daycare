@@ -1,10 +1,12 @@
 import { Octicons } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
 import * as React from "react";
 import { Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useUnistyles } from "react-native-unistyles";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { documentProtectedCheck } from "@/modules/documents/documentProtectedCheck";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
+import { documentWorkspaceIdResolve } from "@/modules/documents/documentWorkspaceIdResolve";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
 type DocumentMetadataModalProps = {
@@ -18,9 +20,11 @@ type DocumentMetadataModalProps = {
  */
 export const DocumentMetadataModal = React.memo<DocumentMetadataModalProps>(({ visible, onClose }) => {
     const { theme } = useUnistyles();
+    const { workspace } = useLocalSearchParams<{ workspace?: string | string[] }>();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
     const activeId = useWorkspacesStore((s) => s.activeId);
+    const workspaceId = React.useMemo(() => documentWorkspaceIdResolve(workspace, activeId), [workspace, activeId]);
 
     const selectedId = useDocumentsStore((s) => s.selectedId);
     const items = useDocumentsStore((s) => s.items);
@@ -42,10 +46,10 @@ export const DocumentMetadataModal = React.memo<DocumentMetadataModalProps>(({ v
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         if (baseUrl && token) {
             saveTimerRef.current = setTimeout(() => {
-                void saveDraft(baseUrl, token, activeId);
+                void saveDraft(baseUrl, token, workspaceId);
             }, 1000);
         }
-    }, [saveDraft, baseUrl, token, activeId]);
+    }, [saveDraft, baseUrl, token, workspaceId]);
 
     React.useEffect(() => {
         return () => {
@@ -57,7 +61,7 @@ export const DocumentMetadataModal = React.memo<DocumentMetadataModalProps>(({ v
         if (!selectedId || !baseUrl || !token) return;
         if (Platform.OS === "web") {
             if (window.confirm("Are you sure you want to delete this document?")) {
-                void deleteDocument(baseUrl, token, activeId, selectedId);
+                void deleteDocument(baseUrl, token, workspaceId, selectedId);
                 onClose();
             }
         } else {
@@ -67,13 +71,13 @@ export const DocumentMetadataModal = React.memo<DocumentMetadataModalProps>(({ v
                     text: "Delete",
                     style: "destructive",
                     onPress: () => {
-                        void deleteDocument(baseUrl, token, activeId, selectedId);
+                        void deleteDocument(baseUrl, token, workspaceId, selectedId);
                         onClose();
                     }
                 }
             ]);
         }
-    }, [selectedId, baseUrl, token, activeId, deleteDocument, onClose]);
+    }, [selectedId, baseUrl, token, workspaceId, deleteDocument, onClose]);
 
     if (!selectedDoc) return null;
 
