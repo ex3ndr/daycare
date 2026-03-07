@@ -4,6 +4,7 @@ import type { RouteAgentCallbacks } from "../routeTypes.js";
 import { agentsChats } from "./agentsChats.js";
 import { agentsCreate } from "./agentsCreate.js";
 import { agentsDelete } from "./agentsDelete.js";
+import { agentsDirect } from "./agentsDirect.js";
 import { agentsHistory } from "./agentsHistory.js";
 import { agentsList } from "./agentsList.js";
 import { agentsMessage } from "./agentsMessage.js";
@@ -53,6 +54,15 @@ export async function agentsRouteHandle(
             agentList: context.callbacks.agentList
         });
         context.sendJson(response, 200, result);
+        return true;
+    }
+
+    if (pathname === "/agents/direct" && request.method === "GET") {
+        const result = await agentsDirect({
+            ctx: context.ctx,
+            agentDirectResolve: context.callbacks.agentDirectResolve
+        });
+        context.sendJson(response, result.ok ? 200 : 400, result);
         return true;
     }
 

@@ -49,6 +49,14 @@ export function agentPathSubuser(userId: string, id: string): AgentPath {
 }
 
 /**
+ * Builds a direct messaging path between two entities.
+ * Expects: ownerId and targetId are non-empty path segments.
+ */
+export function agentPathDirect(ownerId: string, targetId: string): AgentPath {
+    return agentPath(`/${segmentRequire(ownerId, "ownerId")}/direct/${segmentRequire(targetId, "targetId")}`);
+}
+
+/**
  * Builds a child subagent path.
  * Expects: parentPath is valid and index is a non-negative integer.
  */

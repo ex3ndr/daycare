@@ -26,7 +26,7 @@ import { valueDeepEqual } from "../utils/valueDeepEqual.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForAgent, contextForUser } from "./agents/context.js";
 import { agentHistoryLoad } from "./agents/ops/agentHistoryLoad.js";
-import { agentPathApp, agentPathConnector, agentPathTask } from "./agents/ops/agentPathBuild.js";
+import { agentPathApp, agentPathConnector, agentPathDirect, agentPathTask } from "./agents/ops/agentPathBuild.js";
 import { agentPath } from "./agents/ops/agentPathTypes.js";
 import { contextEstimateTokens } from "./agents/ops/contextEstimateTokens.js";
 import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
@@ -474,7 +474,19 @@ export class Engine {
                     };
                 },
                 agentKill: (ctx, agentId) => this.agentSystem.kill(ctx, agentId),
-                agentPost: (ctx, target, item) => this.agentSystem.post(ctx, target, item)
+                agentPost: (ctx, target, item) => this.agentSystem.post(ctx, target, item),
+                agentDirectResolve: async (ctx) => {
+                    const directPath = agentPathDirect(ctx.userId, ctx.userId);
+                    return this.agentSystem.agentIdForTarget(
+                        ctx,
+                        { path: directPath },
+                        {
+                            kind: "connector",
+                            foreground: true,
+                            name: "Direct"
+                        }
+                    );
+                }
             },
             eventBus: this.eventBus,
             skills: async (ctx) => {

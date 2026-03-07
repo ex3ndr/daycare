@@ -518,6 +518,9 @@ describe("AppServer authenticated routes", () => {
                     }
                 }
                 history.set(target.agentId, list);
+            },
+            agentDirectResolve: async (_ctx) => {
+                return "direct-agent-id";
             }
         };
         const built = await appServerCreateForTests({ secret, agentCallbacks: callbacks });
