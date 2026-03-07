@@ -1,6 +1,5 @@
 import path from "node:path";
-
-import type { Context } from "@mariozechner/pi-ai";
+import type { Context, ThinkingLevel } from "@mariozechner/pi-ai";
 
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
@@ -24,7 +23,9 @@ import {
     DEFAULT_SETTINGS_PATH,
     listProviders,
     type ModelRoleKey,
+    type ModelSelectionConfig,
     type ProviderSettings,
+    REASONING_LEVELS,
     readSettingsFile,
     type SettingsConfig,
     updateSettingsFile
@@ -58,6 +59,7 @@ const ADD_CUSTOM_FLAVOR_CHOICE = "__add_custom_flavor__";
 const ADD_OVERRIDE_RULE_CHOICE = "__add_override_rule__";
 const EDIT_OVERRIDE_RULE_CHOICE = "__edit_override_rule__";
 const DELETE_OVERRIDE_RULE_CHOICE = "__delete_override_rule__";
+const AUTO_REASONING_CHOICE = "__auto_reasoning__";
 
 const RULE_ROLE_CHOICES = [
     { value: "__none__", name: "Any role", description: "Match all roles" },
@@ -102,13 +104,17 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
 
     const defaultProvider = configured[0]!;
     const defaultModel = defaultProvider.model ?? "(provider default)";
+    const defaultSelection = {
+        model: `${defaultProvider.id}/${defaultModel}`,
+        reasoning: defaultProvider.reasoning
+    } satisfies ModelSelectionConfig;
 
     // Print current assignments
     console.log("\nRole model assignments:");
     console.log("─".repeat(60));
     for (const key of ROLE_KEYS) {
         const value = settings.models?.[key];
-        const display = value ?? `${defaultProvider.id}/${defaultModel}`;
+        const display = value ? modelSelectionDisplay(value) : modelSelectionDisplay(defaultSelection);
         const marker = value ? "" : " (default)";
         console.log(`  ${ROLE_LABELS[key].padEnd(24)} ${display}${marker}`);
     }
@@ -116,9 +122,9 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
     console.log("─".repeat(60));
     const customFlavorKeys = Object.keys(settings.modelFlavors ?? {}).filter((key) => !(key in BUILTIN_MODEL_FLAVORS));
     for (const key of BUILTIN_FLAVOR_KEYS) {
-        const value = settings.modelFlavors?.[key]?.model;
-        const display = value ?? `auto (${key} from provider catalog)`;
-        const marker = value ? "" : " (default)";
+        const entry = settings.modelFlavors?.[key];
+        const display = entry ? modelSelectionDisplay(entry) : `auto (${key} from provider catalog)`;
+        const marker = entry ? "" : " (default)";
         console.log(`  ${flavorLabelBuild(key).padEnd(24)} ${display}${marker}`);
     }
     for (const key of customFlavorKeys) {
@@ -126,7 +132,7 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
         if (!entry) {
             continue;
         }
-        console.log(`  ${flavorLabelBuild(key).padEnd(24)} ${entry.model} (${entry.description})`);
+        console.log(`  ${flavorLabelBuild(key).padEnd(24)} ${modelSelectionDisplay(entry)} (${entry.description})`);
     }
 
     // Show override rules
@@ -150,17 +156,19 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
     const roleChoices = ROLE_KEYS.map((key) => ({
         value: `role:${key}`,
         name: ROLE_LABELS[key],
-        description: settings.models?.[key] ?? "default"
+        description: settings.models?.[key] ? modelSelectionDisplay(settings.models[key]!) : "default"
     }));
     const builtinFlavorChoices = BUILTIN_FLAVOR_KEYS.map((key) => ({
         value: `flavor:${key}`,
         name: flavorLabelBuild(key),
-        description: settings.modelFlavors?.[key]?.model ?? `auto (${key})`
+        description: settings.modelFlavors?.[key] ? modelSelectionDisplay(settings.modelFlavors[key]!) : `auto (${key})`
     }));
     const customFlavorChoices = customFlavorKeys.map((key) => ({
         value: `flavor:${key}`,
         name: flavorLabelBuild(key),
-        description: settings.modelFlavors?.[key]?.description ?? "Custom flavor"
+        description: settings.modelFlavors?.[key]
+            ? `${modelSelectionDisplay(settings.modelFlavors[key]!)}`
+            : "Custom flavor"
     }));
     const addCustomFlavorChoice = {
         value: ADD_CUSTOM_FLAVOR_CHOICE,
@@ -275,6 +283,13 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
 
     const providerId = selectedModel.slice(0, slashIndex);
     const modelName = selectedModel.slice(slashIndex + 1);
+    const existingSelection =
+        target.type === "role" ? settings.models?.[target.key] : (settings.modelFlavors?.[target.key] ?? undefined);
+    const selectedReasoning = await reasoningLevelSelect(targetLabel, existingSelection?.reasoning);
+    if (selectedReasoning === null) {
+        console.log("Cancelled.");
+        return;
+    }
 
     // Validate the model with a micro inference call
     const providerSettings = configured.find((p) => p.id === providerId);
@@ -284,7 +299,7 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
     }
 
     console.log(`Validating ${selectedModel}...`);
-    const validation = await validateModel(providerSettings, modelName, settingsPath);
+    const validation = await validateModel(providerSettings, modelName, settingsPath, selectedReasoning);
     if (!validation.ok) {
         console.log(`Validation failed: ${validation.message}`);
         return;
@@ -292,7 +307,9 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
     console.log(`  OK: Model responds (${validation.modelId})`);
 
     // Save
-    await updateSettingsFile(settingsPath, (current) => assignmentTargetSet(current, target, selectedModel));
+    await updateSettingsFile(settingsPath, (current) =>
+        assignmentTargetSet(current, target, { model: selectedModel, reasoning: selectedReasoning ?? undefined })
+    );
 
     const reloaded = await engineReloadRequest(settingsPath);
     console.log(
@@ -334,14 +351,14 @@ export function assignmentTargetClear(settings: SettingsConfig, target: ModelAss
 export function assignmentTargetSet(
     settings: SettingsConfig,
     target: ModelAssignmentTarget,
-    selectedModel: string
+    selection: ModelSelectionConfig
 ): SettingsConfig {
     if (target.type === "role") {
         return {
             ...settings,
             models: {
                 ...settings.models,
-                [target.key]: selectedModel
+                [target.key]: selection
             }
         };
     }
@@ -359,8 +376,9 @@ export function assignmentTargetSet(
         modelFlavors: {
             ...settings.modelFlavors,
             [target.key]: {
-                model: selectedModel,
-                description
+                model: selection.model,
+                description,
+                reasoning: selection.reasoning
             }
         }
     };
@@ -424,8 +442,14 @@ async function customFlavorAdd(
         return;
     }
 
+    const selectedReasoning = await reasoningLevelSelect(flavorLabelBuild(normalizedName));
+    if (selectedReasoning === null) {
+        console.log("Cancelled.");
+        return;
+    }
+
     console.log(`Validating ${selectedModel}...`);
-    const validation = await validateModel(providerSettings, modelName, settingsPath);
+    const validation = await validateModel(providerSettings, modelName, settingsPath, selectedReasoning);
     if (!validation.ok) {
         console.log(`Validation failed: ${validation.message}`);
         return;
@@ -438,7 +462,8 @@ async function customFlavorAdd(
             ...(current.modelFlavors ?? {}),
             [normalizedName]: {
                 model: selectedModel,
-                description: normalizedDescription
+                description: normalizedDescription,
+                reasoning: selectedReasoning ?? undefined
             }
         }
     }));
@@ -492,6 +517,52 @@ function providerModelChoicesBuild(configuredProviders: ProviderSettings[]): Arr
 
 function flavorLabelBuild(flavorKey: string): string {
     return `Flavor: ${flavorKey}`;
+}
+
+function modelSelectionDisplay(selection: Pick<ModelSelectionConfig, "model" | "reasoning">): string {
+    return selection.reasoning ? `${selection.model} [reasoning=${selection.reasoning}]` : selection.model;
+}
+
+async function reasoningLevelSelect(
+    targetLabel: string,
+    currentReasoning?: ThinkingLevel
+): Promise<ThinkingLevel | undefined | null> {
+    const choices = [
+        {
+            value: AUTO_REASONING_CHOICE,
+            name: currentReasoning ? "Auto (provider/model default)" : "Auto (provider/model default) (current)",
+            description: "Do not force a reasoning level"
+        },
+        ...REASONING_LEVELS.map((level) => ({
+            value: level,
+            name: level === currentReasoning ? `${reasoningLabelBuild(level)} (current)` : reasoningLabelBuild(level),
+            description: `Force ${level} reasoning`
+        }))
+    ];
+
+    const selected = await promptSelect({
+        message: `Select reasoning level for ${targetLabel}`,
+        choices
+    });
+    if (!selected) {
+        return null;
+    }
+    return selected === AUTO_REASONING_CHOICE ? undefined : (selected as ThinkingLevel);
+}
+
+function reasoningLabelBuild(level: ThinkingLevel): string {
+    switch (level) {
+        case "minimal":
+            return "Minimal";
+        case "low":
+            return "Low";
+        case "medium":
+            return "Medium";
+        case "high":
+            return "High";
+        case "xhigh":
+            return "Extra High";
+    }
 }
 
 function builtinFlavorParse(flavorKey: string): BuiltinModelFlavor | null {
@@ -759,7 +830,8 @@ async function overrideRuleDelete(ruleStore: RuleStore, rules: RuleRecord[]): Pr
 async function validateModel(
     providerSettings: ProviderSettings,
     model: string,
-    settingsPath: string
+    settingsPath: string,
+    reasoning?: ThinkingLevel
 ): Promise<{ ok: true; modelId: string } | { ok: false; message: string }> {
     const definition = getProviderDefinition(providerSettings.id);
     if (!definition) {
@@ -794,7 +866,7 @@ async function validateModel(
             return { ok: false, message: "Provider did not register inference." };
         }
 
-        const overrideSettings: ProviderSettings = { ...providerSettings, model };
+        const overrideSettings: ProviderSettings = { ...providerSettings, model, reasoning };
         const router = new InferenceRouter({
             registry: inferenceRegistry,
             auth,

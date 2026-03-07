@@ -1390,8 +1390,11 @@ export class Agent {
             userId: this.ctx.userId,
             agentId: this.id
         });
-        const roleConfig =
-            ruleModel ?? (roleKey ? this.agentSystem.config.current.settings.models?.[roleKey] : undefined);
+        const roleConfig = ruleModel
+            ? { model: ruleModel }
+            : roleKey
+              ? this.agentSystem.config.current.settings.models?.[roleKey]
+              : undefined;
         const roleApplied = modelRoleApply(rawProviders, roleConfig);
         const roleProviders = roleApplied.providers;
         const providerId = roleApplied.providerId ?? this.resolveAgentProvider(roleProviders);

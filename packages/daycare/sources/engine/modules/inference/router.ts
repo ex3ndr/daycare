@@ -103,10 +103,14 @@ export class InferenceRouter {
                         `event: Calling client.complete() providerId=${providerConfig.id} modelId=${client.modelId} sessionId=${sessionId}`
                     );
                     // Provider API expects `sessionId`; caller owns how this is scoped/rotated.
-                    const message = await client.complete(context, {
+                    const providerOptions = {
+                        ...(providerConfig.reasoning ? { reasoning: providerConfig.reasoning } : {}),
                         ...(options?.providerOptions ?? {}),
                         sessionId,
                         signal: options?.signal
+                    };
+                    const message = await client.complete(context, {
+                        ...providerOptions
                     });
                     inferenceOutputTokensValidate(message);
                     this.logger.debug(

@@ -8,13 +8,13 @@ const providers: ProviderSettings[] = [
 ];
 
 describe("modelRoleResolve", () => {
-    it("parses valid provider/model string", () => {
-        const result = modelRoleResolve("anthropic/claude-haiku-3.5", providers);
-        expect(result).toEqual({ providerId: "anthropic", model: "claude-haiku-3.5" });
+    it("parses valid provider/model selection", () => {
+        const result = modelRoleResolve({ model: "anthropic/claude-haiku-3.5", reasoning: "medium" }, providers);
+        expect(result).toEqual({ providerId: "anthropic", model: "claude-haiku-3.5", reasoning: "medium" });
     });
 
     it("handles model names with slashes", () => {
-        const result = modelRoleResolve("openai/org/gpt-4o-mini", providers);
+        const result = modelRoleResolve({ model: "openai/org/gpt-4o-mini" }, providers);
         expect(result).toEqual({ providerId: "openai", model: "org/gpt-4o-mini" });
     });
 
@@ -22,23 +22,23 @@ describe("modelRoleResolve", () => {
         expect(modelRoleResolve(undefined, providers)).toBeNull();
     });
 
-    it("returns null for empty string", () => {
-        expect(modelRoleResolve("", providers)).toBeNull();
+    it("returns null for empty model string", () => {
+        expect(modelRoleResolve({ model: "" }, providers)).toBeNull();
     });
 
     it("returns null for missing slash", () => {
-        expect(modelRoleResolve("anthropic", providers)).toBeNull();
+        expect(modelRoleResolve({ model: "anthropic" }, providers)).toBeNull();
     });
 
     it("returns null for empty provider id", () => {
-        expect(modelRoleResolve("/gpt-4o", providers)).toBeNull();
+        expect(modelRoleResolve({ model: "/gpt-4o" }, providers)).toBeNull();
     });
 
     it("returns null for empty model name", () => {
-        expect(modelRoleResolve("anthropic/", providers)).toBeNull();
+        expect(modelRoleResolve({ model: "anthropic/" }, providers)).toBeNull();
     });
 
     it("returns null when provider is not in active list", () => {
-        expect(modelRoleResolve("groq/llama-3", providers)).toBeNull();
+        expect(modelRoleResolve({ model: "groq/llama-3" }, providers)).toBeNull();
     });
 });

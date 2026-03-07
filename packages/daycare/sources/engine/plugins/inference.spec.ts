@@ -62,7 +62,8 @@ describe("PluginInferenceService", () => {
                 modelFlavors: {
                     coding: {
                         model: "anthropic/claude-opus-4-5",
-                        description: "High-capability coding and planning"
+                        description: "High-capability coding and planning",
+                        reasoning: "high"
                     }
                 }
             })
@@ -76,7 +77,9 @@ describe("PluginInferenceService", () => {
 
         const call = router.complete.mock.calls[0];
         const options = call?.[2];
-        expect(options?.providersOverride).toEqual([{ id: "anthropic", enabled: true, model: "claude-opus-4-5" }]);
+        expect(options?.providersOverride).toEqual([
+            { id: "anthropic", enabled: true, model: "claude-opus-4-5", reasoning: "high" }
+        ]);
     });
 
     it("throws for unknown non-default strategy", async () => {
@@ -111,7 +114,10 @@ describe("PluginInferenceService", () => {
 
 function configModuleBuild(options: {
     providers: Array<{ id: string; enabled: boolean; model: string }>;
-    modelFlavors?: Record<string, { model: string; description: string }>;
+    modelFlavors?: Record<
+        string,
+        { model: string; description: string; reasoning?: "minimal" | "low" | "medium" | "high" | "xhigh" }
+    >;
 }): ConfigModule {
     return new ConfigModule(
         configResolve(

@@ -146,12 +146,16 @@ describe("configSettingsParse", () => {
         const parsed = configSettingsParse({
             models: {
                 user: "anthropic/claude-sonnet-4-5",
-                task: "openai/gpt-5-mini"
+                task: {
+                    model: "openai/gpt-5-mini",
+                    reasoning: "high"
+                }
             },
             modelFlavors: {
                 coding: {
                     model: "openai/gpt-5-mini",
-                    description: "Optimized for coding work"
+                    description: "Optimized for coding work",
+                    reasoning: "medium"
                 },
                 research: {
                     model: "google/gemini-2.5-pro",
@@ -161,13 +165,19 @@ describe("configSettingsParse", () => {
         });
 
         expect(parsed.models).toEqual({
-            user: "anthropic/claude-sonnet-4-5",
-            task: "openai/gpt-5-mini"
+            user: {
+                model: "anthropic/claude-sonnet-4-5"
+            },
+            task: {
+                model: "openai/gpt-5-mini",
+                reasoning: "high"
+            }
         });
         expect(parsed.modelFlavors).toEqual({
             coding: {
                 model: "openai/gpt-5-mini",
-                description: "Optimized for coding work"
+                description: "Optimized for coding work",
+                reasoning: "medium"
             },
             research: {
                 model: "google/gemini-2.5-pro",

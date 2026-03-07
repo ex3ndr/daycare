@@ -1,4 +1,4 @@
-import type { ProviderSettings } from "../settings.js";
+import type { ModelSelectionConfig, ProviderSettings } from "../settings.js";
 import { modelRoleResolve } from "./modelRoleResolve.js";
 
 export type ModelRoleApplyResult = {
@@ -7,12 +7,15 @@ export type ModelRoleApplyResult = {
 };
 
 /**
- * Applies a role-based model config string to the provider list.
- * Moves the target provider to the front and overrides its model.
+ * Applies a role-based model selection to the provider list.
+ * Moves the target provider to the front and overrides its model/reasoning settings.
  *
  * Returns the original providers unchanged when config is undefined or the provider is not found.
  */
-export function modelRoleApply(providers: ProviderSettings[], modelConfig: string | undefined): ModelRoleApplyResult {
+export function modelRoleApply(
+    providers: ProviderSettings[],
+    modelConfig: ModelSelectionConfig | undefined
+): ModelRoleApplyResult {
     const resolved = modelRoleResolve(modelConfig, providers);
     if (!resolved) {
         return { providers, providerId: null };
@@ -20,7 +23,11 @@ export function modelRoleApply(providers: ProviderSettings[], modelConfig: strin
 
     const updated = providers.map((p) => {
         if (p.id === resolved.providerId) {
-            return { ...p, model: resolved.model };
+            return {
+                ...p,
+                model: resolved.model,
+                reasoning: resolved.reasoning ?? p.reasoning
+            };
         }
         return p;
     });

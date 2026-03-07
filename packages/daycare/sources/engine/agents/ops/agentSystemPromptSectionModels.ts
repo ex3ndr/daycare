@@ -60,7 +60,8 @@ function availableFlavorsPromptBuild(settings: SettingsConfig): string {
         if (name in BUILTIN_MODEL_FLAVORS) {
             continue;
         }
-        lines.push(`- "${name}": ${entry.description}`);
+        const reasoningSuffix = entry.reasoning ? ` (reasoning: ${entry.reasoning})` : "";
+        lines.push(`- "${name}": ${entry.description}${reasoningSuffix}`);
     }
     return lines.join("\n");
 }

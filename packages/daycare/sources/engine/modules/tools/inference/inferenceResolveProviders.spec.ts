@@ -60,13 +60,14 @@ describe("inferenceResolveProviders", () => {
         const config = configModuleBuild(input, {
             coding: {
                 model: "anthropic/claude-opus-4-5",
-                description: "High reasoning for difficult code work"
+                description: "High reasoning for difficult code work",
+                reasoning: "high"
             }
         });
 
         const result = inferenceResolveProviders(config, "coding");
 
-        expect(result).toEqual([{ ...input[1], model: "claude-opus-4-5" }, { ...input[0] }]);
+        expect(result).toEqual([{ ...input[1], model: "claude-opus-4-5", reasoning: "high" }, { ...input[0] }]);
     });
 
     it("keeps defaults for custom flavor mapped to inactive provider", () => {
@@ -86,7 +87,10 @@ describe("inferenceResolveProviders", () => {
 
 function configModuleBuild(
     providers: ProviderSettings[],
-    modelFlavors?: Record<string, { model: string; description: string }>
+    modelFlavors?: Record<
+        string,
+        { model: string; description: string; reasoning?: "minimal" | "low" | "medium" | "high" | "xhigh" }
+    >
 ): ConfigModule {
     const config = configResolve(
         {

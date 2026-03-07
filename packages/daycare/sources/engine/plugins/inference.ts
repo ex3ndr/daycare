@@ -9,6 +9,7 @@ import {
     BUILTIN_MODEL_FLAVORS,
     type BuiltinModelFlavor,
     type ModelFlavorConfig,
+    type ModelFlavorEntry,
     type ProviderSettings
 } from "../../settings.js";
 import type { ConfigModule } from "../config/configModule.js";
@@ -155,7 +156,7 @@ function resolveProvidersForStrategy(
     }
 
     const candidates = providerId ? [resolveSelectedProvider(providers, providerId)] : providers;
-    const applied = modelRoleApply(candidates, customFlavor.model);
+    const applied = modelRoleApply(candidates, customFlavor);
     if (applied.providerId) {
         const selected = applied.providers.find((entry) => entry.id === applied.providerId);
         if (selected) {
@@ -174,7 +175,7 @@ function builtinModelFlavorParse(value: string): BuiltinModelFlavor | null {
     return null;
 }
 
-function customFlavorResolve(strategy: string, modelFlavors: ModelFlavorConfig | undefined): { model: string } | null {
+function customFlavorResolve(strategy: string, modelFlavors: ModelFlavorConfig | undefined): ModelFlavorEntry | null {
     if (!modelFlavors) {
         return null;
     }
@@ -182,7 +183,7 @@ function customFlavorResolve(strategy: string, modelFlavors: ModelFlavorConfig |
     const trimmed = strategy.trim();
     const exact = modelFlavors[trimmed];
     if (exact) {
-        return { model: exact.model };
+        return exact;
     }
 
     const normalized = trimmed.toLowerCase();
@@ -190,5 +191,5 @@ function customFlavorResolve(strategy: string, modelFlavors: ModelFlavorConfig |
     if (!flavorKey) {
         return null;
     }
-    return { model: modelFlavors[flavorKey]!.model };
+    return modelFlavors[flavorKey]!;
 }

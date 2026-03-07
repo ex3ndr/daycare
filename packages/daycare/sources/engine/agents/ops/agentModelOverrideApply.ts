@@ -27,7 +27,7 @@ export function agentModelOverrideApply(
 
     const flavor = override.value.trim();
     const normalizedFlavor = flavor.toLowerCase();
-    const configuredModel = modelFlavorResolve(selectorOverrides, flavor, normalizedFlavor)?.model;
+    const configuredModel = modelFlavorResolve(selectorOverrides, flavor, normalizedFlavor);
     if (configuredModel) {
         const configuredApply = modelRoleApply(providers, configuredModel);
         if (configuredApply.providerId) {
@@ -71,14 +71,14 @@ function modelFlavorResolve(
     modelFlavors: ModelFlavorConfig | undefined,
     flavor: string,
     normalizedFlavor: string
-): { model: string } | null {
+): ModelFlavorConfig[string] | null {
     if (!modelFlavors) {
         return null;
     }
 
     const exact = modelFlavors[flavor];
     if (exact) {
-        return { model: exact.model };
+        return exact;
     }
 
     const flavorKey = Object.keys(modelFlavors).find((key) => key.toLowerCase() === normalizedFlavor);
@@ -86,5 +86,5 @@ function modelFlavorResolve(
         return null;
     }
 
-    return { model: modelFlavors[flavorKey]!.model };
+    return modelFlavors[flavorKey]!;
 }

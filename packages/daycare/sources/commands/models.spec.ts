@@ -25,7 +25,7 @@ describe("models command helpers", () => {
     it("sets built-in flavor mapping with built-in description", () => {
         const settings: SettingsConfig = {};
 
-        const result = assignmentTargetSet(settings, { type: "flavor", key: "small" }, "openai/gpt-5-mini");
+        const result = assignmentTargetSet(settings, { type: "flavor", key: "small" }, { model: "openai/gpt-5-mini" });
 
         expect(result.modelFlavors?.small).toEqual({
             model: "openai/gpt-5-mini",
@@ -38,16 +38,36 @@ describe("models command helpers", () => {
             modelFlavors: {
                 coding: {
                     model: "openai/codex-mini",
-                    description: "Optimized for code generation"
+                    description: "Optimized for code generation",
+                    reasoning: "high"
                 }
             }
         };
 
-        const result = assignmentTargetSet(settings, { type: "flavor", key: "coding" }, "openai/gpt-5-mini");
+        const result = assignmentTargetSet(settings, { type: "flavor", key: "coding" }, { model: "openai/gpt-5-mini" });
 
         expect(result.modelFlavors?.coding).toEqual({
             model: "openai/gpt-5-mini",
-            description: "Optimized for code generation"
+            description: "Optimized for code generation",
+            reasoning: undefined
+        });
+    });
+
+    it("sets role mappings with reasoning level", () => {
+        const settings: SettingsConfig = {};
+
+        const result = assignmentTargetSet(
+            settings,
+            { type: "role", key: "task" },
+            {
+                model: "openai/gpt-5-mini",
+                reasoning: "high"
+            }
+        );
+
+        expect(result.models?.task).toEqual({
+            model: "openai/gpt-5-mini",
+            reasoning: "high"
         });
     });
 

@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import type { ThinkingLevel } from "@mariozechner/pi-ai";
 
 import type { CronTaskDefinition as CronTaskConfig } from "./engine/cron/cronTypes.js";
 import { resolveDaycarePath } from "./paths.js";
@@ -14,6 +15,7 @@ export type PluginInstanceSettings = {
 export type InferenceProviderSettings = {
     id: string;
     model?: string;
+    reasoning?: ThinkingLevel;
     options?: Record<string, unknown>;
 };
 
@@ -31,6 +33,7 @@ export type ProviderSettings = {
     id: string;
     enabled?: boolean;
     model?: string;
+    reasoning?: ThinkingLevel;
     options?: Record<string, unknown>;
     image?: ProviderImageSettings;
 };
@@ -40,6 +43,14 @@ export type ModelFlavorKey = string;
 
 export type BuiltinModelFlavor = "small" | "normal" | "large";
 
+export const REASONING_LEVELS = [
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh"
+] as const satisfies readonly ThinkingLevel[];
+
 export const BUILTIN_MODEL_FLAVORS: Record<BuiltinModelFlavor, { description: string }> = {
     small: { description: "Fastest and lowest-cost path for lightweight tasks." },
     normal: { description: "Balanced default for most work." },
@@ -47,18 +58,25 @@ export const BUILTIN_MODEL_FLAVORS: Record<BuiltinModelFlavor, { description: st
 };
 
 /**
- * Per-role model overrides. Each value uses "<providerId>/<modelName>" format.
- * When a role has no entry, the provider's default model is used.
+ * Per-role model overrides.
+ * When a role has no entry, the provider's default model/reasoning is used.
  */
-export type ModelRoleConfig = Partial<Record<ModelRoleKey, string>>;
+export type ModelSelectionConfig = {
+    model: string;
+    reasoning?: ThinkingLevel;
+};
+
+export type ModelRoleEntry = ModelSelectionConfig;
+
+export type ModelRoleConfig = Partial<Record<ModelRoleKey, ModelRoleEntry>>;
 
 /**
- * Optional per-flavor model overrides. Values use "<providerId>/<modelName>" format
- * plus a human-readable description shown to agents in system prompts.
+ * Optional per-flavor model overrides plus a human-readable description shown to agents in system prompts.
  */
 export type ModelFlavorEntry = {
     model: string;
     description: string;
+    reasoning?: ThinkingLevel;
 };
 
 export type ModelFlavorConfig = Record<ModelFlavorKey, ModelFlavorEntry>;
@@ -184,7 +202,7 @@ export async function readSettingsFile(filePath: string = DEFAULT_SETTINGS_PATH)
 
     try {
         const raw = await fs.readFile(resolvedPath, "utf8");
-        return JSON.parse(raw) as SettingsConfig;
+        return settingsNormalize(JSON.parse(raw) as SettingsConfig);
     } catch (error) {
         if ((error as NodeJS.ErrnoException).code === "ENOENT") {
             return {};
@@ -278,6 +296,7 @@ export function listProviders(settings: SettingsConfig): ProviderSettings[] {
         id: provider.id,
         enabled: true,
         model: provider.model,
+        reasoning: provider.reasoning,
         options: provider.options
     }));
 }
@@ -301,4 +320,33 @@ export function removeProviderSettings(providers: ProviderSettings[] | undefined
 
 function normalizePlugins(plugins: PluginInstanceSettings[]): PluginInstanceSettings[] {
     return plugins.map((plugin) => ({ ...plugin }));
+}
+
+function settingsNormalize(settings: SettingsConfig): SettingsConfig {
+    const models = settings.models
+        ? Object.fromEntries(
+              Object.entries(settings.models).map(([key, value]) => [
+                  key,
+                  typeof value === "string" ? { model: value } : value
+              ])
+          )
+        : undefined;
+    const modelFlavors = settings.modelFlavors
+        ? Object.fromEntries(Object.entries(settings.modelFlavors).map(([key, value]) => [key, { ...value }]))
+        : undefined;
+
+    return {
+        ...settings,
+        models: models as ModelRoleConfig | undefined,
+        modelFlavors: modelFlavors as ModelFlavorConfig | undefined,
+        providers: settings.providers?.map((provider) => ({ ...provider })),
+        inference: settings.inference
+            ? {
+                  ...settings.inference,
+                  providers: settings.inference.providers?.map((provider) => ({
+                      ...provider
+                  }))
+              }
+            : undefined
+    };
 }

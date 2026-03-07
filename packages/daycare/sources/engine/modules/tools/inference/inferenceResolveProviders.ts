@@ -2,7 +2,12 @@ import { getProviderDefinition, listActiveInferenceProviders } from "../../../..
 import { modelRoleApply } from "../../../../providers/modelRoleApply.js";
 import { providerModelSelectBySize } from "../../../../providers/providerModelSelectBySize.js";
 import type { ProviderModelSize } from "../../../../providers/types.js";
-import { BUILTIN_MODEL_FLAVORS, type BuiltinModelFlavor, type ProviderSettings } from "../../../../settings.js";
+import {
+    BUILTIN_MODEL_FLAVORS,
+    type BuiltinModelFlavor,
+    type ModelFlavorEntry,
+    type ProviderSettings
+} from "../../../../settings.js";
 import type { ConfigModule } from "../../../config/configModule.js";
 
 const INFERENCE_MODEL_SIZES: readonly ProviderModelSize[] = ["small", "normal", "large"];
@@ -29,7 +34,7 @@ export function inferenceResolveProviders(config: ConfigModule, model?: string):
     }
 
     if (flavor.type === "custom") {
-        const applied = modelRoleApply(providers, flavor.model);
+        const applied = modelRoleApply(providers, flavor);
         return applied.providerId ? applied.providers : providers;
     }
 
@@ -43,7 +48,7 @@ export function inferenceResolveProviders(config: ConfigModule, model?: string):
 function inferenceModelFlavorParse(
     config: ConfigModule,
     value: string
-): { type: "builtin"; value: BuiltinModelFlavor } | { type: "custom"; model: string } | null {
+): { type: "builtin"; value: BuiltinModelFlavor } | ({ type: "custom" } & ModelFlavorEntry) | null {
     const normalized = value.toLowerCase() as ProviderModelSize;
     if (INFERENCE_MODEL_SIZES.includes(normalized) && normalized in BUILTIN_MODEL_FLAVORS) {
         return { type: "builtin", value: normalized as BuiltinModelFlavor };
@@ -51,13 +56,13 @@ function inferenceModelFlavorParse(
 
     const modelFlavors = config.current.settings.modelFlavors ?? {};
     const exactMatch = modelFlavors[value];
-    if (exactMatch?.model) {
-        return { type: "custom", model: exactMatch.model };
+    if (exactMatch) {
+        return { type: "custom", ...exactMatch };
     }
 
     const customKey = Object.keys(modelFlavors).find((key) => key.toLowerCase() === normalized);
     if (customKey) {
-        return { type: "custom", model: modelFlavors[customKey]!.model };
+        return { type: "custom", ...modelFlavors[customKey]! };
     }
 
     return null;

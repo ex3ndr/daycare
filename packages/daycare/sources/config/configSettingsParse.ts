@@ -1,12 +1,23 @@
 import { z } from "zod";
 
-import type { SettingsConfig } from "../settings.js";
+import { REASONING_LEVELS, type SettingsConfig } from "../settings.js";
 
 /**
  * Parses raw settings data into a validated SettingsConfig.
  * Expects: raw is JSON-compatible and matches the settings schema.
  */
 export function configSettingsParse(raw: unknown): SettingsConfig {
+    const modelSelection = z
+        .object({
+            model: z.string().min(1),
+            reasoning: z.enum(REASONING_LEVELS).optional()
+        })
+        .passthrough();
+
+    const legacyOrStructuredModelSelection = z
+        .union([z.string().min(1), modelSelection])
+        .transform((value) => (typeof value === "string" ? { model: value } : value));
+
     const pluginInstance = z
         .object({
             instanceId: z.string().min(1),
@@ -33,6 +44,7 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
             id: z.string().min(1),
             enabled: z.boolean().optional(),
             model: z.string().optional(),
+            reasoning: z.enum(REASONING_LEVELS).optional(),
             options: z.record(z.unknown()).optional(),
             image: imageSettings.optional()
         })
@@ -42,6 +54,7 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
         .object({
             id: z.string().min(1),
             model: z.string().optional(),
+            reasoning: z.enum(REASONING_LEVELS).optional(),
             options: z.record(z.unknown()).optional()
         })
         .passthrough();
@@ -138,11 +151,11 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                 .optional(),
             models: z
                 .object({
-                    user: z.string().min(1).optional(),
-                    memory: z.string().min(1).optional(),
-                    memorySearch: z.string().min(1).optional(),
-                    subagent: z.string().min(1).optional(),
-                    task: z.string().min(1).optional()
+                    user: legacyOrStructuredModelSelection.optional(),
+                    memory: legacyOrStructuredModelSelection.optional(),
+                    memorySearch: legacyOrStructuredModelSelection.optional(),
+                    subagent: legacyOrStructuredModelSelection.optional(),
+                    task: legacyOrStructuredModelSelection.optional()
                 })
                 .partial()
                 .optional(),
@@ -150,7 +163,8 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                 .record(
                     z.object({
                         model: z.string().min(1),
-                        description: z.string().min(1)
+                        description: z.string().min(1),
+                        reasoning: z.enum(REASONING_LEVELS).optional()
                     })
                 )
                 .optional(),

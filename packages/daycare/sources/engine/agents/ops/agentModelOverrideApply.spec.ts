@@ -60,11 +60,12 @@ describe("agentModelOverrideApply", () => {
         const result = agentModelOverrideApply(providers, override, "anthropic", {
             small: {
                 model: "openai/gpt-5-mini",
-                description: "Fast coding model"
+                description: "Fast coding model",
+                reasoning: "low"
             }
         });
 
-        expect(result[0]).toMatchObject({ id: "openai", model: "gpt-5-mini" });
+        expect(result[0]).toMatchObject({ id: "openai", model: "gpt-5-mini", reasoning: "low" });
     });
 
     it("ignores configured selector override when provider is not active", () => {
@@ -90,11 +91,12 @@ describe("agentModelOverrideApply", () => {
         const result = agentModelOverrideApply(providers, override, "openai", {
             coding: {
                 model: "anthropic/claude-sonnet-4-5",
-                description: "Use for code review"
+                description: "Use for code review",
+                reasoning: "high"
             }
         });
 
-        expect(result[0]).toMatchObject({ id: "anthropic", model: "claude-sonnet-4-5" });
+        expect(result[0]).toMatchObject({ id: "anthropic", model: "claude-sonnet-4-5", reasoning: "high" });
     });
 
     it("passes through unknown custom flavor when no mapping exists", () => {
