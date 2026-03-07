@@ -12,9 +12,15 @@ import { userHomeEnsure } from "./userHomeEnsure.js";
 
 const MARKER_FILENAME = ".migrated";
 const logger = getLogger("engine.users.migrate");
+const SYSTEM_PROMPT_FILES = [
+    { slug: "soul", filename: "SOUL.md" },
+    { slug: "user", filename: "USER.md" },
+    { slug: "agents", filename: "AGENTS.md" },
+    { slug: "tools", filename: "TOOLS.md" }
+] as const;
 
 /**
- * Migrates legacy system prompt files into the owner user's document store once.
+ * Migrates legacy system prompt files into each user's document store once.
  * Expects: storage migrations have already run and config paths are absolute.
  */
 export async function userHomeMigrate(config: Config, storageOrConfig?: Storage | Config): Promise<void> {
@@ -25,13 +31,26 @@ export async function userHomeMigrate(config: Config, storageOrConfig?: Storage 
     }
 
     const ownerUserId = await ownerUserIdEnsure(storage);
-    const ownerHome = new UserHome(config.usersDir, ownerUserId);
-    const ownerCtx = contextForUser({ userId: ownerUserId });
-    await userHomeEnsure(ownerHome);
-    await documentSystemDocsEnsure(ownerCtx, storage);
-    await knowledgeFilesMigrate(config, ownerHome, ownerCtx, storage);
+    const users = await storage.users.findMany();
+    for (const user of users) {
+        const userHome = new UserHome(config.usersDir, user.id);
+        const ctx = contextForUser({ userId: user.id });
+        await userHomeEnsure(userHome);
+        await documentSystemDocsEnsure(ctx, storage);
+        await knowledgeFilesMigrate({
+            config,
+            userHome,
+            ctx,
+            storage,
+            includeGlobalFallback: user.id === ownerUserId
+        });
+    }
     await fs.mkdir(config.usersDir, { recursive: true });
-    await fs.writeFile(markerPath, `${JSON.stringify({ migratedAt: Date.now(), ownerUserId }, null, 2)}\n`, "utf8");
+    await fs.writeFile(
+        markerPath,
+        `${JSON.stringify({ migratedAt: Date.now(), ownerUserId, migratedUserIds: users.map((user) => user.id) }, null, 2)}\n`,
+        "utf8"
+    );
 }
 
 async function ownerUserIdEnsure(storage: Storage): Promise<string> {
@@ -60,40 +79,36 @@ async function ownerUserIdEnsure(storage: Storage): Promise<string> {
     return ownerId;
 }
 
-async function knowledgeFilesMigrate(
-    config: Config,
-    ownerHome: UserHome,
-    ctx: ReturnType<typeof contextForUser>,
-    storage: Storage
-): Promise<void> {
-    const system = await storage.documents.findBySlugAndParent(ctx, "system", null);
+async function knowledgeFilesMigrate(input: {
+    config: Config;
+    userHome: UserHome;
+    ctx: ReturnType<typeof contextForUser>;
+    storage: Storage;
+    includeGlobalFallback: boolean;
+}): Promise<void> {
+    const system = await input.storage.documents.findBySlugAndParent(input.ctx, "system", null);
     if (!system) {
         throw new Error("Missing doc://system root during userHome migration.");
     }
 
-    const legacyKnowledgeDir = path.join(ownerHome.home, "knowledge");
-    const files = [
-        { slug: "soul", filename: "SOUL.md" },
-        { slug: "user", filename: "USER.md" },
-        { slug: "agents", filename: "AGENTS.md" },
-        { slug: "tools", filename: "TOOLS.md" }
-    ];
+    const legacyKnowledgeDir = path.join(input.userHome.home, "knowledge");
 
-    for (const file of files) {
-        const content = await legacyPromptContentLoad([
-            path.join(legacyKnowledgeDir, file.filename),
-            path.join(config.dataDir, file.filename)
-        ]);
+    for (const file of SYSTEM_PROMPT_FILES) {
+        const candidatePaths = [path.join(legacyKnowledgeDir, file.filename)];
+        if (input.includeGlobalFallback) {
+            candidatePaths.push(path.join(input.config.dataDir, file.filename));
+        }
+        const content = await legacyPromptContentLoad([...candidatePaths]);
         if (content === null) {
             continue;
         }
 
-        const document = await storage.documents.findBySlugAndParent(ctx, file.slug, system.id);
+        const document = await input.storage.documents.findBySlugAndParent(input.ctx, file.slug, system.id);
         if (!document) {
             throw new Error(`Missing doc://system/${file.slug} during userHome migration.`);
         }
 
-        await storage.documents.update(ctx, document.id, {
+        await input.storage.documents.update(input.ctx, document.id, {
             body: content,
             updatedAt: Date.now()
         });
