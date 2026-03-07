@@ -24,13 +24,13 @@ const segmentGroups: Segment[][] = [
     [{ mode: "home", icon: "home", label: "Home" }],
     [
         { mode: "todos", icon: "checklist", label: "Todos" },
-        { mode: "documents", icon: "file", label: "Documents" },
-        { mode: "files", icon: "file-directory", label: "Files" }
+        { mode: "documents", icon: "file", label: "Documents" }
     ],
     [
         { mode: "agents", icon: "device-desktop", label: "Agents" },
         { mode: "fragments", icon: "note", label: "Fragments" },
         { mode: "routines", icon: "clock", label: "Routines" },
+        { mode: "files", icon: "file-directory", label: "Files" },
         { mode: "skills", icon: "zap", label: "Skills" },
         { mode: "tools", icon: "tools", label: "Tools" },
         { mode: "costs", icon: "credit-card", label: "Costs" }
@@ -129,7 +129,7 @@ const WorkspaceButton = React.memo<{
     onPress: () => void;
 }>(({ workspace, isActive, onPress }) => {
     const { theme } = useUnistyles();
-    const initials = workspaceInitials(workspace);
+    const label = workspace.emoji ?? workspaceInitials(workspace);
     return (
         <Pressable
             onPress={onPress}
@@ -142,13 +142,13 @@ const WorkspaceButton = React.memo<{
         >
             <Text
                 style={[
-                    stripStyles.workspaceInitials,
-                    {
+                    workspace.emoji ? stripStyles.workspaceEmoji : stripStyles.workspaceInitials,
+                    !workspace.emoji && {
                         color: isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant
                     }
                 ]}
             >
-                {initials}
+                {label}
             </Text>
         </Pressable>
     );
@@ -271,6 +271,9 @@ const stripStyles = StyleSheet.create({
     workspaceInitials: {
         fontSize: 13,
         fontWeight: "600"
+    },
+    workspaceEmoji: {
+        fontSize: 18
     }
 });
 

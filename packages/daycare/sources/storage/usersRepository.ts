@@ -153,6 +153,7 @@ export class UsersRepository {
                 systemPrompt: row.systemPrompt ?? null,
                 memory: row.memory,
                 nametag: row.nametag,
+                emoji: row.emoji ?? null,
                 createdAt: row.createdAt,
                 updatedAt: row.updatedAt,
                 connectorKeys: (keysByUserId.get(row.id) ?? []).map((keyRow) => ({
@@ -212,6 +213,7 @@ export class UsersRepository {
             const country = textNullableNormalize(input.country);
             const timezone = textNullableNormalize(input.timezone);
             const systemPrompt = textNullableNormalize(input.systemPrompt);
+            const emoji = textNullableNormalize(input.emoji);
             const memory = input.memory ?? false;
             const connectorKey = input.connectorKey?.trim() ?? "";
             const explicitNametag = input.nametag?.trim() ?? "";
@@ -239,6 +241,7 @@ export class UsersRepository {
                         systemPrompt,
                         memory,
                         nametag,
+                        emoji,
                         createdAt,
                         updatedAt
                     });
@@ -285,6 +288,7 @@ export class UsersRepository {
                 systemPrompt,
                 memory,
                 nametag,
+                emoji,
                 createdAt,
                 updatedAt,
                 connectorKeys
@@ -317,6 +321,7 @@ export class UsersRepository {
                 ...(data.timezone === undefined ? {} : { timezone: textNullableNormalize(data.timezone) }),
                 ...(data.systemPrompt === undefined ? {} : { systemPrompt: textNullableNormalize(data.systemPrompt) }),
                 ...(data.memory === undefined ? {} : { memory: data.memory }),
+                ...(data.emoji === undefined ? {} : { emoji: textNullableNormalize(data.emoji) }),
                 createdAt: current.createdAt,
                 updatedAt: now
             };
@@ -335,6 +340,7 @@ export class UsersRepository {
                         timezone: next.timezone,
                         systemPrompt: next.systemPrompt,
                         memory: next.memory,
+                        emoji: next.emoji,
                         createdAt: current.createdAt,
                         updatedAt: now
                     },
@@ -371,6 +377,7 @@ export class UsersRepository {
                             systemPrompt: row.systemPrompt,
                             memory: row.memory,
                             nametag: row.nametag,
+                            emoji: row.emoji,
                             createdAt: row.createdAt,
                             updatedAt: row.updatedAt
                         });
@@ -499,6 +506,7 @@ export class UsersRepository {
             systemPrompt: userRow.systemPrompt ?? null,
             memory: userRow.memory,
             nametag: userRow.nametag,
+            emoji: userRow.emoji ?? null,
             createdAt: userRow.createdAt,
             updatedAt: userRow.updatedAt,
             connectorKeys: keyRows.map((row) => ({

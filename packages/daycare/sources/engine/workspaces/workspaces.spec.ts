@@ -27,6 +27,7 @@ describe("Workspaces", () => {
                 bio: "Todo helper",
                 about: null,
                 systemPrompt: "prompt",
+                emoji: "✅",
                 memory: false
             });
 

@@ -17,7 +17,8 @@ describe("workspaceCreateToolBuild", () => {
                 nametag: "auto-generated",
                 firstName: "Todo",
                 lastName: null,
-                memory: false
+                memory: false,
+                emoji: "✅"
             }));
             const discover = vi.fn(async () => []);
             const refreshSandboxesForUserId = vi.fn(() => 1);
@@ -28,6 +29,7 @@ describe("workspaceCreateToolBuild", () => {
                     firstName: "Todo",
                     bio: "Manages todos",
                     systemPrompt: "You are todo",
+                    emoji: "✅",
                     memory: undefined
                 },
                 {
@@ -72,7 +74,8 @@ describe("workspaceCreateToolBuild", () => {
                     {
                         firstName: "todo",
                         bio: "todo",
-                        systemPrompt: "prompt"
+                        systemPrompt: "prompt",
+                        emoji: "📝"
                     },
                     {
                         ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),

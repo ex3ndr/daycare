@@ -5,6 +5,7 @@ export type WorkspaceConfig = {
     about: string | null;
     systemPrompt: string;
     memory: boolean;
+    emoji: string;
 };
 
 export type WorkspaceRecord = {
@@ -17,6 +18,7 @@ export type WorkspaceRecord = {
     about: string | null;
     systemPrompt: string;
     memory: boolean;
+    emoji: string;
     createdAt: number;
     updatedAt: number;
 };

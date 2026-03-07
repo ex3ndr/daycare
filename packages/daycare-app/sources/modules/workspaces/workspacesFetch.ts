@@ -3,6 +3,7 @@ export type WorkspaceListItem = {
     userId: string;
     firstName: string | null;
     lastName: string | null;
+    emoji: string | null;
     isSelf: boolean;
 };
 

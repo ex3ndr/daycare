@@ -26,6 +26,7 @@ describe("workspaceCreate", () => {
                     bio: "Manages todos",
                     about: "Autonomous todo management",
                     systemPrompt: "You are the todo workspace.",
+                    emoji: "📝",
                     memory: false
                 },
                 storage,
@@ -47,6 +48,7 @@ describe("workspaceCreate", () => {
             expect(user?.bio).toBe("Manages todos");
             expect(user?.about).toBe("Autonomous todo management");
             expect(user?.memory).toBe(false);
+            expect(user?.emoji).toBe("📝");
             expect(soul).toContain("You are the todo workspace.");
         } finally {
             storage.connection.close();

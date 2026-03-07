@@ -32,5 +32,9 @@ export const migrations: Migration[] = [
     {
         name: "20260306120000_swarm_to_workspace",
         fileName: "20260306120000_swarm_to_workspace.sql"
+    },
+    {
+        name: "20260306130000_user_emoji",
+        fileName: "20260306130000_user_emoji.sql"
     }
 ];

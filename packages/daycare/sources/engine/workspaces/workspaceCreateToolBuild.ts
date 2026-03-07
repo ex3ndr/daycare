@@ -11,6 +11,7 @@ const schema = Type.Object(
         bio: Type.String({ minLength: 1 }),
         about: Type.Optional(Type.Union([Type.String({ minLength: 1 }), Type.Null()])),
         systemPrompt: Type.String({ minLength: 1 }),
+        emoji: Type.String({ minLength: 1 }),
         memory: Type.Optional(Type.Boolean())
     },
     { additionalProperties: false }
@@ -25,6 +26,7 @@ const workspaceCreateToolResultSchema = Type.Object(
         nametag: Type.String(),
         firstName: Type.String(),
         lastName: Type.Union([Type.String(), Type.Null()]),
+        emoji: Type.String(),
         memory: Type.Boolean()
     },
     { additionalProperties: false }
@@ -46,6 +48,7 @@ type WorkspacesFacade = {
         nametag: string;
         firstName: string;
         lastName: string | null;
+        emoji: string;
         memory: boolean;
     }>;
     discover: (ownerUserId: string) => Promise<unknown>;
@@ -77,6 +80,7 @@ export function workspaceCreateToolBuild(workspaces: WorkspacesFacade): ToolDefi
                 bio: payload.bio.trim(),
                 about: payload.about?.trim() ?? null,
                 systemPrompt: payload.systemPrompt.trim(),
+                emoji: payload.emoji.trim(),
                 memory: payload.memory ?? false
             };
             if (!config.firstName) {
@@ -87,6 +91,9 @@ export function workspaceCreateToolBuild(workspaces: WorkspacesFacade): ToolDefi
             }
             if (!config.systemPrompt) {
                 throw new Error("Workspace systemPrompt is required.");
+            }
+            if (!config.emoji) {
+                throw new Error("Workspace emoji is required.");
             }
 
             const created = await workspaces.create(toolContext.ctx.userId, config);
@@ -115,6 +122,7 @@ export function workspaceCreateToolBuild(workspaces: WorkspacesFacade): ToolDefi
                     nametag: created.nametag,
                     firstName: created.firstName,
                     lastName: created.lastName,
+                    emoji: created.emoji,
                     memory: created.memory
                 }
             };

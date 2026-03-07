@@ -44,7 +44,8 @@ export const usersTable = pgTable(
         timezone: text("timezone"),
         systemPrompt: text("system_prompt"),
         memory: boolean("memory").notNull().default(false),
-        nametag: text("nametag").notNull()
+        nametag: text("nametag").notNull(),
+        emoji: text("emoji")
     },
     (table) => [
         primaryKey({ columns: [table.id, table.version] }),

@@ -474,6 +474,7 @@ export type DatabaseUserRow = {
     system_prompt: string | null;
     memory: boolean;
     nametag: string;
+    emoji: string | null;
     created_at: number;
     updated_at: number;
 };
@@ -501,6 +502,7 @@ export type UserDbRecord = {
     systemPrompt: string | null;
     memory: boolean;
     nametag: string;
+    emoji: string | null;
     createdAt: number;
     updatedAt: number;
 };
@@ -646,6 +648,7 @@ export type CreateUserInput = {
     systemPrompt?: string | null;
     memory?: boolean;
     nametag?: string;
+    emoji?: string | null;
     createdAt?: number;
     updatedAt?: number;
     connectorKey?: string;
@@ -696,6 +699,7 @@ export type UpdateUserInput = {
     timezone?: string | null;
     systemPrompt?: string | null;
     memory?: boolean;
+    emoji?: string | null;
     createdAt?: number;
     updatedAt?: number;
 };

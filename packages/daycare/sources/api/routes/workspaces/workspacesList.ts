@@ -6,6 +6,7 @@ export type WorkspacesListItem = {
     userId: string;
     firstName: string | null;
     lastName: string | null;
+    emoji: string | null;
     isSelf: boolean;
 };
 
@@ -37,6 +38,7 @@ export async function workspacesList(input: WorkspacesListInput): Promise<Worksp
             userId: caller.id,
             firstName: caller.firstName,
             lastName: caller.lastName,
+            emoji: caller.emoji,
             isSelf: true
         }
     ];
@@ -50,6 +52,7 @@ export async function workspacesList(input: WorkspacesListInput): Promise<Worksp
                 userId: child.id,
                 firstName: child.firstName,
                 lastName: child.lastName,
+                emoji: child.emoji,
                 isSelf: false
             });
         }

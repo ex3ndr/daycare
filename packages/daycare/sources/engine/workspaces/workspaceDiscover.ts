@@ -33,6 +33,7 @@ export async function workspaceDiscover(input: WorkspaceDiscoverInput): Promise<
             bio: user.bio ?? "",
             about: user.about,
             systemPrompt: user.systemPrompt ?? "",
+            emoji: user.emoji ?? "",
             memory: user.memory,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt

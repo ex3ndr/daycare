@@ -28,6 +28,7 @@ export async function workspaceCreate(input: WorkspaceCreateInput): Promise<Work
     const bio = input.config.bio.trim();
     const about = input.config.about?.trim() ?? null;
     const systemPrompt = input.config.systemPrompt.trim();
+    const emoji = input.config.emoji.trim();
     if (!firstName) {
         throw new Error("Workspace firstName is required.");
     }
@@ -36,6 +37,9 @@ export async function workspaceCreate(input: WorkspaceCreateInput): Promise<Work
     }
     if (!systemPrompt) {
         throw new Error("Workspace systemPrompt is required.");
+    }
+    if (!emoji) {
+        throw new Error("Workspace emoji is required.");
     }
 
     const now = Date.now();
@@ -49,6 +53,7 @@ export async function workspaceCreate(input: WorkspaceCreateInput): Promise<Work
         bio,
         about,
         systemPrompt,
+        emoji,
         memory: input.config.memory,
         createdAt: now,
         updatedAt: now
@@ -64,6 +69,7 @@ export async function workspaceCreate(input: WorkspaceCreateInput): Promise<Work
         about,
         systemPrompt,
         memory: input.config.memory,
+        emoji,
         createdAt: now,
         updatedAt: now
     };
