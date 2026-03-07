@@ -8,7 +8,7 @@ Telegram foreground conversations now keep a single editable bot message open wh
 - Taught the Telegram connector to create text-only drafts with `sendMessage` and update them with `editMessageText`.
 - Updated the agent loop to render only `run_python.description` step labels into a live draft when the connector supports drafts.
 - Ordered the draft surface so step descriptions render first and assistant text renders after them.
-- Kept persisted history unchanged: the app still reads normal `assistant_message`, `rlm_start`, and `rlm_tool_call` records.
+- Persisted the Telegram draft reference on `assistant_message` history so pending-phase recovery can reattach to the same Telegram message after resume or restart.
 
 ```mermaid
 sequenceDiagram
@@ -27,8 +27,21 @@ sequenceDiagram
     T->>TG: editMessageText(...)
 ```
 
+```mermaid
+sequenceDiagram
+    participant H as History
+    participant A as Agent loop
+    participant T as Telegram connector
+    participant TG as Telegram Bot API
+
+    H-->>A: assistant_message + draftReference
+    A->>T: resumeDraft(draftReference)
+    A->>T: update or finish existing draft
+    T->>TG: editMessageText(existing message_id, ...)
+```
+
 ## Notes
 
 - Drafts are text-only; file sends and button sends still use normal outbound messages.
-- The draft text is a connector surface only. It does not change agent history storage or app history parsing.
+- The draft text is still a connector surface, but the `assistant_message` history now stores a tiny draft reference so Telegram can resume editing the same message.
 - Inner tool names and raw arguments are intentionally excluded from Telegram drafts.

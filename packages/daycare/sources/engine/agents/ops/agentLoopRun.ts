@@ -256,6 +256,29 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         }
     };
 
+    const draftReferenceResolve = () => {
+        if (!draftHandle) {
+            return null;
+        }
+        return draftHandle.reference ?? null;
+    };
+
+    const draftRestore = async (): Promise<void> => {
+        const draftReference = initialPhase?.type !== "error" ? initialPhase?.draftReference : null;
+        if (!draftReference || !connector?.resumeDraft || !targetId) {
+            return;
+        }
+        try {
+            draftHandle = await connector.resumeDraft(targetId, draftReference);
+            if (draftHandle) {
+                usedDraftOutput = true;
+            }
+        } catch (error) {
+            logger.warn({ connector: source, error }, "error: Failed to restore draft message");
+            draftHandle = null;
+        }
+    };
+
     const blockStateBuild = (params: {
         iteration: number;
         blocks: string[];
@@ -407,6 +430,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     };
 
     try {
+        await draftRestore();
         logger.debug(`start: Starting inference loop maxIterations=${MAX_TOOL_ITERATIONS}`);
         let phase: AgentLoopPhase = { type: "inference", iteration: 0 };
         if (initialPhase) {
@@ -711,7 +735,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             type: "assistant_message",
                             at: assistantRecordAt,
                             content: messageContentClone(response.message.content),
-                            tokens: tokensEntry
+                            tokens: tokensEntry,
+                            draftReference: draftReferenceResolve()
                         },
                         appendHistoryRecord
                     );

@@ -3,6 +3,7 @@ import type { AssistantMessage, Context } from "@mariozechner/pi-ai";
 import type {
     AgentConfig,
     AgentPath,
+    ConnectorDraftReference,
     ConnectorMessage,
     FileReference,
     MessageContext,
@@ -126,6 +127,7 @@ export type AgentHistoryRecord =
           at: number;
           content: AgentAssistantContent;
           tokens: AgentTokenEntry | null;
+          draftReference?: ConnectorDraftReference | null;
       }
     | AgentHistoryRlmStartRecord
     | AgentHistoryRlmToolCallRecord

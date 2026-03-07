@@ -15,6 +15,7 @@ describe("agentLoopPendingPhaseResolve", () => {
                 type: "assistant_message",
                 at: 10,
                 tokens: null,
+                draftReference: { type: "telegram", messageId: "101" },
                 content: [
                     {
                         type: "toolCall",
@@ -36,6 +37,7 @@ describe("agentLoopPendingPhaseResolve", () => {
             expect(pending.blockDescriptions).toEqual(["Echo x"]);
             expect(pending.blockIndex).toBe(0);
             expect(pending.assistantAt).toBe(10);
+            expect(pending.draftReference).toEqual({ type: "telegram", messageId: "101" });
         }
     });
 
@@ -45,6 +47,7 @@ describe("agentLoopPendingPhaseResolve", () => {
                 type: "assistant_message",
                 at: 5,
                 tokens: null,
+                draftReference: { type: "telegram", messageId: "101" },
                 content: [
                     {
                         type: "toolCall",
@@ -90,6 +93,7 @@ describe("agentLoopPendingPhaseResolve", () => {
             expect(pending.blocks).toEqual(["echo('a')", "echo('b')"]);
             expect(pending.blockToolCallIds).toEqual(["tool-1", "tool-2"]);
             expect(pending.blockDescriptions).toEqual(["Echo a", "Echo b"]);
+            expect(pending.draftReference).toEqual({ type: "telegram", messageId: "101" });
         }
     });
 

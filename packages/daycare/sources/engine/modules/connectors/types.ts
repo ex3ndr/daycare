@@ -28,7 +28,13 @@ export type ConnectorMessage = {
     buttons?: ConnectorMessageButton[];
 };
 
+export type ConnectorDraftReference = {
+    type: "telegram";
+    messageId: string;
+};
+
 export type ConnectorDraft = {
+    reference?: ConnectorDraftReference;
     update: (message: ConnectorMessage) => Promise<void>;
     finish: (message?: ConnectorMessage) => Promise<void>;
 };
@@ -88,6 +94,7 @@ export interface Connector {
     updateCommands?: (commands: SlashCommandEntry[]) => void | Promise<void>;
     sendMessage(targetId: string, message: ConnectorMessage): Promise<void>;
     createDraft?: (targetId: string, message: ConnectorMessage) => Promise<ConnectorDraft | null>;
+    resumeDraft?: (targetId: string, reference: ConnectorDraftReference) => Promise<ConnectorDraft | null>;
     startTyping?: (targetId: string) => () => void;
     setReaction?: (targetId: string, messageId: string, reaction: string) => Promise<void>;
     shutdown?: (reason?: string) => void | Promise<void>;

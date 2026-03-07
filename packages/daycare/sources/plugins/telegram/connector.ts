@@ -8,6 +8,7 @@ import type {
     Connector,
     ConnectorCapabilities,
     ConnectorDraft,
+    ConnectorDraftReference,
     ConnectorFile,
     ConnectorMessage,
     FileReference,
@@ -365,31 +366,22 @@ export class TelegramConnector implements Connector {
             return null;
         }
 
-        let currentText = initialText;
-        return {
-            update: async (nextMessage) => {
-                const nextText = nextMessage.text?.trim() ?? "";
-                if (!nextText || nextText === currentText) {
-                    return;
-                }
-                if (telegramMessageSplit(nextText, TELEGRAM_MESSAGE_MAX_LENGTH).length !== 1) {
-                    return;
-                }
-                await this.editTextMessage(chatId, sent.message_id, nextText);
-                currentText = nextText;
-            },
-            finish: async (nextMessage) => {
-                const nextText = nextMessage?.text?.trim() ?? "";
-                if (!nextText || nextText === currentText) {
-                    return;
-                }
-                if (telegramMessageSplit(nextText, TELEGRAM_MESSAGE_MAX_LENGTH).length !== 1) {
-                    return;
-                }
-                await this.editTextMessage(chatId, sent.message_id, nextText);
-                currentText = nextText;
-            }
-        };
+        return this.draftBuild(chatId, sent.message_id, initialText);
+    }
+
+    async resumeDraft(targetId: string, reference: ConnectorDraftReference): Promise<ConnectorDraft | null> {
+        if (!this.isAllowedTarget(targetId, "resumeDraft")) {
+            return null;
+        }
+        if (reference.type !== "telegram") {
+            return null;
+        }
+        const messageId = Number(reference.messageId);
+        if (!Number.isInteger(messageId) || messageId <= 0) {
+            return null;
+        }
+        const chatId = telegramTargetChatIdResolve(targetId);
+        return this.draftBuild(chatId, messageId);
     }
 
     startTyping(targetId: string): () => void {
@@ -544,6 +536,38 @@ export class TelegramConnector implements Connector {
                 message_id: messageId
             });
         }
+    }
+
+    private draftBuild(chatId: string, messageId: number, initialText = ""): ConnectorDraft {
+        let currentText = initialText.trim();
+        return {
+            reference: {
+                type: "telegram",
+                messageId: String(messageId)
+            },
+            update: async (nextMessage) => {
+                const nextText = nextMessage.text?.trim() ?? "";
+                if (!nextText || nextText === currentText) {
+                    return;
+                }
+                if (telegramMessageSplit(nextText, TELEGRAM_MESSAGE_MAX_LENGTH).length !== 1) {
+                    return;
+                }
+                await this.editTextMessage(chatId, messageId, nextText);
+                currentText = nextText;
+            },
+            finish: async (nextMessage) => {
+                const nextText = nextMessage?.text?.trim() ?? "";
+                if (!nextText || nextText === currentText) {
+                    return;
+                }
+                if (telegramMessageSplit(nextText, TELEGRAM_MESSAGE_MAX_LENGTH).length !== 1) {
+                    return;
+                }
+                await this.editTextMessage(chatId, messageId, nextText);
+                currentText = nextText;
+            }
+        };
     }
 
     private async sendFileWithOptions(

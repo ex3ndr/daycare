@@ -2,7 +2,8 @@ import type {
     AgentHistoryRecord,
     AgentHistoryRlmStartRecord,
     AgentHistoryRlmToolCallRecord,
-    AgentHistoryRlmToolResultRecord
+    AgentHistoryRlmToolResultRecord,
+    ConnectorDraftReference
 } from "@/types";
 import { messageContentExtractText } from "../../messages/messageContentExtractText.js";
 import { messageContentExtractToolCalls } from "../../messages/messageContentExtractToolCalls.js";
@@ -21,6 +22,7 @@ type AssistantRunPythonContext = {
     blocks: string[];
     blockToolCallIds: string[];
     blockDescriptions?: Array<string | undefined>;
+    draftReference?: ConnectorDraftReference | null;
 };
 
 export type AgentLoopPendingPhase =
@@ -34,6 +36,7 @@ export type AgentLoopPendingPhase =
           blockIndex: number;
           assistantAt: number;
           historyResponseText: string;
+          draftReference?: ConnectorDraftReference | null;
       }
     | {
           type: "tool_call";
@@ -47,6 +50,7 @@ export type AgentLoopPendingPhase =
           blockIndex: number;
           assistantAt: number;
           historyResponseText: string;
+          draftReference?: ConnectorDraftReference | null;
           /** Deferred tool payloads from completed tool calls in this block (for restart recovery). */
           persistedDeferredEntries: PersistedDeferredEntry[];
       }
@@ -126,6 +130,7 @@ export function agentLoopPendingPhaseResolve(records: AgentHistoryRecord[]): Age
             blockIndex,
             assistantAt: assistantContext?.assistantAt ?? pendingStart.at,
             historyResponseText: assistantContext?.historyResponseText ?? "",
+            draftReference: assistantContext?.draftReference ?? null,
             persistedDeferredEntries
         };
     }
@@ -147,7 +152,8 @@ export function agentLoopPendingPhaseResolve(records: AgentHistoryRecord[]): Age
         blockDescriptions: latestAssistant.blockDescriptions,
         blockIndex: 0,
         assistantAt: latestAssistant.assistantAt,
-        historyResponseText: latestAssistant.historyResponseText
+        historyResponseText: latestAssistant.historyResponseText,
+        draftReference: latestAssistant.draftReference ?? null
     };
 }
 
@@ -166,7 +172,8 @@ function latestAssistantRunPythonResolve(records: AgentHistoryRecord[]): Assista
                     historyResponseText: messageContentExtractText(record.content),
                     blocks: runPythonCalls.map((call) => call.code),
                     blockToolCallIds: runPythonCalls.map((call) => call.toolCallId),
-                    blockDescriptions: runPythonCalls.map((call) => call.description)
+                    blockDescriptions: runPythonCalls.map((call) => call.description),
+                    draftReference: record.draftReference ?? null
                 });
             }
             continue;
@@ -210,7 +217,8 @@ function assistantRunPythonForStart(
                     historyResponseText: messageContentExtractText(record.content),
                     blocks: runPythonCalls.map((call) => call.code),
                     blockToolCallIds: runPythonCalls.map((call) => call.toolCallId),
-                    blockDescriptions: runPythonCalls.map((call) => call.description)
+                    blockDescriptions: runPythonCalls.map((call) => call.description),
+                    draftReference: record.draftReference ?? null
                 });
             }
             continue;

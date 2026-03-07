@@ -42,6 +42,7 @@ export type {
     Connector,
     ConnectorCapabilities,
     ConnectorDraft,
+    ConnectorDraftReference,
     ConnectorFile,
     ConnectorFileDisposition,
     ConnectorFileMode,

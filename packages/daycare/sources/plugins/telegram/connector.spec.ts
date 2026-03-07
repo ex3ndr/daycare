@@ -923,6 +923,7 @@ describe("TelegramConnector file uploads", () => {
         });
 
         expect(draft).toBeTruthy();
+        expect(draft?.reference).toEqual({ type: "telegram", messageId: "101" });
         const bot = telegramInstances[0];
         expect(bot).toBeTruthy();
         expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
@@ -932,6 +933,44 @@ describe("TelegramConnector file uploads", () => {
             parse_mode: "HTML",
             reply_to_message_id: 77
         });
+
+        await draft?.update({ text: "Still working" });
+        await draft?.finish({ text: "Done" });
+
+        expect(bot!.editMessageText).toHaveBeenCalledTimes(2);
+        expect((bot!.editMessageText.mock.calls[0]?.[0] as string).trim()).toBe("Still working");
+        expect(bot!.editMessageText.mock.calls[0]?.[1]).toMatchObject({
+            chat_id: "123",
+            message_id: 101,
+            parse_mode: "HTML"
+        });
+        expect((bot!.editMessageText.mock.calls[1]?.[0] as string).trim()).toBe("Done");
+        expect(bot!.editMessageText.mock.calls[1]?.[1]).toMatchObject({
+            chat_id: "123",
+            message_id: 101,
+            parse_mode: "HTML"
+        });
+    });
+
+    it("resumes editable drafts by message id", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        const draft = await connector.resumeDraft?.("123", { type: "telegram", messageId: "101" });
+
+        expect(draft).toBeTruthy();
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendMessage).not.toHaveBeenCalled();
 
         await draft?.update({ text: "Still working" });
         await draft?.finish({ text: "Done" });

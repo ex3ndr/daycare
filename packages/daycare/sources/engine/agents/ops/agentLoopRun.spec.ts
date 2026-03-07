@@ -73,7 +73,11 @@ describe("agentLoopRun", () => {
         const sendMessage = vi.fn(async () => undefined);
         const update = vi.fn(async () => undefined);
         const finish = vi.fn(async () => undefined);
-        const createDraft = vi.fn(async () => ({ update, finish }));
+        const createDraft = vi.fn(async () => ({
+            reference: { type: "telegram", messageId: "101" } as const,
+            update,
+            finish
+        }));
         const connector: Connector = {
             capabilities: { sendText: true },
             onMessage: () => () => undefined,
@@ -90,7 +94,7 @@ describe("agentLoopRun", () => {
         const inferenceRouter = inferenceRouterBuild(responses);
         const toolResolver = toolResolverBuild(async (toolCall) => toolResultBuild(toolCall.id, toolCall.name, "ok"));
 
-        await agentLoopRun(
+        const result = await agentLoopRun(
             optionsBuild({
                 connector,
                 inferenceRouter,
@@ -114,6 +118,78 @@ describe("agentLoopRun", () => {
                 return typeof message?.text !== "string" || !message.text.includes("echo text=hello");
             })
         ).toBe(true);
+        expect(finish).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining("Finished") }));
+        expect(sendMessage).not.toHaveBeenCalled();
+        const assistant = result.historyRecords.find(
+            (record): record is Extract<(typeof result.historyRecords)[number], { type: "assistant_message" }> =>
+                record.type === "assistant_message"
+        );
+        expect(assistant?.draftReference).toEqual({ type: "telegram", messageId: "101" });
+    });
+
+    it("stores draft references in assistant history and resumes them on restore", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const update = vi.fn(async () => undefined);
+        const finish = vi.fn(async () => undefined);
+        const createDraft = vi.fn(async () => ({
+            reference: { type: "telegram", messageId: "101" } as const,
+            update,
+            finish
+        }));
+        const resumeDraft = vi.fn(async () => ({
+            reference: { type: "telegram", messageId: "101" } as const,
+            update,
+            finish
+        }));
+        const connector: Connector = {
+            capabilities: { sendText: true },
+            onMessage: () => () => undefined,
+            sendMessage,
+            createDraft,
+            resumeDraft
+        };
+        const toolResolver = toolResolverBuild(async (toolCall) => toolResultBuild(toolCall.id, toolCall.name, "ok"));
+        const options = optionsBuild({
+            connector,
+            inferenceRouter: inferenceRouterBuild([
+                assistantToolCallMessageBuild("tool-1", "run_python", {
+                    code: 'echo(text="hello")',
+                    description: "Check status"
+                }),
+                assistantMessageBuild("Finished")
+            ]),
+            toolResolver
+        });
+
+        const firstResult = await agentLoopRun(options);
+        const assistant = firstResult.historyRecords.find(
+            (record): record is Extract<(typeof firstResult.historyRecords)[number], { type: "assistant_message" }> =>
+                record.type === "assistant_message"
+        );
+
+        expect(assistant?.draftReference).toEqual({ type: "telegram", messageId: "101" });
+
+        sendMessage.mockClear();
+        finish.mockClear();
+        const restoreOptions = optionsBuild({
+            connector,
+            inferenceRouter: inferenceRouterBuild([assistantMessageBuild("Finished")]),
+            toolResolver
+        });
+        restoreOptions.initialPhase = {
+            type: "vm_start",
+            blocks: ['echo(text="hello")'],
+            blockToolCallIds: ["tool-1"],
+            blockDescriptions: ["Check status"],
+            blockIndex: 0,
+            assistantAt: 1,
+            historyResponseText: "",
+            draftReference: { type: "telegram", messageId: "101" }
+        };
+
+        await agentLoopRun(restoreOptions);
+
+        expect(resumeDraft).toHaveBeenCalledWith("channel-1", { type: "telegram", messageId: "101" });
         expect(finish).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining("Finished") }));
         expect(sendMessage).not.toHaveBeenCalled();
     });
