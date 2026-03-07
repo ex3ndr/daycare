@@ -1,5 +1,5 @@
 import { Octicons } from "@expo/vector-icons";
-import { Slot } from "expo-router";
+import { Navigator, type ScreenProps } from "expo-router";
 import * as React from "react";
 import { Pressable, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -17,6 +17,12 @@ import { Drawer } from "@/components/Drawer";
 
 const SIDEBAR_KEY = "daycare:sidebar-collapsed";
 const CHAT_KEY = "daycare:chat-collapsed";
+// Expo Router's Navigator.Screen runtime supports singular screen props, but its exported type omits them.
+const LayoutScreen = Navigator.Screen as unknown as React.ComponentType<ScreenProps>;
+
+function workspaceRouteSingularId(_name: string, params: Record<string, unknown>): string | undefined {
+    return typeof params.workspace === "string" ? params.workspace : undefined;
+}
 
 function panelStateRead(key: string, fallback: boolean): boolean {
     try {
@@ -90,48 +96,52 @@ function DesktopLayout() {
     const cardShadow = `0px 1px 2px ${theme.colors.shadow}0D, 0px 1px 3px ${theme.colors.shadow}14`;
 
     return (
-        <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
-            <WorkspaceStrip style={{ paddingTop: 18 + insets.top, paddingBottom: 8 + insets.bottom }} />
-            <Animated.View
-                style={[
-                    styles.sidebarCard,
-                    sidebarAnimatedStyle,
-                    {
-                        ...cardMargins,
-                        backgroundColor: theme.colors.surface,
-                        boxShadow: cardShadow
-                    }
-                ]}
-            >
-                <AppSidebar
-                    onToggleCollapse={toggleSidebar}
-                    labelsOpacity={labelsOpacity}
-                    sidebarWidth={sidebarWidth}
-                    collapsed={sidebarCollapsed}
-                />
-            </Animated.View>
-            <View
-                style={[
-                    styles.contentCard,
-                    { ...cardMargins, backgroundColor: theme.colors.surface, boxShadow: cardShadow }
-                ]}
-            >
-                <Slot />
+        <Navigator>
+            <LayoutScreen name="index" />
+            <LayoutScreen name="[workspace]" dangerouslySingular={workspaceRouteSingularId} />
+            <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
+                <WorkspaceStrip style={{ paddingTop: 18 + insets.top, paddingBottom: 8 + insets.bottom }} />
+                <Animated.View
+                    style={[
+                        styles.sidebarCard,
+                        sidebarAnimatedStyle,
+                        {
+                            ...cardMargins,
+                            backgroundColor: theme.colors.surface,
+                            boxShadow: cardShadow
+                        }
+                    ]}
+                >
+                    <AppSidebar
+                        onToggleCollapse={toggleSidebar}
+                        labelsOpacity={labelsOpacity}
+                        sidebarWidth={sidebarWidth}
+                        collapsed={sidebarCollapsed}
+                    />
+                </Animated.View>
+                <View
+                    style={[
+                        styles.contentCard,
+                        { ...cardMargins, backgroundColor: theme.colors.surface, boxShadow: cardShadow }
+                    ]}
+                >
+                    <Navigator.Slot />
+                </View>
+                <Animated.View
+                    style={[
+                        styles.chatCard,
+                        chatAnimatedStyle,
+                        {
+                            ...cardMargins,
+                            backgroundColor: theme.colors.surface,
+                            boxShadow: cardShadow
+                        }
+                    ]}
+                >
+                    <ChatPanel onToggleCollapse={toggleChat} labelsOpacity={chatLabelsOpacity} panelWidth={chatWidth} />
+                </Animated.View>
             </View>
-            <Animated.View
-                style={[
-                    styles.chatCard,
-                    chatAnimatedStyle,
-                    {
-                        ...cardMargins,
-                        backgroundColor: theme.colors.surface,
-                        boxShadow: cardShadow
-                    }
-                ]}
-            >
-                <ChatPanel onToggleCollapse={toggleChat} labelsOpacity={chatLabelsOpacity} panelWidth={chatWidth} />
-            </Animated.View>
-        </View>
+        </Navigator>
     );
 }
 
@@ -155,36 +165,40 @@ function MobileLayout() {
     );
 
     return (
-        <View style={[styles.mobileRoot, { backgroundColor: theme.colors.surfaceContainerLow }]}>
-            <Drawer
-                isOpen={drawerOpen}
-                onClose={closeDrawer}
-                renderDrawer={renderDrawerContent}
-                width={WORKSPACE_STRIP_WIDTH + SIDEBAR_WIDTH + 16}
-                position="left"
-            >
-                <View style={styles.content}>
-                    <Slot />
-                </View>
-            </Drawer>
-
-            {/* Floating hamburger button — flies above everything */}
-            {!drawerOpen && (
-                <Pressable
-                    onPress={openDrawer}
-                    style={[
-                        styles.hamburger,
-                        {
-                            top: 12 + insets.top,
-                            backgroundColor: theme.colors.surface,
-                            boxShadow: theme.elevation.level2
-                        }
-                    ]}
+        <Navigator>
+            <LayoutScreen name="index" />
+            <LayoutScreen name="[workspace]" dangerouslySingular={workspaceRouteSingularId} />
+            <View style={[styles.mobileRoot, { backgroundColor: theme.colors.surfaceContainerLow }]}>
+                <Drawer
+                    isOpen={drawerOpen}
+                    onClose={closeDrawer}
+                    renderDrawer={renderDrawerContent}
+                    width={WORKSPACE_STRIP_WIDTH + SIDEBAR_WIDTH + 16}
+                    position="left"
                 >
-                    <Octicons name="three-bars" size={18} color={theme.colors.onSurface} />
-                </Pressable>
-            )}
-        </View>
+                    <View style={styles.content}>
+                        <Navigator.Slot />
+                    </View>
+                </Drawer>
+
+                {/* Floating hamburger button — flies above everything */}
+                {!drawerOpen && (
+                    <Pressable
+                        onPress={openDrawer}
+                        style={[
+                            styles.hamburger,
+                            {
+                                top: 12 + insets.top,
+                                backgroundColor: theme.colors.surface,
+                                boxShadow: theme.elevation.level2
+                            }
+                        ]}
+                    >
+                        <Octicons name="three-bars" size={18} color={theme.colors.onSurface} />
+                    </Pressable>
+                )}
+            </View>
+        </Navigator>
     );
 }
 

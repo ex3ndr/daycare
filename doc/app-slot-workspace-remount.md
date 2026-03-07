@@ -7,7 +7,11 @@ Keying that `Slot` by `activeId` remounted the layout navigator whenever the wor
 - `TypeError: Cannot read properties of undefined (reading 'stale')`
 - stack frames in `Navigator.js`, `ModalStack`, and `SlotNavigator`
 
-The fix is to let Expo Router own the `Slot` lifecycle and keep workspace switching in route updates and store state instead of forcing a navigator remount.
+The fix is to let Expo Router own the `Slot` lifecycle and remount at the route level instead:
+
+- the `(app)` shell now uses an explicit `Navigator`
+- the `[workspace]` route gets a workspace-derived `dangerouslySingular` id
+- switching workspaces recreates the `[workspace]` subtree without tearing down the layout navigator
 
 ```mermaid
 flowchart LR
@@ -15,7 +19,7 @@ flowchart LR
     B --> C[Expo Router layout navigator recreated]
     C --> D[React Navigation reads partial state]
     D --> E[stale undefined crash]
-    A --> F[unkeyed Slot stays mounted]
-    F --> G[route and store update in place]
-    G --> H[navigator state stays valid]
+    A --> F[Navigator keeps layout alive]
+    F --> G[[workspace] route gets singular id]
+    G --> H[workspace subtree remounts cleanly]
 ```
