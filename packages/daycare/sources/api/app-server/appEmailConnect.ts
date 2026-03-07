@@ -3,6 +3,7 @@ import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js"
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import { jwtSign, jwtVerify } from "../../utils/jwt.js";
 import { appAuthPayloadUrlBuild } from "./appAuthLinkTool.js";
+import { type AppRequestEndpointHeaders, appRequestEndpointsResolve } from "./appRequestEndpointsResolve.js";
 
 export const APP_EMAIL_CONNECT_EXPIRES_IN_SECONDS = 15 * 60;
 const APP_EMAIL_CONNECT_SERVICE = "daycare.app-auth.connect-email";
@@ -17,8 +18,6 @@ export type AppEmailConnectOptions = {
     replyTo?: string;
     mailSend: (message: EmailMessage) => Promise<void>;
 };
-
-type AppEmailConnectHeaders = Headers | Record<string, string | string[] | undefined> | Array<[string, string]>;
 
 type AppEmailConnectTokenPayload = {
     userId: string;
@@ -50,7 +49,7 @@ export class AppEmailConnect {
         this.mailSend = options.mailSend;
     }
 
-    async request(userId: string, email: string, _headers?: AppEmailConnectHeaders): Promise<void> {
+    async request(userId: string, email: string, headers?: AppRequestEndpointHeaders): Promise<void> {
         const normalizedUserId = userId.trim();
         const normalizedEmail = appEmailNormalize(email);
         if (!normalizedUserId) {
@@ -78,14 +77,21 @@ export class AppEmailConnect {
             userId: normalizedUserId,
             email: normalizedEmail
         });
+        const endpoints = appRequestEndpointsResolve({
+            host: this.host,
+            port: this.port,
+            appEndpoint: this.appEndpoint,
+            serverEndpoint: this.serverEndpoint,
+            headers
+        });
         await this.mailSend(
             appEmailConnectMessageBuild({
                 email: normalizedEmail,
                 token,
                 host: this.host,
                 port: this.port,
-                serverEndpoint: this.serverEndpoint,
-                appEndpoint: this.appEndpoint,
+                serverEndpoint: endpoints.serverEndpoint,
+                appEndpoint: endpoints.appEndpoint,
                 replyTo: this.replyTo
             })
         );

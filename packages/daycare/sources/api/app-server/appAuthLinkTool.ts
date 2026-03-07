@@ -108,10 +108,10 @@ export function appAuthPayloadUrlBuild(
         throw new Error("App port must be an integer between 1 and 65535.");
     }
 
-    const defaults = APP_AUTH_DEFAULT_ENDPOINT;
     const resolvedAppEndpoint = appEndpointNormalize(appEndpoint, "appEndpoint");
     const resolvedServerEndpoint = appEndpointNormalize(serverEndpoint, "serverEndpoint");
-    const appUrl = resolvedAppEndpoint ?? resolvedServerEndpoint ?? defaults;
+    const localEndpoint = `http://${normalizedHost}:${port}`;
+    const appUrl = resolvedAppEndpoint ?? resolvedServerEndpoint ?? localEndpoint;
     const backendUrl = resolvedServerEndpoint ?? appUrl;
     const hashPayload = appAuthLinkHashPayloadEncode({
         ...payload,

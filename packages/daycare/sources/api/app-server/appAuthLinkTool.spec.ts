@@ -5,13 +5,13 @@ import { jwtVerify } from "../../utils/jwt.js";
 import { APP_AUTH_LINK_SERVICE, appAuthLinkGenerate, appAuthLinkTool, appAuthLinkUrlBuild } from "./appAuthLinkTool.js";
 
 describe("appAuthLinkUrlBuild", () => {
-    it("builds auth URL using default app endpoint", () => {
+    it("builds auth URL using the local listener when endpoints are not configured", () => {
         const url = appAuthLinkUrlBuild("127.0.0.1", 7332, "token-1");
         const parsed = new URL(url);
-        expect(parsed.origin).toBe("https://daycare.dev");
+        expect(parsed.origin).toBe("http://127.0.0.1:7332");
         expect(parsed.pathname).toBe("/verify");
         expect(appAuthLinkPayloadDecode(url)).toEqual({
-            backendUrl: "https://daycare.dev",
+            backendUrl: "http://127.0.0.1:7332",
             token: "token-1",
             kind: "session"
         });
@@ -62,7 +62,7 @@ describe("appAuthLinkGenerate", () => {
             secret: "test-secret"
         });
 
-        expect(result.url.startsWith("https://daycare.dev/verify#")).toBe(true);
+        expect(result.url.startsWith("http://127.0.0.1:7332/verify#")).toBe(true);
         const payload = await jwtVerify(result.token, "test-secret", { service: APP_AUTH_LINK_SERVICE });
         expect(payload.userId).toBe("user-7");
     });

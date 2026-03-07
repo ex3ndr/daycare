@@ -94,6 +94,27 @@ flowchart LR
     G --> H
 ```
 
+## Endpoint Resolution
+
+Outbound email links now resolve their public origins in this order:
+- use configured `appServer.appEndpoint` / `appServer.serverEndpoint` when present
+- otherwise derive app origin from the request `Origin` or `Referer`
+- derive API origin from `x-forwarded-*` or `Host`
+- fall back to the local app-server listener only if request metadata is unavailable
+
+```mermaid
+flowchart LR
+    A[Email request arrives] --> B{Configured public endpoints?}
+    B -- yes --> C[Use configured app/api origins]
+    B -- no --> D[Read Origin Referer Host x-forwarded-*]
+    D --> E[Resolve app origin]
+    D --> F[Resolve api origin]
+    E --> G[Build /verify link]
+    F --> G
+    C --> G
+    G --> H[Send email]
+```
+
 ## Local Env Wiring
 
 `yarn env <name>` must wire both the API process and the web app to the same local app-server endpoints. The API side now writes top-level `appServer` settings, and the web side exports the same URL through the default backend env vars that the welcome screen reads before login.

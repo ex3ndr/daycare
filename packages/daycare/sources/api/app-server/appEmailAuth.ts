@@ -12,6 +12,7 @@ import {
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import { APP_AUTH_SESSION_EXPIRES_IN_SECONDS, appAuthPayloadUrlBuild } from "./appAuthLinkTool.js";
+import { type AppRequestEndpointHeaders, appRequestEndpointsResolve } from "./appRequestEndpointsResolve.js";
 
 export type AppEmailAuthOptions = {
     db: DaycareDb;
@@ -25,8 +26,6 @@ export type AppEmailAuthOptions = {
     mailSend: (message: EmailMessage) => Promise<void>;
 };
 
-type AppEmailAuthHeaders = Headers | Record<string, string | string[] | undefined> | Array<[string, string]>;
-
 /**
  * Coordinates Better Auth magic-link email delivery and maps verified emails to Daycare users.
  * Expects: storage migrations are applied and mailSend delivers outbound email.
@@ -37,58 +36,66 @@ export class AppEmailAuth {
     private readonly port: number;
     private readonly serverEndpoint?: string;
     private readonly appEndpoint?: string;
+    private readonly secret: string;
     private readonly replyTo?: string;
     private readonly mailSend: AppEmailAuthOptions["mailSend"];
-    private readonly auth: ReturnType<typeof appEmailAuthCreate>;
+    private readonly db: DaycareDb;
 
     constructor(options: AppEmailAuthOptions) {
+        this.db = options.db;
         this.users = options.users;
         this.host = options.host;
         this.port = options.port;
         this.serverEndpoint = options.serverEndpoint;
         this.appEndpoint = options.appEndpoint;
+        this.secret = options.secret;
         this.replyTo = options.replyTo;
         this.mailSend = options.mailSend;
-        this.auth = appEmailAuthCreate(options, async ({ email, token }) => {
-            await this.mailSend(
-                appEmailAuthMessageBuild({
-                    email,
-                    token,
-                    host: this.host,
-                    port: this.port,
-                    serverEndpoint: this.serverEndpoint,
-                    appEndpoint: this.appEndpoint,
-                    replyTo: this.replyTo
-                })
-            );
-        });
     }
 
-    async request(email: string, headers?: AppEmailAuthHeaders): Promise<void> {
+    async request(email: string, headers?: AppRequestEndpointHeaders): Promise<void> {
         const normalizedEmail = appEmailNormalize(email);
         if (!normalizedEmail) {
             throw new Error("Email is required.");
         }
 
-        await this.auth.api.signInMagicLink({
+        const endpoints = appRequestEndpointsResolve({
+            host: this.host,
+            port: this.port,
+            appEndpoint: this.appEndpoint,
+            serverEndpoint: this.serverEndpoint,
+            headers
+        });
+        const auth = this.authCreate(endpoints);
+
+        await auth.api.signInMagicLink({
             body: {
                 email: normalizedEmail
             },
-            headers: appEmailAuthHeadersBuild(headers, this.host, this.port, this.serverEndpoint)
+            headers: appEmailAuthHeadersBuild(headers, this.host, this.port, endpoints.serverEndpoint)
         });
     }
 
-    async verify(token: string, headers?: AppEmailAuthHeaders): Promise<{ email: string; userId: string }> {
+    async verify(token: string, headers?: AppRequestEndpointHeaders): Promise<{ email: string; userId: string }> {
         const normalizedToken = token.trim();
         if (!normalizedToken) {
             throw new Error("Magic-link token is required.");
         }
 
-        const result = await this.auth.api.magicLinkVerify({
+        const endpoints = appRequestEndpointsResolve({
+            host: this.host,
+            port: this.port,
+            appEndpoint: this.appEndpoint,
+            serverEndpoint: this.serverEndpoint,
+            headers
+        });
+        const auth = this.authCreate(endpoints);
+
+        const result = await auth.api.magicLinkVerify({
             query: {
                 token: normalizedToken
             },
-            headers: appEmailAuthHeadersBuild(headers, this.host, this.port, this.serverEndpoint)
+            headers: appEmailAuthHeadersBuild(headers, this.host, this.port, endpoints.serverEndpoint)
         });
 
         const email = appEmailNormalize(result.user.email);
@@ -101,6 +108,35 @@ export class AppEmailAuth {
             email,
             userId
         };
+    }
+
+    private authCreate(endpoints: { appEndpoint: string; serverEndpoint: string }) {
+        return appEmailAuthCreate(
+            {
+                db: this.db,
+                users: this.users,
+                host: this.host,
+                port: this.port,
+                serverEndpoint: endpoints.serverEndpoint,
+                appEndpoint: endpoints.appEndpoint,
+                secret: this.secret,
+                replyTo: this.replyTo,
+                mailSend: this.mailSend
+            },
+            async ({ email, token }) => {
+                await this.mailSend(
+                    appEmailAuthMessageBuild({
+                        email,
+                        token,
+                        host: this.host,
+                        port: this.port,
+                        serverEndpoint: endpoints.serverEndpoint,
+                        appEndpoint: endpoints.appEndpoint,
+                        replyTo: this.replyTo
+                    })
+                );
+            }
+        );
     }
 
     private async userIdResolveByEmail(email: string): Promise<string> {
@@ -166,13 +202,18 @@ function appEmailAuthBaseUrlResolve(host: string, port: number, serverEndpoint?:
 }
 
 function appEmailAuthHeadersBuild(
-    headers: AppEmailAuthHeaders | undefined,
+    headers: AppRequestEndpointHeaders | undefined,
     host: string,
     port: number,
     serverEndpoint?: string
 ): Headers {
     const result = new Headers();
-    const source = headers instanceof Headers ? headers : new Headers(appEmailAuthHeadersNormalize(headers));
+    const source =
+        headers instanceof Headers
+            ? headers
+            : Array.isArray(headers)
+              ? new Headers(headers)
+              : new Headers(appEmailAuthHeadersNormalize(headers));
     source.forEach((value, key) => {
         result.set(key, value);
     });
@@ -193,7 +234,7 @@ function appEmailAuthHeadersBuild(
     return result;
 }
 
-function appEmailAuthHeadersNormalize(headers: AppEmailAuthHeaders | undefined): Record<string, string> {
+function appEmailAuthHeadersNormalize(headers: AppRequestEndpointHeaders | undefined): Record<string, string> {
     if (!headers || headers instanceof Headers || Array.isArray(headers)) {
         return {};
     }

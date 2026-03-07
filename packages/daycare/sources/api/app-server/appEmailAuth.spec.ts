@@ -41,6 +41,38 @@ describe("AppEmailAuth", () => {
         expect(payload.token.length).toBeGreaterThan(0);
     });
 
+    it("uses request headers when public endpoints are not configured", async () => {
+        const sent: EmailMessage[] = [];
+        const storage = await storageOpenTest();
+        activeStorages.push(storage);
+        const auth = new AppEmailAuth({
+            db: storage.db,
+            users: storage.users,
+            host: "127.0.0.1",
+            port: 7332,
+            secret: "12345678901234567890123456789012",
+            mailSend: async (message) => {
+                sent.push(message);
+            }
+        });
+
+        await auth.request("person@example.com", {
+            origin: "https://app.customer.example",
+            host: "api.customer.example",
+            "x-forwarded-proto": "https"
+        });
+
+        expect(sent).toHaveLength(1);
+        const url = appEmailUrlExtract(sent[0]?.text ?? "");
+        expect(url.origin).toBe("https://app.customer.example");
+        expect(url.pathname).toBe("/verify");
+        expect(appEmailPayloadDecode(sent[0]?.text ?? "")).toEqual({
+            backendUrl: "https://api.customer.example",
+            token: expect.any(String),
+            kind: "email"
+        });
+    });
+
     it("verifies a magic-link token and creates an email-scoped Daycare user", async () => {
         const sent: EmailMessage[] = [];
         const storage = await storageOpenTest();
@@ -98,12 +130,7 @@ describe("AppEmailAuth", () => {
 });
 
 function appEmailPayloadDecode(text: string): { backendUrl: string; token: string; kind: string } {
-    const match = text.match(/https?:\/\/\S+/);
-    if (!match?.[0]) {
-        throw new Error("Expected auth URL in email body.");
-    }
-
-    const url = new URL(match[0]);
+    const url = appEmailUrlExtract(text);
     const encoded = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
     if (!encoded) {
         throw new Error("Expected auth hash payload.");
@@ -114,4 +141,12 @@ function appEmailPayloadDecode(text: string): { backendUrl: string; token: strin
         token: string;
         kind: string;
     };
+}
+
+function appEmailUrlExtract(text: string): URL {
+    const match = text.match(/https?:\/\/\S+/);
+    if (!match?.[0]) {
+        throw new Error("Expected auth URL in email body.");
+    }
+    return new URL(match[0]);
 }
