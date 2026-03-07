@@ -20,5 +20,9 @@ export const migrations: Migration[] = [
     {
         name: "20260304120000_fragments",
         fileName: "20260304120000_fragments.sql"
+    },
+    {
+        name: "20260307170000_model_role_rules_reasoning",
+        fileName: "20260307170000_model_role_rules_reasoning.sql"
     }
 ];

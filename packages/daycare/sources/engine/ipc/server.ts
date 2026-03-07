@@ -131,7 +131,8 @@ const modelRoleRuleSetSchema = z.object({
         .optional(),
     userId: z.string().min(1).nullable().optional(),
     agentId: z.string().min(1).nullable().optional(),
-    model: z.string().min(1)
+    model: z.string().min(1),
+    reasoning: z.enum(["minimal", "low", "medium", "high", "xhigh"]).nullable().optional()
 });
 const modelRoleRuleDeleteSchema = z.object({
     id: z.string().min(1)
@@ -760,7 +761,8 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
                       kind: payload.kind,
                       userId: payload.userId,
                       agentId: payload.agentId,
-                      model: payload.model
+                      model: payload.model,
+                      reasoning: payload.reasoning
                   })
                 : null;
             if (rule) {
@@ -772,7 +774,8 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
                 kind: payload.kind,
                 userId: payload.userId,
                 agentId: payload.agentId,
-                model: payload.model
+                model: payload.model,
+                reasoning: payload.reasoning
             });
             return reply.send({ ok: true, rule: created });
         } catch (error) {

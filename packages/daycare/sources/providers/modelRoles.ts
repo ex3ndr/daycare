@@ -1,4 +1,5 @@
 import { getLogger } from "../log.js";
+import type { ModelSelectionConfig } from "../settings.js";
 import type {
     ModelRoleRuleCreateInput,
     ModelRoleRuleDbRecord,
@@ -49,12 +50,12 @@ export class ModelRoles {
     }
 
     /**
-     * Resolves the best matching model for the given context.
-     * Returns the model string from the most specific matching rule, or undefined if no rules match.
+     * Resolves the best matching model selection for the given context.
+     * Returns the model/reasoning pair from the most specific matching rule, or undefined if no rules match.
      *
      * Specificity = count of non-null matchers. Ties broken by most recently created.
      */
-    resolve(context: ModelRoleResolveContext): string | undefined {
+    resolve(context: ModelRoleResolveContext): ModelSelectionConfig | undefined {
         return modelRoleRuleResolve(this.rules, context);
     }
 
@@ -72,7 +73,7 @@ export class ModelRoles {
         const record = await this.repository.insert(input);
         this.rules.push(record);
         logger.info(
-            `set: Model role rule created id=${record.id} role=${record.role} kind=${record.kind} userId=${record.userId} agentId=${record.agentId} model=${record.model}`
+            `set: Model role rule created id=${record.id} role=${record.role} kind=${record.kind} userId=${record.userId} agentId=${record.agentId} model=${record.model} reasoning=${record.reasoning ?? "default"}`
         );
         return { ...record };
     }
@@ -89,7 +90,9 @@ export class ModelRoles {
         if (index >= 0) {
             this.rules[index] = updated;
         }
-        logger.info(`update: Model role rule updated id=${id} model=${updated.model}`);
+        logger.info(
+            `update: Model role rule updated id=${id} model=${updated.model} reasoning=${updated.reasoning ?? "default"}`
+        );
         return { ...updated };
     }
 
@@ -112,12 +115,12 @@ export class ModelRoles {
  * Among matching rules, the highest specificity (most matchers) wins.
  * Ties broken by most recently created.
  *
- * Returns the model string or undefined if no rules match.
+ * Returns the model selection or undefined if no rules match.
  */
 export function modelRoleRuleResolve(
     rules: ModelRoleRuleDbRecord[],
     context: ModelRoleResolveContext
-): string | undefined {
+): ModelSelectionConfig | undefined {
     let bestRule: ModelRoleRuleDbRecord | null = null;
     let bestScore = -1;
 
@@ -132,7 +135,13 @@ export function modelRoleRuleResolve(
         }
     }
 
-    return bestRule?.model;
+    if (!bestRule) {
+        return undefined;
+    }
+
+    return bestRule.reasoning === null
+        ? { model: bestRule.model }
+        : { model: bestRule.model, reasoning: bestRule.reasoning };
 }
 
 /**

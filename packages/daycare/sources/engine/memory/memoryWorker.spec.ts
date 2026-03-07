@@ -128,7 +128,6 @@ describe("MemoryWorker", () => {
     });
 
     it("uses foreground labels and no preamble for user agents", async () => {
-        vi.useFakeTimers();
         const { storage, ownerId } = await createTestStorage();
         try {
             await storage.agents.create({
@@ -150,11 +149,10 @@ describe("MemoryWorker", () => {
             await storage.sessions.invalidate(sessionId, maxId!);
 
             const postFn = vi.fn().mockResolvedValue(undefined);
-            const worker = createWorker(storage, postFn);
+            const worker = createWorker(storage, postFn, 20);
             worker.start();
 
-            await vi.advanceTimersByTimeAsync(300);
-            await expectEventually(() => {
+            await expectEventuallyReal(() => {
                 expect(postFn).toHaveBeenCalledOnce();
             });
 

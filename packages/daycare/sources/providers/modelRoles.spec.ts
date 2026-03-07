@@ -10,6 +10,7 @@ function rule(overrides: Partial<ModelRoleRuleDbRecord> & { model: string }): Mo
         userId: overrides.userId ?? null,
         agentId: overrides.agentId ?? null,
         model: overrides.model,
+        reasoning: overrides.reasoning ?? null,
         createdAt: overrides.createdAt ?? 1000,
         updatedAt: overrides.updatedAt ?? 1000
     };
@@ -29,12 +30,12 @@ describe("modelRoleRuleResolve", () => {
 
     it("matches rule with no matchers (wildcard)", () => {
         const rules = [rule({ model: "anthropic/claude-sonnet" })];
-        expect(modelRoleRuleResolve(rules, ctx)).toBe("anthropic/claude-sonnet");
+        expect(modelRoleRuleResolve(rules, ctx)).toEqual({ model: "anthropic/claude-sonnet" });
     });
 
     it("matches rule by role", () => {
         const rules = [rule({ role: "user", model: "anthropic/opus" })];
-        expect(modelRoleRuleResolve(rules, ctx)).toBe("anthropic/opus");
+        expect(modelRoleRuleResolve(rules, ctx)).toEqual({ model: "anthropic/opus" });
     });
 
     it("rejects rule when role does not match", () => {
@@ -44,17 +45,17 @@ describe("modelRoleRuleResolve", () => {
 
     it("matches rule by kind", () => {
         const rules = [rule({ kind: "connector", model: "openai/gpt-4" })];
-        expect(modelRoleRuleResolve(rules, ctx)).toBe("openai/gpt-4");
+        expect(modelRoleRuleResolve(rules, ctx)).toEqual({ model: "openai/gpt-4" });
     });
 
     it("matches rule by userId", () => {
         const rules = [rule({ userId: "u1", model: "openai/gpt-4" })];
-        expect(modelRoleRuleResolve(rules, ctx)).toBe("openai/gpt-4");
+        expect(modelRoleRuleResolve(rules, ctx)).toEqual({ model: "openai/gpt-4" });
     });
 
     it("matches rule by agentId", () => {
         const rules = [rule({ agentId: "a1", model: "openai/gpt-4" })];
-        expect(modelRoleRuleResolve(rules, ctx)).toBe("openai/gpt-4");
+        expect(modelRoleRuleResolve(rules, ctx)).toEqual({ model: "openai/gpt-4" });
     });
 
     it("prefers more specific rule (higher matcher count)", () => {
@@ -62,7 +63,7 @@ describe("modelRoleRuleResolve", () => {
             rule({ id: "broad", role: "user", model: "anthropic/sonnet" }),
             rule({ id: "specific", role: "user", kind: "connector", model: "anthropic/opus" })
         ];
-        expect(modelRoleRuleResolve(rules, ctx)).toBe("anthropic/opus");
+        expect(modelRoleRuleResolve(rules, ctx)).toEqual({ model: "anthropic/opus" });
     });
 
     it("prefers most specific rule across all matchers", () => {
@@ -71,7 +72,7 @@ describe("modelRoleRuleResolve", () => {
             rule({ id: "r2", role: "user", kind: "connector", model: "model-b" }),
             rule({ id: "r3", role: "user", kind: "connector", userId: "u1", model: "model-c" })
         ];
-        expect(modelRoleRuleResolve(rules, ctx)).toBe("model-c");
+        expect(modelRoleRuleResolve(rules, ctx)).toEqual({ model: "model-c" });
     });
 
     it("breaks ties by most recently created", () => {
@@ -79,7 +80,7 @@ describe("modelRoleRuleResolve", () => {
             rule({ id: "old", role: "user", model: "model-old", createdAt: 100 }),
             rule({ id: "new", role: "user", model: "model-new", createdAt: 200 })
         ];
-        expect(modelRoleRuleResolve(rules, ctx)).toBe("model-new");
+        expect(modelRoleRuleResolve(rules, ctx)).toEqual({ model: "model-new" });
     });
 
     it("skips non-matching rules among multiple", () => {
@@ -89,7 +90,7 @@ describe("modelRoleRuleResolve", () => {
             rule({ id: "r3", userId: "other", model: "model-c" }),
             rule({ id: "r4", role: "user", model: "model-d" })
         ];
-        expect(modelRoleRuleResolve(rules, ctx)).toBe("model-d");
+        expect(modelRoleRuleResolve(rules, ctx)).toEqual({ model: "model-d" });
     });
 
     it("wildcard rule loses to any specific rule", () => {
@@ -97,13 +98,18 @@ describe("modelRoleRuleResolve", () => {
             rule({ id: "wildcard", model: "model-default" }),
             rule({ id: "specific", kind: "connector", model: "model-connector" })
         ];
-        expect(modelRoleRuleResolve(rules, ctx)).toBe("model-connector");
+        expect(modelRoleRuleResolve(rules, ctx)).toEqual({ model: "model-connector" });
     });
 
     it("handles null role in context", () => {
         const nullRoleCtx = { ...ctx, role: null };
         const rules = [rule({ role: "user", model: "model-a" }), rule({ kind: "connector", model: "model-b" })];
         // role="user" rule should NOT match since context role is null
-        expect(modelRoleRuleResolve(rules, nullRoleCtx)).toBe("model-b");
+        expect(modelRoleRuleResolve(rules, nullRoleCtx)).toEqual({ model: "model-b" });
+    });
+
+    it("returns reasoning when the matched rule sets it", () => {
+        const rules = [rule({ role: "user", model: "anthropic/opus", reasoning: "high" })];
+        expect(modelRoleRuleResolve(rules, ctx)).toEqual({ model: "anthropic/opus", reasoning: "high" });
     });
 });

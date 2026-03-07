@@ -10,11 +10,12 @@ describe("ModelRoleRulesRepository", () => {
             const repo = new ModelRoleRulesRepository(storage.db);
 
             // Insert
-            const r1 = await repo.insert({ role: "user", model: "anthropic/opus" });
+            const r1 = await repo.insert({ role: "user", model: "anthropic/opus", reasoning: "high" });
             expect(r1.id).toBeTruthy();
             expect(r1.role).toBe("user");
             expect(r1.kind).toBeNull();
             expect(r1.model).toBe("anthropic/opus");
+            expect(r1.reasoning).toBe("high");
 
             const r2 = await repo.insert({ kind: "connector", userId: "u1", model: "openai/gpt-4" });
 
@@ -26,14 +27,16 @@ describe("ModelRoleRulesRepository", () => {
             const found = await repo.findById(r1.id);
             expect(found).not.toBeNull();
             expect(found!.model).toBe("anthropic/opus");
+            expect(found!.reasoning).toBe("high");
 
             expect(await repo.findById("nonexistent")).toBeNull();
 
             // Update
-            const updated = await repo.update(r1.id, { model: "anthropic/sonnet" });
+            const updated = await repo.update(r1.id, { model: "anthropic/sonnet", reasoning: null });
             expect(updated).not.toBeNull();
             expect(updated!.model).toBe("anthropic/sonnet");
             expect(updated!.role).toBe("user");
+            expect(updated!.reasoning).toBeNull();
 
             expect(await repo.update("nonexistent", { model: "x" })).toBeNull();
 

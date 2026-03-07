@@ -143,7 +143,7 @@ export async function modelsCommand(options: ModelsCommandOptions): Promise<void
         console.log("  (none)");
     } else {
         for (const rule of overrideRules) {
-            console.log(`  ${rule.id}  ${ruleMatcherSummary(rule)}  →  ${rule.model}`);
+            console.log(`  ${rule.id}  ${ruleMatcherSummary(rule)}  →  ${ruleSelectionDisplay(rule)}`);
         }
     }
     console.log("");
@@ -603,7 +603,8 @@ async function ruleStoreOpen(config: {
                         kind: input.kind ?? null,
                         userId: input.userId ?? null,
                         agentId: input.agentId ?? null,
-                        model: input.model
+                        model: input.model,
+                        reasoning: input.reasoning ?? null
                     },
                     config.socketPath
                 );
@@ -617,7 +618,8 @@ async function ruleStoreOpen(config: {
                         kind: input.kind ?? null,
                         userId: input.userId ?? null,
                         agentId: input.agentId ?? null,
-                        model: input.model ?? ""
+                        model: input.model ?? "",
+                        reasoning: input.reasoning ?? null
                     },
                     config.socketPath
                 );
@@ -642,6 +644,7 @@ function ipcRuleToRecord(rule: ModelRoleRuleResponse): RuleRecord {
         userId: rule.userId,
         agentId: rule.agentId,
         model: rule.model,
+        reasoning: rule.reasoning,
         createdAt: rule.createdAt,
         updatedAt: rule.updatedAt
     };
@@ -669,6 +672,12 @@ function ruleMatcherSummary(rule: RuleRecord): string {
 async function overrideRuleAdd(ruleStore: RuleStore): Promise<void> {
     const model = await promptInput({ message: "Model (provider/model)", placeholder: "anthropic/claude-sonnet-4-6" });
     if (!model?.trim()) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const reasoning = await reasoningLevelSelect("override rule");
+    if (reasoning === null) {
         console.log("Cancelled.");
         return;
     }
@@ -702,17 +711,18 @@ async function overrideRuleAdd(ruleStore: RuleStore): Promise<void> {
         kind: kind === "__none__" ? null : kind,
         userId: userId.trim() || null,
         agentId: agentId.trim() || null,
-        model: model.trim()
+        model: model.trim(),
+        reasoning: reasoning ?? null
     });
 
     console.log("\nRule created:");
-    console.log(`  ${rule.id}  ${ruleMatcherSummary(rule)}  →  ${rule.model}`);
+    console.log(`  ${rule.id}  ${ruleMatcherSummary(rule)}  →  ${ruleSelectionDisplay(rule)}`);
 }
 
 async function overrideRuleEdit(ruleStore: RuleStore, rules: RuleRecord[]): Promise<void> {
     const choices = rules.map((rule) => ({
         value: rule.id,
-        name: `${ruleMatcherSummary(rule)}  →  ${rule.model}`,
+        name: `${ruleMatcherSummary(rule)}  →  ${ruleSelectionDisplay(rule)}`,
         description: rule.id
     }));
 
@@ -727,7 +737,7 @@ async function overrideRuleEdit(ruleStore: RuleStore, rules: RuleRecord[]): Prom
         return;
     }
 
-    console.log(`\nEditing: ${existing.id}  ${ruleMatcherSummary(existing)}  →  ${existing.model}\n`);
+    console.log(`\nEditing: ${existing.id}  ${ruleMatcherSummary(existing)}  →  ${ruleSelectionDisplay(existing)}\n`);
 
     const model = await promptInput({
         message: "Model (provider/model)",
@@ -735,6 +745,12 @@ async function overrideRuleEdit(ruleStore: RuleStore, rules: RuleRecord[]): Prom
         placeholder: existing.model
     });
     if (model === null) {
+        console.log("Cancelled.");
+        return;
+    }
+
+    const reasoning = await reasoningLevelSelect("override rule", existing.reasoning ?? undefined);
+    if (reasoning === null) {
         console.log("Cancelled.");
         return;
     }
@@ -788,12 +804,13 @@ async function overrideRuleEdit(ruleStore: RuleStore, rules: RuleRecord[]): Prom
         kind: kind === "__none__" ? null : kind,
         userId: userId.trim() || null,
         agentId: agentId.trim() || null,
-        model: model.trim() || existing.model
+        model: model.trim() || existing.model,
+        reasoning: reasoning ?? null
     });
 
     if (rule) {
         console.log("\nRule updated:");
-        console.log(`  ${rule.id}  ${ruleMatcherSummary(rule)}  →  ${rule.model}`);
+        console.log(`  ${rule.id}  ${ruleMatcherSummary(rule)}  →  ${ruleSelectionDisplay(rule)}`);
     } else {
         console.log("Rule not found.");
     }
@@ -802,7 +819,7 @@ async function overrideRuleEdit(ruleStore: RuleStore, rules: RuleRecord[]): Prom
 async function overrideRuleDelete(ruleStore: RuleStore, rules: RuleRecord[]): Promise<void> {
     const choices = rules.map((rule) => ({
         value: rule.id,
-        name: `${ruleMatcherSummary(rule)}  →  ${rule.model}`,
+        name: `${ruleMatcherSummary(rule)}  →  ${ruleSelectionDisplay(rule)}`,
         description: rule.id
     }));
 
@@ -814,7 +831,7 @@ async function overrideRuleDelete(ruleStore: RuleStore, rules: RuleRecord[]): Pr
 
     const existing = rules.find((r) => r.id === selectedId);
     if (existing) {
-        console.log(`  ${existing.id}  ${ruleMatcherSummary(existing)}  →  ${existing.model}`);
+        console.log(`  ${existing.id}  ${ruleMatcherSummary(existing)}  →  ${ruleSelectionDisplay(existing)}`);
     }
 
     const confirmed = await promptConfirm({ message: "Delete this rule?", default: false });
@@ -825,6 +842,10 @@ async function overrideRuleDelete(ruleStore: RuleStore, rules: RuleRecord[]): Pr
 
     const deleted = await ruleStore.delete(selectedId);
     console.log(deleted ? `Rule ${selectedId} deleted.` : `Rule ${selectedId} not found.`);
+}
+
+function ruleSelectionDisplay(rule: Pick<RuleRecord, "model" | "reasoning">): string {
+    return modelSelectionDisplay({ model: rule.model, reasoning: rule.reasoning ?? undefined });
 }
 
 async function validateModel(

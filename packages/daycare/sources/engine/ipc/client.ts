@@ -1,4 +1,5 @@
 import http from "node:http";
+import type { ThinkingLevel } from "@mariozechner/pi-ai";
 import type { AgentCreationConfig, AgentPath, Channel, ChannelMessage, MessageContext, SignalSource } from "@/types";
 
 import { resolveEngineSocketPath } from "./socket.js";
@@ -182,6 +183,7 @@ export type ModelRoleRuleResponse = {
     userId: string | null;
     agentId: string | null;
     model: string;
+    reasoning: ThinkingLevel | null;
     createdAt: number;
     updatedAt: number;
 };
@@ -204,6 +206,7 @@ export async function setModelRoleRule(
         userId?: string | null;
         agentId?: string | null;
         model: string;
+        reasoning?: ThinkingLevel | null;
     },
     socketPathOverride?: string
 ): Promise<ModelRoleRuleResponse> {

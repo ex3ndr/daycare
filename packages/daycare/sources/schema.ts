@@ -594,6 +594,7 @@ export const modelRoleRulesTable = pgTable(
         userId: text("user_id"),
         agentId: text("agent_id"),
         model: text("model").notNull(),
+        reasoning: text("reasoning"),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull()
     },

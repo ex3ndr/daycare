@@ -1,3 +1,4 @@
+import type { ThinkingLevel } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import { eq } from "drizzle-orm";
 
@@ -11,6 +12,7 @@ export type ModelRoleRuleDbRecord = {
     userId: string | null;
     agentId: string | null;
     model: string;
+    reasoning: ThinkingLevel | null;
     createdAt: number;
     updatedAt: number;
 };
@@ -22,6 +24,7 @@ export type ModelRoleRuleCreateInput = {
     userId?: string | null;
     agentId?: string | null;
     model: string;
+    reasoning?: ThinkingLevel | null;
 };
 
 export type ModelRoleRuleUpdateInput = {
@@ -30,6 +33,7 @@ export type ModelRoleRuleUpdateInput = {
     userId?: string | null;
     agentId?: string | null;
     model?: string;
+    reasoning?: ThinkingLevel | null;
 };
 
 /**
@@ -65,6 +69,7 @@ export class ModelRoleRulesRepository {
             userId: input.userId ?? null,
             agentId: input.agentId ?? null,
             model: input.model,
+            reasoning: input.reasoning ?? null,
             createdAt: now,
             updatedAt: now
         };
@@ -76,6 +81,7 @@ export class ModelRoleRulesRepository {
             userId: record.userId,
             agentId: record.agentId,
             model: record.model,
+            reasoning: record.reasoning,
             createdAt: record.createdAt,
             updatedAt: record.updatedAt
         });
@@ -97,6 +103,7 @@ export class ModelRoleRulesRepository {
             userId: input.userId !== undefined ? input.userId : existing.userId,
             agentId: input.agentId !== undefined ? input.agentId : existing.agentId,
             model: input.model ?? existing.model,
+            reasoning: input.reasoning !== undefined ? input.reasoning : existing.reasoning,
             updatedAt: now
         };
 
@@ -108,6 +115,7 @@ export class ModelRoleRulesRepository {
                 userId: updated.userId,
                 agentId: updated.agentId,
                 model: updated.model,
+                reasoning: updated.reasoning,
                 updatedAt: updated.updatedAt
             })
             .where(eq(modelRoleRulesTable.id, id));
@@ -132,6 +140,7 @@ function ruleParse(row: typeof modelRoleRulesTable.$inferSelect): ModelRoleRuleD
         userId: row.userId,
         agentId: row.agentId,
         model: row.model,
+        reasoning: row.reasoning as ThinkingLevel | null,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt
     };
