@@ -67,10 +67,7 @@ export function FragmentsView() {
                     <Pressable
                         key={fragment.id}
                         style={[styles.card, { backgroundColor: theme.colors.surfaceContainerLow }]}
-                        onPress={() => {
-                            const workspaceQuery = workspaceId ? `?workspace=${encodeURIComponent(workspaceId)}` : "";
-                            router.push(`/fragment/${fragment.id}${workspaceQuery}`);
-                        }}
+                        onPress={() => router.push(`/${workspaceId}/fragment/${fragment.id}`)}
                     >
                         <Text style={[styles.cardTitle, { color: theme.colors.onSurface }]} numberOfLines={1}>
                             {fragment.title}

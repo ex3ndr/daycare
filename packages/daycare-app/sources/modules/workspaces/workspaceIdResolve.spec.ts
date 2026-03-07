@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { workspaceCurrentIdResolve, workspaceRequestedIdResolve, workspaceRouteIdResolve } from "./workspaceIdResolve";
+import { workspaceCurrentIdResolve, workspaceRouteIdResolve } from "./workspaceIdResolve";
 import type { WorkspaceListItem } from "./workspacesFetch";
 
 const selfWorkspace: WorkspaceListItem = {
@@ -24,22 +24,14 @@ describe("workspaceRouteIdResolve", () => {
     it("returns the workspace id for workspace-scoped routes", () => {
         expect(workspaceRouteIdResolve("/team/documents")).toBe("team");
         expect(workspaceRouteIdResolve("/self/agents/agent-1")).toBe("self");
+        expect(workspaceRouteIdResolve("/team/fragment/frag-1")).toBe("team");
+        expect(workspaceRouteIdResolve("/team/routine/task-1")).toBe("team");
+        expect(workspaceRouteIdResolve("/team/file-preview/path")).toBe("team");
     });
 
     it("does not treat modal routes as workspace ids", () => {
         expect(workspaceRouteIdResolve("/routine/task-1")).toBeNull();
         expect(workspaceRouteIdResolve("/file-preview/path")).toBeNull();
-    });
-});
-
-describe("workspaceRequestedIdResolve", () => {
-    it("prefers the workspace from the route", () => {
-        expect(workspaceRequestedIdResolve("team", undefined)).toBe("team");
-    });
-
-    it("falls back to the workspace query param", () => {
-        expect(workspaceRequestedIdResolve(null, "team")).toBe("team");
-        expect(workspaceRequestedIdResolve(null, ["", "team"])).toBe("team");
     });
 });
 

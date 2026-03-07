@@ -139,9 +139,18 @@ export default function RootLayout() {
                                         <Stack screenOptions={{ headerShown: false }}>
                                             <Stack.Protected guard={authState === "authenticated"}>
                                                 <Stack.Screen name="(app)" />
-                                                <Stack.Screen name="fragment/[id]" options={modalScreenOptions} />
-                                                <Stack.Screen name="routine/[id]" options={modalScreenOptions} />
-                                                <Stack.Screen name="file-preview/[path]" options={modalScreenOptions} />
+                                                <Stack.Screen
+                                                    name="[workspace]/fragment/[id]"
+                                                    options={modalScreenOptions}
+                                                />
+                                                <Stack.Screen
+                                                    name="[workspace]/routine/[id]"
+                                                    options={modalScreenOptions}
+                                                />
+                                                <Stack.Screen
+                                                    name="[workspace]/file-preview/[path]"
+                                                    options={modalScreenOptions}
+                                                />
                                                 <Stack.Screen name="share" />
                                                 <Stack.Screen name="workspace-not-found" />
                                             </Stack.Protected>

@@ -8,15 +8,17 @@ import { FragmentBusyIndicator } from "@/fragments/FragmentBusyIndicator";
 import { fragmentsRegistry } from "@/fragments/registry";
 import { useFragmentPython } from "@/fragments/useFragmentPython";
 import { useFragmentsStore } from "@/modules/fragments/fragmentsContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 export default function FragmentDetailScreen() {
     const { theme } = useUnistyles();
     const { id } = useLocalSearchParams<{ id: string }>();
+    const { workspaceId, loaded } = useWorkspace();
 
     const fragment = useFragmentsStore((s) => s.fragments.find((f) => f.id === id) ?? null);
     const fragmentPython = useFragmentPython((fragment?.spec as Spec | null) ?? null);
 
-    if (!fragment) return null;
+    if (!loaded || !workspaceId || !fragment) return null;
 
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surface }]}>

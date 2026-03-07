@@ -1,7 +1,7 @@
-import { router, useGlobalSearchParams, usePathname } from "expo-router";
+import { router, usePathname } from "expo-router";
 import type { PropsWithChildren, ReactNode } from "react";
 import * as React from "react";
-import { workspaceCurrentIdResolve, workspaceRequestedIdResolve, workspaceRouteIdResolve } from "./workspaceIdResolve";
+import { workspaceCurrentIdResolve, workspaceRouteIdResolve } from "./workspaceIdResolve";
 import { useWorkspacesStore } from "./workspacesContext";
 import type { WorkspaceListItem } from "./workspacesFetch";
 
@@ -23,22 +23,17 @@ const WorkspaceContext = React.createContext<WorkspaceContextValue>({
  */
 export function WorkspaceProvider({ children }: PropsWithChildren): ReactNode {
     const pathname = usePathname();
-    const { workspace: searchWorkspace } = useGlobalSearchParams<{ workspace?: string | string[] }>();
     const workspaces = useWorkspacesStore((state) => state.workspaces);
     const loaded = useWorkspacesStore((state) => state.loaded);
-    const requestedWorkspaceId = React.useMemo(
-        () => workspaceRequestedIdResolve(workspaceRouteIdResolve(pathname), searchWorkspace),
-        [pathname, searchWorkspace]
-    );
+    const routeWorkspaceId = React.useMemo(() => workspaceRouteIdResolve(pathname), [pathname]);
     const hasRequestedWorkspaceAccess = React.useMemo(
-        () =>
-            requestedWorkspaceId === null || !loaded || workspaces.some((item) => item.userId === requestedWorkspaceId),
-        [loaded, requestedWorkspaceId, workspaces]
+        () => routeWorkspaceId === null || !loaded || workspaces.some((item) => item.userId === routeWorkspaceId),
+        [loaded, routeWorkspaceId, workspaces]
     );
 
     const workspaceId = React.useMemo(
-        () => workspaceCurrentIdResolve(requestedWorkspaceId, workspaces, loaded),
-        [loaded, requestedWorkspaceId, workspaces]
+        () => workspaceCurrentIdResolve(routeWorkspaceId, workspaces, loaded),
+        [loaded, routeWorkspaceId, workspaces]
     );
     const workspace = React.useMemo(
         () => workspaces.find((item) => item.userId === workspaceId) ?? null,
@@ -49,14 +44,14 @@ export function WorkspaceProvider({ children }: PropsWithChildren): ReactNode {
     React.useEffect(() => {
         if (
             !loaded ||
-            requestedWorkspaceId === null ||
+            routeWorkspaceId === null ||
             hasRequestedWorkspaceAccess ||
             pathname === "/workspace-not-found"
         ) {
             return;
         }
         router.replace("/workspace-not-found");
-    }, [hasRequestedWorkspaceAccess, loaded, pathname, requestedWorkspaceId]);
+    }, [hasRequestedWorkspaceAccess, loaded, pathname, routeWorkspaceId]);
 
     return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }

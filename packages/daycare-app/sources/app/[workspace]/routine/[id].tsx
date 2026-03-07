@@ -31,6 +31,10 @@ export default function RoutineDetailScreen() {
         };
     }, [baseUrl, token, workspaceId, loaded, id, selectTask]);
 
+    if (!loaded || !workspaceId) {
+        return null;
+    }
+
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.inner}>

@@ -109,8 +109,7 @@ export function RoutinesView() {
 
     const handleTaskPress = useCallback(
         (taskId: string) => {
-            const workspaceQuery = workspaceId ? `?workspace=${encodeURIComponent(workspaceId)}` : "";
-            router.push(`/routine/${taskId}${workspaceQuery}`);
+            router.push(`/${workspaceId}/routine/${taskId}`);
         },
         [router, workspaceId]
     );

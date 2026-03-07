@@ -41,7 +41,7 @@ export default function FilePreviewScreen() {
             });
     }, [filePath, baseUrl, token, workspaceId, loaded]);
 
-    if (!filePath) return null;
+    if (!loaded || !workspaceId || !filePath) return null;
 
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surface }]}>

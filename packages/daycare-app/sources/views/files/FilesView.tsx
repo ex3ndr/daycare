@@ -81,11 +81,10 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
             if (entryType === "directory") {
                 router.push(`${wsPrefix}/files/${filesPathEncode(newPath)}` as Href);
             } else {
-                const workspaceQuery = workspaceId ? `?workspace=${encodeURIComponent(workspaceId)}` : "";
-                router.push(`/file-preview/${filesPathEncode(newPath)}${workspaceQuery}` as Href);
+                router.push(`${wsPrefix}/file-preview/${filesPathEncode(newPath)}` as Href);
             }
         },
-        [dirPath, router, workspaceId, wsPrefix]
+        [dirPath, router, wsPrefix]
     );
 
     const handleBreadcrumbNavigate = React.useCallback(
