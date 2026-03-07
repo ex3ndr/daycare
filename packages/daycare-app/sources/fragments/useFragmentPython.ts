@@ -50,7 +50,6 @@ export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPyth
         let active = true;
         let pendingCount = 1;
         const externalFunctions = montyFragmentExternalFunctionsBuild({
-            store: fallbackStore,
             baseUrl,
             token,
             workspaceId: activeId
@@ -73,9 +72,16 @@ export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPyth
 
             try {
                 await montyEnsureLoaded();
-                const result = await montyFragmentAction(code, actionName, params, { externalFunctions });
+                const result = await montyFragmentAction(code, actionName, params, {
+                    externalFunctions,
+                    state: fragmentStoreRead(fallbackStore)
+                });
                 if (!result.ok) {
                     console.warn(`[daycare-app] fragment-python action=${actionName} error=${result.error}`);
+                    return;
+                }
+                if (result.stateDirty && result.state) {
+                    montyFragmentStateApply(fallbackStore, result.state);
                     return;
                 }
                 if (isRecord(result.value)) {
@@ -106,11 +112,19 @@ export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPyth
         void (async () => {
             try {
                 await montyEnsureLoaded();
-                const initResult = await montyFragmentInit(code, { externalFunctions });
+                const initResult = await montyFragmentInit(code, {
+                    externalFunctions,
+                    state: fragmentStoreRead(fallbackStore)
+                });
                 if (initResult && !initResult.ok) {
                     if (active) {
                         setRuntimeState({ status: "error", error: initResult.error });
                     }
+                    return;
+                }
+
+                if (initResult?.ok && initResult.stateDirty && initResult.state) {
+                    montyFragmentStateApply(fallbackStore, initResult.state);
                     return;
                 }
 
@@ -145,6 +159,10 @@ function fragmentStateNormalize(value: unknown): Record<string, unknown> {
         return {};
     }
     return value as Record<string, unknown>;
+}
+
+function fragmentStoreRead(store: StateStore): Record<string, unknown> {
+    return fragmentStateNormalize(store.getSnapshot());
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

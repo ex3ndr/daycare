@@ -2,10 +2,13 @@ import { Monty, MontyRuntimeError, MontySyntaxError, runMontyAsync } from "react
 
 type MontyExternalFunction = (...args: unknown[]) => unknown | Promise<unknown>;
 
-export type MontyFragmentResult = { ok: true; value: unknown } | { ok: false; error: string };
+export type MontyFragmentResult =
+    | { ok: true; value: unknown; state: Record<string, unknown> | null; stateDirty: boolean }
+    | { ok: false; error: string };
 
 export type MontyFragmentRunOptions = {
     externalFunctions?: Record<string, MontyExternalFunction>;
+    state?: Record<string, unknown>;
 };
 
 const FRAGMENT_LIMITS = {
@@ -26,7 +29,39 @@ async def __fragment_await_if_needed__(value):
 async def __fragment_call__(func, *args):
     return await __fragment_await_if_needed__(func(*args))
 
+def __fragment_clone__(value):
+    if isinstance(value, dict):
+        result = {}
+        for key, item in value.items():
+            result[key] = __fragment_clone__(item)
+        return result
+    if isinstance(value, list):
+        result = []
+        for item in value:
+            result.append(__fragment_clone__(item))
+        return result
+    return value
+
+def __fragment_state_merge__(current, changes):
+    if not isinstance(current, dict) or not isinstance(changes, dict):
+        return __fragment_clone__(changes)
+    result = __fragment_clone__(current)
+    for key, value in changes.items():
+        if key in result and isinstance(result.get(key), dict) and isinstance(value, dict):
+            result[key] = __fragment_state_merge__(result.get(key), value)
+        else:
+            result[key] = __fragment_clone__(value)
+    return result
+
+__fragment_state__ = __fragment_clone__(__fragment_initial_state)
+__fragment_state_dirty__ = False
+
+def get_state():
+    return __fragment_clone__(__fragment_state__)
+
 def apply(change):
+    global __fragment_state__
+    global __fragment_state_dirty__
     current = get_state()
     try:
         updates = change(current)
@@ -38,8 +73,17 @@ def apply(change):
         return current
     if not isinstance(updates, dict):
         raise TypeError("apply() expects a dict or callable returning a dict")
-    _apply_state(updates)
+    __fragment_state__ = __fragment_state_merge__(__fragment_state__, updates)
+    __fragment_state_dirty__ = True
     return get_state()
+
+async def __fragment_execute__(func, *args):
+    result = await __fragment_call__(func, *args)
+    return {
+        "__fragment_result__": result,
+        "__fragment_state__": get_state(),
+        "__fragment_state_dirty__": __fragment_state_dirty__,
+    }
 `;
 
 /**
@@ -54,7 +98,7 @@ export async function montyFragmentInit(
         return null;
     }
 
-    return montyFragmentRun(code, "await __fragment_call__(init)", undefined, options);
+    return montyFragmentRun(code, "await __fragment_execute__(init)", undefined, options);
 }
 
 /**
@@ -67,7 +111,7 @@ export async function montyFragmentAction(
     params: Record<string, unknown>,
     options?: MontyFragmentRunOptions
 ): Promise<MontyFragmentResult> {
-    return montyFragmentRun(code, `await __fragment_call__(${actionName}, params)`, { params }, options);
+    return montyFragmentRun(code, `await __fragment_execute__(${actionName}, params)`, { params }, options);
 }
 
 async function montyFragmentRun(
@@ -77,20 +121,26 @@ async function montyFragmentRun(
     options?: MontyFragmentRunOptions
 ): Promise<MontyFragmentResult> {
     try {
+        const runtimeInputs = {
+            __fragment_initial_state: options?.state ?? {},
+            ...(inputs ?? {})
+        };
         const program = new Monty(`${FRAGMENT_RUNTIME_HELPERS}\n${code}\n\n${expression}`, {
             scriptName: "fragment.py",
-            inputs: inputs ? Object.keys(inputs) : undefined
+            inputs: Object.keys(runtimeInputs)
         });
-        const value = montyFragmentValueNormalize(
+        const output = montyFragmentResultRead(
             await runMontyAsync(program, {
-                inputs,
+                inputs: runtimeInputs,
                 externalFunctions: options?.externalFunctions,
                 limits: FRAGMENT_LIMITS
             })
         );
         return {
             ok: true,
-            value
+            value: output.value,
+            state: output.state,
+            stateDirty: output.stateDirty
         };
     } catch (error) {
         return {
@@ -112,6 +162,43 @@ function montyFormatError(error: unknown): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function montyFragmentResultRead(value: unknown): {
+    value: unknown;
+    state: Record<string, unknown> | null;
+    stateDirty: boolean;
+} {
+    const normalized = montyFragmentValueNormalize(value);
+    if (!isRecord(normalized)) {
+        return {
+            value: normalized,
+            state: null,
+            stateDirty: false
+        };
+    }
+
+    const rawValue = normalized.__fragment_result__;
+    const rawState = normalized.__fragment_state__;
+    const rawStateDirty = normalized.__fragment_state_dirty__;
+    const hasEnvelope =
+        Object.hasOwn(normalized, "__fragment_result__") ||
+        Object.hasOwn(normalized, "__fragment_state__") ||
+        Object.hasOwn(normalized, "__fragment_state_dirty__");
+
+    if (!hasEnvelope) {
+        return {
+            value: normalized,
+            state: null,
+            stateDirty: false
+        };
+    }
+
+    return {
+        value: rawValue,
+        state: isRecord(rawState) ? rawState : null,
+        stateDirty: rawStateDirty === true
+    };
 }
 
 function montyFragmentValueNormalize(value: unknown): unknown {

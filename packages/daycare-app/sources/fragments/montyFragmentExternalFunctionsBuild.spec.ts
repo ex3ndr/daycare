@@ -1,4 +1,3 @@
-import { createStateStore } from "@json-render/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockState = vi.hoisted(() => ({
@@ -16,42 +15,19 @@ describe("montyFragmentExternalFunctionsBuild", () => {
         mockState.databaseQuery.mockReset();
     });
 
-    it("returns the latest state snapshot", () => {
-        const store = createStateStore({ count: 2 });
+    it("only exposes query helpers", () => {
         const externalFunctions = montyFragmentExternalFunctionsBuild({
-            store,
             baseUrl: null,
             token: null,
             workspaceId: null
         });
 
-        expect(externalFunctions.get_state()).toEqual({ count: 2 });
-    });
-
-    it("applies state patches", () => {
-        const store = createStateStore({ count: 1, nested: { ready: false } });
-        const externalFunctions = montyFragmentExternalFunctionsBuild({
-            store,
-            baseUrl: null,
-            token: null,
-            workspaceId: null
-        });
-
-        expect(externalFunctions._apply_state({ nested: { ready: true } })).toEqual({
-            count: 1,
-            nested: { ready: true }
-        });
-        expect(store.getSnapshot()).toEqual({
-            count: 1,
-            nested: { ready: true }
-        });
+        expect(Object.keys(externalFunctions)).toEqual(["query_database"]);
     });
 
     it("queries the backend database with auth", async () => {
         mockState.databaseQuery.mockResolvedValue([{ id: "1" }]);
-        const store = createStateStore({});
         const externalFunctions = montyFragmentExternalFunctionsBuild({
-            store,
             baseUrl: "http://localhost:7332",
             token: "jwt-token",
             workspaceId: null
@@ -69,9 +45,7 @@ describe("montyFragmentExternalFunctionsBuild", () => {
     });
 
     it("rejects database queries without auth", async () => {
-        const store = createStateStore({});
         const externalFunctions = montyFragmentExternalFunctionsBuild({
-            store,
             baseUrl: null,
             token: null,
             workspaceId: null
