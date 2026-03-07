@@ -9,6 +9,24 @@ import { AppSidebar, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from "@/components
 import { CHAT_COLLAPSED_WIDTH, CHAT_PANEL_WIDTH, ChatPanel } from "@/components/ChatPanel";
 import { Drawer } from "@/components/Drawer";
 
+const SIDEBAR_KEY = "daycare:sidebar-collapsed";
+const CHAT_KEY = "daycare:chat-collapsed";
+
+function panelStateRead(key: string, fallback: boolean): boolean {
+    try {
+        const v = window.localStorage.getItem(key);
+        if (v === "true") return true;
+        if (v === "false") return false;
+    } catch {}
+    return fallback;
+}
+
+function panelStateWrite(key: string, collapsed: boolean): void {
+    try {
+        window.localStorage.setItem(key, String(collapsed));
+    } catch {}
+}
+
 export default function AppLayout() {
     const { theme } = useUnistyles();
     const isMobile = theme.layout.isMobileLayout;
@@ -24,13 +42,15 @@ export default function AppLayout() {
 function DesktopLayout() {
     const { theme } = useUnistyles();
     const insets = useSafeAreaInsets();
-    const sidebarWidth = useSharedValue(SIDEBAR_COLLAPSED_WIDTH);
-    const labelsOpacity = useSharedValue(0);
-    const [sidebarCollapsed, setSidebarCollapsed] = React.useState(true);
+    const initialSidebarCollapsed = React.useMemo(() => panelStateRead(SIDEBAR_KEY, true), []);
+    const sidebarWidth = useSharedValue(initialSidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH);
+    const labelsOpacity = useSharedValue(initialSidebarCollapsed ? 0 : 1);
+    const [sidebarCollapsed, setSidebarCollapsed] = React.useState(initialSidebarCollapsed);
 
     const toggleSidebar = React.useCallback(() => {
         setSidebarCollapsed((prev) => {
             const next = !prev;
+            panelStateWrite(SIDEBAR_KEY, next);
             sidebarWidth.value = withTiming(next ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH, { duration: 200 });
             labelsOpacity.value = withTiming(next ? 0 : 1, { duration: 120 });
             return next;
@@ -42,11 +62,13 @@ function DesktopLayout() {
     }));
 
     // Chat panel state
-    const chatWidth = useSharedValue(CHAT_COLLAPSED_WIDTH);
-    const chatLabelsOpacity = useSharedValue(0);
+    const initialChatCollapsed = React.useMemo(() => panelStateRead(CHAT_KEY, true), []);
+    const chatWidth = useSharedValue(initialChatCollapsed ? CHAT_COLLAPSED_WIDTH : CHAT_PANEL_WIDTH);
+    const chatLabelsOpacity = useSharedValue(initialChatCollapsed ? 0 : 1);
 
     const toggleChat = React.useCallback(() => {
         const isCollapsed = chatWidth.value <= CHAT_COLLAPSED_WIDTH;
+        panelStateWrite(CHAT_KEY, !isCollapsed);
         chatWidth.value = withTiming(isCollapsed ? CHAT_PANEL_WIDTH : CHAT_COLLAPSED_WIDTH, { duration: 200 });
         chatLabelsOpacity.value = withTiming(isCollapsed ? 1 : 0, { duration: 120 });
     }, [chatWidth, chatLabelsOpacity]);
