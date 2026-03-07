@@ -148,11 +148,15 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
                     ...(options.emailAuth
                         ? {
                               appEndpoint: "https://app.example.com",
-                              serverEndpoint: "https://api.example.com",
-                              emailAuth: options.emailAuth
+                              serverEndpoint: "https://api.example.com"
                           }
                         : {})
                 },
+                ...(options.emailAuth
+                    ? {
+                          email: options.emailAuth
+                      }
+                    : {}),
                 ...(options.telegram
                     ? {
                           plugins: [

@@ -89,6 +89,12 @@ export type SecuritySettings = {
     appReviewerEnabled?: boolean;
 };
 
+export type EmailSettings = {
+    smtpUrl?: string;
+    from?: string;
+    replyTo?: string;
+};
+
 export type AppServerSettings = {
     enabled?: boolean;
     host?: string;
@@ -97,11 +103,6 @@ export type AppServerSettings = {
     serverEndpoint?: string;
     jwtSecret?: string;
     telegramInstanceId?: string;
-    emailAuth?: {
-        smtpUrl?: string;
-        from?: string;
-        replyTo?: string;
-    };
 };
 
 export type DockerSettings = {
@@ -177,6 +178,7 @@ export type SettingsConfig = {
         };
     };
     assistant?: AssistantSettings;
+    email?: EmailSettings;
     agents?: AgentSettings;
     security?: SecuritySettings;
     appServer?: AppServerSettings;

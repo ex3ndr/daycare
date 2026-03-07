@@ -111,6 +111,14 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                 })
                 .passthrough()
                 .optional(),
+            email: z
+                .object({
+                    smtpUrl: z.string().min(1).optional(),
+                    from: z.string().min(1).optional(),
+                    replyTo: z.string().min(1).optional()
+                })
+                .passthrough()
+                .optional(),
             agents: z
                 .object({
                     emergencyContextLimit: z.number().int().positive().optional()
@@ -131,15 +139,7 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                     appEndpoint: z.string().min(1).optional(),
                     serverEndpoint: z.string().min(1).optional(),
                     jwtSecret: z.string().min(32).optional(),
-                    telegramInstanceId: z.string().min(1).optional(),
-                    emailAuth: z
-                        .object({
-                            smtpUrl: z.string().min(1).optional(),
-                            from: z.string().min(1).optional(),
-                            replyTo: z.string().min(1).optional()
-                        })
-                        .passthrough()
-                        .optional()
+                    telegramInstanceId: z.string().min(1).optional()
                 })
                 .passthrough()
                 .optional(),

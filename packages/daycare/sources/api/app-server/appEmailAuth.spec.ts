@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
+import type { EmailMessage } from "../../email/emailSend.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
-import { AppEmailAuth, type AppEmailAuthMail } from "./appEmailAuth.js";
+import { AppEmailAuth } from "./appEmailAuth.js";
 
 const activeStorages: Storage[] = [];
 
@@ -12,7 +13,7 @@ describe("AppEmailAuth", () => {
     });
 
     it("sends an email payload that targets the app auth screen", async () => {
-        const sent: AppEmailAuthMail[] = [];
+        const sent: EmailMessage[] = [];
         const storage = await storageOpenTest();
         activeStorages.push(storage);
         const auth = new AppEmailAuth({
@@ -41,7 +42,7 @@ describe("AppEmailAuth", () => {
     });
 
     it("verifies a magic-link token and creates an email-scoped Daycare user", async () => {
-        const sent: AppEmailAuthMail[] = [];
+        const sent: EmailMessage[] = [];
         const storage = await storageOpenTest();
         activeStorages.push(storage);
         const auth = new AppEmailAuth({
@@ -69,7 +70,7 @@ describe("AppEmailAuth", () => {
     });
 
     it("maps a verified email onto an existing Daycare user", async () => {
-        const sent: AppEmailAuthMail[] = [];
+        const sent: EmailMessage[] = [];
         const storage = await storageOpenTest();
         activeStorages.push(storage);
         const existing = await storage.users.create({

@@ -30,21 +30,21 @@ sequenceDiagram
 
 ## Config
 
-Add SMTP settings under `appServer.emailAuth`:
+Add SMTP settings under top-level `email`:
 
 ```json
 {
+    "email": {
+        "smtpUrl": "smtp://user:pass@mail.example.com:587",
+        "from": "Daycare <no-reply@example.com>",
+        "replyTo": "support@example.com"
+    },
     "appServer": {
         "enabled": true,
         "host": "127.0.0.1",
         "port": 7332,
         "appEndpoint": "https://app.example.com",
-        "serverEndpoint": "https://api.example.com",
-        "emailAuth": {
-            "smtpUrl": "smtp://user:pass@mail.example.com:587",
-            "from": "Daycare <no-reply@example.com>",
-            "replyTo": "support@example.com"
-        }
+        "serverEndpoint": "https://api.example.com"
     }
 }
 ```

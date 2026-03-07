@@ -1,18 +1,23 @@
 import nodemailer from "nodemailer";
-import type { AppEmailAuthMail } from "./appEmailAuth.js";
 
-export type AppEmailAuthMailSendOptions = {
+export type EmailMessage = {
+    to: string;
+    subject: string;
+    text: string;
+    html: string;
+    replyTo?: string;
+};
+
+export type EmailSendOptions = {
     smtpUrl: string;
     from: string;
 };
 
 /**
- * Creates a nodemailer-backed sender for Better Auth magic-link emails.
+ * Creates a reusable SMTP sender for global Daycare email delivery.
  * Expects: smtpUrl is a valid connection URL and from is a deliverable mailbox.
  */
-export function appEmailAuthMailSend(
-    options: AppEmailAuthMailSendOptions
-): (message: AppEmailAuthMail) => Promise<void> {
+export function emailSend(options: EmailSendOptions): (message: EmailMessage) => Promise<void> {
     const transport = nodemailer.createTransport(options.smtpUrl);
 
     return async (message) => {

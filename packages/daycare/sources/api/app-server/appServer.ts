@@ -9,6 +9,7 @@ import type {
     TaskListAllResult
 } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
+import { emailSend } from "../../email/emailSend.js";
 import { contextForUser } from "../../engine/agents/context.js";
 import type { ConfigModule } from "../../engine/config/configModule.js";
 import type { EngineEventBus } from "../../engine/ipc/events.js";
@@ -20,6 +21,7 @@ import type { Webhooks } from "../../engine/webhook/webhooks.js";
 import { getLogger } from "../../log.js";
 import type { DaycareDb } from "../../schema.js";
 import type { PsqlService } from "../../services/psql/PsqlService.js";
+import type { EmailSettings } from "../../settings.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
 import type { FragmentsRepository } from "../../storage/fragmentsRepository.js";
@@ -34,7 +36,6 @@ import type { RouteAgentCallbacks, RouteTaskCallbacks } from "../routes/routeTyp
 import { appAuthExtract } from "./appAuthExtract.js";
 import { APP_AUTH_LINK_EXPIRES_IN_SECONDS, appAuthLinkGenerate, appAuthLinkTool } from "./appAuthLinkTool.js";
 import { AppEmailAuth } from "./appEmailAuth.js";
-import { appEmailAuthMailSend } from "./appEmailAuthMailSend.js";
 import { appCorsApply, appReadJsonBody, appSendJson, appSendText, appServerClose, appServerListen } from "./appHttp.js";
 import { appJwtSecretResolve } from "./appJwtSecretResolve.js";
 import type { AppServerResolvedSettings } from "./appServerSettingsResolve.js";
@@ -110,6 +111,7 @@ export class AppServer {
 
     private server: http.Server | null = null;
     private activeSettings: AppServerResolvedSettings | null = null;
+    private activeEmailSettings: EmailSettings | null = null;
     private secretPromise: Promise<string> | null = null;
     private emailAuth: AppEmailAuth | null = null;
 
@@ -152,17 +154,24 @@ export class AppServer {
 
     private async settingsApply(): Promise<void> {
         const next = appServerSettingsResolve(this.config.current.settings.appServer);
+        const nextEmail = this.config.current.settings.email ?? null;
         if (!next.enabled) {
             await this.shutdown();
             return;
         }
 
-        if (this.server && this.activeSettings && appServerSettingsEqual(this.activeSettings, next)) {
+        if (
+            this.server &&
+            this.activeSettings &&
+            appServerSettingsEqual(this.activeSettings, next) &&
+            emailSettingsEqual(this.activeEmailSettings, nextEmail)
+        ) {
             return;
         }
 
         await this.shutdown();
         this.activeSettings = next;
+        this.activeEmailSettings = nextEmail;
 
         try {
             await this.secretResolve();
@@ -397,13 +406,14 @@ export class AppServer {
 
         const settings = this.settingsRequire();
         const users = this.users;
-        const smtpUrl = settings.emailAuth?.smtpUrl?.trim() ?? "";
-        const from = settings.emailAuth?.from?.trim() ?? "";
+        const email = this.activeEmailSettings;
+        const smtpUrl = email?.smtpUrl?.trim() ?? "";
+        const from = email?.from?.trim() ?? "";
         if (!users) {
             throw new Error("User repository is unavailable.");
         }
         if (!smtpUrl || !from) {
-            throw new Error("appServer.emailAuth.smtpUrl and appServer.emailAuth.from are required.");
+            throw new Error("email.smtpUrl and email.from are required.");
         }
 
         this.emailAuth = new AppEmailAuth({
@@ -414,8 +424,8 @@ export class AppServer {
             serverEndpoint: settings.serverEndpoint,
             appEndpoint: settings.appEndpoint,
             secret: await this.secretResolve(),
-            replyTo: settings.emailAuth?.replyTo,
-            mailSend: appEmailAuthMailSend({
+            replyTo: email?.replyTo,
+            mailSend: emailSend({
                 smtpUrl,
                 from
             })
@@ -481,6 +491,7 @@ export class AppServer {
     private async shutdown(): Promise<void> {
         this.commandRegistry.unregister("app");
         this.toolResolver.unregister("app_auth_link");
+        this.activeEmailSettings = null;
         this.secretPromise = null;
         this.emailAuth = null;
 
@@ -554,9 +565,14 @@ function appServerSettingsEqual(left: AppServerResolvedSettings, right: AppServe
         left.appEndpoint === right.appEndpoint &&
         left.serverEndpoint === right.serverEndpoint &&
         left.jwtSecret === right.jwtSecret &&
-        left.telegramInstanceId === right.telegramInstanceId &&
-        left.emailAuth?.smtpUrl === right.emailAuth?.smtpUrl &&
-        left.emailAuth?.from === right.emailAuth?.from &&
-        left.emailAuth?.replyTo === right.emailAuth?.replyTo
+        left.telegramInstanceId === right.telegramInstanceId
+    );
+}
+
+function emailSettingsEqual(left: EmailSettings | null, right: EmailSettings | null): boolean {
+    return (
+        (left?.smtpUrl ?? "") === (right?.smtpUrl ?? "") &&
+        (left?.from ?? "") === (right?.from ?? "") &&
+        (left?.replyTo ?? "") === (right?.replyTo ?? "")
     );
 }

@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { magicLink } from "better-auth/plugins";
+import type { EmailMessage } from "../../email/emailSend.js";
 import type { DaycareDb } from "../../schema.js";
 import {
     appAuthAccountsTable,
@@ -12,14 +13,6 @@ import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js"
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import { APP_AUTH_SESSION_EXPIRES_IN_SECONDS, appAuthPayloadUrlBuild } from "./appAuthLinkTool.js";
 
-export type AppEmailAuthMail = {
-    to: string;
-    subject: string;
-    text: string;
-    html: string;
-    replyTo?: string;
-};
-
 export type AppEmailAuthOptions = {
     db: DaycareDb;
     users: UsersRepository;
@@ -29,7 +22,7 @@ export type AppEmailAuthOptions = {
     appEndpoint?: string;
     secret: string;
     replyTo?: string;
-    mailSend: (message: AppEmailAuthMail) => Promise<void>;
+    mailSend: (message: EmailMessage) => Promise<void>;
 };
 
 type AppEmailAuthHeaders = Headers | Record<string, string | string[] | undefined> | Array<[string, string]>;
@@ -226,7 +219,7 @@ function appEmailAuthMessageBuild(options: {
     serverEndpoint?: string;
     appEndpoint?: string;
     replyTo?: string;
-}): AppEmailAuthMail {
+}): EmailMessage {
     const url = appAuthPayloadUrlBuild(
         options.host,
         options.port,
