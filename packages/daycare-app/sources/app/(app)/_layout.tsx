@@ -5,7 +5,13 @@ import { Pressable, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { AppSidebar, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from "@/components/AppSidebar";
+import {
+    AppSidebar,
+    SIDEBAR_COLLAPSED_WIDTH,
+    SIDEBAR_WIDTH,
+    WORKSPACE_STRIP_WIDTH,
+    WorkspaceStrip
+} from "@/components/AppSidebar";
 import { CHAT_COLLAPSED_WIDTH, CHAT_PANEL_WIDTH, ChatPanel } from "@/components/ChatPanel";
 import { Drawer } from "@/components/Drawer";
 
@@ -85,6 +91,7 @@ function DesktopLayout() {
 
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
+            <WorkspaceStrip />
             <Animated.View
                 style={[
                     styles.sidebarCard,
@@ -137,7 +144,15 @@ function MobileLayout() {
     const openDrawer = React.useCallback(() => setDrawerOpen(true), []);
     const closeDrawer = React.useCallback(() => setDrawerOpen(false), []);
 
-    const renderDrawerContent = React.useCallback(() => <AppSidebar onNavigate={closeDrawer} />, [closeDrawer]);
+    const renderDrawerContent = React.useCallback(
+        () => (
+            <View style={styles.mobileDrawerContent}>
+                <WorkspaceStrip onNavigate={closeDrawer} />
+                <AppSidebar onNavigate={closeDrawer} />
+            </View>
+        ),
+        [closeDrawer]
+    );
 
     return (
         <View style={[styles.mobileRoot, { backgroundColor: theme.colors.surfaceContainerLow }]}>
@@ -145,7 +160,7 @@ function MobileLayout() {
                 isOpen={drawerOpen}
                 onClose={closeDrawer}
                 renderDrawer={renderDrawerContent}
-                width={SIDEBAR_WIDTH + 32}
+                width={WORKSPACE_STRIP_WIDTH + SIDEBAR_WIDTH + 16}
                 position="left"
             >
                 <View style={styles.content}>
@@ -183,10 +198,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8
     },
     sidebarCard: {
-        borderTopLeftRadius: 16,
-        borderBottomLeftRadius: 16,
-        borderTopRightRadius: 8,
-        borderBottomRightRadius: 8,
+        borderRadius: 8,
         overflow: "hidden",
         flexShrink: 0
     },
@@ -210,6 +222,10 @@ const styles = StyleSheet.create({
     // Mobile
     mobileRoot: {
         flex: 1
+    },
+    mobileDrawerContent: {
+        flex: 1,
+        flexDirection: "row"
     },
     hamburger: {
         position: "absolute",

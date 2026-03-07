@@ -11,6 +11,7 @@ import { documentRootIdResolve } from "@/modules/documents/documentRootIdResolve
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
 import { type AppMode, appModes } from "@/modules/navigation/appModes";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import type { WorkspaceListItem } from "@/modules/workspaces/workspacesFetch";
 import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 
 export const SIDEBAR_WIDTH = 240;
@@ -36,8 +37,8 @@ const segmentGroups: Segment[][] = [
     ]
 ];
 
-/** Bottom-pinned items outside the scrollable area. */
-const bottomSegments: Segment[] = [
+/** Bottom-pinned items shown as icons in the workspace strip. */
+const stripBottomSegments: Segment[] = [
     { mode: "dev", icon: "code-square", label: "Dev" },
     { mode: "settings", icon: "gear", label: "Settings" }
 ];
@@ -112,6 +113,167 @@ function extractItemFromPath(pathname: string): string | undefined {
     return undefined;
 }
 
+function workspaceInitials(ws: WorkspaceListItem): string {
+    if (ws.firstName && ws.lastName) {
+        return `${ws.firstName[0]}${ws.lastName[0]}`.toUpperCase();
+    }
+    if (ws.firstName) {
+        return ws.firstName.slice(0, 2).toUpperCase();
+    }
+    return ws.nametag.slice(0, 2).toUpperCase();
+}
+
+const WorkspaceButton = React.memo<{
+    workspace: WorkspaceListItem;
+    isActive: boolean;
+    onPress: () => void;
+}>(({ workspace, isActive, onPress }) => {
+    const { theme } = useUnistyles();
+    const initials = workspaceInitials(workspace);
+    return (
+        <Pressable
+            onPress={onPress}
+            style={[
+                stripStyles.workspaceButton,
+                {
+                    backgroundColor: isActive ? theme.colors.primaryContainer : theme.colors.surfaceContainerHigh
+                }
+            ]}
+        >
+            <Text
+                style={[
+                    stripStyles.workspaceInitials,
+                    {
+                        color: isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant
+                    }
+                ]}
+            >
+                {initials}
+            </Text>
+        </Pressable>
+    );
+});
+
+export const WORKSPACE_STRIP_WIDTH = 52;
+
+/**
+ * Vertical workspace strip with workspace buttons and bottom action icons.
+ * Rendered outside the sidebar card on the page background.
+ */
+export const WorkspaceStrip = React.memo<{ onNavigate?: () => void }>(({ onNavigate }) => {
+    const { theme } = useUnistyles();
+    const router = useRouter();
+    const pathname = usePathname();
+    const workspaces = useWorkspacesStore((s) => s.workspaces);
+    const activeId = useWorkspacesStore((s) => s.activeId);
+    const activeMode = extractModeFromPath(pathname);
+    const workspace = extractWorkspaceFromPath(pathname);
+    const wsPrefix = workspace ? `/${workspace}` : "";
+
+    const handleWorkspaceSwitch = React.useCallback(
+        (userId: string) => {
+            router.replace(`/${userId}/home` as `/${string}`);
+            onNavigate?.();
+        },
+        [router, onNavigate]
+    );
+
+    const handleModePress = React.useCallback(
+        (mode: AppMode) => {
+            router.replace(`${wsPrefix}/${mode}` as `/${string}`);
+            onNavigate?.();
+        },
+        [router, onNavigate, wsPrefix]
+    );
+
+    return (
+        <View style={stripStyles.strip}>
+            <View style={stripStyles.stripTop}>
+                {workspaces
+                    .filter((ws) => ws.isSelf)
+                    .map((ws) => (
+                        <WorkspaceButton
+                            key={ws.userId}
+                            workspace={ws}
+                            isActive={ws.userId === activeId}
+                            onPress={() => handleWorkspaceSwitch(ws.userId)}
+                        />
+                    ))}
+                {workspaces.some((ws) => !ws.isSelf) && (
+                    <View style={[stripStyles.divider, { backgroundColor: theme.colors.outlineVariant }]} />
+                )}
+                {workspaces
+                    .filter((ws) => !ws.isSelf)
+                    .map((ws) => (
+                        <WorkspaceButton
+                            key={ws.userId}
+                            workspace={ws}
+                            isActive={ws.userId === activeId}
+                            onPress={() => handleWorkspaceSwitch(ws.userId)}
+                        />
+                    ))}
+            </View>
+            <View style={stripStyles.stripBottom}>
+                {stripBottomSegments.map((seg) => {
+                    const isActive = activeMode === seg.mode;
+                    return (
+                        <Pressable
+                            key={seg.mode}
+                            testID={`sidebar-${seg.mode}`}
+                            onPress={() => handleModePress(seg.mode)}
+                            style={[
+                                stripStyles.workspaceButton,
+                                isActive && { backgroundColor: theme.colors.primaryContainer }
+                            ]}
+                        >
+                            <Octicons
+                                name={seg.icon}
+                                size={16}
+                                color={isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant}
+                            />
+                        </Pressable>
+                    );
+                })}
+            </View>
+        </View>
+    );
+});
+
+const stripStyles = StyleSheet.create({
+    strip: {
+        width: WORKSPACE_STRIP_WIDTH,
+        paddingTop: 8,
+        paddingBottom: 8,
+        alignItems: "center",
+        justifyContent: "space-between"
+    },
+    stripTop: {
+        alignItems: "center",
+        gap: 4
+    },
+    stripBottom: {
+        alignItems: "center",
+        gap: 4
+    },
+    divider: {
+        width: 24,
+        height: 1,
+        borderRadius: 1,
+        marginVertical: 2
+    },
+    workspaceButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 8,
+        alignItems: "center",
+        justifyContent: "center"
+    },
+    workspaceInitials: {
+        fontSize: 13,
+        fontWeight: "600"
+    }
+});
+
 type AppSidebarProps = {
     /** Called after any navigation action (e.g. to close a drawer). */
     onNavigate?: () => void;
@@ -164,17 +326,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         const activeMode = extractModeFromPath(pathname);
         const selectedItem = extractItemFromPath(pathname);
 
-        // Workspaces
-        const workspaces = useWorkspacesStore((s) => s.workspaces);
         const activeId = useWorkspacesStore((s) => s.activeId);
-
-        const handleWorkspaceSwitch = React.useCallback(
-            (userId: string) => {
-                router.replace(`/${userId}/home` as `/${string}`);
-                onNavigate?.();
-            },
-            [router, onNavigate]
-        );
 
         // Documents store
         const baseUrl = useAuthStore((s) => s.baseUrl);
@@ -279,52 +431,6 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                         </Animated.View>
                     </Animated.View>
                 </Pressable>
-
-                {/* Workspace switcher */}
-                {!collapsed && workspaces.length > 1 && (
-                    <View style={styles.workspaceSwitcher}>
-                        {workspaces.map((ws) => {
-                            const isActive = ws.userId === activeId;
-                            const label = ws.firstName
-                                ? `${ws.firstName}${ws.lastName ? ` ${ws.lastName}` : ""}`
-                                : ws.nametag;
-                            return (
-                                <Pressable
-                                    key={ws.userId}
-                                    onPress={() => handleWorkspaceSwitch(ws.userId)}
-                                    style={[
-                                        styles.workspaceItem,
-                                        isActive && {
-                                            backgroundColor: theme.colors.secondaryContainer
-                                        }
-                                    ]}
-                                >
-                                    <Octicons
-                                        name={ws.isSelf ? "person" : "iterations"}
-                                        size={12}
-                                        color={
-                                            isActive ? theme.colors.onSecondaryContainer : theme.colors.onSurfaceVariant
-                                        }
-                                    />
-                                    <Text
-                                        style={[
-                                            styles.workspaceLabel,
-                                            {
-                                                color: isActive
-                                                    ? theme.colors.onSecondaryContainer
-                                                    : theme.colors.onSurfaceVariant
-                                            },
-                                            isActive && { fontWeight: "600" }
-                                        ]}
-                                        numberOfLines={1}
-                                    >
-                                        {label}
-                                    </Text>
-                                </Pressable>
-                            );
-                        })}
-                    </View>
-                )}
 
                 {/* Tree navigation */}
                 <ScrollView style={styles.treeContainer} showsVerticalScrollIndicator={false}>
@@ -490,92 +596,6 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                     ))}
                 </ScrollView>
 
-                {/* Bottom-pinned items */}
-                <View style={styles.footer}>
-                    {bottomSegments.map((seg) => {
-                        const isActive = activeMode === seg.mode;
-                        const items = modeItems[seg.mode];
-                        const hasStaticItems = items.length > 0;
-
-                        return (
-                            <View key={seg.mode}>
-                                <Pressable
-                                    testID={`sidebar-${seg.mode}`}
-                                    onPress={() => handleModePress(seg.mode)}
-                                    style={styles.modeRow}
-                                >
-                                    {isActive && (
-                                        <Animated.View
-                                            style={[
-                                                styles.activeRowBg,
-                                                { backgroundColor: theme.colors.primaryContainer },
-                                                activeRowBgStyle
-                                            ]}
-                                        />
-                                    )}
-                                    <Octicons
-                                        name={seg.icon}
-                                        size={16}
-                                        color={
-                                            isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant
-                                        }
-                                    />
-                                    <Animated.View style={[styles.modeLabelRow, labelsAnimatedStyle]}>
-                                        <Text
-                                            style={[
-                                                styles.modeLabel,
-                                                {
-                                                    color: isActive
-                                                        ? theme.colors.onPrimaryContainer
-                                                        : theme.colors.onSurfaceVariant
-                                                },
-                                                isActive && styles.modeLabelActive
-                                            ]}
-                                        >
-                                            {seg.label}
-                                        </Text>
-                                    </Animated.View>
-                                </Pressable>
-
-                                {/* Static sub-items */}
-                                {!collapsed && isActive && hasStaticItems && (
-                                    <View style={styles.subItems}>
-                                        {items.map((item) => {
-                                            const isSelected = selectedItem === item.id;
-                                            return (
-                                                <Pressable
-                                                    key={item.id}
-                                                    testID={`sidebar-item-${item.id}`}
-                                                    onPress={() => handleItemPress(seg.mode, item.id)}
-                                                    style={[
-                                                        styles.subItemRow,
-                                                        isSelected && {
-                                                            backgroundColor: theme.colors.surfaceContainerHigh
-                                                        }
-                                                    ]}
-                                                >
-                                                    <Text
-                                                        style={[
-                                                            styles.subItemLabel,
-                                                            {
-                                                                color: isSelected
-                                                                    ? theme.colors.onSurface
-                                                                    : theme.colors.onSurfaceVariant
-                                                            }
-                                                        ]}
-                                                    >
-                                                        {item.title}
-                                                    </Text>
-                                                </Pressable>
-                                            );
-                                        })}
-                                    </View>
-                                )}
-                            </View>
-                        );
-                    })}
-                </View>
-
                 {/* Document create dialog */}
                 <DocumentCreateDialog
                     visible={createDialogVisible}
@@ -627,23 +647,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         width: 32,
         height: 32
-    },
-    workspaceSwitcher: {
-        paddingHorizontal: 8,
-        paddingBottom: 4,
-        gap: 2
-    },
-    workspaceItem: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        paddingHorizontal: 12,
-        height: 30,
-        borderRadius: 6
-    },
-    workspaceLabel: {
-        fontSize: 13,
-        fontWeight: "400"
     },
     treeContainer: {
         flex: 1,
@@ -702,9 +705,5 @@ const styles = StyleSheet.create({
     },
     createIcon: {
         marginRight: 6
-    },
-    footer: {
-        paddingHorizontal: 8,
-        paddingVertical: 8
     }
 });
