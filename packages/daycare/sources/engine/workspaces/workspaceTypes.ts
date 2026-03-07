@@ -1,5 +1,4 @@
 export type WorkspaceConfig = {
-    nametag: string;
     firstName: string;
     lastName: string | null;
     bio: string;

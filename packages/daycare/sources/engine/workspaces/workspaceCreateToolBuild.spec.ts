@@ -14,7 +14,7 @@ describe("workspaceCreateToolBuild", () => {
 
             const create = vi.fn(async () => ({
                 userId: "workspace-1",
-                nametag: "todo",
+                nametag: "auto-generated",
                 firstName: "Todo",
                 lastName: null,
                 memory: false
@@ -25,7 +25,6 @@ describe("workspaceCreateToolBuild", () => {
 
             const result = await tool.execute(
                 {
-                    nametag: "Todo",
                     firstName: "Todo",
                     bio: "Manages todos",
                     systemPrompt: "You are todo",
@@ -42,29 +41,13 @@ describe("workspaceCreateToolBuild", () => {
             );
 
             expect(tool.tool.name).toBe("workspace_create");
-            expect(create).toHaveBeenCalledWith(owner.id, expect.objectContaining({ nametag: "todo", memory: false }));
+            expect(create).toHaveBeenCalledWith(
+                owner.id,
+                expect.objectContaining({ firstName: "Todo", memory: false })
+            );
             expect(discover).toHaveBeenCalledWith(owner.id);
             expect(refreshSandboxesForUserId).toHaveBeenCalledWith(owner.id);
-            expect(result.typedResult.nametag).toBe("todo");
-
-            await expect(
-                tool.execute(
-                    {
-                        nametag: "Bad Name",
-                        firstName: "x",
-                        bio: "x",
-                        systemPrompt: "x"
-                    },
-                    {
-                        ctx: contextForAgent({ userId: owner.id, agentId: "agent-1" }),
-                        agentSystem: {
-                            storage,
-                            refreshSandboxesForUserId
-                        }
-                    } as never,
-                    { id: "call-2", name: "workspace_create" }
-                )
-            ).rejects.toThrow("Workspace name must be username-style");
+            expect(result.typedResult.nametag).toBe("auto-generated");
         } finally {
             storage.connection.close();
         }
@@ -87,7 +70,6 @@ describe("workspaceCreateToolBuild", () => {
             await expect(
                 tool.execute(
                     {
-                        nametag: "todo",
                         firstName: "todo",
                         bio: "todo",
                         systemPrompt: "prompt"

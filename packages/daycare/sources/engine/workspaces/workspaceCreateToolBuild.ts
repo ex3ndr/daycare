@@ -2,12 +2,10 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { workspaceNameNormalize } from "./workspaceNameNormalize.js";
 import type { WorkspaceConfig } from "./workspaceTypes.js";
 
 const schema = Type.Object(
     {
-        nametag: Type.String({ minLength: 1 }),
         firstName: Type.String({ minLength: 1 }),
         lastName: Type.Optional(Type.Union([Type.String({ minLength: 1 }), Type.Null()])),
         bio: Type.String({ minLength: 1 }),
@@ -61,7 +59,7 @@ export function workspaceCreateToolBuild(workspaces: WorkspacesFacade): ToolDefi
     return {
         tool: {
             name: "workspace_create",
-            description: "Create a workspace user that can be targeted via send_user_message by nametag.",
+            description: "Create a workspace user that can be targeted via send_user_message.",
             parameters: schema
         },
         returns: workspaceCreateToolReturns,
@@ -74,7 +72,6 @@ export function workspaceCreateToolBuild(workspaces: WorkspacesFacade): ToolDefi
 
             const payload = args as WorkspaceCreateToolArgs;
             const config: WorkspaceConfig = {
-                nametag: workspaceNameNormalize(payload.nametag),
                 firstName: payload.firstName.trim(),
                 lastName: payload.lastName?.trim() ?? null,
                 bio: payload.bio.trim(),

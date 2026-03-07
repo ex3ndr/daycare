@@ -21,7 +21,6 @@ describe("workspaceCreate", () => {
             const created = await workspaceCreate({
                 ownerUserId: owner.id,
                 config: {
-                    nametag: "todo",
                     firstName: "Todo",
                     lastName: "Workspace",
                     bio: "Manages todos",
@@ -41,7 +40,8 @@ describe("workspaceCreate", () => {
 
             expect(user?.parentUserId).toBe(owner.id);
             expect(user?.isWorkspace).toBe(true);
-            expect(user?.nametag).toBe("todo");
+            expect(typeof user?.nametag).toBe("string");
+            expect(user?.nametag?.length).toBeGreaterThan(0);
             expect(user?.firstName).toBe("Todo");
             expect(user?.lastName).toBe("Workspace");
             expect(user?.bio).toBe("Manages todos");

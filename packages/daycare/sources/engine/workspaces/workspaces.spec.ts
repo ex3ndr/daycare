@@ -21,8 +21,7 @@ describe("Workspaces", () => {
                 storage,
                 userHomeForUserId: (userId) => new UserHome(path.join(dir, "users"), userId)
             });
-            await workspaces.create(owner.id, {
-                nametag: "todo",
+            const created = await workspaces.create(owner.id, {
                 firstName: "Todo",
                 lastName: null,
                 bio: "Todo helper",
@@ -32,10 +31,10 @@ describe("Workspaces", () => {
             });
 
             const listed = workspaces.list();
-            const fetched = workspaces.get("todo");
+            const fetched = workspaces.get(created.nametag);
 
             expect(listed).toHaveLength(1);
-            expect(fetched?.nametag).toBe("todo");
+            expect(fetched?.nametag).toBe(created.nametag);
             expect(workspaces.mountsForOwner(owner.id)).toHaveLength(1);
         } finally {
             storage.connection.close();

@@ -4,7 +4,6 @@ import { createId } from "@paralleldrive/cuid2";
 import type { Storage } from "../../storage/storage.js";
 import type { UserHome } from "../users/userHome.js";
 import { userHomeEnsure } from "../users/userHomeEnsure.js";
-import { workspaceNameNormalize } from "./workspaceNameNormalize.js";
 import type { WorkspaceConfig, WorkspaceRecord } from "./workspaceTypes.js";
 
 type WorkspaceCreateInput = {
@@ -24,7 +23,6 @@ export async function workspaceCreate(input: WorkspaceCreateInput): Promise<Work
         throw new Error("ownerUserId is required.");
     }
 
-    const nametag = workspaceNameNormalize(input.config.nametag);
     const firstName = input.config.firstName.trim();
     const lastName = input.config.lastName?.trim() ?? null;
     const bio = input.config.bio.trim();
@@ -40,11 +38,6 @@ export async function workspaceCreate(input: WorkspaceCreateInput): Promise<Work
         throw new Error("Workspace systemPrompt is required.");
     }
 
-    const existing = await input.storage.users.findByNametag(nametag);
-    if (existing) {
-        throw new Error(`Workspace already exists: ${nametag}`);
-    }
-
     const now = Date.now();
     const createdUser = await input.storage.users.create({
         id: createId(),
@@ -57,7 +50,6 @@ export async function workspaceCreate(input: WorkspaceCreateInput): Promise<Work
         about,
         systemPrompt,
         memory: input.config.memory,
-        nametag,
         createdAt: now,
         updatedAt: now
     });
@@ -65,7 +57,7 @@ export async function workspaceCreate(input: WorkspaceCreateInput): Promise<Work
     const record: WorkspaceRecord = {
         userId: createdUser.id,
         ownerUserId,
-        nametag,
+        nametag: createdUser.nametag,
         firstName,
         lastName,
         bio,
