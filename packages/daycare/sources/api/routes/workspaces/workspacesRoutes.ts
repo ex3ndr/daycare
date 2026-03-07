@@ -2,13 +2,14 @@ import type http from "node:http";
 import type { Context } from "@/types";
 import type { UsersRepository } from "../../../storage/usersRepository.js";
 import type { SecretsRuntime } from "../secrets/secretsTypes.js";
-import { swarmsSecretsCopy } from "./swarmsSecretsCopy.js";
-import { swarmsSecretsCreate } from "./swarmsSecretsCreate.js";
-import { swarmsSecretsDelete } from "./swarmsSecretsDelete.js";
-import { swarmsSecretsList } from "./swarmsSecretsList.js";
-import { swarmsSecretsUpdate } from "./swarmsSecretsUpdate.js";
+import { workspacesList } from "./workspacesList.js";
+import { workspacesSecretsCopy } from "./workspacesSecretsCopy.js";
+import { workspacesSecretsCreate } from "./workspacesSecretsCreate.js";
+import { workspacesSecretsDelete } from "./workspacesSecretsDelete.js";
+import { workspacesSecretsList } from "./workspacesSecretsList.js";
+import { workspacesSecretsUpdate } from "./workspacesSecretsUpdate.js";
 
-export type SwarmsRouteContext = {
+export type WorkspacesRouteContext = {
     ctx: Context;
     sendJson: (response: http.ServerResponse, statusCode: number, payload: Record<string, unknown>) => void;
     readJsonBody: (request: http.IncomingMessage) => Promise<Record<string, unknown>>;
@@ -17,30 +18,39 @@ export type SwarmsRouteContext = {
 };
 
 /**
- * Routes authenticated swarm secret APIs.
- * Returns true when a /swarms endpoint matched and handled.
+ * Routes authenticated workspace secret APIs.
+ * Returns true when a /workspaces endpoint matched and handled.
  */
-export async function swarmsRouteHandle(
+export async function workspacesRouteHandle(
     request: http.IncomingMessage,
     response: http.ServerResponse,
     pathname: string,
-    context: SwarmsRouteContext
+    context: WorkspacesRouteContext
 ): Promise<boolean> {
-    if (!pathname.startsWith("/swarms")) {
+    if (!pathname.startsWith("/workspaces")) {
         return false;
     }
 
-    if (!context.users || !context.secrets) {
-        context.sendJson(response, 503, {
-            ok: false,
-            error: "Swarms runtime unavailable."
-        });
+    if (!context.users) {
+        context.sendJson(response, 503, { ok: false, error: "Workspaces runtime unavailable." });
         return true;
     }
 
-    const listMatch = pathname.match(/^\/swarms\/([^/]+)\/secrets$/);
+    // GET /workspaces — list accessible workspaces
+    if (pathname === "/workspaces" && request.method === "GET") {
+        const result = await workspacesList({ ctx: context.ctx, users: context.users });
+        context.sendJson(response, 200, result);
+        return true;
+    }
+
+    if (!context.secrets) {
+        context.sendJson(response, 503, { ok: false, error: "Workspaces runtime unavailable." });
+        return true;
+    }
+
+    const listMatch = pathname.match(/^\/workspaces\/([^/]+)\/secrets$/);
     if (listMatch?.[1] && request.method === "GET") {
-        const result = await swarmsSecretsList({
+        const result = await workspacesSecretsList({
             ctx: context.ctx,
             nametag: decodeURIComponent(listMatch[1]),
             users: context.users,
@@ -50,10 +60,10 @@ export async function swarmsRouteHandle(
         return true;
     }
 
-    const copyMatch = pathname.match(/^\/swarms\/([^/]+)\/secrets\/copy$/);
+    const copyMatch = pathname.match(/^\/workspaces\/([^/]+)\/secrets\/copy$/);
     if (copyMatch?.[1] && request.method === "POST") {
         const body = await context.readJsonBody(request);
-        const result = await swarmsSecretsCopy({
+        const result = await workspacesSecretsCopy({
             ctx: context.ctx,
             nametag: decodeURIComponent(copyMatch[1]),
             body,
@@ -64,10 +74,10 @@ export async function swarmsRouteHandle(
         return true;
     }
 
-    const createMatch = pathname.match(/^\/swarms\/([^/]+)\/secrets\/create$/);
+    const createMatch = pathname.match(/^\/workspaces\/([^/]+)\/secrets\/create$/);
     if (createMatch?.[1] && request.method === "POST") {
         const body = await context.readJsonBody(request);
-        const result = await swarmsSecretsCreate({
+        const result = await workspacesSecretsCreate({
             ctx: context.ctx,
             nametag: decodeURIComponent(createMatch[1]),
             body,
@@ -78,10 +88,10 @@ export async function swarmsRouteHandle(
         return true;
     }
 
-    const updateMatch = pathname.match(/^\/swarms\/([^/]+)\/secrets\/([^/]+)\/update$/);
+    const updateMatch = pathname.match(/^\/workspaces\/([^/]+)\/secrets\/([^/]+)\/update$/);
     if (updateMatch?.[1] && updateMatch[2] && request.method === "POST") {
         const body = await context.readJsonBody(request);
-        const result = await swarmsSecretsUpdate({
+        const result = await workspacesSecretsUpdate({
             ctx: context.ctx,
             nametag: decodeURIComponent(updateMatch[1]),
             name: decodeURIComponent(updateMatch[2]),
@@ -93,9 +103,9 @@ export async function swarmsRouteHandle(
         return true;
     }
 
-    const deleteMatch = pathname.match(/^\/swarms\/([^/]+)\/secrets\/([^/]+)\/delete$/);
+    const deleteMatch = pathname.match(/^\/workspaces\/([^/]+)\/secrets\/([^/]+)\/delete$/);
     if (deleteMatch?.[1] && deleteMatch[2] && request.method === "POST") {
-        const result = await swarmsSecretsDelete({
+        const result = await workspacesSecretsDelete({
             ctx: context.ctx,
             nametag: decodeURIComponent(deleteMatch[1]),
             name: decodeURIComponent(deleteMatch[2]),
@@ -110,10 +120,10 @@ export async function swarmsRouteHandle(
 }
 
 function errorStatusResolve(error: string): number {
-    if (error === "Only the owner user can manage swarm secrets.") {
+    if (error === "Only the owner user can manage workspace secrets.") {
         return 403;
     }
-    if (error === "Swarm not found." || error === "Secret not found." || error.startsWith("Secret not found:")) {
+    if (error === "Workspace not found." || error === "Secret not found." || error.startsWith("Secret not found:")) {
         return 404;
     }
     return 400;

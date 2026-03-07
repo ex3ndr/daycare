@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { contextForUser } from "../../../engine/agents/context.js";
 import type { Secret } from "../../../engine/secrets/secretTypes.js";
-import { swarmsRouteHandle } from "./swarmsRoutes.js";
+import { workspacesRouteHandle } from "./workspacesRoutes.js";
 
-describe("swarmsRouteHandle", () => {
-    it("routes swarm secrets endpoints", async () => {
+describe("workspacesRouteHandle", () => {
+    it("routes workspace secrets endpoints", async () => {
         const store = new Map<string, Secret[]>();
         store.set("owner-1", [
             {
@@ -16,7 +16,7 @@ describe("swarmsRouteHandle", () => {
         ]);
 
         const listBefore = await routeCall({
-            pathname: "/swarms/reviewer/secrets",
+            pathname: "/workspaces/reviewer/secrets",
             method: "GET",
             store
         });
@@ -25,11 +25,11 @@ describe("swarmsRouteHandle", () => {
         expect(listBefore.payload).toEqual({ ok: true, secrets: [] });
 
         const create = await routeCall({
-            pathname: "/swarms/reviewer/secrets/create",
+            pathname: "/workspaces/reviewer/secrets/create",
             method: "POST",
             body: {
-                name: "swarm-key",
-                displayName: "Swarm Key",
+                name: "workspace-key",
+                displayName: "Workspace Key",
                 description: "desc",
                 variables: { API_KEY: "secret" }
             },
@@ -39,7 +39,7 @@ describe("swarmsRouteHandle", () => {
         expect(create.payload.ok).toBe(true);
 
         const copy = await routeCall({
-            pathname: "/swarms/reviewer/secrets/copy",
+            pathname: "/workspaces/reviewer/secrets/copy",
             method: "POST",
             body: { secret: "owner-secret" },
             store
@@ -47,12 +47,12 @@ describe("swarmsRouteHandle", () => {
         expect(copy.statusCode).toBe(200);
         expect(copy.payload).toEqual({
             ok: true,
-            swarmUserId: "swarm-1",
+            workspaceUserId: "workspace-1",
             secret: "owner-secret"
         });
 
         const update = await routeCall({
-            pathname: "/swarms/reviewer/secrets/swarm-key/update",
+            pathname: "/workspaces/reviewer/secrets/workspace-key/update",
             method: "POST",
             body: { description: "updated" },
             store
@@ -61,7 +61,7 @@ describe("swarmsRouteHandle", () => {
         expect(update.payload.ok).toBe(true);
 
         const remove = await routeCall({
-            pathname: "/swarms/reviewer/secrets/swarm-key/delete",
+            pathname: "/workspaces/reviewer/secrets/workspace-key/delete",
             method: "POST",
             store
         });
@@ -69,7 +69,7 @@ describe("swarmsRouteHandle", () => {
         expect(remove.payload).toEqual({ ok: true, deleted: true });
 
         const listAfter = await routeCall({
-            pathname: "/swarms/reviewer/secrets",
+            pathname: "/workspaces/reviewer/secrets",
             method: "GET",
             store
         });
@@ -79,7 +79,7 @@ describe("swarmsRouteHandle", () => {
 
     it("returns false for unknown paths and 503 for unavailable runtime", async () => {
         const unknown = await routeCall({
-            pathname: "/not-swarms",
+            pathname: "/not-workspaces",
             method: "GET",
             usersEnabled: true,
             secretsEnabled: true
@@ -87,7 +87,7 @@ describe("swarmsRouteHandle", () => {
         expect(unknown.handled).toBe(false);
 
         const unavailable = await routeCall({
-            pathname: "/swarms/reviewer/secrets",
+            pathname: "/workspaces/reviewer/secrets",
             method: "GET",
             usersEnabled: false,
             secretsEnabled: false
@@ -96,7 +96,7 @@ describe("swarmsRouteHandle", () => {
         expect(unavailable.statusCode).toBe(503);
         expect(unavailable.payload).toEqual({
             ok: false,
-            error: "Swarms runtime unavailable."
+            error: "Workspaces runtime unavailable."
         });
     });
 });
@@ -121,7 +121,7 @@ async function routeCall(input: RouteCallInput): Promise<{
     const usersEnabled = input.usersEnabled ?? true;
     const secretsEnabled = input.secretsEnabled ?? true;
 
-    const handled = await swarmsRouteHandle(
+    const handled = await workspacesRouteHandle(
         {
             method: input.method
         } as never,
@@ -139,7 +139,9 @@ async function routeCall(input: RouteCallInput): Promise<{
                       findById: async (id: string) =>
                           id === "owner-1" ? { id: "owner-1", isOwner: true } : { id, isOwner: false },
                       findByNametag: async (nametag: string) =>
-                          nametag === "reviewer" ? { id: "swarm-1", isSwarm: true, parentUserId: "owner-1" } : null
+                          nametag === "reviewer"
+                              ? { id: "workspace-1", isWorkspace: true, parentUserId: "owner-1" }
+                              : null
                   } as never)
                 : null,
             secrets: secretsEnabled

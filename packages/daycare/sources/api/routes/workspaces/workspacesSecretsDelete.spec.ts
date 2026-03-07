@@ -2,34 +2,34 @@ import { describe, expect, it } from "vitest";
 import { contextForUser } from "../../../engine/agents/context.js";
 import type { Secret } from "../../../engine/secrets/secretTypes.js";
 import type { SecretsRuntime } from "../secrets/secretsTypes.js";
-import { swarmsSecretsDelete } from "./swarmsSecretsDelete.js";
+import { workspacesSecretsDelete } from "./workspacesSecretsDelete.js";
 
-describe("swarmsSecretsDelete", () => {
-    it("deletes a secret in swarm scope", async () => {
+describe("workspacesSecretsDelete", () => {
+    it("deletes a secret in workspace scope", async () => {
         const store = new Map<string, Secret[]>();
-        store.set("swarm-1", [
+        store.set("workspace-1", [
             {
-                name: "swarm-key",
-                displayName: "Swarm Key",
+                name: "workspace-key",
+                displayName: "Workspace Key",
                 description: "desc",
                 variables: { API_KEY: "secret" }
             }
         ]);
 
-        const result = await swarmsSecretsDelete({
+        const result = await workspacesSecretsDelete({
             ctx: contextForUser({ userId: "owner-1" }),
             nametag: "reviewer",
-            name: "swarm-key",
+            name: "workspace-key",
             users: usersBuild(),
             secrets: secretsRuntimeBuild(store)
         });
 
         expect(result).toEqual({ ok: true, deleted: true });
-        expect(store.get("swarm-1")).toEqual([]);
+        expect(store.get("workspace-1")).toEqual([]);
     });
 
     it("returns not found when secret is missing", async () => {
-        const result = await swarmsSecretsDelete({
+        const result = await workspacesSecretsDelete({
             ctx: contextForUser({ userId: "owner-1" }),
             nametag: "reviewer",
             name: "missing",
@@ -43,12 +43,12 @@ describe("swarmsSecretsDelete", () => {
 
 function usersBuild(): {
     findById: (id: string) => Promise<{ id: string; isOwner: boolean } | null>;
-    findByNametag: (nametag: string) => Promise<{ id: string; isSwarm: boolean; parentUserId: string } | null>;
+    findByNametag: (nametag: string) => Promise<{ id: string; isWorkspace: boolean; parentUserId: string } | null>;
 } {
     return {
         findById: async (id) => (id === "owner-1" ? { id: "owner-1", isOwner: true } : { id, isOwner: false }),
         findByNametag: async (nametag) =>
-            nametag === "reviewer" ? { id: "swarm-1", isSwarm: true, parentUserId: "owner-1" } : null
+            nametag === "reviewer" ? { id: "workspace-1", isWorkspace: true, parentUserId: "owner-1" } : null
     };
 }
 

@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { contextForUser } from "../../../engine/agents/context.js";
 import type { Secret } from "../../../engine/secrets/secretTypes.js";
 import type { SecretsRuntime } from "../secrets/secretsTypes.js";
-import { swarmsSecretsList } from "./swarmsSecretsList.js";
+import { workspacesSecretsList } from "./workspacesSecretsList.js";
 
-describe("swarmsSecretsList", () => {
-    it("lists secrets for a caller-owned swarm", async () => {
+describe("workspacesSecretsList", () => {
+    it("lists secrets for a caller-owned workspace", async () => {
         const store = new Map<string, Secret[]>();
-        store.set("swarm-1", [
+        store.set("workspace-1", [
             {
                 name: "openai-key",
                 displayName: "OpenAI",
@@ -16,7 +16,7 @@ describe("swarmsSecretsList", () => {
             }
         ]);
 
-        const result = await swarmsSecretsList({
+        const result = await workspacesSecretsList({
             ctx: contextForUser({ userId: "owner-1" }),
             nametag: "reviewer",
             users: usersBuild(),
@@ -38,7 +38,7 @@ describe("swarmsSecretsList", () => {
     });
 
     it("returns error when caller is not owner", async () => {
-        const result = await swarmsSecretsList({
+        const result = await workspacesSecretsList({
             ctx: contextForUser({ userId: "user-1" }),
             nametag: "reviewer",
             users: usersBuild(),
@@ -47,19 +47,19 @@ describe("swarmsSecretsList", () => {
 
         expect(result).toEqual({
             ok: false,
-            error: "Only the owner user can manage swarm secrets."
+            error: "Only the owner user can manage workspace secrets."
         });
     });
 });
 
 function usersBuild(): {
     findById: (id: string) => Promise<{ id: string; isOwner: boolean } | null>;
-    findByNametag: (nametag: string) => Promise<{ id: string; isSwarm: boolean; parentUserId: string } | null>;
+    findByNametag: (nametag: string) => Promise<{ id: string; isWorkspace: boolean; parentUserId: string } | null>;
 } {
     return {
         findById: async (id) => (id === "owner-1" ? { id: "owner-1", isOwner: true } : { id, isOwner: false }),
         findByNametag: async (nametag) =>
-            nametag === "reviewer" ? { id: "swarm-1", isSwarm: true, parentUserId: "owner-1" } : null
+            nametag === "reviewer" ? { id: "workspace-1", isWorkspace: true, parentUserId: "owner-1" } : null
     };
 }
 

@@ -1,19 +1,19 @@
 import type { Context } from "@/types";
 import type { SecretsRuntime } from "../secrets/secretsTypes.js";
-import { type SwarmsUsersRuntime, swarmsSecretScopeResolve } from "./swarmsSecretScopeResolve.js";
+import { type WorkspacesUsersRuntime, workspacesSecretScopeResolve } from "./workspacesSecretScopeResolve.js";
 
-export type SwarmsSecretsCopyInput = {
+export type WorkspacesSecretsCopyInput = {
     ctx: Context;
     nametag: string;
     body: Record<string, unknown>;
-    users: SwarmsUsersRuntime;
+    users: WorkspacesUsersRuntime;
     secrets: SecretsRuntime;
 };
 
-export type SwarmsSecretsCopyResult =
+export type WorkspacesSecretsCopyResult =
     | {
           ok: true;
-          swarmUserId: string;
+          workspaceUserId: string;
           secret: string;
       }
     | {
@@ -22,11 +22,11 @@ export type SwarmsSecretsCopyResult =
       };
 
 /**
- * Copies one owner secret to the target swarm secret store.
+ * Copies one owner secret to the target workspace secret store.
  * Expects: body.secret is a non-empty secret name.
  */
-export async function swarmsSecretsCopy(input: SwarmsSecretsCopyInput): Promise<SwarmsSecretsCopyResult> {
-    const scope = await swarmsSecretScopeResolve({
+export async function workspacesSecretsCopy(input: WorkspacesSecretsCopyInput): Promise<WorkspacesSecretsCopyResult> {
+    const scope = await workspacesSecretScopeResolve({
         ctx: input.ctx,
         nametag: input.nametag,
         users: input.users
@@ -46,7 +46,7 @@ export async function swarmsSecretsCopy(input: SwarmsSecretsCopyInput): Promise<
     if (!secret) {
         return { ok: false, error: `Secret not found: "${requestedName.value}".` };
     }
-    await input.secrets.add(scope.swarmCtx, {
+    await input.secrets.add(scope.workspaceCtx, {
         name: secret.name,
         displayName: secret.displayName,
         description: secret.description,
@@ -55,7 +55,7 @@ export async function swarmsSecretsCopy(input: SwarmsSecretsCopyInput): Promise<
 
     return {
         ok: true,
-        swarmUserId: scope.swarmUserId,
+        workspaceUserId: scope.workspaceUserId,
         secret: requestedName.value
     };
 }

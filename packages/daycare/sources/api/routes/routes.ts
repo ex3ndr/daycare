@@ -25,9 +25,9 @@ import { promptsRouteHandle } from "./prompts/promptsRoutes.js";
 import type { RouteAgentCallbacks, RouteTaskCallbacks } from "./routeTypes.js";
 import { secretsRouteHandle } from "./secrets/secretsRoutes.js";
 import { skillsRouteHandle } from "./skills/skillsRoutes.js";
-import { swarmsRouteHandle } from "./swarms/swarmsRoutes.js";
 import { tasksRouteHandle } from "./tasks/tasksRoutes.js";
 import { toolsRouteHandle } from "./tools/toolsRoutes.js";
+import { workspacesRouteHandle } from "./workspaces/workspacesRoutes.js";
 
 export type ApiRouteContext = {
     ctx: Context;
@@ -121,8 +121,8 @@ export async function apiRouteHandle(
             secrets: context.secrets
         });
     }
-    if (pathname.startsWith("/swarms")) {
-        return swarmsRouteHandle(request, response, pathname, {
+    if (pathname.startsWith("/workspaces")) {
+        return workspacesRouteHandle(request, response, pathname, {
             ctx: context.ctx,
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody,

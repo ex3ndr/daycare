@@ -2,19 +2,27 @@ import { describe, expect, it } from "vitest";
 import { contextForUser } from "../../../engine/agents/context.js";
 import type { Secret } from "../../../engine/secrets/secretTypes.js";
 import type { SecretsRuntime } from "../secrets/secretsTypes.js";
-import { swarmsSecretsCreate } from "./swarmsSecretsCreate.js";
+import { workspacesSecretsUpdate } from "./workspacesSecretsUpdate.js";
 
-describe("swarmsSecretsCreate", () => {
-    it("creates a secret in the target swarm scope", async () => {
+describe("workspacesSecretsUpdate", () => {
+    it("updates an existing secret in the workspace scope", async () => {
         const store = new Map<string, Secret[]>();
-        const result = await swarmsSecretsCreate({
+        store.set("workspace-1", [
+            {
+                name: "workspace-key",
+                displayName: "Workspace Key",
+                description: "old",
+                variables: { API_KEY: "old" }
+            }
+        ]);
+
+        const result = await workspacesSecretsUpdate({
             ctx: contextForUser({ userId: "owner-1" }),
             nametag: "reviewer",
+            name: "workspace-key",
             body: {
-                name: "swarm-key",
-                displayName: "Swarm Key",
-                description: "desc",
-                variables: { API_KEY: "secret" }
+                description: "new",
+                variables: { API_KEY: "new" }
             },
             users: usersBuild(),
             secrets: secretsRuntimeBuild(store)
@@ -23,43 +31,41 @@ describe("swarmsSecretsCreate", () => {
         expect(result).toEqual({
             ok: true,
             secret: {
-                name: "swarm-key",
-                displayName: "Swarm Key",
-                description: "desc",
+                name: "workspace-key",
+                displayName: "Workspace Key",
+                description: "new",
                 variableNames: ["API_KEY"],
                 variableCount: 1
             }
         });
-        expect(store.get("swarm-1")?.[0]?.name).toBe("swarm-key");
+        expect(store.get("workspace-1")?.[0]?.description).toBe("new");
     });
 
-    it("returns error when swarm nametag does not exist", async () => {
-        const result = await swarmsSecretsCreate({
+    it("returns not found when secret does not exist", async () => {
+        const result = await workspacesSecretsUpdate({
             ctx: contextForUser({ userId: "owner-1" }),
-            nametag: "missing",
-            body: {
-                name: "swarm-key",
-                variables: { API_KEY: "secret" }
-            },
+            nametag: "reviewer",
+            name: "missing",
+            body: { description: "x" },
             users: usersBuild(),
             secrets: secretsRuntimeBuild(new Map())
         });
 
         expect(result).toEqual({
             ok: false,
-            error: "Swarm not found."
+            error: "Secret not found."
         });
     });
 });
 
 function usersBuild(): {
     findById: (id: string) => Promise<{ id: string; isOwner: boolean } | null>;
-    findByNametag: (nametag: string) => Promise<{ id: string; isSwarm: boolean; parentUserId: string } | null>;
+    findByNametag: (nametag: string) => Promise<{ id: string; isWorkspace: boolean; parentUserId: string } | null>;
 } {
     return {
         findById: async (id) => (id === "owner-1" ? { id: "owner-1", isOwner: true } : { id, isOwner: false }),
         findByNametag: async (nametag) =>
-            nametag === "reviewer" ? { id: "swarm-1", isSwarm: true, parentUserId: "owner-1" } : null
+            nametag === "reviewer" ? { id: "workspace-1", isWorkspace: true, parentUserId: "owner-1" } : null
     };
 }
 

@@ -2,70 +2,67 @@ import { describe, expect, it } from "vitest";
 import { contextForUser } from "../../../engine/agents/context.js";
 import type { Secret } from "../../../engine/secrets/secretTypes.js";
 import type { SecretsRuntime } from "../secrets/secretsTypes.js";
-import { swarmsSecretsUpdate } from "./swarmsSecretsUpdate.js";
+import { workspacesSecretsCopy } from "./workspacesSecretsCopy.js";
 
-describe("swarmsSecretsUpdate", () => {
-    it("updates an existing secret in the swarm scope", async () => {
+describe("workspacesSecretsCopy", () => {
+    it("copies owner secrets to workspace secrets", async () => {
         const store = new Map<string, Secret[]>();
-        store.set("swarm-1", [
+        store.set("owner-1", [
             {
-                name: "swarm-key",
-                displayName: "Swarm Key",
-                description: "old",
-                variables: { API_KEY: "old" }
+                name: "openai-key",
+                displayName: "OpenAI",
+                description: "desc",
+                variables: { OPENAI_API_KEY: "sk" }
             }
         ]);
 
-        const result = await swarmsSecretsUpdate({
+        const result = await workspacesSecretsCopy({
             ctx: contextForUser({ userId: "owner-1" }),
             nametag: "reviewer",
-            name: "swarm-key",
-            body: {
-                description: "new",
-                variables: { API_KEY: "new" }
-            },
+            body: { secret: "openai-key" },
             users: usersBuild(),
             secrets: secretsRuntimeBuild(store)
         });
 
         expect(result).toEqual({
             ok: true,
-            secret: {
-                name: "swarm-key",
-                displayName: "Swarm Key",
-                description: "new",
-                variableNames: ["API_KEY"],
-                variableCount: 1
-            }
+            workspaceUserId: "workspace-1",
+            secret: "openai-key"
         });
-        expect(store.get("swarm-1")?.[0]?.description).toBe("new");
+        expect(store.get("workspace-1")).toEqual([
+            {
+                name: "openai-key",
+                displayName: "OpenAI",
+                description: "desc",
+                variables: { OPENAI_API_KEY: "sk" }
+            }
+        ]);
     });
 
-    it("returns not found when secret does not exist", async () => {
-        const result = await swarmsSecretsUpdate({
+    it("returns error when owner secret is missing", async () => {
+        const result = await workspacesSecretsCopy({
             ctx: contextForUser({ userId: "owner-1" }),
             nametag: "reviewer",
-            name: "missing",
-            body: { description: "x" },
+            body: { secret: "missing" },
             users: usersBuild(),
-            secrets: secretsRuntimeBuild(new Map())
+            secrets: secretsRuntimeBuild(new Map([["owner-1", []]]))
         });
 
         expect(result).toEqual({
             ok: false,
-            error: "Secret not found."
+            error: 'Secret not found: "missing".'
         });
     });
 });
 
 function usersBuild(): {
     findById: (id: string) => Promise<{ id: string; isOwner: boolean } | null>;
-    findByNametag: (nametag: string) => Promise<{ id: string; isSwarm: boolean; parentUserId: string } | null>;
+    findByNametag: (nametag: string) => Promise<{ id: string; isWorkspace: boolean; parentUserId: string } | null>;
 } {
     return {
         findById: async (id) => (id === "owner-1" ? { id: "owner-1", isOwner: true } : { id, isOwner: false }),
         findByNametag: async (nametag) =>
-            nametag === "reviewer" ? { id: "swarm-1", isSwarm: true, parentUserId: "owner-1" } : null
+            nametag === "reviewer" ? { id: "workspace-1", isWorkspace: true, parentUserId: "owner-1" } : null
     };
 }
 

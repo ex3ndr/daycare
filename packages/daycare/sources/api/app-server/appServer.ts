@@ -41,6 +41,7 @@ import { appCorsApply, appReadJsonBody, appSendJson, appSendText, appServerClose
 import { appJwtSecretResolve } from "./appJwtSecretResolve.js";
 import type { AppServerResolvedSettings } from "./appServerSettingsResolve.js";
 import { appServerSettingsResolve } from "./appServerSettingsResolve.js";
+import { appWorkspaceResolve, WorkspaceAccessError } from "./appWorkspaceResolve.js";
 import { routeAuthEmailConnectVerify } from "./routes/routeAuthEmailConnectVerify.js";
 import { routeAuthEmailRequest } from "./routes/routeAuthEmailRequest.js";
 import { routeAuthEmailVerify } from "./routes/routeAuthEmailVerify.js";
@@ -278,19 +279,50 @@ export class AppServer {
             return;
         }
 
-        const ctx = contextForUser({ userId: auth.userId });
-        const eventsHandled = await eventsRouteHandle(request, response, pathname, {
+        // Resolve workspace scope from /w/{nametag}/... prefix
+        let effectiveUserId = auth.userId;
+        let routePathname = pathname;
+
+        if (pathname.startsWith("/w/") && this.users) {
+            try {
+                const resolved = await appWorkspaceResolve(pathname, auth.userId, this.users);
+                if (resolved) {
+                    effectiveUserId = resolved.workspaceUserId;
+                    routePathname = resolved.strippedPathname;
+                }
+            } catch (error) {
+                if (error instanceof WorkspaceAccessError) {
+                    appSendJson(response, 403, { ok: false, error: error.message });
+                    return;
+                }
+                throw error;
+            }
+        }
+
+        // Profile is always scoped to the authenticated user, not the workspace
+        const callerCtx = contextForUser({ userId: auth.userId });
+        const ctx = contextForUser({ userId: effectiveUserId });
+
+        const eventsHandled = await eventsRouteHandle(request, response, routePathname, {
             eventBus: this.eventBus,
-            userId: auth.userId,
+            userId: effectiveUserId,
             sendJson: appSendJson
         });
         if (eventsHandled) {
             return;
         }
 
+        // Profile and workspaces list use the caller's own context (global, not workspace-scoped)
+        const profileCtx = routePathname.startsWith("/profile") ? callerCtx : ctx;
+        const workspacesCtx = routePathname.startsWith("/workspaces") ? callerCtx : ctx;
+
         const skillsList = this.skills;
-        const handled = await apiRouteHandle(request, response, pathname, {
-            ctx,
+        const handled = await apiRouteHandle(request, response, routePathname, {
+            ctx: routePathname.startsWith("/profile")
+                ? profileCtx
+                : routePathname.startsWith("/workspaces")
+                  ? workspacesCtx
+                  : ctx,
             usersDir: this.config.current.usersDir,
             sendJson: appSendJson,
             readJsonBody: appReadJsonBody,
