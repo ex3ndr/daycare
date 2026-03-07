@@ -91,8 +91,28 @@ describe("authLinkPayloadFromUrl", () => {
         });
         expect(warnSpy).not.toHaveBeenCalled();
     });
+
+    it("parses connect-email payloads", () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const encoded = authLinkPayloadEncode({
+            backendUrl: "http://127.0.0.1:7332/",
+            token: "token-1",
+            kind: "connect-email"
+        });
+
+        expect(authLinkPayloadFromUrl(`https://daycare.dev/auth#${encoded}`)).toEqual({
+            backendUrl: "http://127.0.0.1:7332",
+            token: "token-1",
+            kind: "connect-email"
+        });
+        expect(warnSpy).not.toHaveBeenCalled();
+    });
 });
 
-function authLinkPayloadEncode(payload: { backendUrl: string; token: string; kind?: "session" | "email" }): string {
+function authLinkPayloadEncode(payload: {
+    backendUrl: string;
+    token: string;
+    kind?: "session" | "email" | "connect-email";
+}): string {
     return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
 }

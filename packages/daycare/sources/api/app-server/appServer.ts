@@ -36,10 +36,12 @@ import type { RouteAgentCallbacks, RouteTaskCallbacks } from "../routes/routeTyp
 import { appAuthExtract } from "./appAuthExtract.js";
 import { APP_AUTH_LINK_EXPIRES_IN_SECONDS, appAuthLinkGenerate, appAuthLinkTool } from "./appAuthLinkTool.js";
 import { AppEmailAuth } from "./appEmailAuth.js";
+import { AppEmailConnect } from "./appEmailConnect.js";
 import { appCorsApply, appReadJsonBody, appSendJson, appSendText, appServerClose, appServerListen } from "./appHttp.js";
 import { appJwtSecretResolve } from "./appJwtSecretResolve.js";
 import type { AppServerResolvedSettings } from "./appServerSettingsResolve.js";
 import { appServerSettingsResolve } from "./appServerSettingsResolve.js";
+import { routeAuthEmailConnectVerify } from "./routes/routeAuthEmailConnectVerify.js";
 import { routeAuthEmailRequest } from "./routes/routeAuthEmailRequest.js";
 import { routeAuthEmailVerify } from "./routes/routeAuthEmailVerify.js";
 import { routeAuthRefresh } from "./routes/routeAuthRefresh.js";
@@ -114,6 +116,7 @@ export class AppServer {
     private activeEmailSettings: EmailSettings | null = null;
     private secretPromise: Promise<string> | null = null;
     private emailAuth: AppEmailAuth | null = null;
+    private emailConnect: AppEmailConnect | null = null;
 
     constructor(options: AppServerOptions) {
         this.config = options.config;
@@ -248,6 +251,12 @@ export class AppServer {
             });
             return;
         }
+        if (pathname === "/auth/email/connect/verify" && request.method === "POST") {
+            await routeAuthEmailConnectVerify(request, response, {
+                emailConnect: await this.emailConnectResolve()
+            });
+            return;
+        }
 
         const webhookToken = webhookTokenResolve(pathname);
         if (request.method === "POST" && webhookToken) {
@@ -305,7 +314,8 @@ export class AppServer {
             keyValues: this.keyValues,
             psql: this.psql,
             observationLog: this.observationLog,
-            secrets: this.secrets
+            secrets: this.secrets,
+            emailConnectRequest: (userId, email) => this.emailConnectRequest(userId, email, request.headers)
         });
         if (handled) {
             return;
@@ -433,6 +443,44 @@ export class AppServer {
         return this.emailAuth;
     }
 
+    private async emailConnectResolve(): Promise<AppEmailConnect> {
+        if (this.emailConnect) {
+            return this.emailConnect;
+        }
+
+        const settings = this.settingsRequire();
+        const users = this.users;
+        const email = this.activeEmailSettings;
+        const smtpUrl = email?.smtpUrl?.trim() ?? "";
+        const from = email?.from?.trim() ?? "";
+        if (!users) {
+            throw new Error("User repository is unavailable.");
+        }
+        if (!smtpUrl || !from) {
+            throw new Error("email.smtpUrl and email.from are required.");
+        }
+
+        this.emailConnect = new AppEmailConnect({
+            users,
+            host: settings.host,
+            port: settings.port,
+            serverEndpoint: settings.serverEndpoint,
+            appEndpoint: settings.appEndpoint,
+            secret: await this.secretResolve(),
+            replyTo: email?.replyTo,
+            mailSend: emailSend({
+                smtpUrl,
+                from
+            })
+        });
+        return this.emailConnect;
+    }
+
+    private async emailConnectRequest(userId: string, email: string, headers: http.IncomingHttpHeaders): Promise<void> {
+        const emailConnect = await this.emailConnectResolve();
+        await emailConnect.request(userId, email, headers);
+    }
+
     private registerRuntime(): void {
         const settings = this.settingsRequire();
 
@@ -494,6 +542,7 @@ export class AppServer {
         this.activeEmailSettings = null;
         this.secretPromise = null;
         this.emailAuth = null;
+        this.emailConnect = null;
 
         if (!this.server) {
             this.activeSettings = null;

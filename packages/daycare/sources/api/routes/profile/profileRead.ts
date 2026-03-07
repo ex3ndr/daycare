@@ -10,6 +10,7 @@ export type ProfileUserRecord = {
     systemPrompt: string | null;
     memory: boolean;
     nametag: string;
+    connectorKeys: Array<{ connectorKey: string }>;
 };
 
 export type ProfileReadInput = {
@@ -32,6 +33,7 @@ export type ProfileReadResult =
               systemPrompt: string | null;
               memory: boolean;
               nametag: string;
+              emails: string[];
           };
       }
     | {
@@ -60,7 +62,15 @@ export async function profileRead(input: ProfileReadInput): Promise<ProfileReadR
             timezone: user.timezone,
             systemPrompt: user.systemPrompt,
             memory: user.memory,
-            nametag: user.nametag
+            nametag: user.nametag,
+            emails: profileEmailsList(user.connectorKeys)
         }
     };
+}
+
+function profileEmailsList(connectorKeys: Array<{ connectorKey: string }>): string[] {
+    return connectorKeys
+        .map((entry) => (entry.connectorKey.startsWith("email:") ? entry.connectorKey.slice("email:".length) : null))
+        .filter((value): value is string => !!value)
+        .sort((left, right) => left.localeCompare(right));
 }

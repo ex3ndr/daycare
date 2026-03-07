@@ -14,7 +14,8 @@ describe("profileUpdate", () => {
             timezone: null,
             systemPrompt: null,
             memory: false,
-            nametag: "ada"
+            nametag: "ada",
+            connectorKeys: []
         };
         const users = {
             findById: vi.fn(async () => ({ ...state })),
@@ -43,7 +44,8 @@ describe("profileUpdate", () => {
                 timezone: null,
                 systemPrompt: null,
                 memory: true,
-                nametag: "ada"
+                nametag: "ada",
+                emails: []
             }
         });
         expect(users.update).toHaveBeenCalledWith(
@@ -63,7 +65,8 @@ describe("profileUpdate", () => {
             timezone: "Europe/London",
             systemPrompt: "prompt",
             memory: true,
-            nametag: "ada"
+            nametag: "ada",
+            connectorKeys: []
         };
         const users = {
             findById: vi.fn(async () => ({ ...state })),
@@ -92,7 +95,8 @@ describe("profileUpdate", () => {
                 timezone: "UTC",
                 systemPrompt: "prompt",
                 memory: true,
-                nametag: "ada"
+                nametag: "ada",
+                emails: []
             }
         });
     });

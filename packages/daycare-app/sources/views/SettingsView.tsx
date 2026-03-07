@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
@@ -7,6 +7,7 @@ import { ItemListStatic } from "@/components/ItemList";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useProfileStore } from "@/modules/profile/profileContext";
+import { profileEmailConnectRequest } from "@/modules/profile/profileEmailConnectRequest";
 import { secretsFetch } from "@/modules/secrets/secretsFetch";
 import type { SecretSummary } from "@/modules/secrets/secretsTypes";
 import { secretPresenceSubtitleBuild } from "@/views/settings/secretPresenceSubtitleBuild";
@@ -23,6 +24,10 @@ export function SettingsView() {
     const loading = useProfileStore((s) => s.loading);
     const error = useProfileStore((s) => s.error);
     const fetchProfile = useProfileStore((s) => s.fetch);
+    const [email, setEmail] = useState("");
+    const [emailSubmitting, setEmailSubmitting] = useState(false);
+    const [emailMessage, setEmailMessage] = useState<string | null>(null);
+    const [emailError, setEmailError] = useState<string | null>(null);
     const [secrets, setSecrets] = useState<SecretSummary[] | null>(null);
     const [secretsLoading, setSecretsLoading] = useState(false);
     const [secretsError, setSecretsError] = useState<string | null>(null);
@@ -73,6 +78,29 @@ export function SettingsView() {
         };
     }, [baseUrl, token]);
 
+    const connectEmailRequest = async () => {
+        const normalizedEmail = email.trim().toLowerCase();
+        if (!baseUrl || !token || !normalizedEmail || emailSubmitting) {
+            return;
+        }
+
+        setEmailSubmitting(true);
+        setEmailMessage(null);
+        setEmailError(null);
+        try {
+            const result = await profileEmailConnectRequest(baseUrl, token, normalizedEmail);
+            if (!result.ok) {
+                throw new Error(result.error);
+            }
+            setEmailMessage(`We sent a connection link to ${normalizedEmail}.`);
+            setEmail("");
+        } catch (requestError) {
+            setEmailError(requestError instanceof Error ? requestError.message : "Failed to send email link.");
+        } finally {
+            setEmailSubmitting(false);
+        }
+    };
+
     return (
         <View style={{ flex: 1 }}>
             <PageHeader title="Settings" icon="gear" />
@@ -105,6 +133,71 @@ export function SettingsView() {
                         <Item title="Memory" subtitle={profile.memory ? "Enabled" : "Disabled"} showChevron={false} />
                     </ItemGroup>
                 )}
+
+                <ItemGroup title="Connected Emails">
+                    {profile?.emails.length ? (
+                        profile.emails.map((connectedEmail) => (
+                            <Item
+                                key={connectedEmail}
+                                title={connectedEmail}
+                                subtitle="Connected"
+                                showChevron={false}
+                            />
+                        ))
+                    ) : (
+                        <Item
+                            title="No connected emails"
+                            subtitle="Add an email to sign in with a magic link."
+                            showChevron={false}
+                        />
+                    )}
+
+                    <View style={styles.emailForm}>
+                        <TextInput
+                            autoCapitalize="none"
+                            autoComplete="email"
+                            autoCorrect={false}
+                            keyboardType="email-address"
+                            onChangeText={setEmail}
+                            placeholder="you@company.com"
+                            placeholderTextColor={theme.colors.onSurfaceVariant}
+                            style={[
+                                styles.input,
+                                {
+                                    color: theme.colors.onSurface,
+                                    backgroundColor: theme.colors.surface,
+                                    borderColor: theme.colors.outlineVariant
+                                }
+                            ]}
+                            value={email}
+                        />
+                        <Pressable
+                            accessibilityRole="button"
+                            disabled={emailSubmitting || email.trim().length === 0 || !baseUrl || !token}
+                            onPress={() => void connectEmailRequest()}
+                            style={({ pressed }) => [
+                                styles.button,
+                                { backgroundColor: theme.colors.primary },
+                                pressed && !emailSubmitting ? styles.buttonPressed : null,
+                                emailSubmitting || email.trim().length === 0 ? styles.buttonDisabled : null
+                            ]}
+                        >
+                            {emailSubmitting ? (
+                                <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+                            ) : (
+                                <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>
+                                    Connect Email
+                                </Text>
+                            )}
+                        </Pressable>
+                        {emailMessage ? (
+                            <Text style={[styles.feedback, { color: theme.colors.primary }]}>{emailMessage}</Text>
+                        ) : null}
+                        {emailError ? (
+                            <Text style={[styles.feedback, { color: theme.colors.error }]}>{emailError}</Text>
+                        ) : null}
+                    </View>
+                </ItemGroup>
 
                 <ItemGroup
                     title="Secrets"
@@ -166,5 +259,38 @@ const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5
+    },
+    emailForm: {
+        gap: 12,
+        padding: 16
+    },
+    input: {
+        width: "100%",
+        height: 48,
+        borderRadius: 14,
+        borderWidth: 1,
+        paddingHorizontal: 14,
+        fontSize: 16
+    },
+    button: {
+        minHeight: 44,
+        borderRadius: 14,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 16
+    },
+    buttonPressed: {
+        opacity: 0.92
+    },
+    buttonDisabled: {
+        opacity: 0.5
+    },
+    buttonText: {
+        fontSize: 15,
+        fontWeight: "700"
+    },
+    feedback: {
+        fontSize: 13,
+        lineHeight: 18
     }
 });

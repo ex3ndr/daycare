@@ -1,12 +1,14 @@
 import type http from "node:http";
 import type { Context } from "@/types";
 import type { UsersRepository } from "../../../storage/usersRepository.js";
+import { profileEmailConnectRequest } from "./profileEmailConnectRequest.js";
 import { profileRead } from "./profileRead.js";
 import { profileUpdate } from "./profileUpdate.js";
 
 export type ProfileRouteContext = {
     ctx: Context;
     users: UsersRepository | null;
+    emailConnectRequest: ((userId: string, email: string) => Promise<void>) | null;
     sendJson: (response: http.ServerResponse, statusCode: number, payload: Record<string, unknown>) => void;
     readJsonBody: (request: http.IncomingMessage) => Promise<Record<string, unknown>>;
 };
@@ -47,6 +49,17 @@ export async function profileRouteHandle(
         const result = await profileUpdate({
             ctx: context.ctx,
             users: context.users,
+            body
+        });
+        context.sendJson(response, result.ok ? 200 : 400, result);
+        return true;
+    }
+
+    if (pathname === "/profile/email/connect/request" && request.method === "POST") {
+        const body = await context.readJsonBody(request);
+        const result = await profileEmailConnectRequest({
+            ctx: context.ctx,
+            request: context.emailConnectRequest,
             body
         });
         context.sendJson(response, result.ok ? 200 : 400, result);

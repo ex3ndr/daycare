@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { authEmailRequest, authEmailVerify, authTelegramExchange, authValidateToken } from "@/modules/auth/authApi";
+import {
+    authEmailConnectVerify,
+    authEmailRequest,
+    authEmailVerify,
+    authTelegramExchange,
+    authValidateToken
+} from "@/modules/auth/authApi";
 
 describe("authValidateToken", () => {
     afterEach(() => {
@@ -149,6 +155,41 @@ describe("authEmailVerify", () => {
         await expect(authEmailVerify("http://localhost:7332", "magic-token")).resolves.toEqual({
             ok: false,
             error: "EXPIRED_TOKEN"
+        });
+    });
+});
+
+describe("authEmailConnectVerify", () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it("returns connected email details when verification succeeds", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                json: async () => ({ ok: true, userId: "user-9", email: "person@example.com" })
+            }))
+        );
+
+        await expect(authEmailConnectVerify("http://localhost:7332", "magic-token")).resolves.toEqual({
+            ok: true,
+            userId: "user-9",
+            email: "person@example.com"
+        });
+    });
+
+    it("returns error when verification fails", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                json: async () => ({ ok: false, error: "INVALID_TOKEN" })
+            }))
+        );
+
+        await expect(authEmailConnectVerify("http://localhost:7332", "magic-token")).resolves.toEqual({
+            ok: false,
+            error: "INVALID_TOKEN"
         });
     });
 });

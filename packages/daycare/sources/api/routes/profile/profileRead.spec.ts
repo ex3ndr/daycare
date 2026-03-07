@@ -17,7 +17,7 @@ describe("profileRead", () => {
                 systemPrompt: "prompt",
                 memory: true,
                 nametag: "ada",
-                connectorKeys: []
+                connectorKeys: [{ connectorKey: "email:ada@example.com" }, { connectorKey: "telegram:123" }]
             }))
         };
 
@@ -34,7 +34,8 @@ describe("profileRead", () => {
                 timezone: "Europe/London",
                 systemPrompt: "prompt",
                 memory: true,
-                nametag: "ada"
+                nametag: "ada",
+                emails: ["ada@example.com"]
             }
         });
     });

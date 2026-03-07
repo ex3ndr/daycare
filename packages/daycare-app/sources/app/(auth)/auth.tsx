@@ -4,10 +4,11 @@ import * as React from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { SinglePanelLayout } from "@/components/layout/SinglePanelLayout";
-import { authEmailVerify, authTelegramExchange } from "@/modules/auth/authApi";
+import { authEmailConnectVerify, authEmailVerify, authTelegramExchange } from "@/modules/auth/authApi";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { authLinkPayloadFromUrl } from "@/modules/auth/authLinkPayloadFromUrl";
 import { authTelegramWebAppContextParse } from "@/modules/auth/authTelegramWebAppContextParse";
+import { useProfileStore } from "@/modules/profile/profileContext";
 import { isTMA } from "@/modules/tma/isTMA";
 import { tmaInitData } from "@/modules/tma/tmaInitData";
 import { tmaLaunchParams } from "@/modules/tma/tmaLaunchParams";
@@ -15,7 +16,11 @@ import { tmaReady } from "@/modules/tma/tmaReady";
 
 export default function AuthMagicLinkScreen() {
     const { theme } = useUnistyles();
+    const authBaseUrl = useAuthStore((state) => state.baseUrl);
+    const authToken = useAuthStore((state) => state.token);
+    const authUserId = useAuthStore((state) => state.userId);
     const login = useAuthStore((state) => state.login);
+    const fetchProfile = useProfileStore((state) => state.fetch);
     const incomingLinkUrl = Linking.useURL();
     const [initialLinkUrl, setInitialLinkUrl] = React.useState<string | null | undefined>(undefined);
     React.useEffect(() => {
@@ -86,6 +91,7 @@ export default function AuthMagicLinkScreen() {
 
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
+    const [success, setSuccess] = React.useState<string | null>(null);
 
     React.useEffect(() => {
         if (!telegramWebAppContext) {
@@ -118,6 +124,7 @@ export default function AuthMagicLinkScreen() {
 
         setIsSubmitting(true);
         setError(null);
+        setSuccess(null);
         try {
             if (magicPayload.kind === "email") {
                 const result = await authEmailVerify(magicPayload.backendUrl, magicPayload.token);
@@ -125,20 +132,41 @@ export default function AuthMagicLinkScreen() {
                     throw new Error(result.error);
                 }
                 await login(magicPayload.backendUrl, result.token);
+            } else if (magicPayload.kind === "connect-email") {
+                const result = await authEmailConnectVerify(magicPayload.backendUrl, magicPayload.token);
+                if (!result.ok) {
+                    throw new Error(result.error);
+                }
+                if (
+                    authBaseUrl === magicPayload.backendUrl &&
+                    authToken &&
+                    (!authUserId || authUserId === result.userId)
+                ) {
+                    await fetchProfile(authBaseUrl, authToken);
+                    router.replace("/(app)" as never);
+                    return;
+                }
+                setSuccess(`Email ${result.email} is now connected to your Daycare account.`);
             } else {
                 await login(magicPayload.backendUrl, magicPayload.token);
+                router.replace("/(app)" as never);
+                return;
             }
-            router.replace("/(app)" as never);
+            if (magicPayload.kind === "email") {
+                router.replace("/(app)" as never);
+            }
         } catch {
             setError(
                 magicPayload.kind === "email"
                     ? "Email sign-in link expired or invalid. Request a new link."
-                    : "Magic link expired or invalid. Request a new /app link."
+                    : magicPayload.kind === "connect-email"
+                      ? "Email connection link expired or invalid. Request a new link from Settings."
+                      : "Magic link expired or invalid. Request a new /app link."
             );
         } finally {
             setIsSubmitting(false);
         }
-    }, [isSubmitting, login, magicPayload]);
+    }, [authBaseUrl, authToken, authUserId, fetchProfile, isSubmitting, login, magicPayload]);
     const enterTelegram = React.useCallback(async () => {
         if (!telegramWebAppContext || isSubmitting) {
             return;
@@ -189,7 +217,11 @@ export default function AuthMagicLinkScreen() {
                 {magicPayload ? (
                     <>
                         <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
-                            {magicPayload.kind === "email" ? "Verifying email sign-in with " : "Connecting to "}
+                            {magicPayload.kind === "email"
+                                ? "Verifying email sign-in with "
+                                : magicPayload.kind === "connect-email"
+                                  ? "Connecting email for "
+                                  : "Connecting to "}
                             <Text style={[styles.value, { color: theme.colors.onSurface }]}>{serverLabel}</Text>
                         </Text>
                         <Pressable
@@ -244,6 +276,7 @@ export default function AuthMagicLinkScreen() {
                     </Text>
                 )}
                 {error ? <Text style={[styles.message, { color: theme.colors.error }]}>{error}</Text> : null}
+                {success ? <Text style={[styles.message, { color: theme.colors.primary }]}>{success}</Text> : null}
             </View>
         </SinglePanelLayout>
     );

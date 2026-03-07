@@ -470,6 +470,50 @@ describe("AppServer auth endpoints", () => {
         expect(verified.userId).toBe(mappedUser.id);
     });
 
+    it("connects an email to the authenticated user through a verification link", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await appServerCreateForTests({
+            secret,
+            emailAuth: {
+                smtpUrl: "smtp://mailer.example.com",
+                from: "Daycare <no-reply@example.com>"
+            }
+        });
+        const user = await built.storage.users.create({});
+        const token = await jwtSign({ userId: user.id }, secret, 3600);
+
+        const requestResponse = await fetch(`http://127.0.0.1:${built.port}/profile/email/connect/request`, {
+            method: "POST",
+            headers: {
+                authorization: `Bearer ${token}`,
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({ email: "person@example.com" })
+        });
+
+        await expect(requestResponse.json()).resolves.toEqual({ ok: true });
+        expect(sendMailMock).toHaveBeenCalledTimes(1);
+        const sentMessage = sendMailMock.mock.calls[0]?.[0] as { text?: string } | undefined;
+        const connectToken = appServerEmailTokenExtract(sentMessage?.text ?? "");
+
+        const verifyResponse = await fetch(`http://127.0.0.1:${built.port}/auth/email/connect/verify`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ token: connectToken })
+        });
+
+        await expect(verifyResponse.json()).resolves.toEqual({
+            ok: true,
+            userId: user.id,
+            email: "person@example.com"
+        });
+
+        const reloaded = await built.storage.users.findById(user.id);
+        expect(reloaded?.connectorKeys.map((entry) => entry.connectorKey)).toContain(
+            userConnectorKeyCreate("email", "person@example.com")
+        );
+    });
+
     it("normalizes legacy Telegram session tokens to internal user ids", async () => {
         const secret = "valid-secret-for-tests-1234567890";
         const built = await appServerCreateForTests({ secret });

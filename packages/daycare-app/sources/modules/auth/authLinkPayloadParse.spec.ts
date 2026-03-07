@@ -43,6 +43,25 @@ describe("authLinkPayloadParse", () => {
         expect(warnSpy).not.toHaveBeenCalled();
     });
 
+    it("decodes a connect-email payload hash", () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const encoded = Buffer.from(
+            JSON.stringify({
+                backendUrl: "http://127.0.0.1:7332/",
+                token: "token-1",
+                kind: "connect-email"
+            }),
+            "utf8"
+        ).toString("base64url");
+
+        expect(authLinkPayloadParse(`#${encoded}`)).toEqual({
+            backendUrl: "http://127.0.0.1:7332",
+            token: "token-1",
+            kind: "connect-email"
+        });
+        expect(warnSpy).not.toHaveBeenCalled();
+    });
+
     it("returns null for invalid hash payload", () => {
         const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
         expect(authLinkPayloadParse("#%%")).toBeNull();

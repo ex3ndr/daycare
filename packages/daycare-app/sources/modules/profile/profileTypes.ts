@@ -8,4 +8,5 @@ export type ProfileData = {
     systemPrompt: string | null;
     memory: boolean;
     nametag: string;
+    emails: string[];
 };

@@ -54,3 +54,25 @@ Add SMTP settings under top-level `email`:
 - Better Auth data is stored in dedicated `app_auth_*` tables inside the main Daycare database.
 - Verified email identities map into Daycare users through the existing `user_connector_keys` table using `email:<normalized-address>`.
 - Existing Telegram auth and signed `/app` links continue to work.
+
+## Connect Existing Account Email
+
+Authenticated users can also connect an email address to their existing Daycare account from Settings. That flow uses a short-lived Daycare JWT link and adds the `email:<normalized-address>` connector key only after the emailed link is opened.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant App as Daycare App
+    participant API as App Server
+    participant SMTP as SMTP Server
+    participant DB as Daycare DB
+
+    User->>App: Enter email in Settings
+    App->>API: POST /profile/email/connect/request
+    API->>SMTP: Send connect-email /auth link
+    SMTP-->>User: Email connection link
+    User->>App: Open emailed /auth link
+    App->>API: POST /auth/email/connect/verify(token)
+    API->>DB: Add user_connector_keys(email:<address>)
+    API-->>App: Connected email + userId
+```

@@ -29,6 +29,17 @@ export type AuthEmailRequestResult =
           error: string;
       };
 
+export type AuthEmailConnectVerifyResult =
+    | {
+          ok: true;
+          userId: string;
+          email: string;
+      }
+    | {
+          ok: false;
+          error: string;
+      };
+
 /**
  * Validates an auth token and exchanges link tokens to session tokens when needed.
  * Expects: baseUrl points to daycare-app-server and token is non-empty.
@@ -172,5 +183,39 @@ export async function authEmailVerify(baseUrl: string, token: string): Promise<A
     return {
         ok: false,
         error: typeof parsed.error === "string" ? parsed.error : "Magic link verification failed."
+    };
+}
+
+/**
+ * Verifies an email-connect link and links the address to the target Daycare account.
+ * Expects: baseUrl points to daycare-app-server and token is non-empty.
+ */
+export async function authEmailConnectVerify(baseUrl: string, token: string): Promise<AuthEmailConnectVerifyResult> {
+    const response = await fetch(`${baseUrl}/auth/email/connect/verify`, {
+        method: "POST",
+        headers: {
+            "content-type": "application/json"
+        },
+        body: JSON.stringify({ token })
+    });
+
+    const parsed = (await response.json()) as {
+        ok?: boolean;
+        userId?: string;
+        email?: string;
+        error?: string;
+    };
+
+    if (parsed.ok === true && typeof parsed.userId === "string" && typeof parsed.email === "string") {
+        return {
+            ok: true,
+            userId: parsed.userId,
+            email: parsed.email
+        };
+    }
+
+    return {
+        ok: false,
+        error: typeof parsed.error === "string" ? parsed.error : "Email connection verification failed."
     };
 }

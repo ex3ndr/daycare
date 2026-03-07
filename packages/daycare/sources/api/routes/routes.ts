@@ -53,6 +53,7 @@ export type ApiRouteContext = {
         add: (ctx: Context, secret: Secret) => Promise<void>;
         remove: (ctx: Context, name: string) => Promise<boolean>;
     } | null;
+    emailConnectRequest: ((userId: string, email: string) => Promise<void>) | null;
 };
 
 /**
@@ -71,6 +72,7 @@ export async function apiRouteHandle(
         return profileRouteHandle(request, response, pathname, {
             ctx: context.ctx,
             users: context.users,
+            emailConnectRequest: context.emailConnectRequest,
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody
         });
