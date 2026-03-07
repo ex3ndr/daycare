@@ -1,8 +1,9 @@
 import { usePathname } from "expo-router";
 import { View } from "react-native";
-import { StyleSheet } from "react-native-unistyles";
+import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
 import { ComponentsShowcaseView } from "@/views/dev/ComponentsShowcaseView";
+import { DevTreePanel } from "@/views/dev/DevTreePanel";
 import { ExamplesView } from "@/views/dev/ExamplesView";
 import { LottieShowcaseView } from "@/views/dev/LottieShowcaseView";
 import { MontyDevView } from "@/views/dev/MontyDevView";
@@ -34,6 +35,7 @@ const pageComponents: Record<DevPage, React.ComponentType> = {
  */
 export function DevView() {
     const pathname = usePathname();
+    const { theme } = useUnistyles();
     const segment = pathname.split("/").filter(Boolean)[1] as string | undefined;
 
     // Check if it's an individual showcase page
@@ -41,8 +43,20 @@ export function DevView() {
     if (showcasePage) {
         return (
             <View style={styles.container}>
-                <PageHeader title={showcasePage.title} icon="beaker" />
-                <ShowcasePageView />
+                <View
+                    style={{
+                        width: 280,
+                        borderRightWidth: 1,
+                        borderRightColor: theme.colors.outlineVariant,
+                        backgroundColor: theme.colors.surface
+                    }}
+                >
+                    <DevTreePanel />
+                </View>
+                <View style={styles.content}>
+                    <PageHeader title={showcasePage.title} icon="beaker" />
+                    <ShowcasePageView />
+                </View>
             </View>
         );
     }
@@ -53,14 +67,30 @@ export function DevView() {
 
     return (
         <View style={styles.container}>
-            <PageHeader title={pageTitles[page]} icon="beaker" />
-            <PageComponent />
+            <View
+                style={{
+                    width: 280,
+                    borderRightWidth: 1,
+                    borderRightColor: theme.colors.outlineVariant,
+                    backgroundColor: theme.colors.surface
+                }}
+            >
+                <DevTreePanel />
+            </View>
+            <View style={styles.content}>
+                <PageHeader title={pageTitles[page]} icon="beaker" />
+                <PageComponent />
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
+        flexDirection: "row"
+    },
+    content: {
         flex: 1
     }
 });

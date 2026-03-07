@@ -49,13 +49,7 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     files: [],
     skills: [],
     tools: [],
-    dev: [
-        { id: "components", title: "Components" },
-        { id: "examples", title: "Examples" },
-        { id: "showcase", title: "Showcase" },
-        { id: "lottie", title: "Lottie" },
-        { id: "monty", title: "Monty" }
-    ],
+    dev: [],
     settings: []
 };
 
