@@ -42,7 +42,6 @@ import {
     deferredToolFlush,
     deferredToolStatusBuild
 } from "../../modules/tools/deferredToolFlush.js";
-import { toolArgsFormatVerbose } from "../../modules/tools/toolArgsFormatVerbose.js";
 import type { Skills } from "../../skills/skills.js";
 import type { Webhooks } from "../../webhook/webhooks.js";
 import type { Agent } from "../agent.js";
@@ -934,17 +933,12 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         const at = Date.now();
                         const currentPrintOutput = [...phase.printOutput];
                         const currentToolCallCount = phase.toolCallCount;
-                        const draftToolKey = draftToolEntryKey(blockState.toolCallId, currentToolCallCount);
-                        let draftToolLabel = "";
                         const stepResult = await rlmStepToolCall({
                             snapshot: phase.snapshot,
                             toolByName,
                             toolResolver: blockState.trackingToolResolver,
                             context: blockState.executionContext,
                             beforeExecute: async ({ snapshotDump, toolName, toolArgs }) => {
-                                draftToolLabel = draftToolLabelBuild(toolName, toolArgs);
-                                draftEntrySet(draftToolKey, draftToolLabel, "running");
-                                await draftSync(false);
                                 if (appendHistoryRecord) {
                                     const sessionId = agent.state.activeSessionId;
                                     if (!sessionId) {
@@ -988,10 +982,6 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 ? { deferredPayload: stepResult.deferredPayload }
                                 : {})
                         });
-                        if (draftToolLabel) {
-                            draftEntrySet(draftToolKey, draftToolLabel, stepResult.toolIsError ? "error" : "done");
-                            await draftSync(false);
-                        }
 
                         // Accumulate deferred tool entries for flush after block success
                         if (stepResult.deferredPayload !== undefined && stepResult.deferredHandler) {
@@ -1429,25 +1419,9 @@ function draftPythonEntryKey(toolCallId: string): string {
     return `python:${toolCallId}`;
 }
 
-function draftToolEntryKey(toolCallId: string, toolCallCount: number): string {
-    return `tool:${toolCallId}:${toolCallCount}`;
-}
-
 function draftPythonLabelBuild(description?: string): string {
     const trimmed = description?.trim();
-    return trimmed ? `run_python: ${trimmed}` : "run_python";
-}
-
-function draftToolLabelBuild(toolName: string, toolArgs: unknown): string {
-    const args = draftToolArgsFormat(toolArgs);
-    return args ? `${toolName} ${args}` : toolName;
-}
-
-function draftToolArgsFormat(toolArgs: unknown): string {
-    if (!toolArgs || typeof toolArgs !== "object" || Array.isArray(toolArgs)) {
-        return "";
-    }
-    return toolArgsFormatVerbose(toolArgs as Record<string, unknown>);
+    return trimmed ? trimmed : "Working...";
 }
 
 function usageCostResolve(cost: unknown): number {

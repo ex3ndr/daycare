@@ -100,12 +100,18 @@ describe("agentLoopRun", () => {
 
         expect(createDraft).toHaveBeenCalledWith(
             "channel-1",
-            expect.objectContaining({ text: expect.stringContaining("run_python: Check status") })
+            expect.objectContaining({ text: expect.stringContaining("Check status") })
         );
         expect(
             update.mock.calls.some((call) => {
                 const message = call.at(0) as { text?: string | null } | undefined;
-                return typeof message?.text === "string" && message.text.includes("echo text=hello");
+                return typeof message?.text === "string" && message.text.includes("Check status");
+            })
+        ).toBe(true);
+        expect(
+            update.mock.calls.every((call) => {
+                const message = call.at(0) as { text?: string | null } | undefined;
+                return typeof message?.text !== "string" || !message.text.includes("echo text=hello");
             })
         ).toBe(true);
         expect(finish).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining("Finished") }));

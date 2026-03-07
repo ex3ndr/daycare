@@ -9,18 +9,18 @@ describe("agentDraftTextBuild", () => {
     it("renders tool entries without assistant text", () => {
         expect(
             agentDraftTextBuild(null, [
-                { label: "run_python: Check status", status: "running" },
-                { label: "echo text=hello", status: "done" }
+                { label: "Check status", status: "running" },
+                { label: "Open workspace", status: "done" }
             ])
-        ).toBe("Tools:\n- run_python: Check status (running)\n- echo text=hello");
+        ).toBe("Steps:\n- Check status\n- Open workspace");
     });
 
-    it("marks failed tool entries", () => {
+    it("renders steps before assistant text", () => {
         expect(
             agentDraftTextBuild("Result", [
-                { label: "run_python", status: "done" },
-                { label: "say text=hello", status: "error" }
+                { label: "Check status", status: "done" },
+                { label: "Read memory", status: "error" }
             ])
-        ).toBe("Result\n\nTools:\n- run_python\n- say text=hello (failed)");
+        ).toBe("Steps:\n- Check status\n- Read memory (failed)\n\nResult");
     });
 });
