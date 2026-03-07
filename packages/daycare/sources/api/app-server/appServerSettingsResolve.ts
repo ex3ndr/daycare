@@ -13,6 +13,11 @@ export type AppServerResolvedSettings = {
     serverEndpoint?: string;
     jwtSecret?: string;
     telegramInstanceId?: string;
+    emailAuth?: {
+        smtpUrl?: string;
+        from?: string;
+        replyTo?: string;
+    };
 };
 
 const appServerSettingsSchema = z
@@ -23,7 +28,14 @@ const appServerSettingsSchema = z
         appEndpoint: appEndpointSettingSchema("appEndpoint"),
         serverEndpoint: appEndpointSettingSchema("serverEndpoint"),
         jwtSecret: z.string().trim().min(32).optional(),
-        telegramInstanceId: z.string().trim().min(1).optional()
+        telegramInstanceId: z.string().trim().min(1).optional(),
+        emailAuth: z
+            .object({
+                smtpUrl: z.string().trim().min(1).optional(),
+                from: z.string().trim().min(1).optional(),
+                replyTo: z.string().trim().min(1).optional()
+            })
+            .optional()
     })
     .strict();
 

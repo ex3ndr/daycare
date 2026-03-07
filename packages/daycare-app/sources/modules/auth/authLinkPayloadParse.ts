@@ -1,11 +1,12 @@
 export type AuthLinkPayload = {
     backendUrl: string;
     token: string;
+    kind: "session" | "email";
 };
 
 /**
- * Decodes an auth-link hash payload into backend and token values.
- * Expects: hash contains a base64url-encoded JSON object with backendUrl and token.
+ * Decodes an auth-link hash payload into backend, token, and flow kind values.
+ * Expects: hash contains a base64url-encoded JSON object with backendUrl, token, and optional kind.
  */
 export function authLinkPayloadParse(hash: string): AuthLinkPayload | null {
     const encoded = hash.startsWith("#") ? hash.slice(1) : hash;
@@ -21,7 +22,7 @@ export function authLinkPayloadParse(hash: string): AuthLinkPayload | null {
     }
 
     try {
-        const parsed = JSON.parse(decoded) as { backendUrl?: unknown; token?: unknown };
+        const parsed = JSON.parse(decoded) as { backendUrl?: unknown; token?: unknown; kind?: unknown };
         if (typeof parsed.backendUrl !== "string" || typeof parsed.token !== "string") {
             authLinkPayloadInvalidLog("missing-required-fields", encoded.length);
             return null;
@@ -29,14 +30,16 @@ export function authLinkPayloadParse(hash: string): AuthLinkPayload | null {
 
         const backendUrl = authLinkPayloadBackendUrlNormalize(parsed.backendUrl);
         const token = parsed.token.trim();
-        if (!backendUrl || !token) {
+        const kind = parsed.kind === "email" ? "email" : parsed.kind === undefined ? "session" : null;
+        if (!backendUrl || !token || !kind) {
             authLinkPayloadInvalidLog("invalid-field-values", encoded.length);
             return null;
         }
 
         return {
             backendUrl,
-            token
+            token,
+            kind
         };
     } catch {
         authLinkPayloadInvalidLog("invalid-json-payload", encoded.length);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { authTelegramExchange, authValidateToken } from "@/modules/auth/authApi";
+import { authEmailRequest, authEmailVerify, authTelegramExchange, authValidateToken } from "@/modules/auth/authApi";
 
 describe("authValidateToken", () => {
     afterEach(() => {
@@ -81,6 +81,74 @@ describe("authTelegramExchange", () => {
         await expect(authTelegramExchange("http://localhost:7332", "init-data")).resolves.toEqual({
             ok: false,
             error: "invalid initData"
+        });
+    });
+});
+
+describe("authEmailRequest", () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it("returns ok when email request succeeds", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                json: async () => ({ ok: true })
+            }))
+        );
+
+        await expect(authEmailRequest("http://localhost:7332", "person@example.com")).resolves.toEqual({
+            ok: true
+        });
+    });
+
+    it("returns error when email request fails", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                json: async () => ({ ok: false, error: "smtp unavailable" })
+            }))
+        );
+
+        await expect(authEmailRequest("http://localhost:7332", "person@example.com")).resolves.toEqual({
+            ok: false,
+            error: "smtp unavailable"
+        });
+    });
+});
+
+describe("authEmailVerify", () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it("returns token and userId when email verify succeeds", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                json: async () => ({ ok: true, userId: "user-9", token: "jwt-9" })
+            }))
+        );
+
+        await expect(authEmailVerify("http://localhost:7332", "magic-token")).resolves.toEqual({
+            ok: true,
+            userId: "user-9",
+            token: "jwt-9"
+        });
+    });
+
+    it("returns error when email verify fails", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                json: async () => ({ ok: false, error: "EXPIRED_TOKEN" })
+            }))
+        );
+
+        await expect(authEmailVerify("http://localhost:7332", "magic-token")).resolves.toEqual({
+            ok: false,
+            error: "EXPIRED_TOKEN"
         });
     });
 });

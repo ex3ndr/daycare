@@ -97,6 +97,11 @@ export type AppServerSettings = {
     serverEndpoint?: string;
     jwtSecret?: string;
     telegramInstanceId?: string;
+    emailAuth?: {
+        smtpUrl?: string;
+        from?: string;
+        replyTo?: string;
+    };
 };
 
 export type DockerSettings = {

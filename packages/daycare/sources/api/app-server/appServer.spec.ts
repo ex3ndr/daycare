@@ -19,6 +19,18 @@ import type { RouteAgentCallbacks, RouteTaskCallbacks } from "../routes/routeTyp
 import { APP_AUTH_SEED_KEY } from "./appJwtSecretResolve.js";
 import { AppServer } from "./appServer.js";
 
+const sendMailMock = vi.hoisted(() => vi.fn(async (_message: unknown) => undefined));
+
+vi.mock("nodemailer", () => {
+    return {
+        default: {
+            createTransport: vi.fn(() => ({
+                sendMail: sendMailMock
+            }))
+        }
+    };
+});
+
 type ActiveAppServer = {
     stop: () => Promise<void>;
 };
@@ -49,6 +61,11 @@ type AppServerCreateTestOptions = {
     telegram?: {
         instanceId?: string;
         botToken: string;
+    };
+    emailAuth?: {
+        smtpUrl: string;
+        from: string;
+        replyTo?: string;
     };
     webhookTrigger?: (webhookId: string, data?: unknown) => Promise<void>;
     appServerEnabled?: boolean;
@@ -127,7 +144,14 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
                 appServer: {
                     enabled: options.appServerEnabled ?? true,
                     host: "127.0.0.1",
-                    port
+                    port,
+                    ...(options.emailAuth
+                        ? {
+                              appEndpoint: "https://app.example.com",
+                              serverEndpoint: "https://api.example.com",
+                              emailAuth: options.emailAuth
+                          }
+                        : {})
                 },
                 ...(options.telegram
                     ? {
@@ -168,6 +192,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
 
     const appServer = new AppServer({
         config,
+        db: storage.db,
         auth: auth as never,
         commandRegistry: modules.commands,
         connectorRegistry: modules.connectors,
@@ -223,6 +248,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
 }
 
 afterEach(async () => {
+    sendMailMock.mockClear();
     for (const server of activeServers.splice(0, activeServers.length)) {
         await server.stop();
     }
@@ -396,6 +422,50 @@ describe("AppServer auth endpoints", () => {
         expect(verified.userId).toBe(mappedUser.id);
     });
 
+    it("sends and verifies email magic links through Better Auth", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await appServerCreateForTests({
+            secret,
+            emailAuth: {
+                smtpUrl: "smtp://mailer.example.com",
+                from: "Daycare <no-reply@example.com>"
+            }
+        });
+
+        const requestResponse = await fetch(`http://127.0.0.1:${built.port}/auth/email/request`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ email: "person@example.com" })
+        });
+
+        await expect(requestResponse.json()).resolves.toEqual({ ok: true });
+        expect(sendMailMock).toHaveBeenCalledTimes(1);
+        const sentMessage = sendMailMock.mock.calls[0]?.[0] as { text?: string } | undefined;
+        const emailToken = appServerEmailTokenExtract(sentMessage?.text ?? "");
+
+        const verifyResponse = await fetch(`http://127.0.0.1:${built.port}/auth/email/verify`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ token: emailToken })
+        });
+
+        const payload = (await verifyResponse.json()) as {
+            ok: boolean;
+            userId?: string;
+            token?: string;
+        };
+        expect(payload.ok).toBe(true);
+        expect(typeof payload.userId).toBe("string");
+        expect(typeof payload.token).toBe("string");
+        const mappedUser = await built.storage.resolveUserByConnectorKey(
+            userConnectorKeyCreate("email", "person@example.com")
+        );
+        expect(payload.userId).toBe(mappedUser.id);
+
+        const verified = await jwtVerify(payload.token!, secret);
+        expect(verified.userId).toBe(mappedUser.id);
+    });
+
     it("normalizes legacy Telegram session tokens to internal user ids", async () => {
         const secret = "valid-secret-for-tests-1234567890";
         const built = await appServerCreateForTests({ secret });
@@ -444,6 +514,25 @@ describe("AppServer auth endpoints", () => {
         await expect(response.json()).resolves.toEqual({ ok: false, error: "Not found." });
     });
 });
+
+function appServerEmailTokenExtract(text: string): string {
+    const match = text.match(/https?:\/\/\S+/);
+    if (!match?.[0]) {
+        throw new Error("Expected auth URL in email body.");
+    }
+
+    const url = new URL(match[0]);
+    const encoded = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
+    if (!encoded) {
+        throw new Error("Expected auth hash payload.");
+    }
+
+    const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as { token?: unknown };
+    if (typeof payload.token !== "string" || payload.token.trim().length === 0) {
+        throw new Error("Expected email token in auth payload.");
+    }
+    return payload.token;
+}
 
 describe("AppServer authenticated routes", () => {
     it("supports app-agent create/send/read/delete lifecycle", async () => {

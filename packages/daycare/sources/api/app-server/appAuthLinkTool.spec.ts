@@ -12,7 +12,8 @@ describe("appAuthLinkUrlBuild", () => {
         expect(parsed.pathname).toBe("/auth");
         expect(appAuthLinkPayloadDecode(url)).toEqual({
             backendUrl: "https://daycare.dev",
-            token: "token-1"
+            token: "token-1",
+            kind: "session"
         });
     });
 
@@ -29,7 +30,8 @@ describe("appAuthLinkUrlBuild", () => {
         expect(parsed.pathname).toBe("/auth");
         expect(appAuthLinkPayloadDecode(url)).toEqual({
             backendUrl: "https://api.example.com",
-            token: "token-1"
+            token: "token-1",
+            kind: "session"
         });
     });
 
@@ -39,7 +41,8 @@ describe("appAuthLinkUrlBuild", () => {
         expect(parsed.origin).toBe("https://api.example.com");
         expect(appAuthLinkPayloadDecode(url)).toEqual({
             backendUrl: "https://api.example.com",
-            token: "token-1"
+            token: "token-1",
+            kind: "session"
         });
     });
 
@@ -94,7 +97,7 @@ describe("appAuthLinkTool", () => {
     });
 });
 
-function appAuthLinkPayloadDecode(url: string): { backendUrl: string; token: string } {
+function appAuthLinkPayloadDecode(url: string): { backendUrl: string; token: string; kind?: string } {
     const parsed = new URL(url);
     const hash = parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash;
     return JSON.parse(Buffer.from(hash, "base64url").toString("utf8")) as {

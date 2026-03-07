@@ -8,6 +8,7 @@ export const APP_AUTH_LINK_EXPIRES_IN_SECONDS = 3600;
 export const APP_AUTH_SESSION_EXPIRES_IN_SECONDS = 365 * 24 * 60 * 60;
 export const APP_AUTH_LINK_SERVICE = "daycare.app-auth.link";
 export const APP_AUTH_DEFAULT_ENDPOINT = "https://daycare.dev";
+export type AppAuthLinkKind = "session" | "email";
 
 const appAuthLinkToolSchema = Type.Object({}, { additionalProperties: false });
 type AppAuthLinkArgs = Static<typeof appAuthLinkToolSchema>;
@@ -23,6 +24,12 @@ const appAuthLinkResultSchema = Type.Object(
 );
 
 type AppAuthLinkResult = Static<typeof appAuthLinkResultSchema>;
+
+export type AppAuthLinkPayload = {
+    backendUrl: string;
+    token: string;
+    kind?: AppAuthLinkKind;
+};
 
 const appAuthLinkReturns: ToolResultContract<AppAuthLinkResult> = {
     schema: appAuthLinkResultSchema,
@@ -69,6 +76,30 @@ export function appAuthLinkUrlBuild(
     appEndpoint?: string,
     serverEndpoint?: string
 ): string {
+    return appAuthPayloadUrlBuild(
+        host,
+        port,
+        {
+            backendUrl: "",
+            token,
+            kind: "session"
+        },
+        appEndpoint,
+        serverEndpoint
+    );
+}
+
+/**
+ * Builds an app auth URL from an explicit payload.
+ * Expects: payload.backendUrl will be filled from serverEndpoint/appEndpoint when blank.
+ */
+export function appAuthPayloadUrlBuild(
+    host: string,
+    port: number,
+    payload: AppAuthLinkPayload,
+    appEndpoint?: string,
+    serverEndpoint?: string
+): string {
     const normalizedHost = host.trim();
     if (!normalizedHost) {
         throw new Error("App host is required.");
@@ -83,13 +114,13 @@ export function appAuthLinkUrlBuild(
     const appUrl = resolvedAppEndpoint ?? resolvedServerEndpoint ?? defaults;
     const backendUrl = resolvedServerEndpoint ?? appUrl;
     const hashPayload = appAuthLinkHashPayloadEncode({
-        backendUrl,
-        token
+        ...payload,
+        backendUrl: payload.backendUrl.trim() || backendUrl
     });
     return `${appUrl}/auth#${hashPayload}`;
 }
 
-function appAuthLinkHashPayloadEncode(payload: { backendUrl: string; token: string }): string {
+function appAuthLinkHashPayloadEncode(payload: AppAuthLinkPayload): string {
     return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
 }
 

@@ -4,7 +4,7 @@ import * as React from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { SinglePanelLayout } from "@/components/layout/SinglePanelLayout";
-import { authTelegramExchange } from "@/modules/auth/authApi";
+import { authEmailVerify, authTelegramExchange } from "@/modules/auth/authApi";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { authLinkPayloadFromUrl } from "@/modules/auth/authLinkPayloadFromUrl";
 import { authTelegramWebAppContextParse } from "@/modules/auth/authTelegramWebAppContextParse";
@@ -119,10 +119,22 @@ export default function AuthMagicLinkScreen() {
         setIsSubmitting(true);
         setError(null);
         try {
-            await login(magicPayload.backendUrl, magicPayload.token);
+            if (magicPayload.kind === "email") {
+                const result = await authEmailVerify(magicPayload.backendUrl, magicPayload.token);
+                if (!result.ok) {
+                    throw new Error(result.error);
+                }
+                await login(magicPayload.backendUrl, result.token);
+            } else {
+                await login(magicPayload.backendUrl, magicPayload.token);
+            }
             router.replace("/(app)" as never);
         } catch {
-            setError("Magic link expired or invalid. Request a new /app link.");
+            setError(
+                magicPayload.kind === "email"
+                    ? "Email sign-in link expired or invalid. Request a new link."
+                    : "Magic link expired or invalid. Request a new /app link."
+            );
         } finally {
             setIsSubmitting(false);
         }
@@ -177,7 +189,7 @@ export default function AuthMagicLinkScreen() {
                 {magicPayload ? (
                     <>
                         <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
-                            Connecting to{" "}
+                            {magicPayload.kind === "email" ? "Verifying email sign-in with " : "Connecting to "}
                             <Text style={[styles.value, { color: theme.colors.onSurface }]}>{serverLabel}</Text>
                         </Text>
                         <Pressable

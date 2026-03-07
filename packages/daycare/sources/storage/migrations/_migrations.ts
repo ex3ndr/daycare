@@ -24,5 +24,9 @@ export const migrations: Migration[] = [
     {
         name: "20260307170000_model_role_rules_reasoning",
         fileName: "20260307170000_model_role_rules_reasoning.sql"
+    },
+    {
+        name: "20260307183000_app_auth_tables",
+        fileName: "20260307183000_app_auth_tables.sql"
     }
 ];

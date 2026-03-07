@@ -1,11 +1,40 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { SinglePanelLayout } from "@/components/layout/SinglePanelLayout";
+import { authEmailRequest } from "@/modules/auth/authApi";
+import { authDefaultsResolve } from "@/modules/auth/authDefaultsResolve";
 
 export default React.memo(function Welcome() {
     const { theme } = useUnistyles();
+    const defaults = React.useMemo(() => authDefaultsResolve(), []);
+    const [email, setEmail] = React.useState("");
+    const [submitting, setSubmitting] = React.useState(false);
+    const [message, setMessage] = React.useState<string | null>(null);
+    const [error, setError] = React.useState<string | null>(null);
+
+    const requestMagicLink = React.useCallback(async () => {
+        const normalizedEmail = email.trim().toLowerCase();
+        if (!normalizedEmail || submitting) {
+            return;
+        }
+
+        setSubmitting(true);
+        setError(null);
+        setMessage(null);
+        try {
+            const result = await authEmailRequest(defaults.backendUrl, normalizedEmail);
+            if (!result.ok) {
+                throw new Error(result.error);
+            }
+            setMessage(`We sent a sign-in link to ${normalizedEmail}.`);
+        } catch (requestError) {
+            setError(requestError instanceof Error ? requestError.message : "Failed to send sign-in email.");
+        } finally {
+            setSubmitting(false);
+        }
+    }, [defaults.backendUrl, email, submitting]);
 
     return (
         <SinglePanelLayout>
@@ -40,18 +69,59 @@ export default React.memo(function Welcome() {
                 </View>
 
                 <View style={[styles.instructionCard, { backgroundColor: theme.colors.surfaceContainerHighest }]}>
-                    <Ionicons
-                        name="mail-unread-outline"
-                        size={24}
-                        color={theme.colors.onSurface}
-                        style={styles.instructionIcon}
-                    />
-                    <View style={styles.instructionTextContainer}>
-                        <Text style={[styles.instructionTitle, { color: theme.colors.onSurface }]}>Ready to join?</Text>
-                        <Text style={[styles.instructionSubtitle, { color: theme.colors.onSurfaceVariant }]}>
-                            Check your email or team chat for your magic login link to access your workspace.
-                        </Text>
+                    <View style={styles.instructionHeader}>
+                        <Ionicons
+                            name="mail-unread-outline"
+                            size={24}
+                            color={theme.colors.onSurface}
+                            style={styles.instructionIcon}
+                        />
+                        <View style={styles.instructionTextContainer}>
+                            <Text style={[styles.instructionTitle, { color: theme.colors.onSurface }]}>
+                                Sign in with email
+                            </Text>
+                            <Text style={[styles.instructionSubtitle, { color: theme.colors.onSurfaceVariant }]}>
+                                Enter your email and we'll send a magic link to your Daycare workspace.
+                            </Text>
+                        </View>
                     </View>
+                    <TextInput
+                        autoCapitalize="none"
+                        autoComplete="email"
+                        autoCorrect={false}
+                        keyboardType="email-address"
+                        onChangeText={setEmail}
+                        placeholder="you@company.com"
+                        placeholderTextColor={theme.colors.onSurfaceVariant}
+                        style={[
+                            styles.input,
+                            {
+                                color: theme.colors.onSurface,
+                                backgroundColor: theme.colors.surface,
+                                borderColor: theme.colors.outlineVariant
+                            }
+                        ]}
+                        value={email}
+                    />
+                    <Pressable
+                        accessibilityRole="button"
+                        disabled={submitting || email.trim().length === 0}
+                        onPress={() => void requestMagicLink()}
+                        style={({ pressed }) => [
+                            styles.button,
+                            { backgroundColor: theme.colors.primary },
+                            pressed && !submitting ? styles.buttonPressed : null,
+                            submitting || email.trim().length === 0 ? styles.buttonDisabled : null
+                        ]}
+                    >
+                        {submitting ? (
+                            <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+                        ) : (
+                            <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>Send Magic Link</Text>
+                        )}
+                    </Pressable>
+                    {message ? <Text style={[styles.feedback, { color: theme.colors.primary }]}>{message}</Text> : null}
+                    {error ? <Text style={[styles.feedback, { color: theme.colors.error }]}>{error}</Text> : null}
                 </View>
             </View>
         </SinglePanelLayout>
@@ -155,11 +225,14 @@ const styles = StyleSheet.create({
         lineHeight: 20
     },
     instructionCard: {
-        flexDirection: "row",
         padding: 24,
         borderRadius: 20,
         width: "100%",
         maxWidth: 440,
+        gap: 16
+    },
+    instructionHeader: {
+        flexDirection: "row",
         alignItems: "center",
         gap: 16
     },
@@ -175,6 +248,35 @@ const styles = StyleSheet.create({
         marginBottom: 4
     },
     instructionSubtitle: {
+        fontSize: 14,
+        lineHeight: 20
+    },
+    input: {
+        width: "100%",
+        height: 48,
+        borderRadius: 14,
+        borderWidth: 1,
+        paddingHorizontal: 14,
+        fontSize: 16
+    },
+    button: {
+        width: "100%",
+        height: 48,
+        borderRadius: 14,
+        alignItems: "center",
+        justifyContent: "center"
+    },
+    buttonText: {
+        fontSize: 15,
+        fontWeight: "700"
+    },
+    buttonPressed: {
+        opacity: 0.92
+    },
+    buttonDisabled: {
+        opacity: 0.7
+    },
+    feedback: {
         fontSize: 14,
         lineHeight: 20
     }

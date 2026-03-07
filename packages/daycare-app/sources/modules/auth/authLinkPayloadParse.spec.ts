@@ -18,7 +18,27 @@ describe("authLinkPayloadParse", () => {
 
         expect(authLinkPayloadParse(`#${encoded}`)).toEqual({
             backendUrl: "http://127.0.0.1:7332",
-            token: "token-1"
+            token: "token-1",
+            kind: "session"
+        });
+        expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it("decodes an email magic-link payload hash", () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const encoded = Buffer.from(
+            JSON.stringify({
+                backendUrl: "http://127.0.0.1:7332/",
+                token: "token-1",
+                kind: "email"
+            }),
+            "utf8"
+        ).toString("base64url");
+
+        expect(authLinkPayloadParse(`#${encoded}`)).toEqual({
+            backendUrl: "http://127.0.0.1:7332",
+            token: "token-1",
+            kind: "email"
         });
         expect(warnSpy).not.toHaveBeenCalled();
     });

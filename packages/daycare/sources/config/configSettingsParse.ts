@@ -131,7 +131,15 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                     appEndpoint: z.string().min(1).optional(),
                     serverEndpoint: z.string().min(1).optional(),
                     jwtSecret: z.string().min(32).optional(),
-                    telegramInstanceId: z.string().min(1).optional()
+                    telegramInstanceId: z.string().min(1).optional(),
+                    emailAuth: z
+                        .object({
+                            smtpUrl: z.string().min(1).optional(),
+                            from: z.string().min(1).optional(),
+                            replyTo: z.string().min(1).optional()
+                        })
+                        .passthrough()
+                        .optional()
                 })
                 .passthrough()
                 .optional(),

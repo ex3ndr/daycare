@@ -13,6 +13,7 @@ import {
     real,
     serial,
     text,
+    timestamp,
     uniqueIndex
 } from "drizzle-orm/pg-core";
 import { drizzle as drizzlePglite, type PgliteDatabase } from "drizzle-orm/pglite";
@@ -606,6 +607,85 @@ export const modelRoleRulesTable = pgTable(
     ]
 );
 
+export const appAuthUsersTable = pgTable(
+    "app_auth_users",
+    {
+        id: text("id").primaryKey(),
+        email: text("email").notNull(),
+        emailVerified: boolean("email_verified").notNull().default(false),
+        name: text("name").notNull(),
+        image: text("image"),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull(),
+        updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull()
+    },
+    (table) => [
+        uniqueIndex("idx_app_auth_users_email").on(table.email),
+        index("idx_app_auth_users_created_at").on(table.createdAt)
+    ]
+);
+
+export const appAuthSessionsTable = pgTable(
+    "app_auth_sessions",
+    {
+        id: text("id").primaryKey(),
+        userId: text("user_id")
+            .notNull()
+            .references(() => appAuthUsersTable.id, { onDelete: "cascade" }),
+        token: text("token").notNull(),
+        expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+        ipAddress: text("ip_address"),
+        userAgent: text("user_agent"),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull(),
+        updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull()
+    },
+    (table) => [
+        uniqueIndex("idx_app_auth_sessions_token").on(table.token),
+        index("idx_app_auth_sessions_user_id").on(table.userId),
+        index("idx_app_auth_sessions_expires_at").on(table.expiresAt)
+    ]
+);
+
+export const appAuthAccountsTable = pgTable(
+    "app_auth_accounts",
+    {
+        id: text("id").primaryKey(),
+        providerId: text("provider_id").notNull(),
+        accountId: text("account_id").notNull(),
+        userId: text("user_id")
+            .notNull()
+            .references(() => appAuthUsersTable.id, { onDelete: "cascade" }),
+        accessToken: text("access_token"),
+        refreshToken: text("refresh_token"),
+        idToken: text("id_token"),
+        accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true, mode: "date" }),
+        refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true, mode: "date" }),
+        scope: text("scope"),
+        password: text("password"),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull(),
+        updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull()
+    },
+    (table) => [
+        uniqueIndex("idx_app_auth_accounts_provider_account").on(table.providerId, table.accountId),
+        index("idx_app_auth_accounts_user_id").on(table.userId)
+    ]
+);
+
+export const appAuthVerificationsTable = pgTable(
+    "app_auth_verifications",
+    {
+        id: text("id").primaryKey(),
+        identifier: text("identifier").notNull(),
+        value: text("value").notNull(),
+        expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull(),
+        updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull()
+    },
+    (table) => [
+        uniqueIndex("idx_app_auth_verifications_identifier").on(table.identifier),
+        index("idx_app_auth_verifications_expires_at").on(table.expiresAt)
+    ]
+);
+
 export const schema = {
     migrationsTable,
     usersTable,
@@ -634,7 +714,11 @@ export const schema = {
     keyValuesTable,
     observationLogTable,
     psqlDatabasesTable,
-    modelRoleRulesTable
+    modelRoleRulesTable,
+    appAuthUsersTable,
+    appAuthSessionsTable,
+    appAuthAccountsTable,
+    appAuthVerificationsTable
 };
 
 /**

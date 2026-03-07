@@ -18,6 +18,7 @@ import type { ToolResolver } from "../../engine/modules/toolResolver.js";
 import type { Secret } from "../../engine/secrets/secretTypes.js";
 import type { Webhooks } from "../../engine/webhook/webhooks.js";
 import { getLogger } from "../../log.js";
+import type { DaycareDb } from "../../schema.js";
 import type { PsqlService } from "../../services/psql/PsqlService.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
 import type { DocumentsRepository } from "../../storage/documentsRepository.js";
@@ -32,10 +33,14 @@ import { apiRouteHandle } from "../routes/routes.js";
 import type { RouteAgentCallbacks, RouteTaskCallbacks } from "../routes/routeTypes.js";
 import { appAuthExtract } from "./appAuthExtract.js";
 import { APP_AUTH_LINK_EXPIRES_IN_SECONDS, appAuthLinkGenerate, appAuthLinkTool } from "./appAuthLinkTool.js";
+import { AppEmailAuth } from "./appEmailAuth.js";
+import { appEmailAuthMailSend } from "./appEmailAuthMailSend.js";
 import { appCorsApply, appReadJsonBody, appSendJson, appSendText, appServerClose, appServerListen } from "./appHttp.js";
 import { appJwtSecretResolve } from "./appJwtSecretResolve.js";
 import type { AppServerResolvedSettings } from "./appServerSettingsResolve.js";
 import { appServerSettingsResolve } from "./appServerSettingsResolve.js";
+import { routeAuthEmailRequest } from "./routes/routeAuthEmailRequest.js";
+import { routeAuthEmailVerify } from "./routes/routeAuthEmailVerify.js";
 import { routeAuthRefresh } from "./routes/routeAuthRefresh.js";
 import { routeAuthTelegram } from "./routes/routeAuthTelegram.js";
 import { routeAuthValidate } from "./routes/routeAuthValidate.js";
@@ -45,6 +50,7 @@ const APP_SERVER_OWNER = "core.app-server";
 
 export type AppServerOptions = {
     config: ConfigModule;
+    db: DaycareDb;
     auth: AuthStore;
     commandRegistry: CommandRegistry;
     connectorRegistry: ConnectorRegistry;
@@ -79,6 +85,7 @@ export type AppServerOptions = {
  */
 export class AppServer {
     private readonly config: ConfigModule;
+    private readonly db: DaycareDb;
     private readonly auth: AuthStore;
     private readonly commandRegistry: CommandRegistry;
     private readonly connectorRegistry: ConnectorRegistry;
@@ -104,9 +111,11 @@ export class AppServer {
     private server: http.Server | null = null;
     private activeSettings: AppServerResolvedSettings | null = null;
     private secretPromise: Promise<string> | null = null;
+    private emailAuth: AppEmailAuth | null = null;
 
     constructor(options: AppServerOptions) {
         this.config = options.config;
+        this.db = options.db;
         this.auth = options.auth;
         this.commandRegistry = options.commandRegistry;
         this.connectorRegistry = options.connectorRegistry;
@@ -214,6 +223,19 @@ export class AppServer {
                 secretResolve: () => this.secretResolve(),
                 telegramTokenResolve: (requestedInstanceId) => this.telegramTokenResolve(requestedInstanceId),
                 userIdResolve: (telegramUserId) => this.telegramAuthUserIdResolve(telegramUserId)
+            });
+            return;
+        }
+        if (pathname === "/auth/email/request" && request.method === "POST") {
+            await routeAuthEmailRequest(request, response, {
+                emailAuth: await this.emailAuthResolve()
+            });
+            return;
+        }
+        if (pathname === "/auth/email/verify" && request.method === "POST") {
+            await routeAuthEmailVerify(request, response, {
+                emailAuth: await this.emailAuthResolve(),
+                secretResolve: () => this.secretResolve()
             });
             return;
         }
@@ -368,6 +390,39 @@ export class AppServer {
         return this.secretPromise;
     }
 
+    private async emailAuthResolve(): Promise<AppEmailAuth> {
+        if (this.emailAuth) {
+            return this.emailAuth;
+        }
+
+        const settings = this.settingsRequire();
+        const users = this.users;
+        const smtpUrl = settings.emailAuth?.smtpUrl?.trim() ?? "";
+        const from = settings.emailAuth?.from?.trim() ?? "";
+        if (!users) {
+            throw new Error("User repository is unavailable.");
+        }
+        if (!smtpUrl || !from) {
+            throw new Error("appServer.emailAuth.smtpUrl and appServer.emailAuth.from are required.");
+        }
+
+        this.emailAuth = new AppEmailAuth({
+            db: this.db,
+            users,
+            host: settings.host,
+            port: settings.port,
+            serverEndpoint: settings.serverEndpoint,
+            appEndpoint: settings.appEndpoint,
+            secret: await this.secretResolve(),
+            replyTo: settings.emailAuth?.replyTo,
+            mailSend: appEmailAuthMailSend({
+                smtpUrl,
+                from
+            })
+        });
+        return this.emailAuth;
+    }
+
     private registerRuntime(): void {
         const settings = this.settingsRequire();
 
@@ -427,6 +482,7 @@ export class AppServer {
         this.commandRegistry.unregister("app");
         this.toolResolver.unregister("app_auth_link");
         this.secretPromise = null;
+        this.emailAuth = null;
 
         if (!this.server) {
             this.activeSettings = null;
@@ -498,6 +554,9 @@ function appServerSettingsEqual(left: AppServerResolvedSettings, right: AppServe
         left.appEndpoint === right.appEndpoint &&
         left.serverEndpoint === right.serverEndpoint &&
         left.jwtSecret === right.jwtSecret &&
-        left.telegramInstanceId === right.telegramInstanceId
+        left.telegramInstanceId === right.telegramInstanceId &&
+        left.emailAuth?.smtpUrl === right.emailAuth?.smtpUrl &&
+        left.emailAuth?.from === right.emailAuth?.from &&
+        left.emailAuth?.replyTo === right.emailAuth?.replyTo
     );
 }

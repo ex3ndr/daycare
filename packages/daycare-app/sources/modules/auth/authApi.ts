@@ -9,11 +9,20 @@ export type AuthValidateResult =
           error: string;
       };
 
-export type AuthTelegramExchangeResult =
+export type AuthTokenExchangeResult =
     | {
           ok: true;
           userId: string;
           token: string;
+      }
+    | {
+          ok: false;
+          error: string;
+      };
+
+export type AuthEmailRequestResult =
+    | {
+          ok: true;
       }
     | {
           ok: false;
@@ -63,7 +72,7 @@ export async function authTelegramExchange(
     baseUrl: string,
     initData: string,
     telegramInstanceId?: string
-): Promise<AuthTelegramExchangeResult> {
+): Promise<AuthTokenExchangeResult> {
     const payload: {
         initData: string;
         telegramInstanceId?: string;
@@ -101,5 +110,67 @@ export async function authTelegramExchange(
     return {
         ok: false,
         error: typeof parsed.error === "string" ? parsed.error : "Telegram authentication failed."
+    };
+}
+
+/**
+ * Requests a Better Auth magic link email for the provided address.
+ * Expects: baseUrl points to daycare-app-server and email is non-empty.
+ */
+export async function authEmailRequest(baseUrl: string, email: string): Promise<AuthEmailRequestResult> {
+    const response = await fetch(`${baseUrl}/auth/email/request`, {
+        method: "POST",
+        headers: {
+            "content-type": "application/json"
+        },
+        body: JSON.stringify({ email })
+    });
+
+    const parsed = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+    };
+
+    if (parsed.ok === true) {
+        return { ok: true };
+    }
+
+    return {
+        ok: false,
+        error: typeof parsed.error === "string" ? parsed.error : "Failed to send sign-in email."
+    };
+}
+
+/**
+ * Verifies an email magic-link token and exchanges it for a Daycare app session token.
+ * Expects: baseUrl points to daycare-app-server and token is non-empty.
+ */
+export async function authEmailVerify(baseUrl: string, token: string): Promise<AuthTokenExchangeResult> {
+    const response = await fetch(`${baseUrl}/auth/email/verify`, {
+        method: "POST",
+        headers: {
+            "content-type": "application/json"
+        },
+        body: JSON.stringify({ token })
+    });
+
+    const parsed = (await response.json()) as {
+        ok?: boolean;
+        userId?: string;
+        token?: string;
+        error?: string;
+    };
+
+    if (parsed.ok === true && typeof parsed.userId === "string" && typeof parsed.token === "string") {
+        return {
+            ok: true,
+            userId: parsed.userId,
+            token: parsed.token
+        };
+    }
+
+    return {
+        ok: false,
+        error: typeof parsed.error === "string" ? parsed.error : "Magic link verification failed."
     };
 }

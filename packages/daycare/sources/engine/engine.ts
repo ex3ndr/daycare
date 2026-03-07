@@ -397,6 +397,7 @@ export class Engine {
         this.pluginManager.setWebhooks(this.webhooks);
         this.appServer = new AppServer({
             config: this.config,
+            db: this.storage.db,
             auth: this.authStore,
             commandRegistry: this.modules.commands,
             connectorRegistry: this.modules.connectors,

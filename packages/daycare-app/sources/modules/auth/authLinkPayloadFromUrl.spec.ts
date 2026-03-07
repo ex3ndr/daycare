@@ -15,7 +15,8 @@ describe("authLinkPayloadFromUrl", () => {
 
         expect(authLinkPayloadFromUrl(`https://daycare.dev/auth#${encoded}`)).toEqual({
             backendUrl: "http://127.0.0.1:7332",
-            token: "token-1"
+            token: "token-1",
+            kind: "session"
         });
         expect(warnSpy).not.toHaveBeenCalled();
     });
@@ -29,7 +30,8 @@ describe("authLinkPayloadFromUrl", () => {
 
         expect(authLinkPayloadFromUrl(`daycare://auth?payload=${encoded}`)).toEqual({
             backendUrl: "http://127.0.0.1:7332",
-            token: "token-1"
+            token: "token-1",
+            kind: "session"
         });
         expect(warnSpy).not.toHaveBeenCalled();
     });
@@ -47,7 +49,8 @@ describe("authLinkPayloadFromUrl", () => {
 
         expect(authLinkPayloadFromUrl(`daycare://auth?payload=${queryEncoded}#${hashEncoded}`)).toEqual({
             backendUrl: "http://127.0.0.1:7332",
-            token: "token-hash"
+            token: "token-hash",
+            kind: "session"
         });
         expect(warnSpy).not.toHaveBeenCalled();
     });
@@ -67,12 +70,29 @@ describe("authLinkPayloadFromUrl", () => {
 
         expect(authLinkPayloadFromUrl(`#${encoded}`)).toEqual({
             backendUrl: "http://127.0.0.1:7332",
-            token: "token-1"
+            token: "token-1",
+            kind: "session"
+        });
+        expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it("parses email magic-link payloads", () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const encoded = authLinkPayloadEncode({
+            backendUrl: "http://127.0.0.1:7332/",
+            token: "token-1",
+            kind: "email"
+        });
+
+        expect(authLinkPayloadFromUrl(`https://daycare.dev/auth#${encoded}`)).toEqual({
+            backendUrl: "http://127.0.0.1:7332",
+            token: "token-1",
+            kind: "email"
         });
         expect(warnSpy).not.toHaveBeenCalled();
     });
 });
 
-function authLinkPayloadEncode(payload: { backendUrl: string; token: string }): string {
+function authLinkPayloadEncode(payload: { backendUrl: string; token: string; kind?: "session" | "email" }): string {
     return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
 }
