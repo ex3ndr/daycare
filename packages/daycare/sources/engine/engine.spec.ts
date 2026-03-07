@@ -473,6 +473,85 @@ describe("Engine workspace registration", () => {
             await rm(dir, { recursive: true, force: true });
         }
     });
+
+    it("bootstraps documents for all users even when migration is already marked complete", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const seedStorage = await storageOpen(config.db.path, {
+                url: config.db.url,
+                autoMigrate: true
+            });
+            try {
+                const owner =
+                    (await seedStorage.users.findOwner()) ??
+                    (await seedStorage.users.create({
+                        id: "sy45wijd1hmr03ef2wu7busv",
+                        isOwner: true,
+                        createdAt: 0,
+                        updatedAt: 0,
+                        nametag: "owner"
+                    }));
+                await seedStorage.users.create({
+                    id: "workspace-user-2",
+                    parentUserId: owner.id,
+                    isWorkspace: true,
+                    nametag: "support-reviewer",
+                    firstName: "Support",
+                    lastName: "Reviewer",
+                    bio: "Reviews support workflows",
+                    about: "Support-focused assistant",
+                    systemPrompt: "You are a support workspace.",
+                    memory: false
+                });
+                await seedStorage.users.create({
+                    id: "friend-user-1",
+                    firstName: "Friend",
+                    lastName: "User",
+                    bio: "Regular user",
+                    systemPrompt: null,
+                    createdAt: 0,
+                    updatedAt: 0,
+                    nametag: "friend-user"
+                });
+            } finally {
+                seedStorage.connection.close();
+            }
+
+            await fs.mkdir(config.usersDir, { recursive: true });
+            await fs.writeFile(path.join(config.usersDir, ".migrated"), "{}\n", "utf8");
+
+            const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            await engine.start();
+
+            const workspaceCtx = contextForUser({ userId: "workspace-user-2" });
+            const workspaceDocument = await engine.storage.documents.findBySlugAndParent(
+                workspaceCtx,
+                "document",
+                null
+            );
+            const workspaceSystem = await engine.storage.documents.findBySlugAndParent(workspaceCtx, "system", null);
+            const workspaceSoul = workspaceSystem
+                ? await engine.storage.documents.findBySlugAndParent(workspaceCtx, "soul", workspaceSystem.id)
+                : null;
+            const userCtx = contextForUser({ userId: "friend-user-1" });
+            const userMemory = await engine.storage.documents.findBySlugAndParent(userCtx, "memory", null);
+            const userPeople = await engine.storage.documents.findBySlugAndParent(userCtx, "people", null);
+            const userDocument = await engine.storage.documents.findBySlugAndParent(userCtx, "document", null);
+            const userSystem = await engine.storage.documents.findBySlugAndParent(userCtx, "system", null);
+
+            expect(workspaceDocument?.slug).toBe("document");
+            expect(workspaceSoul?.body).toBe("You are a support workspace.\n");
+            expect(userMemory?.slug).toBe("memory");
+            expect(userPeople?.slug).toBe("people");
+            expect(userDocument?.slug).toBe("document");
+            expect(userSystem?.slug).toBe("system");
+
+            await engine.shutdown();
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
 });
 
 describe("Engine abort command", () => {

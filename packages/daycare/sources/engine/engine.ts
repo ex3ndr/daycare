@@ -674,10 +674,14 @@ export class Engine {
         logger.debug("start: Engine.start() beginning");
         await this.migrationReady;
         const ownerCtx = await this.agentSystem.ownerCtxEnsure();
-        const ownerUserHome = this.agentSystem.userHomeForUserId(ownerCtx.userId);
-        await userHomeEnsure(ownerUserHome);
-        await userDocumentsEnsure(ownerCtx, this.storage);
         await userHomeMigrate(this.config.current, this.storage);
+        const users = await this.storage.users.findMany();
+        for (const user of users) {
+            await userHomeEnsure(this.agentSystem.userHomeForUserId(user.id));
+            await userDocumentsEnsure(contextForUser({ userId: user.id }), this.storage, {
+                soulBody: user.isWorkspace && user.systemPrompt ? `${user.systemPrompt}\n` : undefined
+            });
+        }
         const docker = this.config.current.docker.socketPath
             ? new Docker({ socketPath: this.config.current.docker.socketPath })
             : new Docker();
@@ -697,13 +701,7 @@ export class Engine {
                 "stale: Failed to remove stale Docker sandbox containers on startup"
             );
         }
-        const workspaces = await this.workspaces.discover(ownerCtx.userId);
-        for (const workspace of workspaces) {
-            await userHomeEnsure(this.agentSystem.userHomeForUserId(workspace.userId));
-            await userDocumentsEnsure(contextForUser({ userId: workspace.userId }), this.storage, {
-                soulBody: workspace.systemPrompt ? `${workspace.systemPrompt}\n` : undefined
-            });
-        }
+        await this.workspaces.discover(ownerCtx.userId);
 
         logger.debug("load: Loading model role rules");
         await this.modelRoles.load();
