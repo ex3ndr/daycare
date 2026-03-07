@@ -36,11 +36,11 @@ that can be embedded anywhere in the app.
 
 Fragments may define `spec.code` with Python source for client-side execution.
 
-- `init()` takes no arguments. It may be `def` or `async def`.
+- `init()` takes no arguments.
 - Named action functions take `(params)`. Read current state with `get_state()`.
 - To change state, call `apply({...})` or `apply(lambda state: {...})`.
 - `apply(...)` deep-merges the returned object into the fragment state.
-- `query_database(db_id, sql, params=[])` is available as an async function for authenticated fragments.
+- `query_database(db_id, sql, params=[])` is available for authenticated fragments.
 - Action names must match the `on` binding action name exactly.
 - Use `spec.state` as the initial fallback before Python runs.
 - Fragment saves are Monty-verified, so syntax errors and missing custom action symbols are rejected before persistence.

@@ -1,6 +1,6 @@
 # Fragment Python Runtime
 
-The fragment runtime now uses async-capable external functions instead of passing state into Python action signatures.
+The fragment runtime now uses external functions instead of passing state into Python action signatures.
 
 ## Runtime Flow
 
@@ -30,7 +30,7 @@ flowchart LR
 
 ## Notes
 
-- `init()` may be synchronous or async.
+- `init()` may call external functions before applying state.
 - Action functions receive `params` only.
-- `spec.state` renders immediately, then Python can refine it asynchronously.
+- `spec.state` renders immediately, then Python can refine it after startup work completes.
 - Busy state covers both initial mount work and later action-triggered work.
