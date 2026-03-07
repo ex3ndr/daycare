@@ -1,15 +1,16 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
+import { contextForUser } from "../agents/context.js";
 import { UserHome } from "../users/userHome.js";
 import { workspaceCreate } from "./workspaceCreate.js";
 
 describe("workspaceCreate", () => {
-    it("creates a workspace user and user home with SOUL prompt", async () => {
+    it("creates a workspace user and system soul document", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-workspace-create-"));
         const storage = await storageOpenTest();
         try {
@@ -34,10 +35,9 @@ describe("workspaceCreate", () => {
             });
 
             const user = await storage.users.findById(created.userId);
-            const soul = await readFile(
-                path.join(dir, "users", created.userId, "home", "knowledge", "SOUL.md"),
-                "utf8"
-            );
+            const ctx = contextForUser({ userId: created.userId });
+            const system = await storage.documents.findBySlugAndParent(ctx, "system", null);
+            const soul = system ? await storage.documents.findBySlugAndParent(ctx, "soul", system.id) : null;
 
             expect(user?.parentUserId).toBe(owner.id);
             expect(user?.isWorkspace).toBe(true);
@@ -49,7 +49,7 @@ describe("workspaceCreate", () => {
             expect(user?.about).toBe("Autonomous todo management");
             expect(user?.memory).toBe(false);
             expect(user?.emoji).toBe("📝");
-            expect(soul).toContain("You are the todo workspace.");
+            expect(soul?.body).toContain("You are the todo workspace.");
         } finally {
             storage.connection.close();
             await rm(dir, { recursive: true, force: true });

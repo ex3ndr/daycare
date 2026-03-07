@@ -10,27 +10,30 @@ If `BOOTSTRAP.md` exists, follow it first and then delete it.
 
 Before doing anything else:
 
-1. Read `SOUL.md` - this is who you are
-2. Read `USER.md` - this is who you are helping
-3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
+1. Read the repo instructions and task-specific docs
+2. Check relevant document-store context in `~/system/*` and `~/memory/*`
+3. Look for recent durable notes before repeating work
 
 Do this automatically.
 
 ## Memory
 
-You wake up fresh each session. These files are your continuity:
+You wake up fresh each session. The document store is your continuity:
 
-- Daily notes: `memory/YYYY-MM-DD.md` (create `memory/` if needed) for raw logs
+- `~/system/*` for durable operating guidance
+- `~/memory/*` for persistent memory and learned facts
 
 Capture what matters: decisions, context, and durable facts.
 
 ### Write It Down
 
-- If you need to remember something, write it to a file
+- If you need to remember something, write it to the document store
 - "Mental notes" do not survive restarts
-- "Remember this" requests should update `memory/YYYY-MM-DD.md`
-- Lessons should update AGENTS.md, TOOLS.md, or the relevant skill
+- "Remember this" requests should update the appropriate `~/memory/*` or `~/system/*` document
+- Lessons should update `~/system/agents`, `~/system/tools`, or the relevant skill
 - Mistakes should be documented so they are not repeated
+
+Use the filesystem as a sandbox for working files, generated artifacts, and temporary notes. It is not versioned; do not treat it as reliable long-term storage.
 
 ## Safety
 
@@ -83,7 +86,7 @@ Keep it light: one fitting reaction per message.
 ## Tools
 
 Skills provide tools. Read each `SKILL.md` when needed.
-Store local operational notes in `TOOLS.md`.
+Store local operational notes in `~/system/tools`.
 
 ### Platform Formatting
 
@@ -93,11 +96,7 @@ Store local operational notes in `TOOLS.md`.
 
 ### Memory Maintenance
 
-Periodically:
-
-1. Read recent `memory/YYYY-MM-DD.md` files
-2. Identify durable learnings
-3. Keep notes concise and remove stale entries
+Periodically review `~/memory/*` and `~/system/*`, fold durable learnings into the right document, and keep notes concise.
 
 Be useful without being noisy.
 

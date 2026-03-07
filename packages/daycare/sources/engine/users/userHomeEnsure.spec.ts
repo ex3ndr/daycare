@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -18,7 +18,7 @@ describe("userHomeEnsure", () => {
         await rm(rootDir, { recursive: true, force: true });
     });
 
-    it("creates all user directories and seeds knowledge files", async () => {
+    it("creates all user directories", async () => {
         const userHome = new UserHome(path.join(rootDir, "users"), "usr_abc");
         await userHomeEnsure(userHome);
 
@@ -33,27 +33,11 @@ describe("userHomeEnsure", () => {
             userHome.downloads,
             userHome.documents,
             userHome.developer,
-            userHome.knowledge,
-            userHome.memory,
             userHome.tmp
         ];
         for (const dir of expectedDirs) {
             const dirStat = await stat(dir);
             expect(dirStat.isDirectory()).toBe(true);
-        }
-
-        const knowledgePaths = userHome.knowledgePaths();
-        const filePaths = [
-            knowledgePaths.soulPath,
-            knowledgePaths.userPath,
-            knowledgePaths.agentsPath,
-            knowledgePaths.toolsPath
-        ];
-        for (const filePath of filePaths) {
-            const fileStat = await stat(filePath);
-            expect(fileStat.isFile()).toBe(true);
-            const content = await readFile(filePath, "utf8");
-            expect(content.trim().length).toBeGreaterThan(0);
         }
     });
 
@@ -62,8 +46,7 @@ describe("userHomeEnsure", () => {
         await userHomeEnsure(userHome);
         await userHomeEnsure(userHome);
 
-        const knowledgePaths = userHome.knowledgePaths();
-        const soulContent = await readFile(knowledgePaths.soulPath, "utf8");
-        expect(soulContent.trim().length).toBeGreaterThan(0);
+        const tmpStat = await stat(userHome.tmp);
+        expect(tmpStat.isDirectory()).toBe(true);
     });
 });

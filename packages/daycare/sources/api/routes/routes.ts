@@ -21,7 +21,6 @@ import { fragmentsRouteHandle } from "./fragments/fragmentsRoutes.js";
 import { kvRouteHandle } from "./kv/kvRoutes.js";
 import { observationsRouteHandle } from "./observations/observationsRoutes.js";
 import { profileRouteHandle } from "./profile/profileRoutes.js";
-import { promptsRouteHandle } from "./prompts/promptsRoutes.js";
 import type { RouteAgentCallbacks, RouteTaskCallbacks } from "./routeTypes.js";
 import { secretsRouteHandle } from "./secrets/secretsRoutes.js";
 import { skillsRouteHandle } from "./skills/skillsRoutes.js";
@@ -84,9 +83,6 @@ export async function apiRouteHandle(
             readJsonBody: context.readJsonBody,
             callbacks: context.agentCallbacks
         });
-    }
-    if (pathname.startsWith("/prompts")) {
-        return promptsRouteHandle(request, response, pathname, context);
     }
     if (pathname.startsWith("/tasks")) {
         return tasksRouteHandle(request, response, pathname, {

@@ -1,12 +1,14 @@
 ## Memory
 
-Memory files:
-- SOUL `~/knowledge/SOUL.md`
-- USER `~/knowledge/USER.md`
-- AGENTS `~/knowledge/AGENTS.md`
-- TOOLS `~/knowledge/TOOLS.md`
+Versioned system documents:
+- SOUL `~/system/soul`
+- USER `~/system/user`
+- AGENTS `~/system/agents`
+- TOOLS `~/system/tools`
 
-Update USER.md for stable user facts/preferences. Update SOUL.md for behavioral refinements. Update AGENTS.md for workspace operating rules and recurring session routines. Update TOOLS.md when you learn non-obvious tool behavior. Keep concise, no speculation.
+Update `~/system/user` for stable user facts/preferences. Update `~/system/soul` for behavioral refinements. Update `~/system/agents` for workspace operating rules and recurring routines. Update `~/system/tools` when you learn non-obvious tool behavior.
+
+Prefer the document store for valuable information. Documents are versioned and durable. The filesystem is useful for working files, but it is not versioned and can be overwritten.
 
 ### Memory Search
 

@@ -12,8 +12,6 @@ export function filesRoots(): { ok: true; roots: FileRoot[] } {
             { id: "downloads", label: "Downloads", path: "downloads" },
             { id: "documents", label: "Documents", path: "documents" },
             { id: "developer", label: "Developer", path: "developer" },
-            { id: "knowledge", label: "Knowledge", path: "knowledge" },
-            { id: "memory", label: "Memory", path: "memory" },
             { id: "tmp", label: "Temporary", path: "tmp" }
         ]
     };

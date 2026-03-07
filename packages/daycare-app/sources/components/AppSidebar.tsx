@@ -349,15 +349,12 @@ export const AppSidebar = React.memo<AppSidebarProps>(
             }
         }, [activeMode, baseUrl, token, activeId, fetchDocuments]);
 
-        // Documents under ~/document (children of the root "document" folder)
+        // Root documents are shown directly in the sidebar so system, memory, and people are visible.
         const documentRootId = React.useMemo(() => documentRootIdResolve(documents), [documents]);
 
         const sidebarDocs = React.useMemo(() => {
-            if (!documentRootId) return [];
-            return documents
-                .filter((d) => d.parentId === documentRootId)
-                .sort((a, b) => a.title.localeCompare(b.title));
-        }, [documents, documentRootId]);
+            return documents.filter((d) => d.parentId === null).sort((a, b) => a.title.localeCompare(b.title));
+        }, [documents]);
 
         const wsPrefix = workspace ? `/${workspace}` : "";
 

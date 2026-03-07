@@ -1,6 +1,6 @@
 # Daycare App Server
 
-Core API server for the Daycare app. Handles authentication, prompt file management, active task listing, and `/app` access links.
+Core API server for the Daycare app. Handles authentication, active task listing, and `/app` access links.
 
 ## Settings
 
@@ -26,11 +26,6 @@ Notes:
 - `POST /auth/refresh`: validate token and return a fresh 1-year session token
 - `POST /auth/telegram`: verify Telegram WebApp `initData` and issue a 1-year session token
 
-### Prompts (authenticated via `Authorization: Bearer <token>`)
-- `GET /prompts`: list available prompt files
-- `GET /prompts/:filename`: read prompt file content (falls back to bundled default)
-- `PUT /prompts/:filename`: update prompt file content (`{ "content": "..." }`)
-
 ### Tasks (authenticated via `Authorization: Bearer <token>`)
 - `GET /tasks/active`: list active tasks with cron/webhook triggers and last execution timestamps
 
@@ -42,8 +37,6 @@ Notes:
 - `POST /secrets/:name/delete`: delete a secret
 
 Responses never include secret variable values.
-
-Allowed filenames: `SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`
 
 ### Other
 - `GET /`: welcome message

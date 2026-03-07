@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { configResolve } from "../../config/configResolve.js";
 import { storageResolve } from "../../storage/storageResolve.js";
 import { storageUpgrade } from "../../storage/storageUpgrade.js";
-import { UserHome } from "./userHome.js";
+import { contextForUser } from "../agents/context.js";
 import { userHomeMigrate } from "./userHomeMigrate.js";
 
 describe("userHomeMigrate", () => {
@@ -21,7 +21,7 @@ describe("userHomeMigrate", () => {
         await rm(rootDir, { recursive: true, force: true });
     });
 
-    it("copies legacy knowledge into owner user home and writes marker", async () => {
+    it("migrates legacy knowledge into owner system documents and writes marker", async () => {
         const dataDir = path.join(rootDir, "data");
         const config = configResolve(
             {
@@ -45,12 +45,16 @@ describe("userHomeMigrate", () => {
         if (!owner) {
             throw new Error("Owner user missing");
         }
-        const ownerHome = new UserHome(config.usersDir, owner.id);
-        const knowledge = ownerHome.knowledgePaths();
-        expect(await readFile(knowledge.soulPath, "utf8")).toBe("legacy soul\n");
-        expect(await readFile(knowledge.userPath, "utf8")).toBe("legacy user\n");
-        expect(await readFile(knowledge.agentsPath, "utf8")).toBe("legacy agents\n");
-        expect(await readFile(knowledge.toolsPath, "utf8")).toBe("legacy tools\n");
+        const ctx = contextForUser({ userId: owner.id });
+        const system = await storage.documents.findBySlugAndParent(ctx, "system", null);
+        expect(system?.slug).toBe("system");
+        if (!system) {
+            throw new Error("System root missing");
+        }
+        expect((await storage.documents.findBySlugAndParent(ctx, "soul", system.id))?.body).toBe("legacy soul\n");
+        expect((await storage.documents.findBySlugAndParent(ctx, "user", system.id))?.body).toBe("legacy user\n");
+        expect((await storage.documents.findBySlugAndParent(ctx, "agents", system.id))?.body).toBe("legacy agents\n");
+        expect((await storage.documents.findBySlugAndParent(ctx, "tools", system.id))?.body).toBe("legacy tools\n");
         const markerStat = await stat(path.join(config.usersDir, ".migrated"));
         expect(markerStat.isFile()).toBe(true);
     });
@@ -73,12 +77,22 @@ describe("userHomeMigrate", () => {
         if (!owner) {
             throw new Error("Owner user missing");
         }
-        const ownerHome = new UserHome(config.usersDir, owner.id);
-        const soulPath = ownerHome.knowledgePaths().soulPath;
-        await writeFile(soulPath, "already migrated\n", "utf8");
+        const ctx = contextForUser({ userId: owner.id });
+        const system = await storage.documents.findBySlugAndParent(ctx, "system", null);
+        if (!system) {
+            throw new Error("System root missing");
+        }
+        const soul = await storage.documents.findBySlugAndParent(ctx, "soul", system.id);
+        if (!soul) {
+            throw new Error("Soul document missing");
+        }
+        await storage.documents.update(ctx, soul.id, {
+            body: "already migrated\n",
+            updatedAt: Date.now()
+        });
 
         await userHomeMigrate(config);
-        expect(await readFile(soulPath, "utf8")).toBe("already migrated\n");
+        expect((await storage.documents.findBySlugAndParent(ctx, "soul", system.id))?.body).toBe("already migrated\n");
     });
 
     it("promotes a fallback owner when users table has no owner", async () => {

@@ -34,6 +34,7 @@ import { Channels } from "./channels/channels.js";
 import { ConfigModule } from "./config/configModule.js";
 import { Crons } from "./cron/crons.js";
 import { documentRootDocumentEnsure } from "./document/documentRootDocumentEnsure.js";
+import { documentSystemDocsEnsure } from "./document/documentSystemDocsEnsure.js";
 import { FileFolder } from "./files/fileFolder.js";
 import { Friends } from "./friends/friends.js";
 import type { EngineEventBus } from "./ipc/events.js";
@@ -680,6 +681,7 @@ export class Engine {
         await memoryRootDocumentEnsure(ownerCtx, this.storage);
         await peopleRootDocumentEnsure(ownerCtx, this.storage);
         await documentRootDocumentEnsure(ownerCtx, this.storage);
+        await documentSystemDocsEnsure(ownerCtx, this.storage);
         await userHomeMigrate(this.config.current, this.storage);
         const docker = this.config.current.docker.socketPath
             ? new Docker({ socketPath: this.config.current.docker.socketPath })

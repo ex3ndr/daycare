@@ -4,6 +4,9 @@ import path from "node:path";
 
 import type { Tool } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
+import type { Storage } from "../../../storage/storage.js";
+import { storageOpenTest } from "../../../storage/storageOpenTest.js";
+import { documentSystemDocsEnsure } from "../../document/documentSystemDocsEnsure.js";
 import { UserHome } from "../../users/userHome.js";
 import { contextForAgent, contextForUser } from "../context.js";
 import { systemAgentPromptResolve } from "../system/systemAgentPromptResolve.js";
@@ -89,11 +92,6 @@ describe("agentSystemPrompt", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-system-prompt-unknown-"));
         try {
             const userHome = new UserHome(path.join(dir, "users"), "user-1");
-            await mkdir(userHome.knowledge, { recursive: true });
-            await writeFile(path.join(userHome.knowledge, "SOUL.md"), "soul\n", "utf8");
-            await writeFile(path.join(userHome.knowledge, "USER.md"), "user\n", "utf8");
-            await writeFile(path.join(userHome.knowledge, "AGENTS.md"), "agents\n", "utf8");
-            await writeFile(path.join(userHome.knowledge, "TOOLS.md"), "tools\n", "utf8");
 
             const rendered = await agentSystemPrompt({
                 ctx: contextForAgent({ userId: "user-1", agentId: "agent-system-1" }),
@@ -118,18 +116,15 @@ describe("agentSystemPrompt", () => {
 
     it("renders bundled templates with prompt files from agent system data dir", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-system-prompt-build-"));
+        const storage = await storageOpenTest();
         try {
             const userHome = new UserHome(path.join(dir, "users"), "user-1");
-            const soulPath = path.join(userHome.knowledge, "SOUL.md");
-            const userPath = path.join(userHome.knowledge, "USER.md");
-            const agentsPath = path.join(userHome.knowledge, "AGENTS.md");
-            const toolsPath = path.join(userHome.knowledge, "TOOLS.md");
-
-            await mkdir(userHome.knowledge, { recursive: true });
-            await writeFile(soulPath, "Soul prompt text\n", "utf8");
-            await writeFile(userPath, "User prompt text\n", "utf8");
-            await writeFile(agentsPath, "Agents prompt text\n", "utf8");
-            await writeFile(toolsPath, "Tools prompt text\n", "utf8");
+            await systemPromptDocumentsWrite(storage, "user-1", {
+                soul: "Soul prompt text\n",
+                user: "User prompt text\n",
+                agents: "Agents prompt text\n",
+                tools: "Tools prompt text\n"
+            });
 
             const agentSystem = {
                 config: {
@@ -150,6 +145,7 @@ describe("agentSystemPrompt", () => {
                     }
                 },
                 storage: {
+                    documents: storage.documents,
                     users: {
                         findById: async (id: string) =>
                             id === "user-1"
@@ -206,27 +202,26 @@ describe("agentSystemPrompt", () => {
             expect(rendered).toContain('- "coding": Use for code generation');
             expect(rendered).toContain("/shared/examples");
         } finally {
+            storage.connection.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
 
     it("loads prompt sections internally from runtime context", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-system-prompt-sections-"));
+        const storage = await storageOpenTest();
         try {
             const userHome = new UserHome(path.join(dir, "users"), "user-1");
-            const soulPath = path.join(userHome.knowledge, "SOUL.md");
-            const userPath = path.join(userHome.knowledge, "USER.md");
-            const agentsPath = path.join(userHome.knowledge, "AGENTS.md");
-            const toolsPath = path.join(userHome.knowledge, "TOOLS.md");
             const configDir = path.join(dir, ".daycare");
             const agentsDir = path.join(dir, ".agents");
             const configSkillPath = path.join(configDir, "skills", "my-skill", "SKILL.md");
 
-            await mkdir(userHome.knowledge, { recursive: true });
-            await writeFile(soulPath, "Soul prompt text\n", "utf8");
-            await writeFile(userPath, "User prompt text\n", "utf8");
-            await writeFile(agentsPath, "Agents prompt text\n", "utf8");
-            await writeFile(toolsPath, "Tools prompt text\n", "utf8");
+            await systemPromptDocumentsWrite(storage, "user-1", {
+                soul: "Soul prompt text\n",
+                user: "User prompt text\n",
+                agents: "Agents prompt text\n",
+                tools: "Tools prompt text\n"
+            });
             await mkdir(path.dirname(configSkillPath), { recursive: true });
             await writeFile(
                 configSkillPath,
@@ -247,6 +242,12 @@ describe("agentSystemPrompt", () => {
                 },
                 pluginManager: {
                     listRegisteredSkills: () => []
+                },
+                storage: {
+                    documents: storage.documents,
+                    users: {
+                        findById: async () => null
+                    }
                 },
                 connectorRegistry: {
                     get: () => null
@@ -302,7 +303,34 @@ describe("agentSystemPrompt", () => {
             expect(rendered).not.toContain("If you include `<say>` in the same response");
             expect(rendered).not.toContain("you MUST emit `<say>` with your response");
         } finally {
+            storage.connection.close();
             await rm(dir, { recursive: true, force: true });
         }
     });
 });
+
+async function systemPromptDocumentsWrite(
+    storage: Storage,
+    userId: string,
+    input: { soul: string; user: string; agents: string; tools: string }
+): Promise<void> {
+    const ctx = contextForUser({ userId });
+    const system = await documentSystemDocsEnsure(ctx, storage);
+    const docs = [
+        { slug: "soul", body: input.soul },
+        { slug: "user", body: input.user },
+        { slug: "agents", body: input.agents },
+        { slug: "tools", body: input.tools }
+    ];
+
+    for (const doc of docs) {
+        const existing = await storage.documents.findBySlugAndParent(ctx, doc.slug, system.id);
+        if (!existing) {
+            throw new Error(`Missing ~/system/${doc.slug} in test.`);
+        }
+        await storage.documents.update(ctx, existing.id, {
+            body: doc.body,
+            updatedAt: Date.now()
+        });
+    }
+}

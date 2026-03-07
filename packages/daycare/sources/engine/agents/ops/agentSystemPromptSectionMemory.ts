@@ -1,43 +1,20 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
-
 import Handlebars from "handlebars";
 
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
-import { agentPromptPathsResolve } from "./agentPromptPathsResolve.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 
 /**
- * Renders memory guidance using prompt-memory files.
+ * Renders memory guidance using versioned system documents with bundled fallbacks.
  * Expects: context matches agentSystemPrompt input shape.
  */
 export async function agentSystemPromptSectionMemory(context: AgentSystemPromptContext): Promise<string> {
     const isForeground = context.config?.foreground === true;
-    if (!context.userHome) {
-        throw new Error("User home is required to render memory section.");
-    }
-    const promptPaths = agentPromptPathsResolve(context.userHome);
-    const readPromptFile = async (filePath: string, fallbackPrompt: string): Promise<string> => {
-        const resolvedPath = path.resolve(filePath);
-        try {
-            const content = await fs.readFile(resolvedPath, "utf8");
-            const trimmed = content.trim();
-            if (trimmed.length > 0) {
-                return trimmed;
-            }
-        } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-                throw error;
-            }
-        }
-        return (await agentPromptBundledRead(fallbackPrompt)).trim();
-    };
-
+    const systemRoot = await context.agentSystem?.storage?.documents.findBySlugAndParent(context.ctx, "system", null);
     const [soul, user, agents, tools] = await Promise.all([
-        readPromptFile(promptPaths.soulPath, "SOUL.md"),
-        readPromptFile(promptPaths.userPath, "USER.md"),
-        readPromptFile(promptPaths.agentsPath, "AGENTS.md"),
-        readPromptFile(promptPaths.toolsPath, "TOOLS.md")
+        systemPromptDocumentRead(context, systemRoot?.id ?? null, "soul", "SOUL.md"),
+        systemPromptDocumentRead(context, systemRoot?.id ?? null, "user", "USER.md"),
+        systemPromptDocumentRead(context, systemRoot?.id ?? null, "agents", "AGENTS.md"),
+        systemPromptDocumentRead(context, systemRoot?.id ?? null, "tools", "TOOLS.md")
     ]);
 
     const template = await agentPromptBundledRead("SYSTEM_MEMORY.md");
@@ -51,4 +28,24 @@ export async function agentSystemPromptSectionMemory(context: AgentSystemPromptC
         tools
     });
     return section.trim();
+}
+
+async function systemPromptDocumentRead(
+    context: AgentSystemPromptContext,
+    systemRootId: string | null,
+    slug: string,
+    fallbackPrompt: string
+): Promise<string> {
+    if (systemRootId) {
+        const document = await context.agentSystem?.storage?.documents.findBySlugAndParent(
+            context.ctx,
+            slug,
+            systemRootId
+        );
+        const trimmed = document?.body.trim() ?? "";
+        if (trimmed.length > 0) {
+            return trimmed;
+        }
+    }
+    return (await agentPromptBundledRead(fallbackPrompt)).trim();
 }

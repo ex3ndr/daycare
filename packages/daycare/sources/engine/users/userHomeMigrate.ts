@@ -5,6 +5,8 @@ import type { Config } from "@/types";
 import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageResolve } from "../../storage/storageResolve.js";
+import { contextForUser } from "../agents/context.js";
+import { documentSystemDocsEnsure } from "../document/documentSystemDocsEnsure.js";
 import { UserHome } from "./userHome.js";
 import { userHomeEnsure } from "./userHomeEnsure.js";
 
@@ -12,7 +14,7 @@ const MARKER_FILENAME = ".migrated";
 const logger = getLogger("engine.users.migrate");
 
 /**
- * Migrates legacy knowledge files into the owner user's UserHome tree once.
+ * Migrates legacy system prompt files into the owner user's document store once.
  * Expects: storage migrations have already run and config paths are absolute.
  */
 export async function userHomeMigrate(config: Config, storageOrConfig?: Storage | Config): Promise<void> {
@@ -24,8 +26,10 @@ export async function userHomeMigrate(config: Config, storageOrConfig?: Storage 
 
     const ownerUserId = await ownerUserIdEnsure(storage);
     const ownerHome = new UserHome(config.usersDir, ownerUserId);
+    const ownerCtx = contextForUser({ userId: ownerUserId });
     await userHomeEnsure(ownerHome);
-    await knowledgeFilesCopy(config, ownerHome);
+    await documentSystemDocsEnsure(ownerCtx, storage);
+    await knowledgeFilesMigrate(config, ownerHome, ownerCtx, storage);
     await fs.mkdir(config.usersDir, { recursive: true });
     await fs.writeFile(markerPath, `${JSON.stringify({ migratedAt: Date.now(), ownerUserId }, null, 2)}\n`, "utf8");
 }
@@ -56,26 +60,43 @@ async function ownerUserIdEnsure(storage: Storage): Promise<string> {
     return ownerId;
 }
 
-async function knowledgeFilesCopy(config: Config, ownerHome: UserHome): Promise<void> {
-    const legacyPaths = {
-        soulPath: path.join(config.dataDir, "SOUL.md"),
-        userPath: path.join(config.dataDir, "USER.md"),
-        agentsPath: path.join(config.dataDir, "AGENTS.md"),
-        toolsPath: path.join(config.dataDir, "TOOLS.md")
-    };
-    const nextPaths = ownerHome.knowledgePaths();
-    const pairs = [
-        { from: legacyPaths.soulPath, to: nextPaths.soulPath },
-        { from: legacyPaths.userPath, to: nextPaths.userPath },
-        { from: legacyPaths.agentsPath, to: nextPaths.agentsPath },
-        { from: legacyPaths.toolsPath, to: nextPaths.toolsPath }
+async function knowledgeFilesMigrate(
+    config: Config,
+    ownerHome: UserHome,
+    ctx: ReturnType<typeof contextForUser>,
+    storage: Storage
+): Promise<void> {
+    const system = await storage.documents.findBySlugAndParent(ctx, "system", null);
+    if (!system) {
+        throw new Error("Missing ~/system root during userHome migration.");
+    }
+
+    const legacyKnowledgeDir = path.join(ownerHome.home, "knowledge");
+    const files = [
+        { slug: "soul", filename: "SOUL.md" },
+        { slug: "user", filename: "USER.md" },
+        { slug: "agents", filename: "AGENTS.md" },
+        { slug: "tools", filename: "TOOLS.md" }
     ];
-    for (const pair of pairs) {
-        if (!(await pathExists(pair.from))) {
+
+    for (const file of files) {
+        const content = await legacyPromptContentLoad([
+            path.join(legacyKnowledgeDir, file.filename),
+            path.join(config.dataDir, file.filename)
+        ]);
+        if (content === null) {
             continue;
         }
-        await fs.mkdir(path.dirname(pair.to), { recursive: true });
-        await fs.copyFile(pair.from, pair.to);
+
+        const document = await storage.documents.findBySlugAndParent(ctx, file.slug, system.id);
+        if (!document) {
+            throw new Error(`Missing ~/system/${file.slug} during userHome migration.`);
+        }
+
+        await storage.documents.update(ctx, document.id, {
+            body: content,
+            updatedAt: Date.now()
+        });
     }
 }
 
@@ -89,4 +110,14 @@ async function pathExists(targetPath: string): Promise<boolean> {
         }
         throw error;
     }
+}
+
+async function legacyPromptContentLoad(paths: string[]): Promise<string | null> {
+    for (const targetPath of paths) {
+        if (!(await pathExists(targetPath))) {
+            continue;
+        }
+        return fs.readFile(targetPath, "utf8");
+    }
+    return null;
 }

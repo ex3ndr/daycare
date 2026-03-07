@@ -32,8 +32,6 @@ import { agentLoopPendingPhaseResolve } from "./ops/agentLoopPendingPhaseResolve
 import { agentLoopRun } from "./ops/agentLoopRun.js";
 import { agentModelOverrideApply } from "./ops/agentModelOverrideApply.js";
 import { agentPathTargetResolve } from "./ops/agentPathTargetResolve.js";
-import { agentPromptFilesEnsure } from "./ops/agentPromptFilesEnsure.js";
-import { agentPromptPathsResolve } from "./ops/agentPromptPathsResolve.js";
 import { agentSandboxBackendConfigBuild } from "./ops/agentSandboxBackendConfigBuild.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { type AgentSystemPromptContext, agentSystemPrompt } from "./ops/agentSystemPrompt.js";
@@ -472,7 +470,6 @@ export class Agent {
             } as AgentHistoryRecord & { type: "user_message" };
         }
 
-        await agentPromptFilesEnsure(agentPromptPathsResolve(this.userHome));
         logger.debug(`event: handleMessage building system prompt agentId=${this.id}`);
         const connectorTargetId = (
             await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path)

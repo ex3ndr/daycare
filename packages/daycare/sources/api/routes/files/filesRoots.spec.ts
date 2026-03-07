@@ -17,10 +17,12 @@ describe("filesRoots", () => {
         }
     });
 
-    it("includes desktop, documents, downloads", () => {
+    it("includes desktop, documents, downloads and excludes legacy prompt roots", () => {
         const ids = filesRoots().roots.map((r) => r.id);
         expect(ids).toContain("desktop");
         expect(ids).toContain("documents");
         expect(ids).toContain("downloads");
+        expect(ids).not.toContain("knowledge");
+        expect(ids).not.toContain("memory");
     });
 });

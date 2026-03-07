@@ -735,21 +735,6 @@ describe("AppServer authenticated routes", () => {
         await expect(listedAfterDelete.json()).resolves.toEqual({ ok: true, chats: [] });
     });
 
-    it("lists prompt files", async () => {
-        const secret = "valid-secret-for-tests-1234567890";
-        const built = await appServerCreateForTests({ secret });
-        const token = await jwtSign({ userId: "user-1" }, secret, 3600);
-
-        const response = await fetch(`http://127.0.0.1:${built.port}/prompts`, {
-            headers: { authorization: `Bearer ${token}` }
-        });
-
-        expect(response.status).toBe(200);
-        const body = (await response.json()) as { ok: boolean; files: string[] };
-        expect(body.ok).toBe(true);
-        expect(body.files).toEqual(["SOUL.md", "USER.md", "AGENTS.md", "TOOLS.md"]);
-    });
-
     it("lists active tasks", async () => {
         const secret = "valid-secret-for-tests-1234567890";
         const built = await appServerCreateForTests({

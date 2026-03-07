@@ -19,18 +19,6 @@ describe("UserHome", () => {
         expect(userHome.downloads).toBe(path.join(usersDir, "usr_123", "home", "downloads"));
         expect(userHome.documents).toBe(path.join(usersDir, "usr_123", "home", "documents"));
         expect(userHome.developer).toBe(path.join(usersDir, "usr_123", "home", "developer"));
-        expect(userHome.knowledge).toBe(path.join(usersDir, "usr_123", "home", "knowledge"));
-        expect(userHome.memory).toBe(path.join(usersDir, "usr_123", "home", "memory"));
         expect(userHome.tmp).toBe(path.join(usersDir, "usr_123", "home", "tmp"));
-    });
-
-    it("returns knowledge prompt file paths from the knowledge folder", () => {
-        const userHome = new UserHome("/tmp/daycare-users", "usr_456");
-        expect(userHome.knowledgePaths()).toEqual({
-            soulPath: path.join(userHome.knowledge, "SOUL.md"),
-            userPath: path.join(userHome.knowledge, "USER.md"),
-            agentsPath: path.join(userHome.knowledge, "AGENTS.md"),
-            toolsPath: path.join(userHome.knowledge, "TOOLS.md")
-        });
     });
 });

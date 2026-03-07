@@ -18,8 +18,6 @@ export async function agentSystemPromptSectionPermissions(context: AgentSystemPr
         { name: "downloads" },
         { name: "documents" },
         { name: "developer" },
-        { name: "knowledge" },
-        { name: "memory" },
         { name: "tmp" }
     ];
 

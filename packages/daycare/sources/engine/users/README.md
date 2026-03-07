@@ -23,19 +23,23 @@ This module provides per-user filesystem isolation under `config.usersDir`:
     documents/
     developer/
     tmp/
-    knowledge/
-      SOUL.md
-      USER.md
-      AGENTS.md
-      TOOLS.md
-      MEMORY.md
+```
+
+Versioned system prompts now live in the document store:
+
+```text
+~/system/
+  soul
+  user
+  agents
+  tools
 ```
 
 ## Components
 
 - `userHome.ts`: `UserHome` facade for user-scoped path resolution.
-- `userHomeEnsure.ts`: creates user directory tree and seeds knowledge markdown files.
-- `userHomeMigrate.ts`: one-time migration of legacy knowledge files into owner user home.
+- `userHomeEnsure.ts`: creates the user directory tree for filesystem workspaces.
+- `userHomeMigrate.ts`: one-time migration of legacy prompt files into owner user documents.
 
 ## Resolution Flow
 
@@ -44,11 +48,11 @@ flowchart TD
     A[AgentSystem resolves userId] --> B[UserHome(usersDir, userId)]
     B --> C[userHomeEnsure]
     C --> D[skills/active, skills/personal, apps, home/* directories]
-    C --> E[knowledge files ensured]
     B --> F[permissionBuildUser]
     F --> G[Agent session permissions + skills active read access]
     B --> H[Agent files facade: home/downloads, home/desktop, home/tmp]
-    B --> I[prompt paths: home/knowledge/*.md]
+    A --> I[documentSystemDocsEnsure]
+    I --> J[~/system/{soul,user,agents,tools}]
 ```
 
 ## Migration Flow
@@ -67,7 +71,9 @@ sequenceDiagram
     else no marker
         Migrate->>DB: resolve/create owner user
         Migrate->>FS: ensure owner UserHome
-        Migrate->>FS: copy legacy knowledge files
+        Migrate->>DB: ensure ~/system documents
+        Migrate->>FS: read legacy knowledge files if present
+        Migrate->>DB: update ~/system child documents
         Migrate->>FS: write users/.migrated
         Migrate-->>Engine: complete
     end

@@ -1,7 +1,7 @@
-import { promises as fs } from "node:fs";
-
 import { createId } from "@paralleldrive/cuid2";
 import type { Storage } from "../../storage/storage.js";
+import { contextForUser } from "../agents/context.js";
+import { documentSystemDocsEnsure } from "../document/documentSystemDocsEnsure.js";
 import type { UserHome } from "../users/userHome.js";
 import { userHomeEnsure } from "../users/userHomeEnsure.js";
 import type { WorkspaceConfig, WorkspaceRecord } from "./workspaceTypes.js";
@@ -9,7 +9,7 @@ import type { WorkspaceConfig, WorkspaceRecord } from "./workspaceTypes.js";
 type WorkspaceCreateInput = {
     ownerUserId: string;
     config: WorkspaceConfig;
-    storage: Pick<Storage, "users">;
+    storage: Pick<Storage, "documents" | "users">;
     userHomeForUserId: (userId: string) => UserHome;
 };
 
@@ -76,7 +76,21 @@ export async function workspaceCreate(input: WorkspaceCreateInput): Promise<Work
 
     const userHome = input.userHomeForUserId(record.userId);
     await userHomeEnsure(userHome);
-    await fs.writeFile(userHome.knowledgePaths().soulPath, `${systemPrompt}\n`, "utf8");
+    const workspaceCtx = contextForUser({ userId: record.userId });
+    await documentSystemDocsEnsure(workspaceCtx, input.storage);
+
+    const system = await input.storage.documents.findBySlugAndParent(workspaceCtx, "system", null);
+    if (!system) {
+        throw new Error("Missing ~/system root for workspace.");
+    }
+    const soul = await input.storage.documents.findBySlugAndParent(workspaceCtx, "soul", system.id);
+    if (!soul) {
+        throw new Error("Missing ~/system/soul document for workspace.");
+    }
+    await input.storage.documents.update(workspaceCtx, soul.id, {
+        body: `${systemPrompt}\n`,
+        updatedAt: Date.now()
+    });
 
     return record;
 }
