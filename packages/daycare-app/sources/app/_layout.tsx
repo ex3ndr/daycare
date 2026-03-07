@@ -146,6 +146,7 @@ export default function RootLayout() {
                                             <Stack.Screen name="(auth)" />
                                         </Stack.Protected>
                                         <Stack.Screen name="verify" />
+                                        <Stack.Screen name="invite" />
                                     </Stack>
                                 </ThemeProvider>
                             </View>

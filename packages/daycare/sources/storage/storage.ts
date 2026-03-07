@@ -28,6 +28,7 @@ import { TasksRepository } from "./tasksRepository.js";
 import { TokenStatsRepository } from "./tokenStatsRepository.js";
 import { UsersRepository } from "./usersRepository.js";
 import { WebhookTasksRepository } from "./webhookTasksRepository.js";
+import { WorkspaceMembersRepository } from "./workspaceMembersRepository.js";
 
 /**
  * Facade for all storage access and repository instances.
@@ -49,6 +50,7 @@ export class Storage {
     readonly delayedSignals: DelayedSignalsRepository;
     readonly channels: ChannelsRepository;
     readonly channelMessages: ChannelMessagesRepository;
+    readonly workspaceMembers: WorkspaceMembersRepository;
     readonly connections: ConnectionsRepository;
     readonly processes: ProcessesRepository;
     readonly systemPrompts: SystemPromptsRepository;
@@ -81,6 +83,7 @@ export class Storage {
         this.delayedSignals = new DelayedSignalsRepository(db);
         this.channels = new ChannelsRepository(db);
         this.channelMessages = new ChannelMessagesRepository(db);
+        this.workspaceMembers = new WorkspaceMembersRepository(db);
         this.connections = new ConnectionsRepository(db);
         this.processes = new ProcessesRepository(db);
         this.systemPrompts = new SystemPromptsRepository(db);

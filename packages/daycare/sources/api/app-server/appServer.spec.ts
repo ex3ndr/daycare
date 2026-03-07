@@ -209,6 +209,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
                 })
         } as never,
         users: storage.users,
+        workspaceMembers: storage.workspaceMembers,
         agentCallbacks: options.agentCallbacks ?? null,
         eventBus: null,
         skills: null,
@@ -512,6 +513,118 @@ describe("AppServer auth endpoints", () => {
         expect(reloaded?.connectorKeys.map((entry) => entry.connectorKey)).toContain(
             userConnectorKeyCreate("email", "person@example.com")
         );
+    });
+
+    it("creates invites, accepts them, lists joined workspaces, and revokes member access after kick", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await appServerCreateForTests({ secret });
+        const owner = await built.storage.users.findOwner();
+        if (!owner) {
+            throw new Error("Expected seeded owner user.");
+        }
+
+        const workspace = await built.storage.users.create({
+            id: "workspace-1",
+            nametag: "product-ops",
+            firstName: "Product",
+            lastName: "Ops",
+            isWorkspace: true,
+            parentUserId: owner.id,
+            createdAt: 10,
+            updatedAt: 10
+        });
+        const member = await built.storage.users.create({
+            id: "member-1",
+            nametag: "member-1",
+            createdAt: 20,
+            updatedAt: 20
+        });
+
+        const ownerToken = await jwtSign({ userId: owner.id }, secret, 3600);
+        const memberToken = await jwtSign({ userId: member.id }, secret, 3600);
+
+        const inviteResponse = await fetch(
+            `http://127.0.0.1:${built.port}/workspaces/${workspace.nametag}/invite/create`,
+            {
+                method: "POST",
+                headers: {
+                    authorization: `Bearer ${ownerToken}`,
+                    "content-type": "application/json",
+                    origin: "https://app.example.com",
+                    host: "api.example.com",
+                    "x-forwarded-proto": "https"
+                },
+                body: JSON.stringify({})
+            }
+        );
+        const invitePayload = (await inviteResponse.json()) as {
+            ok: boolean;
+            token?: string;
+            url?: string;
+        };
+        expect(invitePayload.ok).toBe(true);
+        expect(invitePayload.url).toContain("https://app.example.com/invite#");
+
+        const acceptResponse = await fetch(`http://127.0.0.1:${built.port}/invite/accept`, {
+            method: "POST",
+            headers: {
+                authorization: `Bearer ${memberToken}`,
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({ token: invitePayload.token })
+        });
+        await expect(acceptResponse.json()).resolves.toEqual({
+            ok: true,
+            workspaceId: workspace.id
+        });
+        await expect(built.storage.workspaceMembers.isMember(workspace.id, member.id)).resolves.toBe(true);
+
+        const workspacesResponse = await fetch(`http://127.0.0.1:${built.port}/workspaces`, {
+            headers: {
+                authorization: `Bearer ${memberToken}`
+            }
+        });
+        await expect(workspacesResponse.json()).resolves.toMatchObject({
+            ok: true,
+            workspaces: expect.arrayContaining([
+                expect.objectContaining({
+                    userId: workspace.id,
+                    nametag: workspace.nametag
+                })
+            ])
+        });
+
+        const scopedBeforeKick = await fetch(`http://127.0.0.1:${built.port}/w/${workspace.id}/tools`, {
+            headers: {
+                authorization: `Bearer ${memberToken}`
+            }
+        });
+        expect(scopedBeforeKick.status).toBe(200);
+
+        const kickResponse = await fetch(
+            `http://127.0.0.1:${built.port}/workspaces/${workspace.nametag}/members/${member.id}/kick`,
+            {
+                method: "POST",
+                headers: {
+                    authorization: `Bearer ${ownerToken}`,
+                    "content-type": "application/json"
+                },
+                body: JSON.stringify({ reason: "cleanup" })
+            }
+        );
+        await expect(kickResponse.json()).resolves.toEqual({ ok: true });
+        await expect(built.storage.workspaceMembers.isKicked(workspace.id, member.id)).resolves.toBe(true);
+
+        const scopedAfterKick = await fetch(`http://127.0.0.1:${built.port}/w/${workspace.id}/tools`, {
+            headers: {
+                authorization: `Bearer ${memberToken}`
+            }
+        });
+        expect(scopedAfterKick.status).toBe(403);
+        await expect(scopedAfterKick.json()).resolves.toEqual({
+            ok: false,
+            error: "Workspace access denied."
+        });
     });
 
     it("normalizes legacy Telegram session tokens to internal user ids", async () => {

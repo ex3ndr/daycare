@@ -6,6 +6,7 @@ import { SinglePanelLayout } from "@/components/layout/SinglePanelLayout";
 import { authEmailConnectVerify, authEmailVerify, authTelegramExchange } from "@/modules/auth/authApi";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { authLinkPayloadFromUrl } from "@/modules/auth/authLinkPayloadFromUrl";
+import { authRedirectTake } from "@/modules/auth/authRedirectStorage";
 import { authTelegramWebAppContextParse } from "@/modules/auth/authTelegramWebAppContextParse";
 import { useAuthLinkUrl } from "@/modules/auth/useAuthLinkUrl";
 import { useProfileStore } from "@/modules/profile/profileContext";
@@ -105,6 +106,8 @@ export default function AuthMagicLinkScreen() {
                     throw new Error(result.error);
                 }
                 await login(magicPayload.backendUrl, result.token);
+                router.replace((authRedirectTake() ?? "/(app)") as never);
+                return;
             } else if (magicPayload.kind === "connect-email") {
                 const result = await authEmailConnectVerify(magicPayload.backendUrl, magicPayload.token);
                 if (!result.ok) {
@@ -122,11 +125,8 @@ export default function AuthMagicLinkScreen() {
                 setSuccess(`Email ${result.email} is now connected to your Daycare account.`);
             } else {
                 await login(magicPayload.backendUrl, magicPayload.token);
-                router.replace("/(app)" as never);
+                router.replace((authRedirectTake() ?? "/(app)") as never);
                 return;
-            }
-            if (magicPayload.kind === "email") {
-                router.replace("/(app)" as never);
             }
         } catch {
             setError(
@@ -160,7 +160,7 @@ export default function AuthMagicLinkScreen() {
             }
             console.info(`[daycare-app] auth-screen: telegram exchange succeeded userId=${result.userId}`);
             await login(telegramWebAppContext.backendUrl, result.token);
-            router.replace("/(app)" as never);
+            router.replace((authRedirectTake() ?? "/(app)") as never);
         } catch (e) {
             console.warn(
                 `[daycare-app] auth-screen: telegram login error - ${e instanceof Error ? e.message : String(e)}`

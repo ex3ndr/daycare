@@ -403,6 +403,27 @@ export const channelMessagesTable = pgTable(
     (table) => [index("idx_channel_messages_channel_created").on(table.channelId, table.createdAt)]
 );
 
+export const workspaceMembersTable = pgTable(
+    "workspace_members",
+    {
+        id: serial("id").primaryKey(),
+        workspaceId: text("workspace_id").notNull(),
+        userId: text("user_id").notNull(),
+        joinedAt: bigint("joined_at", { mode: "number" }).notNull(),
+        leftAt: bigint("left_at", { mode: "number" }),
+        kickReason: text("kick_reason")
+    },
+    (table) => [
+        uniqueIndex("workspace_members_workspace_user_unique").on(table.workspaceId, table.userId),
+        index("idx_workspace_members_workspace").on(table.workspaceId),
+        index("idx_workspace_members_user").on(table.userId),
+        index("idx_workspace_members_active_workspace")
+            .on(table.workspaceId, table.joinedAt)
+            .where(sql`${table.leftAt} IS NULL`),
+        index("idx_workspace_members_active_user").on(table.userId, table.joinedAt).where(sql`${table.leftAt} IS NULL`)
+    ]
+);
+
 export const processesTable = pgTable(
     "processes",
     {
@@ -689,6 +710,7 @@ export const schema = {
     channelsTable,
     channelMembersTable,
     channelMessagesTable,
+    workspaceMembersTable,
     processesTable,
     connectionsTable,
     systemPromptsTable,

@@ -405,6 +405,7 @@ export class Engine {
             toolResolver: this.modules.tools,
             webhooks: this.webhooks,
             users: this.storage.users,
+            workspaceMembers: this.storage.workspaceMembers,
             agentCallbacks: {
                 agentList: async (ctx) => {
                     const records = await this.storage.agents.findByUserId(ctx.userId);

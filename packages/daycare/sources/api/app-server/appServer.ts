@@ -29,6 +29,7 @@ import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
 import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
 import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
+import type { WorkspaceMembersRepository } from "../../storage/workspaceMembersRepository.js";
 import type { TokenStatsFetchOptions } from "../routes/costs/costsRoutes.js";
 import { eventsRouteHandle } from "../routes/events/eventsRoutes.js";
 import { apiRouteHandle } from "../routes/routes.js";
@@ -39,6 +40,7 @@ import { AppEmailAuth } from "./appEmailAuth.js";
 import { AppEmailConnect } from "./appEmailConnect.js";
 import { appCorsApply, appReadJsonBody, appSendJson, appSendText, appServerClose, appServerListen } from "./appHttp.js";
 import { appJwtSecretResolve } from "./appJwtSecretResolve.js";
+import { appRequestEndpointsResolve } from "./appRequestEndpointsResolve.js";
 import type { AppServerResolvedSettings } from "./appServerSettingsResolve.js";
 import { appServerSettingsResolve } from "./appServerSettingsResolve.js";
 import { appWorkspaceResolve, WorkspaceAccessError } from "./appWorkspaceResolve.js";
@@ -61,6 +63,7 @@ export type AppServerOptions = {
     toolResolver: ToolResolver;
     webhooks: Webhooks;
     users: UsersRepository | null;
+    workspaceMembers: WorkspaceMembersRepository | null;
     agentCallbacks: RouteAgentCallbacks | null;
     eventBus: EngineEventBus | null;
     skills: ((ctx: Context) => Promise<AgentSkill[]>) | null;
@@ -96,6 +99,7 @@ export class AppServer {
     private readonly toolResolver: ToolResolver;
     private readonly webhooks: Webhooks;
     private readonly users: UsersRepository | null;
+    private readonly workspaceMembers: WorkspaceMembersRepository | null;
     private readonly agentCallbacks: RouteAgentCallbacks | null;
     private readonly eventBus: EngineEventBus | null;
     private readonly skills: ((ctx: Context) => Promise<AgentSkill[]>) | null;
@@ -128,6 +132,7 @@ export class AppServer {
         this.toolResolver = options.toolResolver;
         this.webhooks = options.webhooks;
         this.users = options.users;
+        this.workspaceMembers = options.workspaceMembers;
         this.agentCallbacks = options.agentCallbacks;
         this.eventBus = options.eventBus;
         this.skills = options.skills;
@@ -285,7 +290,12 @@ export class AppServer {
 
         if (pathname.startsWith("/w/") && this.users) {
             try {
-                const resolved = await appWorkspaceResolve(pathname, auth.userId, this.users);
+                const resolved = await appWorkspaceResolve(
+                    pathname,
+                    auth.userId,
+                    this.users,
+                    this.workspaceMembers ?? undefined
+                );
                 if (resolved) {
                     effectiveUserId = resolved.workspaceUserId;
                     routePathname = resolved.strippedPathname;
@@ -315,6 +325,13 @@ export class AppServer {
         // Profile and workspaces list use the caller's own context (global, not workspace-scoped)
         const profileCtx = routePathname.startsWith("/profile") ? callerCtx : ctx;
         const workspacesCtx = routePathname.startsWith("/workspaces") ? callerCtx : ctx;
+        const publicEndpoints = appRequestEndpointsResolve({
+            host: settings.host,
+            port: settings.port,
+            appEndpoint: settings.appEndpoint,
+            serverEndpoint: settings.serverEndpoint,
+            headers: request.headers
+        });
 
         const skillsList = this.skills;
         const handled = await apiRouteHandle(request, response, routePathname, {
@@ -327,6 +344,7 @@ export class AppServer {
             sendJson: appSendJson,
             readJsonBody: appReadJsonBody,
             users: this.users,
+            workspaceMembers: this.workspaceMembers,
             agentCallbacks: this.agentCallbacks,
             eventBus: this.eventBus,
             skills: skillsList
@@ -346,6 +364,8 @@ export class AppServer {
             keyValues: this.keyValues,
             psql: this.psql,
             observationLog: this.observationLog,
+            publicEndpoints,
+            secretResolve: () => this.secretResolve(),
             secrets: this.secrets,
             emailConnectRequest: (userId, email) => this.emailConnectRequest(userId, email, request.headers)
         });

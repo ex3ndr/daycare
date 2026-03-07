@@ -77,6 +77,58 @@ describe("workspacesRouteHandle", () => {
         expect(listAfter.payload.ok).toBe(true);
     });
 
+    it("routes members and invite endpoints", async () => {
+        const invite = await routeCall({
+            pathname: "/workspaces/reviewer/invite/create",
+            method: "POST",
+            workspaceMembersApiEnabled: true
+        });
+        expect(invite.statusCode).toBe(200);
+        expect(invite.payload).toMatchObject({
+            ok: true,
+            url: expect.stringContaining("/invite#"),
+            token: expect.any(String),
+            expiresAt: expect.any(Number)
+        });
+
+        const members = await routeCall({
+            pathname: "/workspaces/reviewer/members",
+            method: "GET",
+            workspaceMembersApiEnabled: true
+        });
+        expect(members.statusCode).toBe(200);
+        expect(members.payload).toEqual({
+            ok: true,
+            members: [
+                {
+                    userId: "owner-1",
+                    nametag: "owner-1",
+                    firstName: null,
+                    lastName: null,
+                    joinedAt: 1,
+                    isOwner: true
+                },
+                {
+                    userId: "member-2",
+                    nametag: "member-2",
+                    firstName: null,
+                    lastName: null,
+                    joinedAt: 2,
+                    isOwner: false
+                }
+            ]
+        });
+
+        const kicked = await routeCall({
+            pathname: "/workspaces/reviewer/members/member-2/kick",
+            method: "POST",
+            body: { reason: "cleanup" },
+            workspaceMembersApiEnabled: true
+        });
+        expect(kicked.statusCode).toBe(200);
+        expect(kicked.payload).toEqual({ ok: true });
+    });
+
     it("returns false for unknown paths and 503 for unavailable runtime", async () => {
         const unknown = await routeCall({
             pathname: "/not-workspaces",
@@ -108,6 +160,7 @@ type RouteCallInput = {
     store?: Map<string, Secret[]>;
     usersEnabled?: boolean;
     secretsEnabled?: boolean;
+    workspaceMembersApiEnabled?: boolean;
 };
 
 async function routeCall(input: RouteCallInput): Promise<{
@@ -120,6 +173,7 @@ async function routeCall(input: RouteCallInput): Promise<{
     const store = input.store ?? new Map<string, Secret[]>();
     const usersEnabled = input.usersEnabled ?? true;
     const secretsEnabled = input.secretsEnabled ?? true;
+    const activeMembers = input.workspaceMembersApiEnabled ? new Set(["member-2"]) : new Set<string>();
 
     const handled = await workspacesRouteHandle(
         {
@@ -137,11 +191,51 @@ async function routeCall(input: RouteCallInput): Promise<{
             users: usersEnabled
                 ? ({
                       findById: async (id: string) =>
-                          id === "owner-1" ? { id: "owner-1", isOwner: true } : { id, isOwner: false },
+                          id === "workspace-1"
+                              ? {
+                                    id: "workspace-1",
+                                    nametag: "reviewer",
+                                    isWorkspace: true,
+                                    parentUserId: "owner-1",
+                                    createdAt: 1
+                                }
+                              : id === "owner-1"
+                                ? { id: "owner-1", nametag: "owner-1", isOwner: true, firstName: null, lastName: null }
+                                : { id, nametag: id, isOwner: false, firstName: null, lastName: null },
                       findByNametag: async (nametag: string) =>
                           nametag === "reviewer"
-                              ? { id: "workspace-1", isWorkspace: true, parentUserId: "owner-1" }
+                              ? {
+                                    id: "workspace-1",
+                                    nametag: "reviewer",
+                                    firstName: "Reviewer",
+                                    lastName: null,
+                                    createdAt: 1,
+                                    isWorkspace: true,
+                                    parentUserId: "owner-1"
+                                }
                               : null
+                  } as never)
+                : null,
+            workspaceMembers: usersEnabled
+                ? ({
+                      findByUser: async () => [],
+                      findByWorkspace: async () =>
+                          activeMembers.has("member-2")
+                              ? [
+                                    {
+                                        id: 1,
+                                        workspaceId: "workspace-1",
+                                        userId: "member-2",
+                                        joinedAt: 2,
+                                        leftAt: null,
+                                        kickReason: null
+                                    }
+                                ]
+                              : [],
+                      isMember: async () => false,
+                      kick: async (_workspaceId: string, userId: string) => {
+                          activeMembers.delete(userId);
+                      }
                   } as never)
                 : null,
             secrets: secretsEnabled
@@ -164,7 +258,12 @@ async function routeCall(input: RouteCallInput): Promise<{
                           return next.length !== current.length;
                       }
                   } as never)
-                : null
+                : null,
+            publicEndpoints: {
+                appEndpoint: "https://app.example.com",
+                serverEndpoint: "https://api.example.com"
+            },
+            secretResolve: async () => "test-secret"
         }
     );
 

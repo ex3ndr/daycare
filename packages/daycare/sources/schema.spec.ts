@@ -19,6 +19,7 @@ describe("schema", () => {
             expect(tableNames.has("users")).toBe(true);
             expect(tableNames.has("tasks")).toBe(true);
             expect(tableNames.has("token_stats_hourly")).toBe(true);
+            expect(tableNames.has("workspace_members")).toBe(true);
 
             const userColumns = (await db
                 .prepare(
@@ -62,6 +63,7 @@ describe("schema", () => {
             expect(indexNames.has("idx_users_single_owner")).toBe(true);
             expect(indexNames.has("idx_tasks_cron_task_id")).toBe(true);
             expect(indexNames.has("idx_token_stats_hourly_agent_hour")).toBe(true);
+            expect(indexNames.has("workspace_members_workspace_user_unique")).toBe(true);
         } finally {
             db.close();
         }

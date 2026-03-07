@@ -1,4 +1,5 @@
 import type { UsersRepository } from "../../storage/usersRepository.js";
+import type { WorkspaceMembersRepository } from "../../storage/workspaceMembersRepository.js";
 
 export type AppWorkspaceResolveResult = {
     workspaceUserId: string;
@@ -15,7 +16,8 @@ export type AppWorkspaceResolveResult = {
 export async function appWorkspaceResolve(
     pathname: string,
     callerUserId: string,
-    users: UsersRepository
+    users: UsersRepository,
+    workspaceMembers?: Pick<WorkspaceMembersRepository, "isMember">
 ): Promise<AppWorkspaceResolveResult | null> {
     // Check for /w/{userId}/... prefix
     const match = pathname.match(/^\/w\/([^/]+)(\/.*)?$/);
@@ -43,6 +45,10 @@ export async function appWorkspaceResolve(
 
     // Caller accessing a child workspace they own
     if (target.isWorkspace && target.parentUserId === callerUserId) {
+        return { workspaceUserId: target.id, strippedPathname };
+    }
+
+    if (target.isWorkspace && (await workspaceMembers?.isMember(target.id, callerUserId))) {
         return { workspaceUserId: target.id, strippedPathname };
     }
 

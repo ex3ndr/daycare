@@ -390,6 +390,24 @@ export type ChannelMessageDbRecord = {
     createdAt: number;
 };
 
+export type DatabaseWorkspaceMemberRow = {
+    id: number;
+    workspace_id: string;
+    user_id: string;
+    joined_at: number;
+    left_at: number | null;
+    kick_reason: string | null;
+};
+
+export type WorkspaceMemberDbRecord = {
+    id: number;
+    workspaceId: string;
+    userId: string;
+    joinedAt: number;
+    leftAt: number | null;
+    kickReason: string | null;
+};
+
 export type DatabaseProcessRow = {
     id: string;
     version: number;

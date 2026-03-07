@@ -27,6 +27,7 @@ const segmentGroups: Segment[][] = [
         { mode: "files", icon: "file-directory", label: "Files" },
         { mode: "skills", icon: "zap", label: "Skills" },
         { mode: "tools", icon: "tools", label: "Tools" },
+        { mode: "members", icon: "people", label: "Members" },
         { mode: "costs", icon: "credit-card", label: "Costs" }
     ]
 ];
@@ -49,6 +50,7 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     files: [],
     skills: [],
     tools: [],
+    members: [],
     dev: [],
     settings: []
 };
@@ -322,6 +324,13 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         const activeId = useWorkspacesStore((s) => s.activeId);
         const workspaces = useWorkspacesStore((s) => s.workspaces);
         const activeWorkspace = workspaces.find((ws) => ws.userId === activeId);
+        const visibleSegmentGroups = React.useMemo(
+            () =>
+                segmentGroups.map((group) =>
+                    group.filter((segment) => !(segment.mode === "members" && activeWorkspace?.isSelf === true))
+                ),
+            [activeWorkspace?.isSelf]
+        );
 
         const wsPrefix = workspace ? `/${workspace}` : "";
 
@@ -373,7 +382,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(
 
                 {/* Tree navigation */}
                 <ScrollView style={styles.treeContainer} showsVerticalScrollIndicator={false}>
-                    {segmentGroups.map((group, groupIndex) => (
+                    {visibleSegmentGroups.map((group, groupIndex) => (
                         <View
                             key={group.map((s) => s.mode).join("-")}
                             style={groupIndex > 0 ? styles.groupSpacer : undefined}
