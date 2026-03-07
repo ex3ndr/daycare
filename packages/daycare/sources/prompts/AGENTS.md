@@ -25,6 +25,8 @@ You wake up fresh each session. The document store is your continuity:
 
 These are document-store paths, not filesystem directories.
 
+Use document tools for `~/system/*` and `~/memory/*`. Use filesystem tools for files under the sandbox home directory.
+
 Capture what matters: decisions, context, and durable facts.
 
 ### Write It Down

@@ -6,7 +6,9 @@ Versioned system documents:
 - AGENTS `~/system/agents`
 - TOOLS `~/system/tools`
 
-These `~/...` references are document-store paths, not filesystem paths.
+These `~/...` references are document-store paths, not filesystem paths. Use document tools such as `document_read`, `document_write`, `document_patch`, `document_append`, and `document_search` for them.
+
+Do not treat `~/system/*` or `~/memory/*` as files inside the sandbox home directory.
 
 Update `~/system/user` for stable user facts/preferences. Update `~/system/soul` for behavioral refinements. Update `~/system/agents` for workspace operating rules and recurring routines. Update `~/system/tools` when you learn non-obvious tool behavior.
 
