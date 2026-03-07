@@ -425,20 +425,15 @@ export function topologyTool(
 
             const subusers: TopologySubuser[] = isSubuser
                 ? []
-                : ownerSubusers.map((subuser) => {
-                      const gateway = allAgentRecords.find(
-                          (agent) => topologyAgentKindResolve(agent) === "workspace" && agent.userId === subuser.id
-                      );
-                      return {
-                          id: subuser.id,
-                          name: userDisplayName(subuser),
-                          nametag: subuser.nametag ?? null,
-                          gatewayAgentId: gateway?.id ?? null,
-                          gatewayLifecycle: gateway?.lifecycle ?? null
-                      };
-                  });
+                : ownerSubusers.map((subuser) => ({
+                      id: subuser.id,
+                      name: userDisplayName(subuser),
+                      nametag: subuser.nametag ?? null,
+                      gatewayAgentId: null,
+                      gatewayLifecycle: null
+                  }));
 
-            const friends = isSubuser ? [] : await friendsListBuild(callerUserId, storage, allAgentRecords);
+            const friends = isSubuser ? [] : await friendsListBuild(callerUserId, storage);
 
             const typedResult: TopologyResult = {
                 agents,
@@ -516,8 +511,7 @@ async function friendsListBuild(
                 lastName: string | null;
             } | null>;
         };
-    },
-    agents: Array<{ id: string; kind?: string | null; userId: string; path: string }>
+    }
 ): Promise<TopologyFriend[]> {
     const friendConnections = await storage.connections.findFriends(callerUserId);
     const userCache = new Map<
@@ -573,10 +567,7 @@ async function friendsListBuild(
             return leftTag.localeCompare(rightTag);
         });
 
-    const gatewayEntries: Array<[string, string]> = agents
-        .filter((agent) => topologyAgentKindResolve(agent) === "workspace")
-        .map((agent) => [agent.userId, agent.id] as [string, string]);
-    const gatewayBySubuserId = new Map<string, string>(gatewayEntries);
+    const gatewayBySubuserId = new Map<string, string>();
 
     const friends: TopologyFriend[] = [];
     for (const friend of friendUsers) {

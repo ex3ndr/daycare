@@ -209,159 +209,6 @@ describe("buildSendAgentMessageTool", () => {
         expect(payload.origin).toBe("child-agent");
         expect(payload.text).toMatch(/~\/outputs\/\d{14}-agent-message-/);
     });
-
-    it("defaults workspace replies to the latest known contact and uses target user context", async () => {
-        const post = vi.fn(async () => {});
-        const listContacts = vi.fn(async () => [
-            {
-                workspaceUserId: "workspace-user-1",
-                contactAgentId: "contact-agent-2",
-                workspaceAgentId: "workspace-agent-1",
-                messagesSent: 0,
-                messagesReceived: 1,
-                firstContactAt: 1,
-                lastContactAt: 2
-            }
-        ]);
-        const isKnownContact = vi.fn(async () => true);
-        const recordSent = vi.fn(async () => {});
-        const context = contextBuild(
-            {
-                post,
-                contextForAgentId: vi.fn(async () =>
-                    contextForAgent({ userId: "contact-user-2", agentId: "contact-agent-2" })
-                ),
-                storage: {
-                    workspaceContacts: { listContacts, isKnownContact, recordSent }
-                }
-            },
-            {
-                userId: "workspace-user-1",
-                agentId: "workspace-agent-1",
-                descriptor: { type: "workspace", id: "workspace-user-1" }
-            }
-        );
-        const tool = buildSendAgentMessageTool();
-
-        await tool.execute({ text: "reply" }, context, sendToolCall);
-
-        expect(listContacts).toHaveBeenCalledWith("workspace-user-1");
-        expect(post).toHaveBeenCalledWith(
-            expect.objectContaining({ userId: "contact-user-2", hasAgentId: true }),
-            { agentId: "contact-agent-2" },
-            { type: "system_message", text: "reply", origin: "workspace-agent-1" }
-        );
-        expect(recordSent).toHaveBeenCalledWith("workspace-user-1", "contact-agent-2");
-    });
-
-    it("fails for workspace replies when no known contacts exist", async () => {
-        const context = contextBuild(
-            {
-                agentFor: vi.fn(() => undefined),
-                storage: {
-                    workspaceContacts: {
-                        listContacts: vi.fn(async () => []),
-                        isKnownContact: vi.fn(async () => false),
-                        recordSent: vi.fn(async () => {})
-                    }
-                }
-            },
-            {
-                userId: "workspace-user-1",
-                agentId: "workspace-agent-1",
-                descriptor: { type: "workspace", id: "workspace-user-1" }
-            }
-        );
-        const tool = buildSendAgentMessageTool();
-
-        await expect(tool.execute({ text: "reply" }, context, sendToolCall)).rejects.toThrow(
-            "No known workspace contacts found."
-        );
-    });
-
-    it("allows workspace messages to same-user agents without contact checks", async () => {
-        const post = vi.fn(async () => {});
-        const isKnownContact = vi.fn(async () => false);
-        const context = contextBuild(
-            {
-                post,
-                contextForAgentId: vi.fn(async () =>
-                    contextForAgent({ userId: "workspace-user-1", agentId: "workspace-subagent-1" })
-                ),
-                storage: {
-                    workspaceContacts: {
-                        listContacts: vi.fn(async () => []),
-                        isKnownContact,
-                        recordSent: vi.fn(async () => {})
-                    }
-                }
-            },
-            {
-                userId: "workspace-user-1",
-                agentId: "workspace-agent-1",
-                descriptor: { type: "workspace", id: "workspace-user-1" }
-            }
-        );
-        const tool = buildSendAgentMessageTool();
-
-        await tool.execute({ text: "ping child", agentId: "workspace-subagent-1" }, context, sendToolCall);
-
-        expect(post).toHaveBeenCalledWith(
-            expect.objectContaining({ userId: "workspace-user-1", hasAgentId: true }),
-            { agentId: "workspace-subagent-1" },
-            { type: "system_message", text: "ping child", origin: "workspace-agent-1" }
-        );
-        expect(isKnownContact).not.toHaveBeenCalled();
-    });
-
-    it("allows workspaces to message same-user agents started in background", async () => {
-        const post = vi.fn(async () => {});
-        const isKnownContact = vi.fn(async () => false);
-        const context = contextBuild(
-            {
-                post,
-                agentIdForTarget: vi.fn(async () => "workspace-subagent-2"),
-                contextForAgentId: vi.fn(async (agentId: string) =>
-                    contextForAgent({ userId: "workspace-user-1", agentId })
-                ),
-                storage: {
-                    workspaceContacts: {
-                        listContacts: vi.fn(async () => []),
-                        isKnownContact,
-                        recordSent: vi.fn(async () => {})
-                    }
-                }
-            },
-            {
-                userId: "workspace-user-1",
-                agentId: "workspace-agent-1",
-                descriptor: { type: "workspace", id: "workspace-user-1" }
-            }
-        );
-        const startTool = buildStartBackgroundAgentTool();
-        const sendTool = buildSendAgentMessageTool();
-
-        const startResult = await startTool.execute({ prompt: "Do work" }, context, startToolCall);
-        await sendTool.execute(
-            { text: "follow up", agentId: startResult.typedResult.targetAgentId },
-            context,
-            sendToolCall
-        );
-
-        expect(post).toHaveBeenNthCalledWith(
-            1,
-            context.ctx,
-            { agentId: "workspace-subagent-2" },
-            { type: "message", message: { text: "Do work" }, context: {} }
-        );
-        expect(post).toHaveBeenNthCalledWith(
-            2,
-            expect.objectContaining({ userId: "workspace-user-1", hasAgentId: true }),
-            { agentId: "workspace-subagent-2" },
-            { type: "system_message", text: "follow up", origin: "workspace-agent-1" }
-        );
-        expect(isKnownContact).not.toHaveBeenCalled();
-    });
 });
 
 type AgentSystemStub = Partial<{
@@ -374,11 +221,6 @@ type AgentSystemStub = Partial<{
     storage: {
         agents?: {
             findByPath: (path: string) => Promise<{ id: string } | null>;
-        };
-        workspaceContacts: {
-            listContacts: (workspaceUserId: string) => Promise<Array<{ contactAgentId: string }>>;
-            isKnownContact: (workspaceUserId: string, contactAgentId: string) => Promise<boolean>;
-            recordSent: (workspaceUserId: string, contactAgentId: string) => Promise<void>;
         };
     };
 }>;
@@ -455,11 +297,6 @@ function contextBuild(agentSystem: AgentSystemStub, options: ContextBuildOptions
                             const id = parts.at(-1) ?? null;
                             return id ? { id } : null;
                         })
-                    },
-                    workspaceContacts: {
-                        listContacts: vi.fn(async () => []),
-                        isKnownContact: vi.fn(async () => false),
-                        recordSent: vi.fn(async () => {})
                     }
                 } as AgentSystemStub["storage"])
         } as unknown as ToolExecutionContext["agentSystem"]
@@ -475,9 +312,6 @@ function agentPathFromDescriptorFixture(descriptor: unknown, userId: string, age
     if (type === "user") {
         const connector = typeof value.connector === "string" ? value.connector : "telegram";
         return `/${userId}/${connector}`;
-    }
-    if (type === "workspace") {
-        return `/${userId}/agent/workspace`;
     }
     if (type === "permanent") {
         const name = typeof value.name === "string" ? value.name : agentId;
@@ -520,15 +354,14 @@ function agentConfigFromDescriptorFixture(descriptor: unknown): {
     const connector = typeof value.connector === "string" ? value.connector : null;
     const parentAgentId = typeof value.parentAgentId === "string" ? value.parentAgentId : null;
     const name = typeof value.name === "string" ? value.name : null;
-    const kind =
-        type === "subagent" ? "sub" : type === "workspace" ? "workspace" : type === "user" ? "connector" : "agent";
+    const kind = type === "subagent" ? "sub" : type === "user" ? "connector" : "agent";
     const modelRole = kind === "sub" ? "subagent" : "user";
     return {
         kind,
         modelRole,
         connectorName: kind === "connector" ? connector : null,
         parentAgentId,
-        foreground: type === "user" || type === "workspace",
+        foreground: type === "user",
         name,
         description: null,
         systemPrompt: null,

@@ -21,13 +21,3 @@ export type WorkspaceRecord = {
     createdAt: number;
     updatedAt: number;
 };
-
-export type WorkspaceContact = {
-    workspaceUserId: string;
-    contactAgentId: string;
-    workspaceAgentId: string;
-    messagesSent: number;
-    messagesReceived: number;
-    firstContactAt: number;
-    lastContactAt: number;
-};

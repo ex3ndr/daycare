@@ -138,7 +138,7 @@ export class MemoryWorker {
                     continue;
                 }
 
-                const isForeground = agent.foreground || agent.kind === "workspace" || agentUser?.isWorkspace === true;
+                const isForeground = agent.foreground || agentUser?.isWorkspace === true;
                 const transcript = formatHistoryMessages(records, isForeground);
                 if (transcript.trim().length === 0) {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);

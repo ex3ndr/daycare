@@ -488,24 +488,6 @@ export const systemPromptsTable = pgTable(
     ]
 );
 
-export const workspaceContactsTable = pgTable(
-    "workspace_contacts",
-    {
-        workspaceUserId: text("workspace_user_id").notNull(),
-        contactAgentId: text("contact_agent_id").notNull(),
-        workspaceAgentId: text("workspace_agent_id").notNull(),
-        messagesSent: integer("messages_sent").notNull().default(0),
-        messagesReceived: integer("messages_received").notNull().default(0),
-        firstContactAt: bigint("first_contact_at", { mode: "number" }).notNull(),
-        lastContactAt: bigint("last_contact_at", { mode: "number" }).notNull()
-    },
-    (table) => [
-        primaryKey({ columns: [table.workspaceUserId, table.contactAgentId] }),
-        index("idx_workspace_contacts_workspace_user_id").on(table.workspaceUserId),
-        index("idx_workspace_contacts_workspace_agent_id").on(table.workspaceAgentId)
-    ]
-);
-
 export const tokenStatsHourlyTable = pgTable(
     "token_stats_hourly",
     {
@@ -709,7 +691,6 @@ export const schema = {
     processesTable,
     connectionsTable,
     systemPromptsTable,
-    workspaceContactsTable,
     tokenStatsHourlyTable,
     keyValuesTable,
     observationLogTable,

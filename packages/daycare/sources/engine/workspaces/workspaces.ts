@@ -5,7 +5,7 @@ import { workspaceDiscover } from "./workspaceDiscover.js";
 import type { WorkspaceConfig, WorkspaceRecord } from "./workspaceTypes.js";
 
 type WorkspacesOptions = {
-    storage: Pick<Storage, "users" | "workspaceContacts">;
+    storage: Pick<Storage, "users">;
     userHomeForUserId: (userId: string) => UserHome;
 };
 
@@ -14,7 +14,7 @@ type WorkspacesOptions = {
  * Expects: owner discovery runs before registerTools.
  */
 export class Workspaces {
-    private readonly storage: Pick<Storage, "users" | "workspaceContacts">;
+    private readonly storage: Pick<Storage, "users">;
     private readonly userHomeForUserId: (userId: string) => UserHome;
     private ownerUserId: string | null = null;
     private records: WorkspaceRecord[] = [];

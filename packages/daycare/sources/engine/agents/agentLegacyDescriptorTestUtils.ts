@@ -35,10 +35,6 @@ export type AgentLegacyDescriptor =
           id: string;
           parentAgentId: string;
           name: string;
-      }
-    | {
-          type: "workspace";
-          id: string;
       };
 
 export type AgentPathFromLegacyDescriptorOptions = {
@@ -95,10 +91,6 @@ export function agentPathFromLegacyDescriptor(
         }
         return agentPath(`/${userId}/agent/${descriptor.parentAgentId}/search/${descriptor.id}`);
     }
-    if (descriptor.type === "workspace") {
-        return agentPathAgent(userId, "workspace");
-    }
-
     return descriptorTypeUnreachable(descriptor);
 }
 
@@ -112,13 +104,6 @@ export function agentCreationConfigFromLegacyDescriptor(descriptor: AgentLegacyD
             kind: "connector",
             foreground: true,
             connectorName: descriptor.connector
-        };
-    }
-    if (descriptor.type === "workspace") {
-        return {
-            kind: "workspace",
-            foreground: true,
-            name: "workspace"
         };
     }
     if (descriptor.type === "cron") {

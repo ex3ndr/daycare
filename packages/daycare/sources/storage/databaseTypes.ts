@@ -457,26 +457,6 @@ export type ProcessDbRecord = {
     lastExitedAt: number | null;
 };
 
-export type DatabaseWorkspaceContactRow = {
-    workspace_user_id: string;
-    contact_agent_id: string;
-    workspace_agent_id: string;
-    messages_sent: number;
-    messages_received: number;
-    first_contact_at: number;
-    last_contact_at: number;
-};
-
-export type WorkspaceContactDbRecord = {
-    workspaceUserId: string;
-    contactAgentId: string;
-    workspaceAgentId: string;
-    messagesSent: number;
-    messagesReceived: number;
-    firstContactAt: number;
-    lastContactAt: number;
-};
-
 export type DatabaseUserRow = {
     id: string;
     version: number;

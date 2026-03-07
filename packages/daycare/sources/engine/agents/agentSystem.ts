@@ -574,22 +574,8 @@ export class AgentSystem {
         candidates.sort((a, b) => {
             const aConnector = a.config.connectorName;
             const bConnector = b.config.connectorName;
-            const aKind = a.config.kind ?? "agent";
-            const bKind = b.config.kind ?? "agent";
-            const aPrefix = aConnector
-                ? aConnector === "telegram"
-                    ? "aa-telegram"
-                    : "bb-user"
-                : aKind === "workspace"
-                  ? "cc-workspace"
-                  : "zz-other";
-            const bPrefix = bConnector
-                ? bConnector === "telegram"
-                    ? "aa-telegram"
-                    : "bb-user"
-                : bKind === "workspace"
-                  ? "cc-workspace"
-                  : "zz-other";
+            const aPrefix = aConnector ? (aConnector === "telegram" ? "aa-telegram" : "bb-user") : "zz-other";
+            const bPrefix = bConnector ? (bConnector === "telegram" ? "aa-telegram" : "bb-user") : "zz-other";
             if (aPrefix !== bPrefix) {
                 return aPrefix.localeCompare(bPrefix);
             }
@@ -1302,7 +1288,7 @@ function configForCreation(
         modelRole: creationConfig.modelRole === undefined ? modelRoleForKind(kind) : creationConfig.modelRole,
         connectorName: creationConfig.connectorName === undefined ? null : creationConfig.connectorName,
         parentAgentId: creationConfig.parentAgentId === undefined ? null : creationConfig.parentAgentId,
-        foreground: creationConfig.foreground ?? (kind === "connector" || kind === "workspace"),
+        foreground: creationConfig.foreground ?? kind === "connector",
         name: creationConfig.name ?? null,
         description: creationConfig.description ?? null,
         systemPrompt: creationConfig.systemPrompt ?? null,
@@ -1311,7 +1297,7 @@ function configForCreation(
 }
 
 function modelRoleForKind(kind: NonNullable<AgentConfig["kind"]>): AgentConfig["modelRole"] {
-    if (kind === "connector" || kind === "agent" || kind === "app" || kind === "subuser" || kind === "workspace") {
+    if (kind === "connector" || kind === "agent" || kind === "app" || kind === "subuser") {
         return "user";
     }
     if (kind === "sub") {
@@ -1333,7 +1319,7 @@ function agentMatchesStrategy(config: AgentConfig, strategy: AgentFetchStrategy)
     if (strategy !== "most-recent-foreground") {
         return false;
     }
-    return config.foreground || config.kind === "workspace";
+    return config.foreground;
 }
 
 function poisonPillKindIs(kind: AgentConfig["kind"] | null | undefined): boolean {

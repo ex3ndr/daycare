@@ -112,8 +112,7 @@ describe("sendUserMessageToolBuild", () => {
             agentsFindById: vi.fn(async () => ({
                 id: "bg-4"
             })),
-            agentIdForTarget: vi.fn(async () => "workspace-agent-1"),
-            recordReceived: vi.fn(async () => undefined)
+            agentIdForTarget: vi.fn(async () => "workspace-agent-1")
         });
 
         await tool.execute({ text: "hello workspace", nametag: "todo" }, ctx, toolCall);
@@ -153,7 +152,6 @@ function contextBuild(opts: {
     usersFindById?: (id: string) => Promise<unknown>;
     agentsFindById?: (id: string) => Promise<unknown>;
     agentIdForTarget?: (ctx: unknown, target: unknown) => Promise<string>;
-    recordReceived?: (workspaceUserId: string, contactAgentId: string) => Promise<void>;
     postAndAwait?: (ctx: unknown, target: unknown, item: unknown) => Promise<unknown>;
 }): ToolExecutionContext {
     return {
@@ -189,10 +187,6 @@ function contextBuild(opts: {
                         return id ? { id } : null;
                     }),
                     findById: opts.agentsFindById ?? (vi.fn(async () => null) as never)
-                },
-                workspaceContacts: {
-                    findOrCreate: vi.fn(async () => undefined),
-                    recordReceived: opts.recordReceived ?? (vi.fn(async () => undefined) as never)
                 }
             }
         } as unknown as ToolExecutionContext["agentSystem"]
@@ -231,14 +225,13 @@ function configFromDescriptorFixture(descriptor: Record<string, unknown>): {
     const type = typeof descriptor.type === "string" ? descriptor.type : "";
     const parentAgentId = typeof descriptor.parentAgentId === "string" ? descriptor.parentAgentId : null;
     const connectorName = typeof descriptor.connector === "string" ? descriptor.connector : null;
-    const kind =
-        type === "subagent" ? "sub" : type === "user" ? "connector" : type === "workspace" ? "workspace" : "agent";
+    const kind = type === "subagent" ? "sub" : type === "user" ? "connector" : "agent";
     return {
         kind,
         modelRole: kind === "sub" ? "subagent" : "user",
         connectorName: kind === "connector" ? connectorName : null,
         parentAgentId,
-        foreground: type === "user" || type === "workspace",
+        foreground: type === "user",
         name: typeof descriptor.name === "string" ? descriptor.name : null,
         description: null,
         systemPrompt: null,

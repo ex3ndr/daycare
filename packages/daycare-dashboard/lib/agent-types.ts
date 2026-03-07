@@ -47,9 +47,6 @@ export function buildAgentType(agent: AgentSummary): AgentType {
     return { type: "task", id: segments[2] ?? "", path };
   }
   if (userScopeSegment === "agent") {
-    if ((segments[2] ?? "") === "workspace") {
-      return { type: "subuser", id: segments[0] ?? "", path };
-    }
     return { type: "permanent", name: segments[2] ?? "", path };
   }
   if (userScopeSegment === "app") {

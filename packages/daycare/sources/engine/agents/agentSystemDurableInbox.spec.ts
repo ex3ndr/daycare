@@ -507,9 +507,6 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentTargetInp
         );
         return contextForUser({ userId: user.id });
     }
-    if (target.descriptor.type === "workspace") {
-        return contextForUser({ userId: target.descriptor.id });
-    }
     return agentSystem.ownerCtxEnsure();
 }
 
@@ -549,9 +546,6 @@ function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
     const segments = String(path)
         .split("/")
         .filter((segment) => segment.length > 0);
-    if (segments[1] === "agent" && segments[2] === "workspace") {
-        return { kind: "workspace", foreground: true, name: "workspace" };
-    }
     if (segments[1] === "agent") {
         if (segments.at(-2) === "sub") {
             return { kind: "sub", name: "subagent" };

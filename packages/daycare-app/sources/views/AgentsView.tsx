@@ -57,7 +57,6 @@ function agentDisplayName(agent: AgentListItem): string {
             return `Subagent #${segments[segments.length - 1]}`;
         }
         if (agent.kind === "subuser") return "Subuser";
-        if (agent.kind === "workspace") return "Workspace";
     }
 
     if (agent.kind === "connector") return "Connection";

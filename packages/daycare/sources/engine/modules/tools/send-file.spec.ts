@@ -199,7 +199,7 @@ function contextBuild(options: {
     agent?: {
         path: string;
         config: {
-            kind: "connector" | "agent" | "cron" | "task" | "memory" | "sub" | "search" | "workspace";
+            kind: "connector" | "agent" | "cron" | "task" | "memory" | "sub" | "search";
             modelRole: "user" | "assistant" | "system";
             connectorName: string | null;
             parentAgentId: string | null;

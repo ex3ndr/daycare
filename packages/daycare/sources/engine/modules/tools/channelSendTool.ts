@@ -91,9 +91,6 @@ function senderUsernameResolve(context: ToolExecutionContext): string {
     if (kind === "agent") {
         return usernameNormalize(config.name ?? "agent");
     }
-    if (kind === "workspace") {
-        return usernameNormalize(`workspace-${context.ctx.userId}`);
-    }
     if (kind === "sub") {
         return usernameNormalize(config.name ?? "subagent");
     }

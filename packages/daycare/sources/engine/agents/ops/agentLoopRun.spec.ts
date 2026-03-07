@@ -538,19 +538,6 @@ function configFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): {
             workspaceDir: null
         };
     }
-    if (descriptor.type === "workspace") {
-        return {
-            kind: "workspace",
-            modelRole: "user",
-            connectorName: null,
-            parentAgentId: null,
-            foreground: true,
-            name: null,
-            description: null,
-            systemPrompt: null,
-            workspaceDir: null
-        };
-    }
     if (descriptor.type === "permanent") {
         return {
             kind: "agent",

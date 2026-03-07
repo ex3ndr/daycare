@@ -3,8 +3,8 @@ import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
 import { contextForUser } from "../../agents/context.js";
+import { agentPathAgent } from "../../agents/ops/agentPathBuild.js";
 import { messageBuildUserFacing } from "../../messages/messageBuildUserFacing.js";
-import { workspaceAgentResolve } from "../../workspaces/workspaceAgentResolve.js";
 
 const schema = Type.Object(
     {
@@ -18,22 +18,13 @@ const schema = Type.Object(
 
 type SendUserMessageArgs = Static<typeof schema>;
 
-type SendUserMessageDeferredPayload =
-    | {
-          kind: "foreground";
-          ctxUserId: string;
-          resolvedTarget: string;
-          wrappedText: string;
-          origin: string;
-      }
-    | {
-          kind: "workspace";
-          workspaceUserId: string;
-          workspaceAgentId: string;
-          contactAgentId: string;
-          text: string;
-          origin: string;
-      };
+type SendUserMessageDeferredPayload = {
+    kind: "foreground" | "workspace";
+    ctxUserId: string;
+    resolvedTarget: string;
+    wrappedText: string;
+    origin: string;
+};
 
 const sendUserMessageResultSchema = Type.Object(
     {
@@ -160,29 +151,15 @@ export function sendUserMessageToolBuild(): ToolDefinition {
         },
         executeDeferred: async (payload: unknown, context: ToolExecutionContext) => {
             const p = payload as SendUserMessageDeferredPayload;
-            if (p.kind === "foreground") {
-                await context.agentSystem.post(
-                    { userId: p.ctxUserId, agentId: context.agent.ctx.agentId },
-                    { agentId: p.resolvedTarget },
-                    {
-                        type: "system_message",
-                        text: p.wrappedText,
-                        origin: p.origin
-                    }
-                );
-            } else {
-                const workspaceCtx = contextForUser({ userId: p.workspaceUserId });
-                await context.agentSystem.storage.workspaceContacts.recordReceived(p.workspaceUserId, p.contactAgentId);
-                await context.agentSystem.post(
-                    workspaceCtx,
-                    { agentId: p.workspaceAgentId },
-                    {
-                        type: "system_message",
-                        text: p.text,
-                        origin: p.origin
-                    }
-                );
-            }
+            await context.agentSystem.post(
+                { userId: p.ctxUserId, agentId: context.agent.ctx.agentId },
+                { agentId: p.resolvedTarget },
+                {
+                    type: "system_message",
+                    text: p.wrappedText,
+                    origin: p.origin
+                }
+            );
         }
     };
 }
@@ -219,17 +196,20 @@ async function sendWorkspaceMessage(
         throw new Error(`Target is not a workspace: ${input.nametag}`);
     }
 
-    const resolved = await workspaceAgentResolve({
-        workspaceUserId: targetUser.id,
-        contactAgentId: toolContext.agent.id,
-        agentSystem: toolContext.agentSystem
-    });
-
     const messageText = input.text.trim();
     if (!messageText) {
         throw new Error("text is required.");
     }
+
+    // Resolve workspace's default agent
+    const path = agentPathAgent(targetUser.id, "default");
     const workspaceCtx = contextForUser({ userId: targetUser.id });
+    const workspaceAgentId = await toolContext.agentSystem.agentIdForTarget(
+        workspaceCtx,
+        { path },
+        { kind: "agent", foreground: true, name: "workspace" }
+    );
+
     const item = {
         type: "system_message" as const,
         text: messageText,
@@ -249,40 +229,33 @@ async function sendWorkspaceMessage(
         };
         const deferredPayload: SendUserMessageDeferredPayload = {
             kind: "workspace",
-            workspaceUserId: targetUser.id,
-            workspaceAgentId: resolved.workspaceAgentId,
-            contactAgentId: toolContext.agent.id,
-            text: messageText,
+            ctxUserId: targetUser.id,
+            resolvedTarget: workspaceAgentId,
+            wrappedText: messageText,
             origin: input.origin
         };
         return {
             toolMessage,
             typedResult: {
                 summary,
-                targetAgentId: resolved.workspaceAgentId,
+                targetAgentId: workspaceAgentId,
                 originAgentId: input.origin
             },
             deferredPayload
         };
     }
 
-    await toolContext.agentSystem.storage.workspaceContacts.recordReceived(targetUser.id, toolContext.agent.id);
-
     let summary = `Message sent to workspace @${input.nametag}.`;
     if (input.wait) {
-        const result = await toolContext.agentSystem.postAndAwait(
-            workspaceCtx,
-            { agentId: resolved.workspaceAgentId },
-            item
-        );
+        const result = await toolContext.agentSystem.postAndAwait(workspaceCtx, { agentId: workspaceAgentId }, item);
         if (result.type === "message" || result.type === "system_message") {
             summary =
                 result.responseText && result.responseText.trim().length > 0
-                    ? `${result.responseText}\n\nWorkspace agent id: ${resolved.workspaceAgentId}`
-                    : `Workspace @${input.nametag} completed without a text response. Workspace agent id: ${resolved.workspaceAgentId}`;
+                    ? `${result.responseText}\n\nWorkspace agent id: ${workspaceAgentId}`
+                    : `Workspace @${input.nametag} completed without a text response. Workspace agent id: ${workspaceAgentId}`;
         }
     } else {
-        await toolContext.agentSystem.post(workspaceCtx, { agentId: resolved.workspaceAgentId }, item);
+        await toolContext.agentSystem.post(workspaceCtx, { agentId: workspaceAgentId }, item);
     }
 
     const toolMessage: ToolResultMessage = {
@@ -298,7 +271,7 @@ async function sendWorkspaceMessage(
         toolMessage,
         typedResult: {
             summary,
-            targetAgentId: resolved.workspaceAgentId,
+            targetAgentId: workspaceAgentId,
             originAgentId: input.origin
         }
     };

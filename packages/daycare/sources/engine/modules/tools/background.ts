@@ -32,8 +32,6 @@ type SendAgentMessageDeferredPayload = {
     resolvedTarget: string;
     text: string;
     origin: string;
-    workspaceContactTarget: string | null;
-    senderUserId: string;
 };
 
 type StartBackgroundArgs = Static<typeof startSchema>;
@@ -125,7 +123,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
         tool: {
             name: "send_agent_message",
             description:
-                "Send a system message to another agent (defaults to parent for child agents, latest workspace contact for workspaces, otherwise most recent foreground agent). Set steering=true to interrupt the agent's current work.",
+                "Send a system message to another agent (defaults to parent for child agents, otherwise most recent foreground agent). Set steering=true to interrupt the agent's current work.",
             parameters: sendSchema
         },
         returns: backgroundReturns,
@@ -133,31 +131,15 @@ export function buildSendAgentMessageTool(): ToolDefinition {
             const payload = args as SendAgentMessageArgs;
             const outbound = await agentMessageOverflowHandle(payload.text, toolContext);
             const origin = toolContext.agent.id;
-            const kind = agentKindResolve(toolContext);
-            const parentAgentId = await parentAgentIdResolve(toolContext);
-            const defaultWorkspaceContactTarget = await workspaceContactDefaultTargetResolve(kind, toolContext);
+            const kind = toolContext.agent.config.kind ?? "agent";
+            const parentAgentId = toolContext.agent.config.parentAgentId ?? null;
             const targetAgentId =
-                payload.agentId ??
-                (kind === "sub" || kind === "search"
-                    ? (parentAgentId ?? undefined)
-                    : (defaultWorkspaceContactTarget ?? undefined));
+                payload.agentId ?? (kind === "sub" || kind === "search" ? (parentAgentId ?? undefined) : undefined);
             const resolvedTarget =
                 targetAgentId ?? toolContext.agentSystem.agentFor(toolContext.ctx, "most-recent-foreground");
             if (!resolvedTarget) {
-                if (workspaceAgentIs(toolContext)) {
-                    throw new Error(
-                        "No known workspace contacts found. Provide agentId or wait for an inbound message."
-                    );
-                }
                 throw new Error("No recent foreground agent found.");
             }
-            const deliveryContext = await agentMessageDeliveryContextResolve(kind, toolContext, resolvedTarget);
-            const workspaceContactTarget = await workspaceContactTargetResolve(
-                kind,
-                toolContext,
-                resolvedTarget,
-                deliveryContext
-            );
 
             // If steering flag is set, use steering delivery
             if (payload.steering) {
@@ -166,7 +148,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                     throw new Error(`Agent not found: ${resolvedTarget}`);
                 }
 
-                await toolContext.agentSystem.steer(deliveryContext, resolvedTarget, {
+                await toolContext.agentSystem.steer(toolContext.ctx, resolvedTarget, {
                     type: "steering",
                     text: outbound.text,
                     origin,
@@ -189,12 +171,6 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                     isError: false,
                     timestamp: Date.now()
                 };
-                if (workspaceContactTarget) {
-                    await toolContext.agentSystem.storage.workspaceContacts.recordSent(
-                        toolContext.agent.userId,
-                        workspaceContactTarget
-                    );
-                }
 
                 return {
                     toolMessage,
@@ -219,12 +195,10 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                     timestamp: Date.now()
                 };
                 const deferredPayload: SendAgentMessageDeferredPayload = {
-                    deliveryContextUserId: deliveryContext.userId,
+                    deliveryContextUserId: toolContext.ctx.userId,
                     resolvedTarget,
                     text: outbound.text,
-                    origin,
-                    workspaceContactTarget,
-                    senderUserId: toolContext.agent.userId
+                    origin
                 };
                 return {
                     toolMessage,
@@ -239,16 +213,10 @@ export function buildSendAgentMessageTool(): ToolDefinition {
 
             // Normal system message delivery
             await toolContext.agentSystem.post(
-                deliveryContext,
+                toolContext.ctx,
                 { agentId: resolvedTarget },
                 { type: "system_message", text: outbound.text, origin }
             );
-            if (workspaceContactTarget) {
-                await toolContext.agentSystem.storage.workspaceContacts.recordSent(
-                    toolContext.agent.userId,
-                    workspaceContactTarget
-                );
-            }
 
             const summary = outbound.outputPath
                 ? `System message sent. Full content saved to ${outbound.outputPath}.`
@@ -284,12 +252,6 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                 { agentId: p.resolvedTarget },
                 { type: "system_message", text: p.text, origin: p.origin }
             );
-            if (p.workspaceContactTarget) {
-                await context.agentSystem.storage.workspaceContacts.recordSent(
-                    p.senderUserId,
-                    p.workspaceContactTarget
-                );
-            }
         }
     };
 }
@@ -339,66 +301,4 @@ function writeOutputPathResolve(value: unknown): string {
         throw new Error("write_output result path is missing.");
     }
     return path;
-}
-
-async function agentMessageDeliveryContextResolve(
-    sourceKind: NonNullable<ToolExecutionContext["agent"]["config"]["kind"]> | "agent",
-    toolContext: ToolExecutionContext,
-    targetAgentId: string
-): Promise<ToolExecutionContext["ctx"]> {
-    if (sourceKind !== "workspace") {
-        return toolContext.ctx;
-    }
-    const targetContext = await toolContext.agentSystem.contextForAgentId(targetAgentId);
-    if (!targetContext) {
-        throw new Error(`Agent not found: ${targetAgentId}`);
-    }
-    return targetContext;
-}
-
-async function workspaceContactDefaultTargetResolve(
-    sourceKind: NonNullable<ToolExecutionContext["agent"]["config"]["kind"]> | "agent",
-    toolContext: ToolExecutionContext
-): Promise<string | null> {
-    if (sourceKind !== "workspace") {
-        return null;
-    }
-    const contacts = await toolContext.agentSystem.storage.workspaceContacts.listContacts(toolContext.agent.userId);
-    return contacts[0]?.contactAgentId ?? null;
-}
-
-async function workspaceContactTargetResolve(
-    sourceKind: NonNullable<ToolExecutionContext["agent"]["config"]["kind"]> | "agent",
-    toolContext: ToolExecutionContext,
-    targetAgentId: string,
-    deliveryContext: ToolExecutionContext["ctx"]
-): Promise<string | null> {
-    if (sourceKind !== "workspace") {
-        return null;
-    }
-    if (deliveryContext.userId === toolContext.ctx.userId) {
-        return null;
-    }
-    const known = await toolContext.agentSystem.storage.workspaceContacts.isKnownContact(
-        toolContext.agent.userId,
-        targetAgentId
-    );
-    if (!known) {
-        throw new Error("Can only message agents that have contacted this workspace");
-    }
-    return targetAgentId;
-}
-
-async function parentAgentIdResolve(toolContext: ToolExecutionContext): Promise<string | null> {
-    return toolContext.agent.config.parentAgentId ?? null;
-}
-
-function workspaceAgentIs(toolContext: ToolExecutionContext): boolean {
-    return agentKindResolve(toolContext) === "workspace";
-}
-
-function agentKindResolve(
-    toolContext: ToolExecutionContext
-): NonNullable<ToolExecutionContext["agent"]["config"]["kind"]> {
-    return toolContext.agent.config.kind ?? "agent";
 }
