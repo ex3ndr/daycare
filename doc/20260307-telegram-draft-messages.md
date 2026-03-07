@@ -18,7 +18,7 @@ sequenceDiagram
     participant TG as Telegram Bot API
 
     U->>A: message
-    A->>T: createDraft("Steps: Check status")
+    A->>T: createDraft("- Check status")
     T->>TG: sendMessage(...)
     TG-->>T: message_id
     A->>T: update draft with step descriptions

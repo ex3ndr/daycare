@@ -13,7 +13,7 @@ export function agentDraftTextBuild(
     const sections: string[] = [];
     const stepLines = entries.map((entry) => entryRender(entry)).filter((entry): entry is string => entry !== null);
     if (stepLines.length > 0) {
-        sections.push(["Steps:", ...stepLines].join("\n"));
+        sections.push(stepLines.join("\n"));
     }
 
     const trimmedResponseText = responseText?.trim() ?? "";

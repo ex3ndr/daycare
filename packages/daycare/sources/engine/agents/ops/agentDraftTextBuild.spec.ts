@@ -12,7 +12,7 @@ describe("agentDraftTextBuild", () => {
                 { label: "Check status", status: "running" },
                 { label: "Open workspace", status: "done" }
             ])
-        ).toBe("Steps:\n- Check status\n- Open workspace");
+        ).toBe("- Check status\n- Open workspace");
     });
 
     it("renders steps before assistant text", () => {
@@ -21,6 +21,6 @@ describe("agentDraftTextBuild", () => {
                 { label: "Check status", status: "done" },
                 { label: "Read memory", status: "error" }
             ])
-        ).toBe("Steps:\n- Check status\n- Read memory (failed)\n\nResult");
+        ).toBe("- Check status\n- Read memory (failed)\n\nResult");
     });
 });
