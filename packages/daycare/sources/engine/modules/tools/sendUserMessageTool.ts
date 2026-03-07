@@ -4,7 +4,7 @@ import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
 import { contextForUser } from "../../agents/context.js";
 import { messageBuildUserFacing } from "../../messages/messageBuildUserFacing.js";
-import { swarmAgentResolve } from "../../swarms/swarmAgentResolve.js";
+import { workspaceAgentResolve } from "../../workspaces/workspaceAgentResolve.js";
 
 const schema = Type.Object(
     {
@@ -27,9 +27,9 @@ type SendUserMessageDeferredPayload =
           origin: string;
       }
     | {
-          kind: "swarm";
-          swarmUserId: string;
-          swarmAgentId: string;
+          kind: "workspace";
+          workspaceUserId: string;
+          workspaceAgentId: string;
           contactAgentId: string;
           text: string;
           origin: string;
@@ -63,7 +63,7 @@ export function sendUserMessageToolBuild(): ToolDefinition {
             description:
                 "Send a message that must be presented to the user. " +
                 "The foreground agent will rephrase and deliver it. " +
-                "Use nametag to target a swarm directly.",
+                "Use nametag to target a workspace directly.",
             parameters: schema
         },
         returns: sendUserMessageReturns,
@@ -72,9 +72,9 @@ export function sendUserMessageToolBuild(): ToolDefinition {
             const origin = toolContext.agent.id;
             const targetNametag = payload.nametag?.trim().toLowerCase() ?? "";
 
-            // Swarm path: wait=true cannot be deferred (needs synchronous response)
+            // Workspace path: wait=true cannot be deferred (needs synchronous response)
             if (targetNametag) {
-                return sendSwarmMessage(toolContext, toolCall, {
+                return sendWorkspaceMessage(toolContext, toolCall, {
                     text: payload.text,
                     nametag: targetNametag,
                     wait: payload.wait ?? false,
@@ -171,11 +171,11 @@ export function sendUserMessageToolBuild(): ToolDefinition {
                     }
                 );
             } else {
-                const swarmCtx = contextForUser({ userId: p.swarmUserId });
-                await context.agentSystem.storage.swarmContacts.recordReceived(p.swarmUserId, p.contactAgentId);
+                const workspaceCtx = contextForUser({ userId: p.workspaceUserId });
+                await context.agentSystem.storage.workspaceContacts.recordReceived(p.workspaceUserId, p.contactAgentId);
                 await context.agentSystem.post(
-                    swarmCtx,
-                    { agentId: p.swarmAgentId },
+                    workspaceCtx,
+                    { agentId: p.workspaceAgentId },
                     {
                         type: "system_message",
                         text: p.text,
@@ -194,7 +194,7 @@ async function parentAgentIdResolve(
     return kind === "sub" || kind === "search" ? (toolContext.agent.config.parentAgentId ?? null) : null;
 }
 
-type SendSwarmMessageInput = {
+type SendWorkspaceMessageInput = {
     text: string;
     nametag: string;
     wait: boolean;
@@ -202,10 +202,10 @@ type SendSwarmMessageInput = {
     origin: string;
 };
 
-async function sendSwarmMessage(
+async function sendWorkspaceMessage(
     toolContext: Parameters<NonNullable<ToolDefinition["execute"]>>[1],
     toolCall: { id: string; name: string },
-    input: SendSwarmMessageInput
+    input: SendWorkspaceMessageInput
 ): Promise<{
     toolMessage: ToolResultMessage;
     typedResult: SendUserMessageResult;
@@ -215,12 +215,12 @@ async function sendSwarmMessage(
     if (!targetUser) {
         throw new Error(`User not found for nametag: ${input.nametag}`);
     }
-    if (!targetUser.isSwarm) {
-        throw new Error(`Target is not a swarm: ${input.nametag}`);
+    if (!targetUser.isWorkspace) {
+        throw new Error(`Target is not a workspace: ${input.nametag}`);
     }
 
-    const resolved = await swarmAgentResolve({
-        swarmUserId: targetUser.id,
+    const resolved = await workspaceAgentResolve({
+        workspaceUserId: targetUser.id,
         contactAgentId: toolContext.agent.id,
         agentSystem: toolContext.agentSystem
     });
@@ -229,16 +229,16 @@ async function sendSwarmMessage(
     if (!messageText) {
         throw new Error("text is required.");
     }
-    const swarmCtx = contextForUser({ userId: targetUser.id });
+    const workspaceCtx = contextForUser({ userId: targetUser.id });
     const item = {
         type: "system_message" as const,
         text: messageText,
         origin: input.origin
     };
 
-    // Defer swarm sends during Python execution (auto-bypass when wait=true since we need the response)
+    // Defer workspace sends during Python execution (auto-bypass when wait=true since we need the response)
     if (toolContext.pythonExecution && !input.now && !input.wait) {
-        const summary = `Message to swarm @${input.nametag} deferred.`;
+        const summary = `Message to workspace @${input.nametag} deferred.`;
         const toolMessage: ToolResultMessage = {
             role: "toolResult",
             toolCallId: toolCall.id,
@@ -248,9 +248,9 @@ async function sendSwarmMessage(
             timestamp: Date.now()
         };
         const deferredPayload: SendUserMessageDeferredPayload = {
-            kind: "swarm",
-            swarmUserId: targetUser.id,
-            swarmAgentId: resolved.swarmAgentId,
+            kind: "workspace",
+            workspaceUserId: targetUser.id,
+            workspaceAgentId: resolved.workspaceAgentId,
             contactAgentId: toolContext.agent.id,
             text: messageText,
             origin: input.origin
@@ -259,26 +259,30 @@ async function sendSwarmMessage(
             toolMessage,
             typedResult: {
                 summary,
-                targetAgentId: resolved.swarmAgentId,
+                targetAgentId: resolved.workspaceAgentId,
                 originAgentId: input.origin
             },
             deferredPayload
         };
     }
 
-    await toolContext.agentSystem.storage.swarmContacts.recordReceived(targetUser.id, toolContext.agent.id);
+    await toolContext.agentSystem.storage.workspaceContacts.recordReceived(targetUser.id, toolContext.agent.id);
 
-    let summary = `Message sent to swarm @${input.nametag}.`;
+    let summary = `Message sent to workspace @${input.nametag}.`;
     if (input.wait) {
-        const result = await toolContext.agentSystem.postAndAwait(swarmCtx, { agentId: resolved.swarmAgentId }, item);
+        const result = await toolContext.agentSystem.postAndAwait(
+            workspaceCtx,
+            { agentId: resolved.workspaceAgentId },
+            item
+        );
         if (result.type === "message" || result.type === "system_message") {
             summary =
                 result.responseText && result.responseText.trim().length > 0
-                    ? `${result.responseText}\n\nSwarm agent id: ${resolved.swarmAgentId}`
-                    : `Swarm @${input.nametag} completed without a text response. Swarm agent id: ${resolved.swarmAgentId}`;
+                    ? `${result.responseText}\n\nWorkspace agent id: ${resolved.workspaceAgentId}`
+                    : `Workspace @${input.nametag} completed without a text response. Workspace agent id: ${resolved.workspaceAgentId}`;
         }
     } else {
-        await toolContext.agentSystem.post(swarmCtx, { agentId: resolved.swarmAgentId }, item);
+        await toolContext.agentSystem.post(workspaceCtx, { agentId: resolved.workspaceAgentId }, item);
     }
 
     const toolMessage: ToolResultMessage = {
@@ -294,7 +298,7 @@ async function sendSwarmMessage(
         toolMessage,
         typedResult: {
             summary,
-            targetAgentId: resolved.swarmAgentId,
+            targetAgentId: resolved.workspaceAgentId,
             originAgentId: input.origin
         }
     };

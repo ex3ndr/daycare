@@ -580,15 +580,15 @@ export class AgentSystem {
                 ? aConnector === "telegram"
                     ? "aa-telegram"
                     : "bb-user"
-                : aKind === "swarm"
-                  ? "cc-swarm"
+                : aKind === "workspace"
+                  ? "cc-workspace"
                   : "zz-other";
             const bPrefix = bConnector
                 ? bConnector === "telegram"
                     ? "aa-telegram"
                     : "bb-user"
-                : bKind === "swarm"
-                  ? "cc-swarm"
+                : bKind === "workspace"
+                  ? "cc-workspace"
                   : "zz-other";
             if (aPrefix !== bPrefix) {
                 return aPrefix.localeCompare(bPrefix);
@@ -1302,7 +1302,7 @@ function configForCreation(
         modelRole: creationConfig.modelRole === undefined ? modelRoleForKind(kind) : creationConfig.modelRole,
         connectorName: creationConfig.connectorName === undefined ? null : creationConfig.connectorName,
         parentAgentId: creationConfig.parentAgentId === undefined ? null : creationConfig.parentAgentId,
-        foreground: creationConfig.foreground ?? (kind === "connector" || kind === "swarm"),
+        foreground: creationConfig.foreground ?? (kind === "connector" || kind === "workspace"),
         name: creationConfig.name ?? null,
         description: creationConfig.description ?? null,
         systemPrompt: creationConfig.systemPrompt ?? null,
@@ -1311,7 +1311,7 @@ function configForCreation(
 }
 
 function modelRoleForKind(kind: NonNullable<AgentConfig["kind"]>): AgentConfig["modelRole"] {
-    if (kind === "connector" || kind === "agent" || kind === "app" || kind === "subuser" || kind === "swarm") {
+    if (kind === "connector" || kind === "agent" || kind === "app" || kind === "subuser" || kind === "workspace") {
         return "user";
     }
     if (kind === "sub") {
@@ -1333,7 +1333,7 @@ function agentMatchesStrategy(config: AgentConfig, strategy: AgentFetchStrategy)
     if (strategy !== "most-recent-foreground") {
         return false;
     }
-    return config.foreground || config.kind === "swarm";
+    return config.foreground || config.kind === "workspace";
 }
 
 function poisonPillKindIs(kind: AgentConfig["kind"] | null | undefined): boolean {

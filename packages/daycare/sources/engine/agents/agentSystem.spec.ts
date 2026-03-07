@@ -630,38 +630,51 @@ describe("AgentSystem", () => {
         }
     });
 
-    it("creates swarm agents for swarm user paths", async () => {
+    it("creates workspace agents for workspace user paths", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
         try {
             const harness = await harnessCreate(dir);
-            await harness.storage.users.create({ id: "swarm-user-1", isSwarm: true, nametag: "swarm-user-1" });
+            await harness.storage.users.create({
+                id: "workspace-user-1",
+                isWorkspace: true,
+                nametag: "workspace-user-1"
+            });
             await harness.agentSystem.load();
             await harness.agentSystem.start();
 
-            const swarmCtx = contextForUser({ userId: "swarm-user-1" });
-            const swarmPath = agentPath("/swarm-user-1/agent/swarm");
-            await postAndAwait(harness.agentSystem, swarmCtx, { path: swarmPath }, { type: "reset", message: "swarm" });
-            const swarmAgentId = await agentIdForTarget(harness.agentSystem, swarmCtx, { path: swarmPath });
-            const persisted = await harness.storage.agents.findById(swarmAgentId);
+            const workspaceCtx = contextForUser({ userId: "workspace-user-1" });
+            const workspacePath = agentPath("/workspace-user-1/agent/workspace");
+            await postAndAwait(
+                harness.agentSystem,
+                workspaceCtx,
+                { path: workspacePath },
+                { type: "reset", message: "workspace" }
+            );
+            const workspaceAgentId = await agentIdForTarget(harness.agentSystem, workspaceCtx, { path: workspacePath });
+            const persisted = await harness.storage.agents.findById(workspaceAgentId);
 
-            expect(persisted?.path).toBe("/swarm-user-1/agent/swarm");
+            expect(persisted?.path).toBe("/workspace-user-1/agent/workspace");
             expect(persisted?.foreground).toBe(true);
         } finally {
             await tempDirRemove(dir);
         }
     });
 
-    it("canonicalizes legacy swarm paths during load", async () => {
+    it("canonicalizes legacy workspace paths during load", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
         try {
             const harness = await harnessCreate(dir);
-            await harness.storage.users.create({ id: "swarm-user-2", isSwarm: true, nametag: "swarm-user-2" });
+            await harness.storage.users.create({
+                id: "workspace-user-2",
+                isWorkspace: true,
+                nametag: "workspace-user-2"
+            });
             await harness.storage.agents.create({
-                id: "legacy-swarm-agent",
-                userId: "swarm-user-2",
-                type: "swarm",
-                descriptor: { type: "swarm", id: "swarm-user-2" },
-                path: agentPath("/swarm-user-2/agent/legacy-swarm-agent"),
+                id: "legacy-workspace-agent",
+                userId: "workspace-user-2",
+                type: "workspace",
+                descriptor: { type: "workspace", id: "workspace-user-2" },
+                path: agentPath("/workspace-user-2/agent/legacy-workspace-agent"),
                 activeSessionId: null,
                 permissions: { workingDir: "/tmp", writeDirs: ["/tmp"] },
                 lifecycle: "active",
@@ -671,10 +684,10 @@ describe("AgentSystem", () => {
             await harness.agentSystem.load();
             await harness.agentSystem.start();
 
-            const swarmCtx = contextForUser({ userId: "swarm-user-2" });
-            const canonicalPath = agentPath("/swarm-user-2/agent/swarm");
-            const swarmAgentId = await agentIdForTarget(harness.agentSystem, swarmCtx, { path: canonicalPath });
-            const persisted = await harness.storage.agents.findById(swarmAgentId);
+            const workspaceCtx = contextForUser({ userId: "workspace-user-2" });
+            const canonicalPath = agentPath("/workspace-user-2/agent/workspace");
+            const workspaceAgentId = await agentIdForTarget(harness.agentSystem, workspaceCtx, { path: canonicalPath });
+            const persisted = await harness.storage.agents.findById(workspaceAgentId);
             expect(persisted?.path).toBe(canonicalPath);
         } finally {
             await tempDirRemove(dir);
@@ -1090,7 +1103,7 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentTargetInp
         );
         return contextForUser({ userId: user.id });
     }
-    if (target.descriptor.type === "swarm") {
+    if (target.descriptor.type === "workspace") {
         return contextForUser({ userId: target.descriptor.id });
     }
     return agentSystem.ownerCtxEnsure();
@@ -1132,8 +1145,8 @@ function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
     const segments = String(path)
         .split("/")
         .filter((segment) => segment.length > 0);
-    if (segments[1] === "agent" && segments[2] === "swarm") {
-        return { kind: "swarm", foreground: true, name: "swarm" };
+    if (segments[1] === "agent" && segments[2] === "workspace") {
+        return { kind: "workspace", foreground: true, name: "workspace" };
     }
     if (segments[1] === "agent") {
         if (segments.at(-2) === "sub") {

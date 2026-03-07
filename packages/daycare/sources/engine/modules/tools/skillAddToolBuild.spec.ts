@@ -155,15 +155,15 @@ describe("skillAddToolBuild", () => {
         }
     });
 
-    it("installs a skill to a target swarm user when userId is provided", async () => {
+    it("installs a skill to a target workspace user when userId is provided", async () => {
         const dirs = await testDirsCreate();
         try {
             const sourceDir = path.join(dirs.homeDir, "source-skill");
             await fs.mkdir(sourceDir, { recursive: true });
             await fs.writeFile(path.join(sourceDir, "SKILL.md"), "---\nname: test-skill\n---\nBody");
 
-            const swarmUserId = "swarm-1";
-            const swarmPersonalRoot = path.join(dirs.baseDir, swarmUserId, "skills", "personal");
+            const workspaceUserId = "workspace-1";
+            const workspacePersonalRoot = path.join(dirs.baseDir, workspaceUserId, "skills", "personal");
             const tool = skillAddToolBuild();
             const context = contextBuild({
                 skillsPersonalRoot: dirs.personalRoot,
@@ -176,15 +176,15 @@ describe("skillAddToolBuild", () => {
                                     return {
                                         id: "owner-1",
                                         isOwner: true,
-                                        isSwarm: false,
+                                        isWorkspace: false,
                                         parentUserId: null
                                     };
                                 }
-                                if (id === swarmUserId) {
+                                if (id === workspaceUserId) {
                                     return {
-                                        id: swarmUserId,
+                                        id: workspaceUserId,
                                         isOwner: false,
-                                        isSwarm: true,
+                                        isWorkspace: true,
                                         parentUserId: "owner-1"
                                     };
                                 }
@@ -198,17 +198,17 @@ describe("skillAddToolBuild", () => {
                 } as unknown as ToolExecutionContext["agentSystem"],
                 ctx: { userId: "owner-1", agentId: "agent-1" } as ToolExecutionContext["ctx"]
             });
-            const result = await tool.execute({ path: "source-skill", userId: swarmUserId }, context, toolCall);
+            const result = await tool.execute({ path: "source-skill", userId: workspaceUserId }, context, toolCall);
 
             expect(result.typedResult.status).toBe("installed");
-            const installed = await fs.readFile(path.join(swarmPersonalRoot, "test-skill", "SKILL.md"), "utf8");
+            const installed = await fs.readFile(path.join(workspacePersonalRoot, "test-skill", "SKILL.md"), "utf8");
             expect(installed).toContain("name: test-skill");
         } finally {
             await dirs.cleanup();
         }
     });
 
-    it("throws when non-owner user tries to install a skill to a swarm", async () => {
+    it("throws when non-owner user tries to install a skill to a workspace", async () => {
         const dirs = await testDirsCreate();
         try {
             const sourceDir = path.join(dirs.homeDir, "source-skill");
@@ -227,7 +227,7 @@ describe("skillAddToolBuild", () => {
                                     ? {
                                           id: "user-1",
                                           isOwner: false,
-                                          isSwarm: false,
+                                          isWorkspace: false,
                                           parentUserId: null
                                       }
                                     : null
@@ -236,15 +236,15 @@ describe("skillAddToolBuild", () => {
                 } as unknown as ToolExecutionContext["agentSystem"]
             });
 
-            await expect(tool.execute({ path: "source-skill", userId: "swarm-1" }, context, toolCall)).rejects.toThrow(
-                "Only the owner user can install skills to swarms."
-            );
+            await expect(
+                tool.execute({ path: "source-skill", userId: "workspace-1" }, context, toolCall)
+            ).rejects.toThrow("Only the owner user can install skills to workspaces.");
         } finally {
             await dirs.cleanup();
         }
     });
 
-    it("throws when target swarm is not found", async () => {
+    it("throws when target workspace is not found", async () => {
         const dirs = await testDirsCreate();
         try {
             const sourceDir = path.join(dirs.homeDir, "source-skill");
@@ -263,7 +263,7 @@ describe("skillAddToolBuild", () => {
                                     ? {
                                           id: "owner-1",
                                           isOwner: true,
-                                          isSwarm: false,
+                                          isWorkspace: false,
                                           parentUserId: null
                                       }
                                     : null
@@ -277,8 +277,8 @@ describe("skillAddToolBuild", () => {
             });
 
             await expect(
-                tool.execute({ path: "source-skill", userId: "missing-swarm" }, context, toolCall)
-            ).rejects.toThrow("Swarm not found: missing-swarm");
+                tool.execute({ path: "source-skill", userId: "missing-workspace" }, context, toolCall)
+            ).rejects.toThrow("Workspace not found: missing-workspace");
         } finally {
             await dirs.cleanup();
         }

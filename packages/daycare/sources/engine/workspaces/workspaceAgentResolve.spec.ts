@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
-import { swarmAgentResolve } from "./swarmAgentResolve.js";
+import { workspaceAgentResolve } from "./workspaceAgentResolve.js";
 
-describe("swarmAgentResolve", () => {
-    it("creates or reuses swarm agent mapping for a contact agent", async () => {
+describe("workspaceAgentResolve", () => {
+    it("creates or reuses workspace agent mapping for a contact agent", async () => {
         const storage = await storageOpenTest();
         try {
             const owner = await storage.users.findOwner();
@@ -12,10 +12,10 @@ describe("swarmAgentResolve", () => {
                 throw new Error("Owner user not found.");
             }
             await storage.users.create({
-                id: "swarm-1",
+                id: "workspace-1",
                 parentUserId: owner.id,
                 nametag: "todo",
-                isSwarm: true,
+                isWorkspace: true,
                 firstName: "Todo",
                 bio: "desc",
                 systemPrompt: "prompt",
@@ -44,31 +44,31 @@ describe("swarmAgentResolve", () => {
                     if (existing) {
                         return existing;
                     }
-                    const created = `swarm-agent-${ids.size + 1}`;
+                    const created = `workspace-agent-${ids.size + 1}`;
                     ids.set(key, created);
                     return created;
                 }
             };
 
-            const first = await swarmAgentResolve({
-                swarmUserId: "swarm-1",
+            const first = await workspaceAgentResolve({
+                workspaceUserId: "workspace-1",
                 contactAgentId: "contact-agent-1",
                 agentSystem: agentSystem as never
             });
-            const second = await swarmAgentResolve({
-                swarmUserId: "swarm-1",
+            const second = await workspaceAgentResolve({
+                workspaceUserId: "workspace-1",
                 contactAgentId: "contact-agent-1",
                 agentSystem: agentSystem as never
             });
 
-            expect(first.swarmAgentId).toBe("swarm-agent-1");
-            expect(second.swarmAgentId).toBe("swarm-agent-1");
-            expect(first.path).toBe("/swarm-1/agent/swarm");
-            expect(second.path).toBe("/swarm-1/agent/swarm");
+            expect(first.workspaceAgentId).toBe("workspace-agent-1");
+            expect(second.workspaceAgentId).toBe("workspace-agent-1");
+            expect(first.path).toBe("/workspace-1/agent/workspace");
+            expect(second.path).toBe("/workspace-1/agent/workspace");
 
-            const contacts = await storage.swarmContacts.listContacts("swarm-1");
+            const contacts = await storage.workspaceContacts.listContacts("workspace-1");
             expect(contacts).toHaveLength(1);
-            expect(contacts[0]?.swarmAgentId).toBe("swarm-agent-1");
+            expect(contacts[0]?.workspaceAgentId).toBe("workspace-agent-1");
         } finally {
             storage.connection.close();
         }

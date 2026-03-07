@@ -2,7 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { Context, ToolDefinition, ToolResultContract } from "@/types";
 import { contextForUser } from "../../agents/context.js";
-import { swarmOwnedUserResolve } from "./swarmOwnedUserResolve.js";
+import { workspaceOwnedUserResolve } from "./workspaceOwnedUserResolve.js";
 
 const schema = Type.Object(
     {
@@ -88,7 +88,7 @@ export function secretAddToolBuild(): ToolDefinition {
                 variables
             });
 
-            const scope = target.userId ? ` for swarm "${target.userId}"` : "";
+            const scope = target.userId ? ` for workspace "${target.userId}"` : "";
             const summary = `Secret "${name}" ${status}${scope}. Variables: ${variableNames.join(", ")}.`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
@@ -121,14 +121,14 @@ async function secretTargetResolve(
         return { ctx: toolContext.ctx, userId: null };
     }
 
-    const swarmUser = await swarmOwnedUserResolve({
+    const workspaceUser = await workspaceOwnedUserResolve({
         toolContext,
         userId: normalizedUserId,
-        ownerError: "Only the owner user can manage swarm secrets."
+        ownerError: "Only the owner user can manage workspace secrets."
     });
     return {
-        ctx: contextForUser({ userId: swarmUser.id }),
-        userId: swarmUser.id
+        ctx: contextForUser({ userId: workspaceUser.id }),
+        userId: workspaceUser.id
     };
 }
 

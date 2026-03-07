@@ -6,11 +6,11 @@ import { describe, expect, it } from "vitest";
 
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { UserHome } from "../users/userHome.js";
-import { swarmCreate } from "./swarmCreate.js";
+import { workspaceCreate } from "./workspaceCreate.js";
 
-describe("swarmCreate", () => {
-    it("creates a swarm user and user home with SOUL prompt", async () => {
-        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-swarm-create-"));
+describe("workspaceCreate", () => {
+    it("creates a workspace user and user home with SOUL prompt", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-workspace-create-"));
         const storage = await storageOpenTest();
         try {
             const owner = await storage.users.findOwner();
@@ -18,15 +18,15 @@ describe("swarmCreate", () => {
                 throw new Error("Owner user not found.");
             }
 
-            const created = await swarmCreate({
+            const created = await workspaceCreate({
                 ownerUserId: owner.id,
                 config: {
                     nametag: "todo",
                     firstName: "Todo",
-                    lastName: "Swarm",
+                    lastName: "Workspace",
                     bio: "Manages todos",
                     about: "Autonomous todo management",
-                    systemPrompt: "You are the todo swarm.",
+                    systemPrompt: "You are the todo workspace.",
                     memory: false
                 },
                 storage,
@@ -40,14 +40,14 @@ describe("swarmCreate", () => {
             );
 
             expect(user?.parentUserId).toBe(owner.id);
-            expect(user?.isSwarm).toBe(true);
+            expect(user?.isWorkspace).toBe(true);
             expect(user?.nametag).toBe("todo");
             expect(user?.firstName).toBe("Todo");
-            expect(user?.lastName).toBe("Swarm");
+            expect(user?.lastName).toBe("Workspace");
             expect(user?.bio).toBe("Manages todos");
             expect(user?.about).toBe("Autonomous todo management");
             expect(user?.memory).toBe(false);
-            expect(soul).toContain("You are the todo swarm.");
+            expect(soul).toContain("You are the todo workspace.");
         } finally {
             storage.connection.close();
             await rm(dir, { recursive: true, force: true });

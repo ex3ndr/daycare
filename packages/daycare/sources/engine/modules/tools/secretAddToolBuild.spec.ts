@@ -108,7 +108,7 @@ describe("secretAddToolBuild", () => {
         expect(listed[0]?.variables.OPENAI_API_KEY).toBe("sk-new");
     });
 
-    it("creates a secret on a target swarm when userId is provided", async () => {
+    it("creates a secret on a target workspace when userId is provided", async () => {
         const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-secret-add-tool-"));
         dirs.push(usersDir);
         const storage = await storageOpenTest();
@@ -119,32 +119,32 @@ describe("secretAddToolBuild", () => {
 
         const result = await tool.execute(
             {
-                name: "swarm-key",
-                displayName: "Swarm Key",
-                description: "For swarm",
-                userId: "swarm-1",
+                name: "workspace-key",
+                displayName: "Workspace Key",
+                description: "For workspace",
+                userId: "workspace-1",
                 variables: { API_KEY: "secret" }
             },
             contextBuild(ownerCtx, secrets, {
-                owner: { id: "owner-1", isOwner: true, isSwarm: false, parentUserId: null },
-                swarm: { id: "swarm-1", isOwner: false, isSwarm: true, parentUserId: "owner-1" }
+                owner: { id: "owner-1", isOwner: true, isWorkspace: false, parentUserId: null },
+                workspace: { id: "workspace-1", isOwner: false, isWorkspace: true, parentUserId: "owner-1" }
             }),
             toolCall
         );
 
         expect(result.typedResult.status).toBe("created");
         await expect(secrets.list(contextForUser({ userId: "owner-1" }))).resolves.toEqual([]);
-        await expect(secrets.list(contextForUser({ userId: "swarm-1" }))).resolves.toEqual([
+        await expect(secrets.list(contextForUser({ userId: "workspace-1" }))).resolves.toEqual([
             {
-                name: "swarm-key",
-                displayName: "Swarm Key",
-                description: "For swarm",
+                name: "workspace-key",
+                displayName: "Workspace Key",
+                description: "For workspace",
                 variables: { API_KEY: "secret" }
             }
         ]);
     });
 
-    it("throws when non-owner tries to add a swarm secret", async () => {
+    it("throws when non-owner tries to add a workspace secret", async () => {
         const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-secret-add-tool-"));
         dirs.push(usersDir);
         const storage = await storageOpenTest();
@@ -155,22 +155,22 @@ describe("secretAddToolBuild", () => {
         await expect(
             tool.execute(
                 {
-                    name: "swarm-key",
-                    displayName: "Swarm Key",
-                    description: "For swarm",
-                    userId: "swarm-1",
+                    name: "workspace-key",
+                    displayName: "Workspace Key",
+                    description: "For workspace",
+                    userId: "workspace-1",
                     variables: { API_KEY: "secret" }
                 },
                 contextBuild(contextForUser({ userId: "user-1" }), secrets, {
-                    owner: { id: "user-1", isOwner: false, isSwarm: false, parentUserId: null },
-                    swarm: { id: "swarm-1", isOwner: false, isSwarm: true, parentUserId: "owner-1" }
+                    owner: { id: "user-1", isOwner: false, isWorkspace: false, parentUserId: null },
+                    workspace: { id: "workspace-1", isOwner: false, isWorkspace: true, parentUserId: "owner-1" }
                 }),
                 toolCall
             )
-        ).rejects.toThrow("Only the owner user can manage swarm secrets.");
+        ).rejects.toThrow("Only the owner user can manage workspace secrets.");
     });
 
-    it("throws when target swarm does not exist", async () => {
+    it("throws when target workspace does not exist", async () => {
         const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-secret-add-tool-"));
         dirs.push(usersDir);
         const storage = await storageOpenTest();
@@ -181,18 +181,18 @@ describe("secretAddToolBuild", () => {
         await expect(
             tool.execute(
                 {
-                    name: "swarm-key",
-                    displayName: "Swarm Key",
-                    description: "For swarm",
-                    userId: "missing-swarm",
+                    name: "workspace-key",
+                    displayName: "Workspace Key",
+                    description: "For workspace",
+                    userId: "missing-workspace",
                     variables: { API_KEY: "secret" }
                 },
                 contextBuild(contextForUser({ userId: "owner-1" }), secrets, {
-                    owner: { id: "owner-1", isOwner: true, isSwarm: false, parentUserId: null }
+                    owner: { id: "owner-1", isOwner: true, isWorkspace: false, parentUserId: null }
                 }),
                 toolCall
             )
-        ).rejects.toThrow("Swarm not found: missing-swarm");
+        ).rejects.toThrow("Workspace not found: missing-workspace");
     });
 });
 
@@ -200,8 +200,8 @@ function contextBuild(
     ctx: ToolExecutionContext["ctx"],
     secrets: Secrets,
     users?: {
-        owner: { id: string; isOwner: boolean; isSwarm: boolean; parentUserId: string | null };
-        swarm?: { id: string; isOwner: boolean; isSwarm: boolean; parentUserId: string | null };
+        owner: { id: string; isOwner: boolean; isWorkspace: boolean; parentUserId: string | null };
+        workspace?: { id: string; isOwner: boolean; isWorkspace: boolean; parentUserId: string | null };
     }
 ): ToolExecutionContext {
     return {
@@ -222,8 +222,8 @@ function contextBuild(
                               if (id === users.owner.id) {
                                   return users.owner;
                               }
-                              if (users.swarm && id === users.swarm.id) {
-                                  return users.swarm;
+                              if (users.workspace && id === users.workspace.id) {
+                                  return users.workspace;
                               }
                               return null;
                           }

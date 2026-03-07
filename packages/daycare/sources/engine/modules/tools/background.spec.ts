@@ -210,13 +210,13 @@ describe("buildSendAgentMessageTool", () => {
         expect(payload.text).toMatch(/~\/outputs\/\d{14}-agent-message-/);
     });
 
-    it("defaults swarm replies to the latest known contact and uses target user context", async () => {
+    it("defaults workspace replies to the latest known contact and uses target user context", async () => {
         const post = vi.fn(async () => {});
         const listContacts = vi.fn(async () => [
             {
-                swarmUserId: "swarm-user-1",
+                workspaceUserId: "workspace-user-1",
                 contactAgentId: "contact-agent-2",
-                swarmAgentId: "swarm-agent-1",
+                workspaceAgentId: "workspace-agent-1",
                 messagesSent: 0,
                 messagesReceived: 1,
                 firstContactAt: 1,
@@ -232,34 +232,34 @@ describe("buildSendAgentMessageTool", () => {
                     contextForAgent({ userId: "contact-user-2", agentId: "contact-agent-2" })
                 ),
                 storage: {
-                    swarmContacts: { listContacts, isKnownContact, recordSent }
+                    workspaceContacts: { listContacts, isKnownContact, recordSent }
                 }
             },
             {
-                userId: "swarm-user-1",
-                agentId: "swarm-agent-1",
-                descriptor: { type: "swarm", id: "swarm-user-1" }
+                userId: "workspace-user-1",
+                agentId: "workspace-agent-1",
+                descriptor: { type: "workspace", id: "workspace-user-1" }
             }
         );
         const tool = buildSendAgentMessageTool();
 
         await tool.execute({ text: "reply" }, context, sendToolCall);
 
-        expect(listContacts).toHaveBeenCalledWith("swarm-user-1");
+        expect(listContacts).toHaveBeenCalledWith("workspace-user-1");
         expect(post).toHaveBeenCalledWith(
             expect.objectContaining({ userId: "contact-user-2", hasAgentId: true }),
             { agentId: "contact-agent-2" },
-            { type: "system_message", text: "reply", origin: "swarm-agent-1" }
+            { type: "system_message", text: "reply", origin: "workspace-agent-1" }
         );
-        expect(recordSent).toHaveBeenCalledWith("swarm-user-1", "contact-agent-2");
+        expect(recordSent).toHaveBeenCalledWith("workspace-user-1", "contact-agent-2");
     });
 
-    it("fails for swarm replies when no known contacts exist", async () => {
+    it("fails for workspace replies when no known contacts exist", async () => {
         const context = contextBuild(
             {
                 agentFor: vi.fn(() => undefined),
                 storage: {
-                    swarmContacts: {
+                    workspaceContacts: {
                         listContacts: vi.fn(async () => []),
                         isKnownContact: vi.fn(async () => false),
                         recordSent: vi.fn(async () => {})
@@ -267,29 +267,29 @@ describe("buildSendAgentMessageTool", () => {
                 }
             },
             {
-                userId: "swarm-user-1",
-                agentId: "swarm-agent-1",
-                descriptor: { type: "swarm", id: "swarm-user-1" }
+                userId: "workspace-user-1",
+                agentId: "workspace-agent-1",
+                descriptor: { type: "workspace", id: "workspace-user-1" }
             }
         );
         const tool = buildSendAgentMessageTool();
 
         await expect(tool.execute({ text: "reply" }, context, sendToolCall)).rejects.toThrow(
-            "No known swarm contacts found."
+            "No known workspace contacts found."
         );
     });
 
-    it("allows swarm messages to same-user agents without contact checks", async () => {
+    it("allows workspace messages to same-user agents without contact checks", async () => {
         const post = vi.fn(async () => {});
         const isKnownContact = vi.fn(async () => false);
         const context = contextBuild(
             {
                 post,
                 contextForAgentId: vi.fn(async () =>
-                    contextForAgent({ userId: "swarm-user-1", agentId: "swarm-subagent-1" })
+                    contextForAgent({ userId: "workspace-user-1", agentId: "workspace-subagent-1" })
                 ),
                 storage: {
-                    swarmContacts: {
+                    workspaceContacts: {
                         listContacts: vi.fn(async () => []),
                         isKnownContact,
                         recordSent: vi.fn(async () => {})
@@ -297,35 +297,35 @@ describe("buildSendAgentMessageTool", () => {
                 }
             },
             {
-                userId: "swarm-user-1",
-                agentId: "swarm-agent-1",
-                descriptor: { type: "swarm", id: "swarm-user-1" }
+                userId: "workspace-user-1",
+                agentId: "workspace-agent-1",
+                descriptor: { type: "workspace", id: "workspace-user-1" }
             }
         );
         const tool = buildSendAgentMessageTool();
 
-        await tool.execute({ text: "ping child", agentId: "swarm-subagent-1" }, context, sendToolCall);
+        await tool.execute({ text: "ping child", agentId: "workspace-subagent-1" }, context, sendToolCall);
 
         expect(post).toHaveBeenCalledWith(
-            expect.objectContaining({ userId: "swarm-user-1", hasAgentId: true }),
-            { agentId: "swarm-subagent-1" },
-            { type: "system_message", text: "ping child", origin: "swarm-agent-1" }
+            expect.objectContaining({ userId: "workspace-user-1", hasAgentId: true }),
+            { agentId: "workspace-subagent-1" },
+            { type: "system_message", text: "ping child", origin: "workspace-agent-1" }
         );
         expect(isKnownContact).not.toHaveBeenCalled();
     });
 
-    it("allows swarms to message same-user agents started in background", async () => {
+    it("allows workspaces to message same-user agents started in background", async () => {
         const post = vi.fn(async () => {});
         const isKnownContact = vi.fn(async () => false);
         const context = contextBuild(
             {
                 post,
-                agentIdForTarget: vi.fn(async () => "swarm-subagent-2"),
+                agentIdForTarget: vi.fn(async () => "workspace-subagent-2"),
                 contextForAgentId: vi.fn(async (agentId: string) =>
-                    contextForAgent({ userId: "swarm-user-1", agentId })
+                    contextForAgent({ userId: "workspace-user-1", agentId })
                 ),
                 storage: {
-                    swarmContacts: {
+                    workspaceContacts: {
                         listContacts: vi.fn(async () => []),
                         isKnownContact,
                         recordSent: vi.fn(async () => {})
@@ -333,9 +333,9 @@ describe("buildSendAgentMessageTool", () => {
                 }
             },
             {
-                userId: "swarm-user-1",
-                agentId: "swarm-agent-1",
-                descriptor: { type: "swarm", id: "swarm-user-1" }
+                userId: "workspace-user-1",
+                agentId: "workspace-agent-1",
+                descriptor: { type: "workspace", id: "workspace-user-1" }
             }
         );
         const startTool = buildStartBackgroundAgentTool();
@@ -351,14 +351,14 @@ describe("buildSendAgentMessageTool", () => {
         expect(post).toHaveBeenNthCalledWith(
             1,
             context.ctx,
-            { agentId: "swarm-subagent-2" },
+            { agentId: "workspace-subagent-2" },
             { type: "message", message: { text: "Do work" }, context: {} }
         );
         expect(post).toHaveBeenNthCalledWith(
             2,
-            expect.objectContaining({ userId: "swarm-user-1", hasAgentId: true }),
-            { agentId: "swarm-subagent-2" },
-            { type: "system_message", text: "follow up", origin: "swarm-agent-1" }
+            expect.objectContaining({ userId: "workspace-user-1", hasAgentId: true }),
+            { agentId: "workspace-subagent-2" },
+            { type: "system_message", text: "follow up", origin: "workspace-agent-1" }
         );
         expect(isKnownContact).not.toHaveBeenCalled();
     });
@@ -375,10 +375,10 @@ type AgentSystemStub = Partial<{
         agents?: {
             findByPath: (path: string) => Promise<{ id: string } | null>;
         };
-        swarmContacts: {
-            listContacts: (swarmUserId: string) => Promise<Array<{ contactAgentId: string }>>;
-            isKnownContact: (swarmUserId: string, contactAgentId: string) => Promise<boolean>;
-            recordSent: (swarmUserId: string, contactAgentId: string) => Promise<void>;
+        workspaceContacts: {
+            listContacts: (workspaceUserId: string) => Promise<Array<{ contactAgentId: string }>>;
+            isKnownContact: (workspaceUserId: string, contactAgentId: string) => Promise<boolean>;
+            recordSent: (workspaceUserId: string, contactAgentId: string) => Promise<void>;
         };
     };
 }>;
@@ -456,7 +456,7 @@ function contextBuild(agentSystem: AgentSystemStub, options: ContextBuildOptions
                             return id ? { id } : null;
                         })
                     },
-                    swarmContacts: {
+                    workspaceContacts: {
                         listContacts: vi.fn(async () => []),
                         isKnownContact: vi.fn(async () => false),
                         recordSent: vi.fn(async () => {})
@@ -476,8 +476,8 @@ function agentPathFromDescriptorFixture(descriptor: unknown, userId: string, age
         const connector = typeof value.connector === "string" ? value.connector : "telegram";
         return `/${userId}/${connector}`;
     }
-    if (type === "swarm") {
-        return `/${userId}/agent/swarm`;
+    if (type === "workspace") {
+        return `/${userId}/agent/workspace`;
     }
     if (type === "permanent") {
         const name = typeof value.name === "string" ? value.name : agentId;
@@ -520,14 +520,15 @@ function agentConfigFromDescriptorFixture(descriptor: unknown): {
     const connector = typeof value.connector === "string" ? value.connector : null;
     const parentAgentId = typeof value.parentAgentId === "string" ? value.parentAgentId : null;
     const name = typeof value.name === "string" ? value.name : null;
-    const kind = type === "subagent" ? "sub" : type === "swarm" ? "swarm" : type === "user" ? "connector" : "agent";
+    const kind =
+        type === "subagent" ? "sub" : type === "workspace" ? "workspace" : type === "user" ? "connector" : "agent";
     const modelRole = kind === "sub" ? "subagent" : "user";
     return {
         kind,
         modelRole,
         connectorName: kind === "connector" ? connector : null,
         parentAgentId,
-        foreground: type === "user" || type === "swarm",
+        foreground: type === "user" || type === "workspace",
         name,
         description: null,
         systemPrompt: null,

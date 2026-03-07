@@ -49,7 +49,7 @@ describe("sendUserMessageToolBuild", () => {
         );
     });
 
-    it("defers sending during pythonExecution for non-swarm path", async () => {
+    it("defers sending during pythonExecution for non-workspace path", async () => {
         const post = vi.fn();
         const tool = sendUserMessageToolBuild();
         const ctx = contextBuild({
@@ -94,7 +94,7 @@ describe("sendUserMessageToolBuild", () => {
         await expect(tool.execute({ text: "hi" }, ctx, toolCall)).rejects.toThrow("No foreground agent found");
     });
 
-    it("targets a swarm by nametag with plain system message", async () => {
+    it("targets a workspace by nametag with plain system message", async () => {
         const post = vi.fn();
         const tool = sendUserMessageToolBuild();
         const ctx = contextBuild({
@@ -102,44 +102,44 @@ describe("sendUserMessageToolBuild", () => {
             descriptor: { type: "subagent", id: "bg-4", parentAgentId: "fg-1", name: "worker" },
             post,
             usersFindByNametag: vi.fn(async () => ({
-                id: "swarm-user-1",
-                isSwarm: true
+                id: "workspace-user-1",
+                isWorkspace: true
             })),
             usersFindById: vi.fn(async () => ({
-                id: "swarm-user-1",
-                isSwarm: true
+                id: "workspace-user-1",
+                isWorkspace: true
             })),
             agentsFindById: vi.fn(async () => ({
                 id: "bg-4"
             })),
-            agentIdForTarget: vi.fn(async () => "swarm-agent-1"),
+            agentIdForTarget: vi.fn(async () => "workspace-agent-1"),
             recordReceived: vi.fn(async () => undefined)
         });
 
-        await tool.execute({ text: "hello swarm", nametag: "todo" }, ctx, toolCall);
+        await tool.execute({ text: "hello workspace", nametag: "todo" }, ctx, toolCall);
 
         expect(post).toHaveBeenCalledWith(
-            expect.objectContaining({ userId: "swarm-user-1", hasAgentId: false }),
-            { agentId: "swarm-agent-1" },
+            expect.objectContaining({ userId: "workspace-user-1", hasAgentId: false }),
+            { agentId: "workspace-agent-1" },
             {
                 type: "system_message",
-                text: "hello swarm",
+                text: "hello workspace",
                 origin: "bg-4"
             }
         );
     });
 
-    it("throws when target nametag is not a swarm", async () => {
+    it("throws when target nametag is not a workspace", async () => {
         const tool = sendUserMessageToolBuild();
         const ctx = contextBuild({
             agentId: "bg-5",
             descriptor: { type: "permanent", id: "bg-5", name: "bot" },
             post: vi.fn(),
-            usersFindByNametag: vi.fn(async () => ({ id: "user-2", isSwarm: false }))
+            usersFindByNametag: vi.fn(async () => ({ id: "user-2", isWorkspace: false }))
         });
 
         await expect(tool.execute({ text: "hello", nametag: "user-2" }, ctx, toolCall)).rejects.toThrow(
-            "Target is not a swarm"
+            "Target is not a workspace"
         );
     });
 });
@@ -153,7 +153,7 @@ function contextBuild(opts: {
     usersFindById?: (id: string) => Promise<unknown>;
     agentsFindById?: (id: string) => Promise<unknown>;
     agentIdForTarget?: (ctx: unknown, target: unknown) => Promise<string>;
-    recordReceived?: (swarmUserId: string, contactAgentId: string) => Promise<void>;
+    recordReceived?: (workspaceUserId: string, contactAgentId: string) => Promise<void>;
     postAndAwait?: (ctx: unknown, target: unknown, item: unknown) => Promise<unknown>;
 }): ToolExecutionContext {
     return {
@@ -174,7 +174,7 @@ function contextBuild(opts: {
             post: opts.post,
             postAndAwait: opts.postAndAwait ?? (vi.fn(async () => ({ type: "message", responseText: null })) as never),
             agentFor: (_ctx: unknown) => opts.foregroundAgentId ?? undefined,
-            agentIdForTarget: opts.agentIdForTarget ?? (vi.fn(async () => "swarm-agent-1") as never),
+            agentIdForTarget: opts.agentIdForTarget ?? (vi.fn(async () => "workspace-agent-1") as never),
             storage: {
                 users: {
                     findByNametag: opts.usersFindByNametag ?? (vi.fn(async () => null) as never),
@@ -190,7 +190,7 @@ function contextBuild(opts: {
                     }),
                     findById: opts.agentsFindById ?? (vi.fn(async () => null) as never)
                 },
-                swarmContacts: {
+                workspaceContacts: {
                     findOrCreate: vi.fn(async () => undefined),
                     recordReceived: opts.recordReceived ?? (vi.fn(async () => undefined) as never)
                 }
@@ -231,13 +231,14 @@ function configFromDescriptorFixture(descriptor: Record<string, unknown>): {
     const type = typeof descriptor.type === "string" ? descriptor.type : "";
     const parentAgentId = typeof descriptor.parentAgentId === "string" ? descriptor.parentAgentId : null;
     const connectorName = typeof descriptor.connector === "string" ? descriptor.connector : null;
-    const kind = type === "subagent" ? "sub" : type === "user" ? "connector" : type === "swarm" ? "swarm" : "agent";
+    const kind =
+        type === "subagent" ? "sub" : type === "user" ? "connector" : type === "workspace" ? "workspace" : "agent";
     return {
         kind,
         modelRole: kind === "sub" ? "subagent" : "user",
         connectorName: kind === "connector" ? connectorName : null,
         parentAgentId,
-        foreground: type === "user" || type === "swarm",
+        foreground: type === "user" || type === "workspace",
         name: typeof descriptor.name === "string" ? descriptor.name : null,
         description: null,
         systemPrompt: null,

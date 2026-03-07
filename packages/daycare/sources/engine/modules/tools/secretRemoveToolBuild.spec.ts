@@ -60,35 +60,35 @@ describe("secretRemoveToolBuild", () => {
         expect(result.typedResult.status).toBe("not_found");
     });
 
-    it("removes a swarm secret when userId is provided", async () => {
+    it("removes a workspace secret when userId is provided", async () => {
         const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-secret-remove-tool-"));
         dirs.push(usersDir);
         const storage = await storageOpenTest();
         storages.push(storage);
         const secrets = new Secrets({ usersDir, observationLog: storage.observationLog });
-        const swarmCtx = contextForUser({ userId: "swarm-1" });
-        await secrets.add(swarmCtx, {
-            name: "swarm-secret",
-            displayName: "Swarm Secret",
+        const workspaceCtx = contextForUser({ userId: "workspace-1" });
+        await secrets.add(workspaceCtx, {
+            name: "workspace-secret",
+            displayName: "Workspace Secret",
             description: "desc",
             variables: { KEY: "value" }
         });
 
         const tool = secretRemoveToolBuild();
         const result = await tool.execute(
-            { name: "swarm-secret", userId: "swarm-1" },
+            { name: "workspace-secret", userId: "workspace-1" },
             contextBuild(contextForUser({ userId: "owner-1" }), secrets, {
-                owner: { id: "owner-1", isOwner: true, isSwarm: false, parentUserId: null },
-                swarm: { id: "swarm-1", isOwner: false, isSwarm: true, parentUserId: "owner-1" }
+                owner: { id: "owner-1", isOwner: true, isWorkspace: false, parentUserId: null },
+                workspace: { id: "workspace-1", isOwner: false, isWorkspace: true, parentUserId: "owner-1" }
             }),
             toolCall
         );
 
         expect(result.typedResult.status).toBe("removed");
-        await expect(secrets.list(swarmCtx)).resolves.toEqual([]);
+        await expect(secrets.list(workspaceCtx)).resolves.toEqual([]);
     });
 
-    it("throws when non-owner tries to remove a swarm secret", async () => {
+    it("throws when non-owner tries to remove a workspace secret", async () => {
         const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-secret-remove-tool-"));
         dirs.push(usersDir);
         const storage = await storageOpenTest();
@@ -98,17 +98,17 @@ describe("secretRemoveToolBuild", () => {
         const tool = secretRemoveToolBuild();
         await expect(
             tool.execute(
-                { name: "swarm-secret", userId: "swarm-1" },
+                { name: "workspace-secret", userId: "workspace-1" },
                 contextBuild(contextForUser({ userId: "user-1" }), secrets, {
-                    owner: { id: "user-1", isOwner: false, isSwarm: false, parentUserId: null },
-                    swarm: { id: "swarm-1", isOwner: false, isSwarm: true, parentUserId: "owner-1" }
+                    owner: { id: "user-1", isOwner: false, isWorkspace: false, parentUserId: null },
+                    workspace: { id: "workspace-1", isOwner: false, isWorkspace: true, parentUserId: "owner-1" }
                 }),
                 toolCall
             )
-        ).rejects.toThrow("Only the owner user can manage swarm secrets.");
+        ).rejects.toThrow("Only the owner user can manage workspace secrets.");
     });
 
-    it("throws when target swarm does not exist", async () => {
+    it("throws when target workspace does not exist", async () => {
         const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-secret-remove-tool-"));
         dirs.push(usersDir);
         const storage = await storageOpenTest();
@@ -118,13 +118,13 @@ describe("secretRemoveToolBuild", () => {
         const tool = secretRemoveToolBuild();
         await expect(
             tool.execute(
-                { name: "swarm-secret", userId: "missing-swarm" },
+                { name: "workspace-secret", userId: "missing-workspace" },
                 contextBuild(contextForUser({ userId: "owner-1" }), secrets, {
-                    owner: { id: "owner-1", isOwner: true, isSwarm: false, parentUserId: null }
+                    owner: { id: "owner-1", isOwner: true, isWorkspace: false, parentUserId: null }
                 }),
                 toolCall
             )
-        ).rejects.toThrow("Swarm not found: missing-swarm");
+        ).rejects.toThrow("Workspace not found: missing-workspace");
     });
 });
 
@@ -132,8 +132,8 @@ function contextBuild(
     ctx: ToolExecutionContext["ctx"],
     secrets: Secrets,
     users?: {
-        owner: { id: string; isOwner: boolean; isSwarm: boolean; parentUserId: string | null };
-        swarm?: { id: string; isOwner: boolean; isSwarm: boolean; parentUserId: string | null };
+        owner: { id: string; isOwner: boolean; isWorkspace: boolean; parentUserId: string | null };
+        workspace?: { id: string; isOwner: boolean; isWorkspace: boolean; parentUserId: string | null };
     }
 ): ToolExecutionContext {
     return {
@@ -154,8 +154,8 @@ function contextBuild(
                               if (id === users.owner.id) {
                                   return users.owner;
                               }
-                              if (users.swarm && id === users.swarm.id) {
-                                  return users.swarm;
+                              if (users.workspace && id === users.workspace.id) {
+                                  return users.workspace;
                               }
                               return null;
                           }

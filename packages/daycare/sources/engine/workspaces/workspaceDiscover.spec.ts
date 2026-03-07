@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
-import { swarmDiscover } from "./swarmDiscover.js";
+import { workspaceDiscover } from "./workspaceDiscover.js";
 
-describe("swarmDiscover", () => {
-    it("discovers owner swarms from swarm user records", async () => {
+describe("workspaceDiscover", () => {
+    it("discovers owner workspaces from workspace user records", async () => {
         const storage = await storageOpenTest();
         try {
             const owner = await storage.users.findOwner();
@@ -12,9 +12,9 @@ describe("swarmDiscover", () => {
                 throw new Error("Owner user not found.");
             }
             await storage.users.create({
-                id: "swarm-1",
+                id: "workspace-1",
                 parentUserId: owner.id,
-                isSwarm: true,
+                isWorkspace: true,
                 nametag: "todo",
                 firstName: "Todo",
                 bio: "Todos",
@@ -24,9 +24,9 @@ describe("swarmDiscover", () => {
                 updatedAt: 2
             });
             await storage.users.create({
-                id: "swarm-2",
+                id: "workspace-2",
                 parentUserId: owner.id,
-                isSwarm: true,
+                isWorkspace: true,
                 nametag: "review",
                 firstName: "Review",
                 bio: "Reviews",
@@ -36,7 +36,7 @@ describe("swarmDiscover", () => {
                 updatedAt: 3
             });
 
-            const discovered = await swarmDiscover({ ownerUserId: owner.id, storage });
+            const discovered = await workspaceDiscover({ ownerUserId: owner.id, storage });
             expect(discovered.map((entry) => entry.nametag)).toEqual(["review", "todo"]);
             expect(discovered.find((entry) => entry.nametag === "review")?.memory).toBe(true);
         } finally {

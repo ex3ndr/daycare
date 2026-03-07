@@ -427,7 +427,7 @@ export function topologyTool(
                 ? []
                 : ownerSubusers.map((subuser) => {
                       const gateway = allAgentRecords.find(
-                          (agent) => topologyAgentKindResolve(agent) === "swarm" && agent.userId === subuser.id
+                          (agent) => topologyAgentKindResolve(agent) === "workspace" && agent.userId === subuser.id
                       );
                       return {
                           id: subuser.id,
@@ -574,7 +574,7 @@ async function friendsListBuild(
         });
 
     const gatewayEntries: Array<[string, string]> = agents
-        .filter((agent) => topologyAgentKindResolve(agent) === "swarm")
+        .filter((agent) => topologyAgentKindResolve(agent) === "workspace")
         .map((agent) => [agent.userId, agent.id] as [string, string]);
     const gatewayBySubuserId = new Map<string, string>(gatewayEntries);
 

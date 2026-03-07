@@ -32,7 +32,7 @@ type SendAgentMessageDeferredPayload = {
     resolvedTarget: string;
     text: string;
     origin: string;
-    swarmContactTarget: string | null;
+    workspaceContactTarget: string | null;
     senderUserId: string;
 };
 
@@ -125,7 +125,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
         tool: {
             name: "send_agent_message",
             description:
-                "Send a system message to another agent (defaults to parent for child agents, latest swarm contact for swarms, otherwise most recent foreground agent). Set steering=true to interrupt the agent's current work.",
+                "Send a system message to another agent (defaults to parent for child agents, latest workspace contact for workspaces, otherwise most recent foreground agent). Set steering=true to interrupt the agent's current work.",
             parameters: sendSchema
         },
         returns: backgroundReturns,
@@ -135,22 +135,24 @@ export function buildSendAgentMessageTool(): ToolDefinition {
             const origin = toolContext.agent.id;
             const kind = agentKindResolve(toolContext);
             const parentAgentId = await parentAgentIdResolve(toolContext);
-            const defaultSwarmContactTarget = await swarmContactDefaultTargetResolve(kind, toolContext);
+            const defaultWorkspaceContactTarget = await workspaceContactDefaultTargetResolve(kind, toolContext);
             const targetAgentId =
                 payload.agentId ??
                 (kind === "sub" || kind === "search"
                     ? (parentAgentId ?? undefined)
-                    : (defaultSwarmContactTarget ?? undefined));
+                    : (defaultWorkspaceContactTarget ?? undefined));
             const resolvedTarget =
                 targetAgentId ?? toolContext.agentSystem.agentFor(toolContext.ctx, "most-recent-foreground");
             if (!resolvedTarget) {
-                if (swarmAgentIs(toolContext)) {
-                    throw new Error("No known swarm contacts found. Provide agentId or wait for an inbound message.");
+                if (workspaceAgentIs(toolContext)) {
+                    throw new Error(
+                        "No known workspace contacts found. Provide agentId or wait for an inbound message."
+                    );
                 }
                 throw new Error("No recent foreground agent found.");
             }
             const deliveryContext = await agentMessageDeliveryContextResolve(kind, toolContext, resolvedTarget);
-            const swarmContactTarget = await swarmContactTargetResolve(
+            const workspaceContactTarget = await workspaceContactTargetResolve(
                 kind,
                 toolContext,
                 resolvedTarget,
@@ -187,10 +189,10 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                     isError: false,
                     timestamp: Date.now()
                 };
-                if (swarmContactTarget) {
-                    await toolContext.agentSystem.storage.swarmContacts.recordSent(
+                if (workspaceContactTarget) {
+                    await toolContext.agentSystem.storage.workspaceContacts.recordSent(
                         toolContext.agent.userId,
-                        swarmContactTarget
+                        workspaceContactTarget
                     );
                 }
 
@@ -221,7 +223,7 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                     resolvedTarget,
                     text: outbound.text,
                     origin,
-                    swarmContactTarget,
+                    workspaceContactTarget,
                     senderUserId: toolContext.agent.userId
                 };
                 return {
@@ -241,10 +243,10 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                 { agentId: resolvedTarget },
                 { type: "system_message", text: outbound.text, origin }
             );
-            if (swarmContactTarget) {
-                await toolContext.agentSystem.storage.swarmContacts.recordSent(
+            if (workspaceContactTarget) {
+                await toolContext.agentSystem.storage.workspaceContacts.recordSent(
                     toolContext.agent.userId,
-                    swarmContactTarget
+                    workspaceContactTarget
                 );
             }
 
@@ -282,8 +284,11 @@ export function buildSendAgentMessageTool(): ToolDefinition {
                 { agentId: p.resolvedTarget },
                 { type: "system_message", text: p.text, origin: p.origin }
             );
-            if (p.swarmContactTarget) {
-                await context.agentSystem.storage.swarmContacts.recordSent(p.senderUserId, p.swarmContactTarget);
+            if (p.workspaceContactTarget) {
+                await context.agentSystem.storage.workspaceContacts.recordSent(
+                    p.senderUserId,
+                    p.workspaceContactTarget
+                );
             }
         }
     };
@@ -341,7 +346,7 @@ async function agentMessageDeliveryContextResolve(
     toolContext: ToolExecutionContext,
     targetAgentId: string
 ): Promise<ToolExecutionContext["ctx"]> {
-    if (sourceKind !== "swarm") {
+    if (sourceKind !== "workspace") {
         return toolContext.ctx;
     }
     const targetContext = await toolContext.agentSystem.contextForAgentId(targetAgentId);
@@ -351,35 +356,35 @@ async function agentMessageDeliveryContextResolve(
     return targetContext;
 }
 
-async function swarmContactDefaultTargetResolve(
+async function workspaceContactDefaultTargetResolve(
     sourceKind: NonNullable<ToolExecutionContext["agent"]["config"]["kind"]> | "agent",
     toolContext: ToolExecutionContext
 ): Promise<string | null> {
-    if (sourceKind !== "swarm") {
+    if (sourceKind !== "workspace") {
         return null;
     }
-    const contacts = await toolContext.agentSystem.storage.swarmContacts.listContacts(toolContext.agent.userId);
+    const contacts = await toolContext.agentSystem.storage.workspaceContacts.listContacts(toolContext.agent.userId);
     return contacts[0]?.contactAgentId ?? null;
 }
 
-async function swarmContactTargetResolve(
+async function workspaceContactTargetResolve(
     sourceKind: NonNullable<ToolExecutionContext["agent"]["config"]["kind"]> | "agent",
     toolContext: ToolExecutionContext,
     targetAgentId: string,
     deliveryContext: ToolExecutionContext["ctx"]
 ): Promise<string | null> {
-    if (sourceKind !== "swarm") {
+    if (sourceKind !== "workspace") {
         return null;
     }
     if (deliveryContext.userId === toolContext.ctx.userId) {
         return null;
     }
-    const known = await toolContext.agentSystem.storage.swarmContacts.isKnownContact(
+    const known = await toolContext.agentSystem.storage.workspaceContacts.isKnownContact(
         toolContext.agent.userId,
         targetAgentId
     );
     if (!known) {
-        throw new Error("Can only message agents that have contacted this swarm");
+        throw new Error("Can only message agents that have contacted this workspace");
     }
     return targetAgentId;
 }
@@ -388,8 +393,8 @@ async function parentAgentIdResolve(toolContext: ToolExecutionContext): Promise<
     return toolContext.agent.config.parentAgentId ?? null;
 }
 
-function swarmAgentIs(toolContext: ToolExecutionContext): boolean {
-    return agentKindResolve(toolContext) === "swarm";
+function workspaceAgentIs(toolContext: ToolExecutionContext): boolean {
+    return agentKindResolve(toolContext) === "workspace";
 }
 
 function agentKindResolve(

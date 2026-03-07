@@ -111,7 +111,7 @@ function agentLabelResolve(config: AgentConfig): string {
 }
 
 function modelRoleForKind(kind: NonNullable<AgentConfig["kind"]>): AgentConfig["modelRole"] {
-    if (kind === "connector" || kind === "agent" || kind === "app" || kind === "subuser" || kind === "swarm") {
+    if (kind === "connector" || kind === "agent" || kind === "app" || kind === "subuser" || kind === "workspace") {
         return "user";
     }
     if (kind === "sub") {

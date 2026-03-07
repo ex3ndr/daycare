@@ -75,7 +75,7 @@ const RULE_KIND_CHOICES = [
     { value: "connector", name: "Connector", description: "Messaging connectors" },
     { value: "agent", name: "Agent", description: "General agents" },
     { value: "app", name: "App", description: "App agents" },
-    { value: "swarm", name: "Swarm", description: "Swarm agents" },
+    { value: "workspace", name: "Workspace", description: "Workspace agents" },
     { value: "cron", name: "Cron", description: "Scheduled tasks" },
     { value: "task", name: "Task", description: "Task agents" },
     { value: "subuser", name: "Subuser", description: "Sub-user agents" },

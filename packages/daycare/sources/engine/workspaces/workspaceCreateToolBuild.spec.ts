@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { contextForAgent } from "../agents/context.js";
-import { swarmCreateToolBuild } from "./swarmCreateToolBuild.js";
+import { workspaceCreateToolBuild } from "./workspaceCreateToolBuild.js";
 
-describe("swarmCreateToolBuild", () => {
-    it("builds shape and creates swarms for owner users", async () => {
+describe("workspaceCreateToolBuild", () => {
+    it("builds shape and creates workspaces for owner users", async () => {
         const storage = await storageOpenTest();
         try {
             const owner = await storage.users.findOwner();
@@ -13,7 +13,7 @@ describe("swarmCreateToolBuild", () => {
             }
 
             const create = vi.fn(async () => ({
-                userId: "swarm-1",
+                userId: "workspace-1",
                 nametag: "todo",
                 firstName: "Todo",
                 lastName: null,
@@ -21,7 +21,7 @@ describe("swarmCreateToolBuild", () => {
             }));
             const discover = vi.fn(async () => []);
             const refreshSandboxesForUserId = vi.fn(() => 1);
-            const tool = swarmCreateToolBuild({ create, discover });
+            const tool = workspaceCreateToolBuild({ create, discover });
 
             const result = await tool.execute(
                 {
@@ -38,10 +38,10 @@ describe("swarmCreateToolBuild", () => {
                         refreshSandboxesForUserId
                     }
                 } as never,
-                { id: "call-1", name: "swarm_create" }
+                { id: "call-1", name: "workspace_create" }
             );
 
-            expect(tool.tool.name).toBe("swarm_create");
+            expect(tool.tool.name).toBe("workspace_create");
             expect(create).toHaveBeenCalledWith(owner.id, expect.objectContaining({ nametag: "todo", memory: false }));
             expect(discover).toHaveBeenCalledWith(owner.id);
             expect(refreshSandboxesForUserId).toHaveBeenCalledWith(owner.id);
@@ -62,9 +62,9 @@ describe("swarmCreateToolBuild", () => {
                             refreshSandboxesForUserId
                         }
                     } as never,
-                    { id: "call-2", name: "swarm_create" }
+                    { id: "call-2", name: "workspace_create" }
                 )
-            ).rejects.toThrow("Swarm name must be username-style");
+            ).rejects.toThrow("Workspace name must be username-style");
         } finally {
             storage.connection.close();
         }
@@ -79,7 +79,7 @@ describe("swarmCreateToolBuild", () => {
                 createdAt: 1,
                 updatedAt: 1
             });
-            const tool = swarmCreateToolBuild({
+            const tool = workspaceCreateToolBuild({
                 create: vi.fn(),
                 discover: vi.fn(async () => [])
             });
@@ -99,9 +99,9 @@ describe("swarmCreateToolBuild", () => {
                             refreshSandboxesForUserId: vi.fn(() => 0)
                         }
                     } as never,
-                    { id: "call-1", name: "swarm_create" }
+                    { id: "call-1", name: "workspace_create" }
                 )
-            ).rejects.toThrow("Only the owner user can create swarms.");
+            ).rejects.toThrow("Only the owner user can create workspaces.");
         } finally {
             storage.connection.close();
         }

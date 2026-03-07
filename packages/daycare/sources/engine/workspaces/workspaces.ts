@@ -1,40 +1,40 @@
 import type { Storage } from "../../storage/storage.js";
 import type { UserHome } from "../users/userHome.js";
-import { swarmCreate } from "./swarmCreate.js";
-import { swarmDiscover } from "./swarmDiscover.js";
-import type { SwarmConfig, SwarmRecord } from "./swarmTypes.js";
+import { workspaceCreate } from "./workspaceCreate.js";
+import { workspaceDiscover } from "./workspaceDiscover.js";
+import type { WorkspaceConfig, WorkspaceRecord } from "./workspaceTypes.js";
 
-type SwarmsOptions = {
-    storage: Pick<Storage, "users" | "swarmContacts">;
+type WorkspacesOptions = {
+    storage: Pick<Storage, "users" | "workspaceContacts">;
     userHomeForUserId: (userId: string) => UserHome;
 };
 
 /**
- * Facade for swarm discovery, creation, and dynamic tool registration.
+ * Facade for workspace discovery, creation, and dynamic tool registration.
  * Expects: owner discovery runs before registerTools.
  */
-export class Swarms {
-    private readonly storage: Pick<Storage, "users" | "swarmContacts">;
+export class Workspaces {
+    private readonly storage: Pick<Storage, "users" | "workspaceContacts">;
     private readonly userHomeForUserId: (userId: string) => UserHome;
     private ownerUserId: string | null = null;
-    private records: SwarmRecord[] = [];
+    private records: WorkspaceRecord[] = [];
 
-    constructor(options: SwarmsOptions) {
+    constructor(options: WorkspacesOptions) {
         this.storage = options.storage;
         this.userHomeForUserId = options.userHomeForUserId;
     }
 
-    async discover(ownerUserId: string): Promise<SwarmRecord[]> {
+    async discover(ownerUserId: string): Promise<WorkspaceRecord[]> {
         this.ownerUserId = ownerUserId;
-        this.records = await swarmDiscover({
+        this.records = await workspaceDiscover({
             ownerUserId,
             storage: this.storage
         });
         return this.list();
     }
 
-    async create(ownerUserId: string, config: SwarmConfig): Promise<SwarmRecord> {
-        const created = await swarmCreate({
+    async create(ownerUserId: string, config: WorkspaceConfig): Promise<WorkspaceRecord> {
+        const created = await workspaceCreate({
             ownerUserId,
             config,
             storage: this.storage,
@@ -47,7 +47,7 @@ export class Swarms {
         return created;
     }
 
-    get(nametag: string): SwarmRecord | null {
+    get(nametag: string): WorkspaceRecord | null {
         const normalized = nametag.trim();
         if (!normalized) {
             return null;
@@ -55,7 +55,7 @@ export class Swarms {
         return this.records.find((record) => record.nametag === normalized) ?? null;
     }
 
-    list(): SwarmRecord[] {
+    list(): WorkspaceRecord[] {
         return [...this.records].sort((left, right) => left.nametag.localeCompare(right.nametag));
     }
 
@@ -65,7 +65,7 @@ export class Swarms {
         }
         return this.records.map((record) => ({
             hostPath: this.userHomeForUserId(record.userId).home,
-            mappedPath: `/share/swarm/${record.nametag}`
+            mappedPath: `/share/workspace/${record.nametag}`
         }));
     }
 }

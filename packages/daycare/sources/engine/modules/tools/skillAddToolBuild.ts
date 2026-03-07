@@ -5,8 +5,8 @@ import { type Static, Type } from "@sinclair/typebox";
 import matter from "gray-matter";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { SKILL_FILENAME } from "../../skills/skillConstants.js";
-import { swarmOwnedUserResolve } from "./swarmOwnedUserResolve.js";
 import type { ToolExecutionContext } from "./types.js";
+import { workspaceOwnedUserResolve } from "./workspaceOwnedUserResolve.js";
 
 const schema = Type.Object(
     {
@@ -79,7 +79,7 @@ export function skillAddToolBuild(): ToolDefinition {
             await fs.cp(sourceHostDir, targetDir, { recursive: true });
 
             const status = existed ? "replaced" : "installed";
-            const location = target.userId ? `swarm "${target.userId}" personal skills` : "personal skills";
+            const location = target.userId ? `workspace "${target.userId}" personal skills` : "personal skills";
             const summary =
                 status === "replaced"
                     ? `Skill "${skillName}" replaced in ${location}.`
@@ -114,14 +114,14 @@ async function skillAddTargetResolve(
         return { personalRoot, userId: null };
     }
 
-    const swarmUser = await swarmOwnedUserResolve({
+    const workspaceUser = await workspaceOwnedUserResolve({
         toolContext,
         userId: targetUserId,
-        ownerError: "Only the owner user can install skills to swarms."
+        ownerError: "Only the owner user can install skills to workspaces."
     });
     return {
-        personalRoot: toolContext.agentSystem.userHomeForUserId(swarmUser.id).skillsPersonal,
-        userId: swarmUser.id
+        personalRoot: toolContext.agentSystem.userHomeForUserId(workspaceUser.id).skillsPersonal,
+        userId: workspaceUser.id
     };
 }
 

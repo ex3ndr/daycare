@@ -23,7 +23,7 @@ describe("secretCopyToolBuild", () => {
         storages.length = 0;
     });
 
-    it("copies named secrets from owner to target swarm", async () => {
+    it("copies named secrets from owner to target workspace", async () => {
         const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-secrets-copy-tool-"));
         dirs.push(usersDir);
         const storage = await storageOpenTest();
@@ -39,17 +39,17 @@ describe("secretCopyToolBuild", () => {
 
         const tool = secretCopyToolBuild();
         const result = await tool.execute(
-            { userId: "swarm-1", secret: "openai-key" },
+            { userId: "workspace-1", secret: "openai-key" },
             contextBuild(ownerCtx, secrets, {
-                owner: { id: "owner-1", isOwner: true, isSwarm: false, parentUserId: null },
-                swarm: { id: "swarm-1", isOwner: false, isSwarm: true, parentUserId: "owner-1" }
+                owner: { id: "owner-1", isOwner: true, isWorkspace: false, parentUserId: null },
+                workspace: { id: "workspace-1", isOwner: false, isWorkspace: true, parentUserId: "owner-1" }
             }),
             toolCall
         );
 
         expect(result.typedResult.status).toBe("copied");
         expect(result.typedResult.secret).toBe("openai-key");
-        await expect(secrets.list(contextForUser({ userId: "swarm-1" }))).resolves.toEqual([
+        await expect(secrets.list(contextForUser({ userId: "workspace-1" }))).resolves.toEqual([
             {
                 name: "openai-key",
                 displayName: "OpenAI",
@@ -69,17 +69,17 @@ describe("secretCopyToolBuild", () => {
 
         await expect(
             tool.execute(
-                { userId: "swarm-1", secret: "openai-key" },
+                { userId: "workspace-1", secret: "openai-key" },
                 contextBuild(contextForUser({ userId: "user-1" }), secrets, {
-                    owner: { id: "user-1", isOwner: false, isSwarm: false, parentUserId: null },
-                    swarm: { id: "swarm-1", isOwner: false, isSwarm: true, parentUserId: "owner-1" }
+                    owner: { id: "user-1", isOwner: false, isWorkspace: false, parentUserId: null },
+                    workspace: { id: "workspace-1", isOwner: false, isWorkspace: true, parentUserId: "owner-1" }
                 }),
                 toolCall
             )
-        ).rejects.toThrow("Only the owner user can copy secrets to swarms.");
+        ).rejects.toThrow("Only the owner user can copy secrets to workspaces.");
     });
 
-    it("throws when target swarm is not found", async () => {
+    it("throws when target workspace is not found", async () => {
         const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-secrets-copy-tool-"));
         dirs.push(usersDir);
         const storage = await storageOpenTest();
@@ -89,13 +89,13 @@ describe("secretCopyToolBuild", () => {
 
         await expect(
             tool.execute(
-                { userId: "missing-swarm", secret: "openai-key" },
+                { userId: "missing-workspace", secret: "openai-key" },
                 contextBuild(contextForUser({ userId: "owner-1" }), secrets, {
-                    owner: { id: "owner-1", isOwner: true, isSwarm: false, parentUserId: null }
+                    owner: { id: "owner-1", isOwner: true, isWorkspace: false, parentUserId: null }
                 }),
                 toolCall
             )
-        ).rejects.toThrow("Swarm not found: missing-swarm");
+        ).rejects.toThrow("Workspace not found: missing-workspace");
     });
 
     it("throws when a requested secret does not exist on owner", async () => {
@@ -108,10 +108,10 @@ describe("secretCopyToolBuild", () => {
 
         await expect(
             tool.execute(
-                { userId: "swarm-1", secret: "missing" },
+                { userId: "workspace-1", secret: "missing" },
                 contextBuild(contextForUser({ userId: "owner-1" }), secrets, {
-                    owner: { id: "owner-1", isOwner: true, isSwarm: false, parentUserId: null },
-                    swarm: { id: "swarm-1", isOwner: false, isSwarm: true, parentUserId: "owner-1" }
+                    owner: { id: "owner-1", isOwner: true, isWorkspace: false, parentUserId: null },
+                    workspace: { id: "workspace-1", isOwner: false, isWorkspace: true, parentUserId: "owner-1" }
                 }),
                 toolCall
             )
@@ -123,8 +123,8 @@ function contextBuild(
     ctx: ToolExecutionContext["ctx"],
     secrets: Secrets,
     users: {
-        owner: { id: string; isOwner: boolean; isSwarm: boolean; parentUserId: string | null };
-        swarm?: { id: string; isOwner: boolean; isSwarm: boolean; parentUserId: string | null };
+        owner: { id: string; isOwner: boolean; isWorkspace: boolean; parentUserId: string | null };
+        workspace?: { id: string; isOwner: boolean; isWorkspace: boolean; parentUserId: string | null };
     }
 ): ToolExecutionContext {
     return {
@@ -144,8 +144,8 @@ function contextBuild(
                         if (id === users.owner.id) {
                             return users.owner;
                         }
-                        if (users.swarm && id === users.swarm.id) {
-                            return users.swarm;
+                        if (users.workspace && id === users.workspace.id) {
+                            return users.workspace;
                         }
                         return null;
                     }

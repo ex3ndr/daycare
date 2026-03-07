@@ -2,8 +2,8 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { swarmNameNormalize } from "./swarmNameNormalize.js";
-import type { SwarmConfig } from "./swarmTypes.js";
+import { workspaceNameNormalize } from "./workspaceNameNormalize.js";
+import type { WorkspaceConfig } from "./workspaceTypes.js";
 
 const schema = Type.Object(
     {
@@ -18,9 +18,9 @@ const schema = Type.Object(
     { additionalProperties: false }
 );
 
-type SwarmCreateToolArgs = Static<typeof schema>;
+type WorkspaceCreateToolArgs = Static<typeof schema>;
 
-const swarmCreateToolResultSchema = Type.Object(
+const workspaceCreateToolResultSchema = Type.Object(
     {
         summary: Type.String(),
         userId: Type.String(),
@@ -32,17 +32,17 @@ const swarmCreateToolResultSchema = Type.Object(
     { additionalProperties: false }
 );
 
-type SwarmCreateToolResult = Static<typeof swarmCreateToolResultSchema>;
+type WorkspaceCreateToolResult = Static<typeof workspaceCreateToolResultSchema>;
 
-const swarmCreateToolReturns: ToolResultContract<SwarmCreateToolResult> = {
-    schema: swarmCreateToolResultSchema,
+const workspaceCreateToolReturns: ToolResultContract<WorkspaceCreateToolResult> = {
+    schema: workspaceCreateToolResultSchema,
     toLLMText: (result) => result.summary
 };
 
-type SwarmsFacade = {
+type WorkspacesFacade = {
     create: (
         ownerUserId: string,
-        config: SwarmConfig
+        config: WorkspaceConfig
     ) => Promise<{
         userId: string;
         nametag: string;
@@ -54,27 +54,27 @@ type SwarmsFacade = {
 };
 
 /**
- * Builds the swarm_create tool available to owner user agents.
+ * Builds the workspace_create tool available to owner user agents.
  * Expects: caller context belongs to the owner user.
  */
-export function swarmCreateToolBuild(swarms: SwarmsFacade): ToolDefinition {
+export function workspaceCreateToolBuild(workspaces: WorkspacesFacade): ToolDefinition {
     return {
         tool: {
-            name: "swarm_create",
-            description: "Create a swarm user that can be targeted via send_user_message by nametag.",
+            name: "workspace_create",
+            description: "Create a workspace user that can be targeted via send_user_message by nametag.",
             parameters: schema
         },
-        returns: swarmCreateToolReturns,
+        returns: workspaceCreateToolReturns,
         visibleByDefault: (context) => context.config.foreground === true,
         execute: async (args, toolContext, toolCall) => {
             const caller = await toolContext.agentSystem.storage.users.findById(toolContext.ctx.userId);
             if (!caller?.isOwner) {
-                throw new Error("Only the owner user can create swarms.");
+                throw new Error("Only the owner user can create workspaces.");
             }
 
-            const payload = args as SwarmCreateToolArgs;
-            const config: SwarmConfig = {
-                nametag: swarmNameNormalize(payload.nametag),
+            const payload = args as WorkspaceCreateToolArgs;
+            const config: WorkspaceConfig = {
+                nametag: workspaceNameNormalize(payload.nametag),
                 firstName: payload.firstName.trim(),
                 lastName: payload.lastName?.trim() ?? null,
                 bio: payload.bio.trim(),
@@ -83,28 +83,28 @@ export function swarmCreateToolBuild(swarms: SwarmsFacade): ToolDefinition {
                 memory: payload.memory ?? false
             };
             if (!config.firstName) {
-                throw new Error("Swarm firstName is required.");
+                throw new Error("Workspace firstName is required.");
             }
             if (!config.bio) {
-                throw new Error("Swarm bio is required.");
+                throw new Error("Workspace bio is required.");
             }
             if (!config.systemPrompt) {
-                throw new Error("Swarm systemPrompt is required.");
+                throw new Error("Workspace systemPrompt is required.");
             }
 
-            const created = await swarms.create(toolContext.ctx.userId, config);
-            await swarms.discover(toolContext.ctx.userId);
+            const created = await workspaces.create(toolContext.ctx.userId, config);
+            await workspaces.discover(toolContext.ctx.userId);
             toolContext.agentSystem.refreshSandboxesForUserId(toolContext.ctx.userId);
 
-            const summary = `Swarm created: ${created.nametag} (${created.userId}).`;
+            const summary = `Workspace created: ${created.nametag} (${created.userId}).`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
                 toolName: toolCall.name,
                 content: [{ type: "text", text: summary }],
                 details: {
-                    swarmUserId: created.userId,
-                    swarmNametag: created.nametag
+                    workspaceUserId: created.userId,
+                    workspaceNametag: created.nametag
                 },
                 isError: false,
                 timestamp: Date.now()

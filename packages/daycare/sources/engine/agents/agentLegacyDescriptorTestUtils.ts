@@ -37,7 +37,7 @@ export type AgentLegacyDescriptor =
           name: string;
       }
     | {
-          type: "swarm";
+          type: "workspace";
           id: string;
       };
 
@@ -95,8 +95,8 @@ export function agentPathFromLegacyDescriptor(
         }
         return agentPath(`/${userId}/agent/${descriptor.parentAgentId}/search/${descriptor.id}`);
     }
-    if (descriptor.type === "swarm") {
-        return agentPathAgent(userId, "swarm");
+    if (descriptor.type === "workspace") {
+        return agentPathAgent(userId, "workspace");
     }
 
     return descriptorTypeUnreachable(descriptor);
@@ -114,11 +114,11 @@ export function agentCreationConfigFromLegacyDescriptor(descriptor: AgentLegacyD
             connectorName: descriptor.connector
         };
     }
-    if (descriptor.type === "swarm") {
+    if (descriptor.type === "workspace") {
         return {
-            kind: "swarm",
+            kind: "workspace",
             foreground: true,
-            name: "swarm"
+            name: "workspace"
         };
     }
     if (descriptor.type === "cron") {

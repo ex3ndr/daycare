@@ -125,8 +125,6 @@ export type {
 } from "./engine/signals/signalTypes.js";
 // Skills
 export type { AgentSkill } from "./engine/skills/skillTypes.js";
-// Swarms
-export type { SwarmConfig, SwarmContact, SwarmRecord } from "./engine/swarms/swarmTypes.js";
 // Tasks
 export type {
     TaskActiveCronTrigger,
@@ -139,6 +137,8 @@ export type {
     TaskSummary,
     WebhookTriggerSummary
 } from "./engine/tasks/taskListAll.js";
+// Workspaces
+export type { WorkspaceConfig, WorkspaceContact, WorkspaceRecord } from "./engine/workspaces/workspaceTypes.js";
 // Files
 export type { FileReference } from "./files/types.js";
 // Sandbox

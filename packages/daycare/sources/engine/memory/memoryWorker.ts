@@ -126,7 +126,7 @@ export class MemoryWorker {
                     continue;
                 }
                 const agentUser = await this.storage.users.findById(agent.userId);
-                if (agentUser?.isSwarm && !agentUser.memory) {
+                if (agentUser?.isWorkspace && !agentUser.memory) {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
                     continue;
                 }
@@ -138,7 +138,7 @@ export class MemoryWorker {
                     continue;
                 }
 
-                const isForeground = agent.foreground || agent.kind === "swarm" || agentUser?.isSwarm === true;
+                const isForeground = agent.foreground || agent.kind === "workspace" || agentUser?.isWorkspace === true;
                 const transcript = formatHistoryMessages(records, isForeground);
                 if (transcript.trim().length === 0) {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);

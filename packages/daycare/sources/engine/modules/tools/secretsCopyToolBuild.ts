@@ -2,7 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { contextForUser } from "../../agents/context.js";
-import { swarmOwnedUserResolve } from "./swarmOwnedUserResolve.js";
+import { workspaceOwnedUserResolve } from "./workspaceOwnedUserResolve.js";
 
 const schema = Type.Object(
     {
@@ -32,14 +32,14 @@ const returns: ToolResultContract<SecretsCopyResult> = {
 };
 
 /**
- * Copies one named secret from the owner user to a target owned swarm user.
- * Expects: caller is owner and userId belongs to a swarm owned by caller.
+ * Copies one named secret from the owner user to a target owned workspace user.
+ * Expects: caller is owner and userId belongs to a workspace owned by caller.
  */
 export function secretCopyToolBuild(): ToolDefinition {
     return {
         tool: {
             name: "secret_copy",
-            description: "Copy one named secret from your user to a target swarm user.",
+            description: "Copy one named secret from your user to a target workspace user.",
             parameters: schema
         },
         returns,
@@ -50,10 +50,10 @@ export function secretCopyToolBuild(): ToolDefinition {
                 throw new Error("Secrets service is not configured.");
             }
 
-            const swarmUser = await swarmOwnedUserResolve({
+            const workspaceUser = await workspaceOwnedUserResolve({
                 toolContext,
                 userId: payload.userId,
-                ownerError: "Only the owner user can copy secrets to swarms."
+                ownerError: "Only the owner user can copy secrets to workspaces."
             });
             const requestedName = payload.secret.trim();
             if (!requestedName) {
@@ -61,19 +61,19 @@ export function secretCopyToolBuild(): ToolDefinition {
             }
             const ownerSecrets = await toolContext.secrets.list(toolContext.ctx);
             const ownerSecretsByName = new Map(ownerSecrets.map((secret) => [secret.name, secret]));
-            const swarmCtx = contextForUser({ userId: swarmUser.id });
+            const workspaceCtx = contextForUser({ userId: workspaceUser.id });
             const secret = ownerSecretsByName.get(requestedName);
             if (!secret) {
                 throw new Error(`Secret not found: "${requestedName}".`);
             }
-            await toolContext.secrets.add(swarmCtx, {
+            await toolContext.secrets.add(workspaceCtx, {
                 name: secret.name,
                 displayName: secret.displayName,
                 description: secret.description,
                 variables: { ...secret.variables }
             });
 
-            const summary = `Copied secret "${requestedName}" to swarm "${swarmUser.id}".`;
+            const summary = `Copied secret "${requestedName}" to workspace "${workspaceUser.id}".`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -86,7 +86,7 @@ export function secretCopyToolBuild(): ToolDefinition {
                 toolMessage,
                 typedResult: {
                     summary,
-                    userId: swarmUser.id,
+                    userId: workspaceUser.id,
                     secret: requestedName,
                     status: "copied"
                 }

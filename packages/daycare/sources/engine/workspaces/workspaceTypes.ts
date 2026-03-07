@@ -1,4 +1,4 @@
-export type SwarmConfig = {
+export type WorkspaceConfig = {
     nametag: string;
     firstName: string;
     lastName: string | null;
@@ -8,7 +8,7 @@ export type SwarmConfig = {
     memory: boolean;
 };
 
-export type SwarmRecord = {
+export type WorkspaceRecord = {
     userId: string;
     ownerUserId: string;
     nametag: string;
@@ -22,10 +22,10 @@ export type SwarmRecord = {
     updatedAt: number;
 };
 
-export type SwarmContact = {
-    swarmUserId: string;
+export type WorkspaceContact = {
+    workspaceUserId: string;
     contactAgentId: string;
-    swarmAgentId: string;
+    workspaceAgentId: string;
     messagesSent: number;
     messagesReceived: number;
     firstContactAt: number;

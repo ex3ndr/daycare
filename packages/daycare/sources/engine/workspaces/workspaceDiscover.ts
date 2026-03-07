@@ -1,26 +1,26 @@
 import type { Storage } from "../../storage/storage.js";
-import type { SwarmRecord } from "./swarmTypes.js";
+import type { WorkspaceRecord } from "./workspaceTypes.js";
 
-type SwarmDiscoverInput = {
+type WorkspaceDiscoverInput = {
     ownerUserId: string;
     storage: Pick<Storage, "users">;
 };
 
 /**
- * Discovers all swarms owned by a user from user records.
+ * Discovers all workspaces owned by a user from user records.
  * Expects: ownerUserId is non-empty.
  */
-export async function swarmDiscover(input: SwarmDiscoverInput): Promise<SwarmRecord[]> {
+export async function workspaceDiscover(input: WorkspaceDiscoverInput): Promise<WorkspaceRecord[]> {
     const ownerUserId = input.ownerUserId.trim();
     if (!ownerUserId) {
         throw new Error("ownerUserId is required.");
     }
 
-    const records: SwarmRecord[] = [];
+    const records: WorkspaceRecord[] = [];
     const users = await input.storage.users.findByParentUserId(ownerUserId);
 
     for (const user of users) {
-        if (!user.isSwarm) {
+        if (!user.isWorkspace) {
             continue;
         }
 

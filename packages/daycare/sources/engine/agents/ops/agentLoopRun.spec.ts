@@ -538,9 +538,9 @@ function configFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): {
             workspaceDir: null
         };
     }
-    if (descriptor.type === "swarm") {
+    if (descriptor.type === "workspace") {
         return {
-            kind: "swarm",
+            kind: "workspace",
             modelRole: "user",
             connectorName: null,
             parentAgentId: null,

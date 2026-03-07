@@ -22,7 +22,7 @@ Each rule has optional matchers. A rule matches when **all** its non-null matche
 | Matcher   | Matches against         | Values |
 |-----------|------------------------|--------|
 | `role`    | Agent's model role key | `user`, `memory`, `memorySearch`, `subagent`, `task` |
-| `kind`    | Agent's kind           | `connector`, `agent`, `app`, `swarm`, `cron`, `task`, `subuser`, `sub`, `memory`, `search` |
+| `kind`    | Agent's kind           | `connector`, `agent`, `app`, `workspace`, `cron`, `task`, `subuser`, `sub`, `memory`, `search` |
 | `userId`  | Owner user ID          | Any user ID string |
 | `agentId` | Specific agent ID      | Any agent ID string |
 

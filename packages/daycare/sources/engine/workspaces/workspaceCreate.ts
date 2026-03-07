@@ -4,52 +4,52 @@ import { createId } from "@paralleldrive/cuid2";
 import type { Storage } from "../../storage/storage.js";
 import type { UserHome } from "../users/userHome.js";
 import { userHomeEnsure } from "../users/userHomeEnsure.js";
-import { swarmNameNormalize } from "./swarmNameNormalize.js";
-import type { SwarmConfig, SwarmRecord } from "./swarmTypes.js";
+import { workspaceNameNormalize } from "./workspaceNameNormalize.js";
+import type { WorkspaceConfig, WorkspaceRecord } from "./workspaceTypes.js";
 
-type SwarmCreateInput = {
+type WorkspaceCreateInput = {
     ownerUserId: string;
-    config: SwarmConfig;
+    config: WorkspaceConfig;
     storage: Pick<Storage, "users">;
     userHomeForUserId: (userId: string) => UserHome;
 };
 
 /**
- * Creates a swarm as a child user with persisted swarm config and home structure.
+ * Creates a workspace as a child user with persisted workspace config and home structure.
  * Expects: ownerUserId exists and config fields are non-empty.
  */
-export async function swarmCreate(input: SwarmCreateInput): Promise<SwarmRecord> {
+export async function workspaceCreate(input: WorkspaceCreateInput): Promise<WorkspaceRecord> {
     const ownerUserId = input.ownerUserId.trim();
     if (!ownerUserId) {
         throw new Error("ownerUserId is required.");
     }
 
-    const nametag = swarmNameNormalize(input.config.nametag);
+    const nametag = workspaceNameNormalize(input.config.nametag);
     const firstName = input.config.firstName.trim();
     const lastName = input.config.lastName?.trim() ?? null;
     const bio = input.config.bio.trim();
     const about = input.config.about?.trim() ?? null;
     const systemPrompt = input.config.systemPrompt.trim();
     if (!firstName) {
-        throw new Error("Swarm firstName is required.");
+        throw new Error("Workspace firstName is required.");
     }
     if (!bio) {
-        throw new Error("Swarm bio is required.");
+        throw new Error("Workspace bio is required.");
     }
     if (!systemPrompt) {
-        throw new Error("Swarm systemPrompt is required.");
+        throw new Error("Workspace systemPrompt is required.");
     }
 
     const existing = await input.storage.users.findByNametag(nametag);
     if (existing) {
-        throw new Error(`Swarm already exists: ${nametag}`);
+        throw new Error(`Workspace already exists: ${nametag}`);
     }
 
     const now = Date.now();
     const createdUser = await input.storage.users.create({
         id: createId(),
         isOwner: false,
-        isSwarm: true,
+        isWorkspace: true,
         parentUserId: ownerUserId,
         firstName,
         lastName,
@@ -62,7 +62,7 @@ export async function swarmCreate(input: SwarmCreateInput): Promise<SwarmRecord>
         updatedAt: now
     });
 
-    const record: SwarmRecord = {
+    const record: WorkspaceRecord = {
         userId: createdUser.id,
         ownerUserId,
         nametag,

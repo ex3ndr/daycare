@@ -4,7 +4,7 @@ export type AgentKind =
     | "connector"
     | "agent"
     | "app"
-    | "swarm"
+    | "workspace"
     | "cron"
     | "task"
     | "subuser"

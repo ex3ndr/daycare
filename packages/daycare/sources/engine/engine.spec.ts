@@ -313,12 +313,12 @@ describe("Engine startup plugin hooks", () => {
         }
     });
 
-    it("discovers swarms before loading agents so restored sandboxes include swarm mounts", async () => {
+    it("discovers workspaces before loading agents so restored sandboxes include workspace mounts", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
-            const discoverSpy = vi.spyOn(engine.swarms, "discover").mockResolvedValue([]);
+            const discoverSpy = vi.spyOn(engine.workspaces, "discover").mockResolvedValue([]);
             const loadSpy = vi.spyOn(engine.agentSystem, "load").mockResolvedValue();
             vi.spyOn(engine.providerManager, "reload").mockResolvedValue();
             vi.spyOn(engine.processes, "load").mockResolvedValue();
@@ -414,8 +414,8 @@ describe("Engine tool registration", () => {
     });
 });
 
-describe("Engine swarm registration", () => {
-    it("discovers swarms on startup and exposes swarm_create", async () => {
+describe("Engine workspace registration", () => {
+    it("discovers workspaces on startup and exposes workspace_create", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
@@ -434,9 +434,9 @@ describe("Engine swarm registration", () => {
                         nametag: "owner"
                     }));
                 await seedStorage.users.create({
-                    id: "swarm-user-1",
+                    id: "workspace-user-1",
                     parentUserId: owner.id,
-                    isSwarm: true,
+                    isWorkspace: true,
                     nametag: "github-reviewer",
                     firstName: "GitHub",
                     lastName: "Reviewer",
@@ -453,7 +453,7 @@ describe("Engine swarm registration", () => {
             await engine.start();
 
             const toolNames = engine.modules.tools.listTools().map((tool) => tool.name);
-            expect(toolNames).toContain("swarm_create");
+            expect(toolNames).toContain("workspace_create");
 
             await engine.shutdown();
         } finally {

@@ -112,8 +112,6 @@ import { Secrets } from "./secrets/secrets.js";
 import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Signals } from "./signals/signals.js";
 import { Skills } from "./skills/skills.js";
-import { swarmCreateToolBuild } from "./swarms/swarmCreateToolBuild.js";
-import { Swarms } from "./swarms/swarms.js";
 import { taskDeleteSuccessResolve } from "./tasks/taskDeleteSuccessResolve.js";
 import { TaskExecutions } from "./tasks/taskExecutions.js";
 import { taskListActive } from "./tasks/taskListActive.js";
@@ -121,6 +119,8 @@ import { taskListAll } from "./tasks/taskListAll.js";
 import { userHomeEnsure } from "./users/userHomeEnsure.js";
 import { userHomeMigrate } from "./users/userHomeMigrate.js";
 import { Webhooks } from "./webhook/webhooks.js";
+import { workspaceCreateToolBuild } from "./workspaces/workspaceCreateToolBuild.js";
+import { Workspaces } from "./workspaces/workspaces.js";
 
 const logger = getLogger("engine.runtime");
 const DAYCARE_RUNTIME_IMAGE_REF = "daycare-runtime:latest";
@@ -152,7 +152,7 @@ export class Engine {
     readonly inferenceRouter: InferenceRouter;
     readonly modelRoles: ModelRoles;
     readonly eventBus: EngineEventBus;
-    readonly swarms: Swarms;
+    readonly workspaces: Workspaces;
     readonly secrets: Secrets;
     readonly friends: Friends;
     private readonly memoryWorker: MemoryWorker;
@@ -367,11 +367,11 @@ export class Engine {
             storage: this.storage,
             postToUserAgents: (userId, item) => this.agentSystem.postToUserAgents(userId, item)
         });
-        this.swarms = new Swarms({
+        this.workspaces = new Workspaces({
             storage: this.storage,
             userHomeForUserId: (userId) => this.agentSystem.userHomeForUserId(userId)
         });
-        this.agentSystem.setExtraMountsForUserId((userId) => this.swarms.mountsForOwner(userId));
+        this.agentSystem.setExtraMountsForUserId((userId) => this.workspaces.mountsForOwner(userId));
 
         this.memoryWorker.setPostFn((ctx, target, item, creationConfig) =>
             this.agentSystem.post(ctx, target, item, creationConfig)
@@ -700,7 +700,7 @@ export class Engine {
                 "stale: Failed to remove stale Docker sandbox containers on startup"
             );
         }
-        await this.swarms.discover(ownerCtx.userId);
+        await this.workspaces.discover(ownerCtx.userId);
 
         logger.debug("load: Loading model role rules");
         await this.modelRoles.load();
@@ -751,7 +751,7 @@ export class Engine {
         this.modules.tools.register("core", topologyTool(this.crons, this.signals, this.channels, this.secrets));
         this.modules.tools.register("core", sessionHistoryToolBuild());
         this.modules.tools.register("core", permanentAgentToolBuild());
-        this.modules.tools.register("core", swarmCreateToolBuild(this.swarms));
+        this.modules.tools.register("core", workspaceCreateToolBuild(this.workspaces));
         this.modules.tools.register("core", channelCreateToolBuild(this.channels));
         this.modules.tools.register("core", channelSendToolBuild(this.channels));
         this.modules.tools.register("core", channelHistoryToolBuild(this.channels));
@@ -787,7 +787,7 @@ export class Engine {
             this.modules.tools.register("core", tool);
         }
         logger.debug(
-            "register: Core tools registered: tasks, topology, user_profile_update, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, swarms, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, document_read, document_append, document_patch, document_write, fragment_create, fragment_read, fragment_list, fragment_update, fragment_archive"
+            "register: Core tools registered: tasks, topology, user_profile_update, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, workspaces, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, document_read, document_append, document_patch, document_write, fragment_create, fragment_read, fragment_list, fragment_update, fragment_archive"
         );
 
         await this.pluginManager.preStartAll();
