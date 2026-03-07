@@ -4,6 +4,7 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
 import { ComponentsShowcaseView } from "@/views/dev/ComponentsShowcaseView";
 import { DevTreePanel } from "@/views/dev/DevTreePanel";
+import { devPathSegmentResolve } from "@/views/dev/devPathSegmentResolve";
 import { ExamplesView } from "@/views/dev/ExamplesView";
 import { LottieShowcaseView } from "@/views/dev/LottieShowcaseView";
 import { MontyDevView } from "@/views/dev/MontyDevView";
@@ -36,7 +37,7 @@ const pageComponents: Record<DevPage, React.ComponentType> = {
 export function DevView() {
     const pathname = usePathname();
     const { theme } = useUnistyles();
-    const segment = pathname.split("/").filter(Boolean)[1] as string | undefined;
+    const segment = devPathSegmentResolve(pathname);
 
     // Check if it's an individual showcase page
     const showcasePage = segment ? showcasePagesMap.get(segment) : undefined;

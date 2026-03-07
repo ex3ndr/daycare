@@ -4,6 +4,7 @@ import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { devPathSegmentResolve } from "@/views/dev/devPathSegmentResolve";
 import { showcasePages, showcasePagesMap } from "@/views/dev/showcase/_showcasePages";
 
 type DevSection = "components" | "examples" | "showcase" | "lottie" | "monty";
@@ -23,7 +24,7 @@ const devNavItems: DevNavItem[] = [
 ];
 
 function devSelectionResolve(pathname: string): { section: DevSection; showcaseId: string | null } {
-    const segment = pathname.split("/").filter(Boolean)[1] as string | undefined;
+    const segment = devPathSegmentResolve(pathname);
     if (segment && showcasePagesMap.has(segment)) {
         return { section: "showcase", showcaseId: segment };
     }
