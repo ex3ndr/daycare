@@ -130,7 +130,6 @@ export class Webhooks {
                 },
                 scopeIds: [ctx.userId]
             });
-            await this.taskDeleteIfOrphan(ctx, existing.taskId);
         }
         return deleted;
     }
@@ -175,17 +174,6 @@ export class Webhooks {
         await this.storage.webhookTasks.recordRun(trigger.id, Date.now());
 
         logger.info({ triggerId: trigger.id, taskId: task.id }, "event: Webhook trigger queued");
-    }
-
-    private async taskDeleteIfOrphan(ctx: Context, taskId: string): Promise<void> {
-        const [cronTriggers, webhookTriggers] = await Promise.all([
-            this.storage.cronTasks.findManyByTaskId(ctx, taskId),
-            this.storage.webhookTasks.findManyByTaskId(ctx, taskId)
-        ]);
-        if (cronTriggers.length > 0 || webhookTriggers.length > 0) {
-            return;
-        }
-        await this.storage.tasks.delete(ctx, taskId);
     }
 }
 

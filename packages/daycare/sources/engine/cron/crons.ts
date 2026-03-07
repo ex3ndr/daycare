@@ -136,7 +136,6 @@ export class Crons {
 
         const deleted = await this.scheduler.deleteTask(ctx, taskId);
         if (deleted && existing.taskId) {
-            await this.taskDeleteIfOrphan(ctx, existing.taskId);
             await topographyObservationEmit(this.storage.observationLog, {
                 userId: ctx.userId,
                 type: TOPO_EVENT_TYPES.CRON_DELETED,
@@ -212,17 +211,6 @@ export class Crons {
             }
         }
         return removed;
-    }
-
-    private async taskDeleteIfOrphan(ctx: Context, taskId: string): Promise<void> {
-        const [cronTriggers, webhookTriggers] = await Promise.all([
-            this.storage.cronTasks.findManyByTaskId(ctx, taskId),
-            this.storage.webhookTasks.findManyByTaskId(ctx, taskId)
-        ]);
-        if (cronTriggers.length > 0 || webhookTriggers.length > 0) {
-            return;
-        }
-        await this.storage.tasks.delete(ctx, taskId);
     }
 
     private async cronEnabledSet(ctx: Context, taskId: string, enabled: boolean): Promise<boolean> {

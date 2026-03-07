@@ -97,6 +97,44 @@ describe("Crons", () => {
         }
     });
 
+    it("keeps the task when the last cron trigger is deleted", async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-crons-keep-task-"));
+        tempDirs.push(dir);
+        const agentSystem = agentSystemMockBuild(dir);
+        const storage = await storageOpenTest();
+        try {
+            const crons = new Crons({
+                config: new ConfigModule(configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"))),
+                storage,
+                eventBus: { emit: vi.fn() } as unknown as CronsOptions["eventBus"],
+                agentSystem
+            });
+            const ctx = contextBuild("user-a");
+            await storage.tasks.create({
+                id: "task-manual",
+                userId: "user-a",
+                title: "Manual task",
+                description: null,
+                code: "Run manual task",
+                parameters: null,
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
+            const trigger = await crons.addTask(ctx, {
+                taskId: "task-manual",
+                schedule: "* * * * *"
+            });
+
+            await expect(crons.deleteTask(ctx, trigger.id)).resolves.toBe(true);
+            await expect(storage.tasks.findById(ctx, "task-manual")).resolves.toMatchObject({
+                id: "task-manual",
+                userId: "user-a"
+            });
+        } finally {
+            storage.connection.close();
+        }
+    });
+
     it("routes cron runs through the shared taskExecutions facade", async () => {
         const dir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-crons-execute-"));
         tempDirs.push(dir);
