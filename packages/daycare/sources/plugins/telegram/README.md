@@ -43,6 +43,7 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 - Supports inline callback buttons (`callback_data`) and URL buttons on text messages.
 - Renders Daycare app-origin buttons as Telegram `web_app` buttons in private chats so they open inside the Mini App window with Telegram auth context.
 - Falls back to normal `url` buttons for group chats and non-Daycare origins.
+- Supports editable text drafts for long-running foreground replies, so Telegram users see live text + tool progress in a single message while `run_python` continues.
 - Supports typing indicators and emoji reactions.
 
 ## Slash commands

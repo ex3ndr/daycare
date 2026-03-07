@@ -903,6 +903,54 @@ describe("TelegramConnector file uploads", () => {
         telegramInstances.length = 0;
     });
 
+    it("creates editable drafts for text-only messages", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            sendReplies: true,
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        const draft = await connector.createDraft?.("123", {
+            text: "Working",
+            replyToMessageId: "77"
+        });
+
+        expect(draft).toBeTruthy();
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
+        expect(bot!.sendMessage.mock.calls[0]?.[0]).toBe("123");
+        expect((bot!.sendMessage.mock.calls[0]?.[1] as string).trim()).toBe("Working");
+        expect(bot!.sendMessage.mock.calls[0]?.[2]).toMatchObject({
+            parse_mode: "HTML",
+            reply_to_message_id: 77
+        });
+
+        await draft?.update({ text: "Still working" });
+        await draft?.finish({ text: "Done" });
+
+        expect(bot!.editMessageText).toHaveBeenCalledTimes(2);
+        expect((bot!.editMessageText.mock.calls[0]?.[0] as string).trim()).toBe("Still working");
+        expect(bot!.editMessageText.mock.calls[0]?.[1]).toMatchObject({
+            chat_id: "123",
+            message_id: 101,
+            parse_mode: "HTML"
+        });
+        expect((bot!.editMessageText.mock.calls[1]?.[0] as string).trim()).toBe("Done");
+        expect(bot!.editMessageText.mock.calls[1]?.[1]).toMatchObject({
+            chat_id: "123",
+            message_id: 101,
+            parse_mode: "HTML"
+        });
+    });
+
     it("allows private composite targets and sends to chat id", async () => {
         const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         const connector = new TelegramConnector({

@@ -2,7 +2,7 @@ import type { Context as InferenceContext, Tool, ToolCall } from "@mariozechner/
 import { createId } from "@paralleldrive/cuid2";
 import { Type } from "@sinclair/typebox";
 import type { Logger } from "pino";
-import type { AgentSkill, Connector, ToolExecutionContext } from "@/types";
+import type { AgentSkill, Connector, ConnectorDraft, ToolExecutionContext } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
 import type { AssistantSettings, ProviderSettings } from "../../../settings.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
@@ -42,10 +42,12 @@ import {
     deferredToolFlush,
     deferredToolStatusBuild
 } from "../../modules/tools/deferredToolFlush.js";
+import { toolArgsFormatVerbose } from "../../modules/tools/toolArgsFormatVerbose.js";
 import type { Skills } from "../../skills/skills.js";
 import type { Webhooks } from "../../webhook/webhooks.js";
 import type { Agent } from "../agent.js";
 import type { AgentSystem } from "../agentSystem.js";
+import { agentDraftTextBuild } from "./agentDraftTextBuild.js";
 import { agentInferencePromptWrite } from "./agentInferencePromptWrite.js";
 import type { AgentLoopPendingPhase, PersistedDeferredEntry } from "./agentLoopPendingPhaseResolve.js";
 import type { AgentLoopPhase } from "./agentLoopStepTypes.js";
@@ -109,6 +111,11 @@ type AgentLoopResult = {
 
 type AgentLoopBlockState = Extract<AgentLoopPhase, { type: "vm_start" }>["blockState"];
 
+type AgentDraftEntry = {
+    label: string;
+    status: "running" | "done" | "error";
+};
+
 /**
  * Runs the agent inference loop and handles tool execution + response delivery.
  * Expects: context already includes the user message and system prompt.
@@ -163,6 +170,92 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     const restoreOnly = Boolean(initialPhase && stopAfterPendingPhase);
     logger.debug(`start: Starting typing indicator targetId=${targetId ?? "none"}`);
     const stopTyping = targetId ? connector?.startTyping?.(targetId) : null;
+    let draftHandle: ConnectorDraft | null = null;
+    let draftResponseText: string | null = null;
+    let usedDraftOutput = false;
+    const draftEntries: AgentDraftEntry[] = [];
+    const draftEntryIndexes = new Map<string, number>();
+
+    const draftEntrySet = (key: string, label: string, status: AgentDraftEntry["status"]): void => {
+        const nextLabel = label.trim();
+        if (!nextLabel) {
+            return;
+        }
+        const index = draftEntryIndexes.get(key);
+        if (index === undefined) {
+            draftEntryIndexes.set(key, draftEntries.length);
+            draftEntries.push({ label: nextLabel, status });
+            return;
+        }
+        draftEntries[index] = { label: nextLabel, status };
+    };
+
+    const draftEntryPush = (label: string, status: AgentDraftEntry["status"]): void => {
+        const nextLabel = label.trim();
+        if (!nextLabel) {
+            return;
+        }
+        draftEntries.push({ label: nextLabel, status });
+    };
+
+    const draftMessageResolve = (): { text: string; replyToMessageId?: string } | null => {
+        const text = agentDraftTextBuild(draftResponseText, draftEntries);
+        if (!text) {
+            return null;
+        }
+        return {
+            text,
+            replyToMessageId: entry.context.messageId
+        };
+    };
+
+    const draftSync = async (createIfNeeded: boolean): Promise<boolean> => {
+        if (!connector || !targetId) {
+            return false;
+        }
+        const draftMessage = draftMessageResolve();
+        if (!draftMessage) {
+            return false;
+        }
+        try {
+            if (!draftHandle) {
+                if (!createIfNeeded || !connector.createDraft) {
+                    return false;
+                }
+                draftHandle = await connector.createDraft(targetId, draftMessage);
+                if (!draftHandle) {
+                    return false;
+                }
+            } else {
+                await draftHandle.update(draftMessage);
+            }
+            usedDraftOutput = true;
+            return true;
+        } catch (error) {
+            logger.warn({ connector: source, error }, "error: Failed to update draft message");
+            draftHandle = null;
+            return false;
+        }
+    };
+
+    const draftFinish = async (): Promise<boolean> => {
+        if (!draftHandle) {
+            return false;
+        }
+        const draftMessage = draftMessageResolve();
+        if (!draftMessage) {
+            return false;
+        }
+        try {
+            await draftHandle.finish(draftMessage);
+            usedDraftOutput = true;
+            return true;
+        } catch (error) {
+            logger.warn({ connector: source, error }, "error: Failed to finalize draft message");
+            draftHandle = null;
+            return false;
+        }
+    };
 
     const blockStateBuild = (params: {
         iteration: number;
@@ -255,6 +348,12 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         context.messages.push(
             rlmToolResultBuild({ id: blockState.toolCallId, name: RLM_TOOL_NAME }, errorText, true).toolMessage
         );
+        draftEntrySet(
+            draftPythonEntryKey(blockState.toolCallId),
+            draftPythonLabelBuild(blockState.blockDescriptions?.[blockState.blockIndex]),
+            "error"
+        );
+        await draftSync(false);
         const truncated = agentMessageRunPythonFailureTrim(blockState.historyResponseText, blockState.blockIndex);
         if (truncated !== null && response?.message) {
             messageAssistantTextRewrite(response.message, truncated);
@@ -574,8 +673,21 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     if (!childAgentMessageSent) {
                         finalResponseText = hasResponseText ? effectiveResponseText : null;
                     }
+                    for (const runPythonCall of toolCallPartition.runPythonCalls) {
+                        draftEntrySet(
+                            draftPythonEntryKey(runPythonCall.id),
+                            draftPythonLabelBuild(runPythonCall.description),
+                            "running"
+                        );
+                    }
                     lastResponseTextSent = false;
-                    if (hasResponseText && connector && targetId) {
+                    if (!suppressUserOutput && (draftHandle !== null || toolCallPartition.runPythonCalls.length > 0)) {
+                        if (effectiveResponseText !== null) {
+                            draftResponseText = effectiveResponseText;
+                        }
+                        lastResponseTextSent = await draftSync(toolCallPartition.runPythonCalls.length > 0);
+                    }
+                    if (hasResponseText && connector && targetId && !lastResponseTextSent) {
                         try {
                             await connector.sendMessage(targetId, {
                                 text: effectiveResponseText,
@@ -698,6 +810,12 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             preamble: blockState.preamble,
                             description: blockState.blockDescriptions?.[blockState.blockIndex]
                         });
+                        draftEntrySet(
+                            draftPythonEntryKey(blockState.toolCallId),
+                            draftPythonLabelBuild(blockState.blockDescriptions?.[blockState.blockIndex]),
+                            "running"
+                        );
+                        await draftSync(false);
 
                         const runtimeTools = rlmToolsForContextResolve(
                             blockState.trackingToolResolver,
@@ -816,42 +934,46 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         const at = Date.now();
                         const currentPrintOutput = [...phase.printOutput];
                         const currentToolCallCount = phase.toolCallCount;
+                        const draftToolKey = draftToolEntryKey(blockState.toolCallId, currentToolCallCount);
+                        let draftToolLabel = "";
                         const stepResult = await rlmStepToolCall({
                             snapshot: phase.snapshot,
                             toolByName,
                             toolResolver: blockState.trackingToolResolver,
                             context: blockState.executionContext,
                             beforeExecute: async ({ snapshotDump, toolName, toolArgs }) => {
-                                if (!appendHistoryRecord) {
-                                    return;
-                                }
-                                const sessionId = agent.state.activeSessionId;
-                                if (!sessionId) {
-                                    return;
-                                }
-                                let snapshotId = "";
-                                try {
-                                    snapshotId = await rlmSnapshotSave({
-                                        config: agentSystem.config.current,
-                                        agentId: agent.ctx.agentId,
-                                        sessionId,
-                                        snapshotDump: Buffer.from(snapshotDump).toString("base64")
+                                draftToolLabel = draftToolLabelBuild(toolName, toolArgs);
+                                draftEntrySet(draftToolKey, draftToolLabel, "running");
+                                await draftSync(false);
+                                if (appendHistoryRecord) {
+                                    const sessionId = agent.state.activeSessionId;
+                                    if (!sessionId) {
+                                        return;
+                                    }
+                                    let snapshotId = "";
+                                    try {
+                                        snapshotId = await rlmSnapshotSave({
+                                            config: agentSystem.config.current,
+                                            agentId: agent.ctx.agentId,
+                                            sessionId,
+                                            snapshotDump: Buffer.from(snapshotDump).toString("base64")
+                                        });
+                                    } catch (error) {
+                                        throw new Error(
+                                            `Python VM crashed: failed to persist checkpoint: ${errorMessageResolve(error)}`
+                                        );
+                                    }
+                                    await appendHistoryRecord({
+                                        type: "rlm_tool_call",
+                                        at,
+                                        toolCallId: blockState.toolCallId,
+                                        snapshotId,
+                                        printOutput: currentPrintOutput,
+                                        toolCallCount: currentToolCallCount,
+                                        toolName,
+                                        toolArgs
                                     });
-                                } catch (error) {
-                                    throw new Error(
-                                        `Python VM crashed: failed to persist checkpoint: ${errorMessageResolve(error)}`
-                                    );
                                 }
-                                await appendHistoryRecord({
-                                    type: "rlm_tool_call",
-                                    at,
-                                    toolCallId: blockState.toolCallId,
-                                    snapshotId,
-                                    printOutput: currentPrintOutput,
-                                    toolCallCount: currentToolCallCount,
-                                    toolName,
-                                    toolArgs
-                                });
                             }
                         });
                         const nextToolCallCount = phase.toolCallCount + 1;
@@ -866,6 +988,10 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                                 ? { deferredPayload: stepResult.deferredPayload }
                                 : {})
                         });
+                        if (draftToolLabel) {
+                            draftEntrySet(draftToolKey, draftToolLabel, stepResult.toolIsError ? "error" : "done");
+                            await draftSync(false);
+                        }
 
                         // Accumulate deferred tool entries for flush after block success
                         if (stepResult.deferredPayload !== undefined && stepResult.deferredHandler) {
@@ -972,6 +1098,12 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                         rlmToolResultBuild({ id: blockState.toolCallId, name: RLM_TOOL_NAME }, resultText, false)
                             .toolMessage
                     );
+                    draftEntrySet(
+                        draftPythonEntryKey(blockState.toolCallId),
+                        draftPythonLabelBuild(blockState.blockDescriptions?.[blockState.blockIndex]),
+                        "done"
+                    );
+                    await draftSync(false);
 
                     if (result.skipTurn) {
                         logger.debug("event: Skip detected, breaking inference loop");
@@ -1030,10 +1162,18 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
         await notifySubagentFailure("Inference failed", error);
         if (connector && targetId) {
             try {
-                await connector.sendMessage(targetId, {
-                    text: message,
-                    replyToMessageId: entry.context.messageId
-                });
+                if (draftHandle) {
+                    if (!draftResponseText?.trim()) {
+                        draftResponseText = message;
+                    }
+                    draftEntryPush(message, "error");
+                    await draftFinish();
+                } else {
+                    await connector.sendMessage(targetId, {
+                        text: message,
+                        replyToMessageId: entry.context.messageId
+                    });
+                }
             } catch (sendError) {
                 logger.warn({ connector: source, error: sendError }, "error: Failed to send inference error response");
             }
@@ -1088,16 +1228,24 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
         await notifySubagentFailure("Inference failed", response.message.errorMessage);
         try {
             if (connector && targetId) {
-                await connector.sendMessage(targetId, {
-                    text: message,
-                    replyToMessageId: entry.context.messageId
-                });
-                eventBus.emit("agent.outgoing", {
-                    agentId: agent.id,
-                    source,
-                    message: { text: message },
-                    context: entry.context
-                });
+                if (draftHandle) {
+                    if (!draftResponseText?.trim()) {
+                        draftResponseText = message;
+                    }
+                    draftEntryPush(message, "error");
+                    await draftFinish();
+                } else {
+                    await connector.sendMessage(targetId, {
+                        text: message,
+                        replyToMessageId: entry.context.messageId
+                    });
+                    eventBus.emit("agent.outgoing", {
+                        agentId: agent.id,
+                        source,
+                        message: { text: message },
+                        context: entry.context
+                    });
+                }
             }
         } catch (error) {
             logger.warn({ connector: source, error }, "error: Failed to send error response");
@@ -1117,25 +1265,38 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
             await notifySubagentFailure(message);
             try {
                 if (connector && targetId && !lastResponseNoMessage) {
-                    await connector.sendMessage(targetId, {
-                        text: message,
-                        replyToMessageId: entry.context.messageId
-                    });
+                    if (draftHandle) {
+                        if (!draftResponseText?.trim()) {
+                            draftResponseText = message;
+                        }
+                        draftEntryPush(message, "error");
+                        await draftFinish();
+                    } else {
+                        await connector.sendMessage(targetId, {
+                            text: message,
+                            replyToMessageId: entry.context.messageId
+                        });
+                    }
                 }
             } catch (error) {
                 logger.warn({ connector: source, error }, "error: Failed to send tool error");
             }
+        } else if (draftHandle) {
+            await draftFinish();
         }
         logger.debug("event: handleMessage completed with no response text");
         return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
     }
 
     if (lastResponseNoMessage) {
+        if (draftHandle) {
+            await draftFinish();
+        }
         logger.debug("event: NO_MESSAGE suppressed final response delivery");
         return { responseText: finalResponseText, historyRecords, tokenStatsUpdates };
     }
 
-    const shouldSendText = hasResponseText && !lastResponseTextSent && !lastResponseNoMessage;
+    const shouldSendText = hasResponseText && !lastResponseTextSent && !lastResponseNoMessage && !usedDraftOutput;
     const outgoingText = shouldSendText ? responseText : null;
     logger.debug(
         `send: Sending response to user textLength=${outgoingText?.length ?? 0} targetId=${targetId ?? "none"}`
@@ -1156,6 +1317,9 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                 context: entry.context
             });
             logger.debug("event: Agent outgoing event emitted");
+        }
+        if (draftHandle) {
+            await draftFinish();
         }
     } catch (error) {
         logger.debug(`error: Failed to send response error=${String(error)}`);
@@ -1259,6 +1423,31 @@ function descriptionNormalize(value: unknown): string | undefined {
         return undefined;
     }
     return value.trim().length > 0 ? value : undefined;
+}
+
+function draftPythonEntryKey(toolCallId: string): string {
+    return `python:${toolCallId}`;
+}
+
+function draftToolEntryKey(toolCallId: string, toolCallCount: number): string {
+    return `tool:${toolCallId}:${toolCallCount}`;
+}
+
+function draftPythonLabelBuild(description?: string): string {
+    const trimmed = description?.trim();
+    return trimmed ? `run_python: ${trimmed}` : "run_python";
+}
+
+function draftToolLabelBuild(toolName: string, toolArgs: unknown): string {
+    const args = draftToolArgsFormat(toolArgs);
+    return args ? `${toolName} ${args}` : toolName;
+}
+
+function draftToolArgsFormat(toolArgs: unknown): string {
+    if (!toolArgs || typeof toolArgs !== "object" || Array.isArray(toolArgs)) {
+        return "";
+    }
+    return toolArgsFormatVerbose(toolArgs as Record<string, unknown>);
 }
 
 function usageCostResolve(cost: unknown): number {

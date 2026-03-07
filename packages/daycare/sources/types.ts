@@ -41,6 +41,7 @@ export type {
     CommandUnsubscribe,
     Connector,
     ConnectorCapabilities,
+    ConnectorDraft,
     ConnectorFile,
     ConnectorFileDisposition,
     ConnectorFileMode,

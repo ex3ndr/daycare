@@ -7,6 +7,7 @@ import type {
     CommandHandler,
     Connector,
     ConnectorCapabilities,
+    ConnectorDraft,
     ConnectorFile,
     ConnectorMessage,
     FileReference,
@@ -339,6 +340,58 @@ export class TelegramConnector implements Connector {
         logger.debug(`send: All files sent targetId=${targetId} chatId=${chatId} totalFiles=${files.length}`);
     }
 
+    async createDraft(targetId: string, message: ConnectorMessage): Promise<ConnectorDraft | null> {
+        if (!this.isAllowedTarget(targetId, "createDraft")) {
+            return null;
+        }
+        if ((message.files?.length ?? 0) > 0 || (message.buttons?.length ?? 0) > 0) {
+            return null;
+        }
+        const initialText = message.text?.trim() ?? "";
+        if (!initialText) {
+            return null;
+        }
+        if (telegramMessageSplit(initialText, TELEGRAM_MESSAGE_MAX_LENGTH).length !== 1) {
+            return null;
+        }
+
+        const chatId = telegramTargetChatIdResolve(targetId);
+        const sent = await this.sendTextMessage(
+            chatId,
+            initialText,
+            messageReplyOptionsBuild(message, chatId, this.sendReplies, this.sendRepliesInGroups)
+        );
+        if (!sent?.message_id) {
+            return null;
+        }
+
+        let currentText = initialText;
+        return {
+            update: async (nextMessage) => {
+                const nextText = nextMessage.text?.trim() ?? "";
+                if (!nextText || nextText === currentText) {
+                    return;
+                }
+                if (telegramMessageSplit(nextText, TELEGRAM_MESSAGE_MAX_LENGTH).length !== 1) {
+                    return;
+                }
+                await this.editTextMessage(chatId, sent.message_id, nextText);
+                currentText = nextText;
+            },
+            finish: async (nextMessage) => {
+                const nextText = nextMessage?.text?.trim() ?? "";
+                if (!nextText || nextText === currentText) {
+                    return;
+                }
+                if (telegramMessageSplit(nextText, TELEGRAM_MESSAGE_MAX_LENGTH).length !== 1) {
+                    return;
+                }
+                await this.editTextMessage(chatId, sent.message_id, nextText);
+                currentText = nextText;
+            }
+        };
+    }
+
     startTyping(targetId: string): () => void {
         if (!this.isAllowedTarget(targetId, "startTyping")) {
             return () => undefined;
@@ -438,23 +491,58 @@ export class TelegramConnector implements Connector {
         text: string,
         options?: TelegramBot.SendMessageOptions
     ): Promise<void> {
+        await this.sendTextMessage(targetId, text, options);
+    }
+
+    private async sendTextMessage(
+        targetId: string,
+        text: string,
+        options?: TelegramBot.SendMessageOptions
+    ): Promise<TelegramBot.Message> {
         const html = markdownToTelegramHtml(text);
         const useHtml = html.length <= TELEGRAM_MESSAGE_MAX_LENGTH;
         try {
             if (useHtml) {
-                await this.bot.sendMessage(targetId, html, {
+                return await this.bot.sendMessage(targetId, html, {
                     ...options,
                     parse_mode: "HTML"
                 });
-                return;
             }
-            await this.bot.sendMessage(targetId, text, options);
+            return await this.bot.sendMessage(targetId, text, options);
         } catch (error) {
             if (!useHtml || !isTelegramParseError(error)) {
                 throw error;
             }
             logger.warn({ error }, "error: Telegram HTML parse error; retrying without parse_mode");
-            await this.bot.sendMessage(targetId, text, options);
+            return await this.bot.sendMessage(targetId, text, options);
+        }
+    }
+
+    private async editTextMessage(targetId: string, messageId: number, text: string): Promise<void> {
+        const html = markdownToTelegramHtml(text);
+        const useHtml = html.length <= TELEGRAM_MESSAGE_MAX_LENGTH;
+        try {
+            if (useHtml) {
+                await this.bot.editMessageText(html, {
+                    chat_id: targetId,
+                    message_id: messageId,
+                    parse_mode: "HTML"
+                });
+                return;
+            }
+            await this.bot.editMessageText(text, {
+                chat_id: targetId,
+                message_id: messageId
+            });
+        } catch (error) {
+            if (!useHtml || !isTelegramParseError(error)) {
+                throw error;
+            }
+            logger.warn({ error }, "error: Telegram HTML edit parse error; retrying without parse_mode");
+            await this.bot.editMessageText(text, {
+                chat_id: targetId,
+                message_id: messageId
+            });
         }
     }
 

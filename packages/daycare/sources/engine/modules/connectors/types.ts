@@ -28,6 +28,11 @@ export type ConnectorMessage = {
     buttons?: ConnectorMessageButton[];
 };
 
+export type ConnectorDraft = {
+    update: (message: ConnectorMessage) => Promise<void>;
+    finish: (message?: ConnectorMessage) => Promise<void>;
+};
+
 export type ConnectorMessageButton =
     | {
           type: "url";
@@ -82,6 +87,7 @@ export interface Connector {
     onCommand?: (handler: CommandHandler) => CommandUnsubscribe;
     updateCommands?: (commands: SlashCommandEntry[]) => void | Promise<void>;
     sendMessage(targetId: string, message: ConnectorMessage): Promise<void>;
+    createDraft?: (targetId: string, message: ConnectorMessage) => Promise<ConnectorDraft | null>;
     startTyping?: (targetId: string) => () => void;
     setReaction?: (targetId: string, messageId: string, reaction: string) => Promise<void>;
     shutdown?: (reason?: string) => void | Promise<void>;

@@ -69,6 +69,49 @@ describe("agentLoopRun", () => {
         ]);
     });
 
+    it("uses connector drafts for run_python progress and final text", async () => {
+        const sendMessage = vi.fn(async () => undefined);
+        const update = vi.fn(async () => undefined);
+        const finish = vi.fn(async () => undefined);
+        const createDraft = vi.fn(async () => ({ update, finish }));
+        const connector: Connector = {
+            capabilities: { sendText: true },
+            onMessage: () => () => undefined,
+            sendMessage,
+            createDraft
+        };
+        const responses = [
+            assistantToolCallMessageBuild("tool-1", "run_python", {
+                code: 'echo(text="hello")',
+                description: "Check status"
+            }),
+            assistantMessageBuild("Finished")
+        ];
+        const inferenceRouter = inferenceRouterBuild(responses);
+        const toolResolver = toolResolverBuild(async (toolCall) => toolResultBuild(toolCall.id, toolCall.name, "ok"));
+
+        await agentLoopRun(
+            optionsBuild({
+                connector,
+                inferenceRouter,
+                toolResolver
+            })
+        );
+
+        expect(createDraft).toHaveBeenCalledWith(
+            "channel-1",
+            expect.objectContaining({ text: expect.stringContaining("run_python: Check status") })
+        );
+        expect(
+            update.mock.calls.some((call) => {
+                const message = call.at(0) as { text?: string | null } | undefined;
+                return typeof message?.text === "string" && message.text.includes("echo text=hello");
+            })
+        ).toBe(true);
+        expect(finish).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining("Finished") }));
+        expect(sendMessage).not.toHaveBeenCalled();
+    });
+
     it("records run_python descriptions in rlm_start history", async () => {
         const responses = [
             assistantToolCallMessageBuild("tool-1", "run_python", {
