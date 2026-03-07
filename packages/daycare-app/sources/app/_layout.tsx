@@ -9,8 +9,6 @@ import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-c
 import { useUnistyles } from "react-native-unistyles";
 import { AlertProvider } from "@/components/alert";
 import { AuthProvider, useAuthStore } from "@/modules/auth/authContext";
-import { authRouteAccessResolve } from "@/modules/auth/authRouteAccessResolve";
-import { useAuthLinkUrl } from "@/modules/auth/useAuthLinkUrl";
 import { SyncProvider } from "@/modules/sync/SyncProvider";
 import { isTMA } from "@/modules/tma/isTMA";
 
@@ -69,11 +67,7 @@ export default function RootLayout() {
     const ready = useAuthStore((state) => state.ready);
     const authState = useAuthStore((state) => state.state);
     const bootstrap = useAuthStore((state) => state.bootstrap);
-    const { url: authLinkUrl } = useAuthLinkUrl();
     const [fontsReady, setFontsReady] = React.useState(false);
-    const routeAccess = React.useMemo(() => {
-        return authRouteAccessResolve(authState, authLinkUrl);
-    }, [authLinkUrl, authState]);
 
     React.useEffect(() => {
         if (isTMA()) {
@@ -141,16 +135,17 @@ export default function RootLayout() {
                             <View style={{ flexDirection: "column", flexGrow: 1, flexBasis: 0 }}>
                                 <ThemeProvider value={navigationTheme}>
                                     <Stack screenOptions={{ headerShown: false }}>
-                                        <Stack.Protected guard={routeAccess.allowApp}>
+                                        <Stack.Protected guard={authState === "authenticated"}>
                                             <Stack.Screen name="(app)" />
                                             <Stack.Screen name="fragment/[id]" options={modalScreenOptions} />
                                             <Stack.Screen name="routine/[id]" options={modalScreenOptions} />
                                             <Stack.Screen name="file-preview/[path]" options={modalScreenOptions} />
                                             <Stack.Screen name="share" />
                                         </Stack.Protected>
-                                        <Stack.Protected guard={routeAccess.allowAuth}>
+                                        <Stack.Protected guard={authState === "unauthenticated"}>
                                             <Stack.Screen name="(auth)" />
                                         </Stack.Protected>
+                                        <Stack.Screen name="verify" />
                                     </Stack>
                                 </ThemeProvider>
                             </View>

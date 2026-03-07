@@ -17,9 +17,9 @@ sequenceDiagram
     App->>API: POST /auth/email/request
     API->>BA: signInMagicLink(email)
     BA->>DB: Store verification token
-    API->>SMTP: Send email with /auth payload link
+    API->>SMTP: Send email with /verify payload link
     SMTP-->>User: Magic link email
-    User->>App: Open emailed /auth link
+    User->>App: Open emailed /verify link
     App->>API: POST /auth/email/verify(token)
     API->>BA: magicLinkVerify(token)
     BA->>DB: Create auth user/session
@@ -69,27 +69,29 @@ sequenceDiagram
 
     User->>App: Enter email in Settings
     App->>API: POST /profile/email/connect/request
-    API->>SMTP: Send connect-email /auth link
+    API->>SMTP: Send connect-email /verify link
     SMTP-->>User: Email connection link
-    User->>App: Open emailed /auth link
+    User->>App: Open emailed /verify link
     App->>API: POST /auth/email/connect/verify(token)
     API->>DB: Add user_connector_keys(email:<address>)
     API-->>App: Connected email + userId
 ```
 
-## Authenticated Connect Link Handling
+## Dedicated Verify Route
 
-When a signed-in user opens a `connect-email` link, the app must keep the `/auth` route group available long enough for the verification screen to run. Otherwise Expo Router will immediately redirect back into the protected app shell and skip `POST /auth/email/connect/verify`.
+Email and app verification links now land on a top-level `/verify` screen instead of a protected auth-group route. That keeps the confirmation screen reachable regardless of whether the user is signed out, already signed in, or switching accounts.
 
 ```mermaid
 flowchart LR
-    A[Signed-in user opens /auth#connect-email payload] --> B{Auth routes still accessible?}
-    B -- No --> C[Router redirects to /(app)]
-    C --> D[Verification skipped]
-    B -- Yes --> E[Auth screen renders]
-    E --> F[User presses Enter]
-    F --> G[POST /auth/email/connect/verify]
-    G --> H[Profile refresh shows connected email]
+    A[User opens /verify#payload] --> B[Top-level verify screen renders]
+    B --> C[User presses Enter]
+    C --> D{Payload kind}
+    D -- email --> E[POST /auth/email/verify]
+    D -- connect-email --> F[POST /auth/email/connect/verify]
+    D -- session --> G[Validate session token]
+    E --> H[Login and redirect to /(app)]
+    F --> I[Refresh profile or show success]
+    G --> H
 ```
 
 ## Local Env Wiring

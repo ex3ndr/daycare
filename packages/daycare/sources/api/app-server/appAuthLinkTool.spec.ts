@@ -9,7 +9,7 @@ describe("appAuthLinkUrlBuild", () => {
         const url = appAuthLinkUrlBuild("127.0.0.1", 7332, "token-1");
         const parsed = new URL(url);
         expect(parsed.origin).toBe("https://daycare.dev");
-        expect(parsed.pathname).toBe("/auth");
+        expect(parsed.pathname).toBe("/verify");
         expect(appAuthLinkPayloadDecode(url)).toEqual({
             backendUrl: "https://daycare.dev",
             token: "token-1",
@@ -27,7 +27,7 @@ describe("appAuthLinkUrlBuild", () => {
         );
         const parsed = new URL(url);
         expect(parsed.origin).toBe("https://app.example.com");
-        expect(parsed.pathname).toBe("/auth");
+        expect(parsed.pathname).toBe("/verify");
         expect(appAuthLinkPayloadDecode(url)).toEqual({
             backendUrl: "https://api.example.com",
             token: "token-1",
@@ -62,7 +62,7 @@ describe("appAuthLinkGenerate", () => {
             secret: "test-secret"
         });
 
-        expect(result.url.startsWith("https://daycare.dev/auth#")).toBe(true);
+        expect(result.url.startsWith("https://daycare.dev/verify#")).toBe(true);
         const payload = await jwtVerify(result.token, "test-secret", { service: APP_AUTH_LINK_SERVICE });
         expect(payload.userId).toBe("user-7");
     });

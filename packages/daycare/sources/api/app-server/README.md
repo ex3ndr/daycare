@@ -48,10 +48,10 @@ Responses never include secret variable values.
 - Slash command: `/app`
 
 Both generate a short-lived app URL in the form:
-`<appEndpoint-or-serverEndpoint>/auth#<base64url-json>`
+`<appEndpoint-or-serverEndpoint>/verify#<base64url-json>`
 
 Token lifecycle:
-- Link token (ephemeral): embedded in `/auth#...` URL payload, default TTL is 1 hour.
+- Link token (ephemeral): embedded in `/verify#...` URL payload, default TTL is 1 hour.
 - Session token (long-term): returned by `/auth/validate`, `/auth/refresh`, and `/auth/telegram`, TTL is 1 year.
 
 ## Structure

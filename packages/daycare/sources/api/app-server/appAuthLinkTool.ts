@@ -117,7 +117,7 @@ export function appAuthPayloadUrlBuild(
         ...payload,
         backendUrl: payload.backendUrl.trim() || backendUrl
     });
-    return `${appUrl}/auth#${hashPayload}`;
+    return `${appUrl}/verify#${hashPayload}`;
 }
 
 function appAuthLinkHashPayloadEncode(payload: AppAuthLinkPayload): string {

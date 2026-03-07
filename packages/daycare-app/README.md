@@ -23,7 +23,7 @@ Expo app scaffold for Daycare (iOS/Android/Web) with a token-based magic-link au
 
 ## Auth flow
 
-- Open `/auth#<base64url-json>` from the app server link.
+- Open `/verify#<base64url-json>` from the app server link.
 - Hash payload JSON must contain `backendUrl` and `token`.
 - The app displays backend server info and waits for the user to tap `Enter`.
 - On enter, the app calls `POST <backendUrl>/auth/validate`.

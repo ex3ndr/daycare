@@ -13,7 +13,7 @@ describe("authLinkPayloadFromUrl", () => {
             token: "token-1"
         });
 
-        expect(authLinkPayloadFromUrl(`https://daycare.dev/auth#${encoded}`)).toEqual({
+        expect(authLinkPayloadFromUrl(`https://daycare.dev/verify#${encoded}`)).toEqual({
             backendUrl: "http://127.0.0.1:7332",
             token: "token-1",
             kind: "session"
@@ -84,7 +84,7 @@ describe("authLinkPayloadFromUrl", () => {
             kind: "email"
         });
 
-        expect(authLinkPayloadFromUrl(`https://daycare.dev/auth#${encoded}`)).toEqual({
+        expect(authLinkPayloadFromUrl(`https://daycare.dev/verify#${encoded}`)).toEqual({
             backendUrl: "http://127.0.0.1:7332",
             token: "token-1",
             kind: "email"
@@ -100,7 +100,7 @@ describe("authLinkPayloadFromUrl", () => {
             kind: "connect-email"
         });
 
-        expect(authLinkPayloadFromUrl(`https://daycare.dev/auth#${encoded}`)).toEqual({
+        expect(authLinkPayloadFromUrl(`https://daycare.dev/verify#${encoded}`)).toEqual({
             backendUrl: "http://127.0.0.1:7332",
             token: "token-1",
             kind: "connect-email"
