@@ -3,7 +3,7 @@ import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useAgentsStore } from "@/modules/agents/agentsContext";
 import { useAuthStore } from "@/modules/auth/authContext";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { ChatInput } from "./ChatInput";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatThinkingBar } from "./ChatThinkingBar";
@@ -27,7 +27,7 @@ export function Chat({ agentId, systemPrompt, name, description }: ChatProps) {
     const { theme } = useUnistyles();
     const baseUrl = useAuthStore((state) => state.baseUrl);
     const token = useAuthStore((state) => state.token);
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
 
     const open = useChatStore((state) => state.open);
     const create = useChatStore((state) => state.create);
@@ -63,7 +63,7 @@ export function Chat({ agentId, systemPrompt, name, description }: ChatProps) {
 
         if (agentId) {
             setInitializationError(null);
-            void open(baseUrl, token, activeId, agentId);
+            void open(baseUrl, token, workspaceId, agentId);
             return;
         }
 
@@ -74,7 +74,7 @@ export function Chat({ agentId, systemPrompt, name, description }: ChatProps) {
         creatingRef.current = true;
         setInitializationError(null);
         setInitializing(true);
-        void create(baseUrl, token, activeId, { systemPrompt, name, description })
+        void create(baseUrl, token, workspaceId, { systemPrompt, name, description })
             .then((newAgentId) => {
                 setCreatedAgentId(newAgentId);
             })
@@ -85,7 +85,7 @@ export function Chat({ agentId, systemPrompt, name, description }: ChatProps) {
             .finally(() => {
                 setInitializing(false);
             });
-    }, [baseUrl, token, activeId, agentId, systemPrompt, name, description, createdAgentId, open, create]);
+    }, [baseUrl, token, workspaceId, agentId, systemPrompt, name, description, createdAgentId, open, create]);
 
     React.useEffect(() => {
         if (!baseUrl || !token || !resolvedAgentId) {
@@ -93,22 +93,22 @@ export function Chat({ agentId, systemPrompt, name, description }: ChatProps) {
         }
 
         const interval = setInterval(() => {
-            void poll(baseUrl, token, activeId, resolvedAgentId);
+            void poll(baseUrl, token, workspaceId, resolvedAgentId);
         }, CHAT_POLL_INTERVAL_MS);
 
         return () => {
             clearInterval(interval);
         };
-    }, [baseUrl, token, activeId, resolvedAgentId, poll]);
+    }, [baseUrl, token, workspaceId, resolvedAgentId, poll]);
 
     const onSend = React.useCallback(
         async (text: string) => {
             if (!baseUrl || !token || !resolvedAgentId) {
                 return;
             }
-            await send(baseUrl, token, activeId, resolvedAgentId, text);
+            await send(baseUrl, token, workspaceId, resolvedAgentId, text);
         },
-        [baseUrl, token, activeId, resolvedAgentId, send]
+        [baseUrl, token, workspaceId, resolvedAgentId, send]
     );
 
     const error = configurationError ?? initializationError ?? session.error;

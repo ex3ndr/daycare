@@ -2,7 +2,7 @@ import { Octicons } from "@expo/vector-icons";
 import { type Href, useRouter } from "expo-router";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { showcasePages } from "@/views/dev/showcase/_showcasePages";
 
 /**
@@ -12,8 +12,8 @@ import { showcasePages } from "@/views/dev/showcase/_showcasePages";
 export function ShowcaseListView() {
     const { theme } = useUnistyles();
     const router = useRouter();
-    const activeId = useWorkspacesStore((s) => s.activeId);
-    const wsPrefix = activeId ? `/${activeId}` : "";
+    const { workspaceId } = useWorkspace();
+    const wsPrefix = workspaceId ? `/${workspaceId}` : "";
 
     return (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>

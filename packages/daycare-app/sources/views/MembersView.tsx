@@ -1,5 +1,5 @@
 import * as Clipboard from "expo-clipboard";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Badge } from "@/components/Badge";
@@ -10,7 +10,7 @@ import { useAuthStore } from "@/modules/auth/authContext";
 import { memberKick } from "@/modules/members/memberKick";
 import { useMembersStore } from "@/modules/members/membersContext";
 import { membersInviteCreate } from "@/modules/members/membersInviteCreate";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 function memberDisplayName(member: { firstName: string | null; lastName: string | null; nametag: string }): string {
     const label = [member.firstName, member.lastName].filter(Boolean).join(" ").trim();
@@ -26,17 +26,12 @@ export function MembersView() {
     const baseUrl = useAuthStore((state) => state.baseUrl);
     const token = useAuthStore((state) => state.token);
     const authUserId = useAuthStore((state) => state.userId);
-    const activeId = useWorkspacesStore((state) => state.activeId);
-    const workspaces = useWorkspacesStore((state) => state.workspaces);
+    const { workspace: activeWorkspace } = useWorkspace();
     const fetchMembers = useMembersStore((state) => state.fetch);
     const members = useMembersStore((state) => state.members);
     const loading = useMembersStore((state) => state.loading);
     const error = useMembersStore((state) => state.error);
     const applyKicked = useMembersStore((state) => state.applyKicked);
-    const activeWorkspace = useMemo(
-        () => workspaces.find((workspace) => workspace.userId === activeId) ?? null,
-        [activeId, workspaces]
-    );
     const isOwner = members.some((member) => member.isOwner && member.userId === authUserId);
 
     const [inviteLoading, setInviteLoading] = useState(false);

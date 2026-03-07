@@ -3,7 +3,7 @@ import { usePathname, useRouter } from "expo-router";
 import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { devPathSegmentResolve } from "@/views/dev/devPathSegmentResolve";
 import { showcasePages, showcasePagesMap } from "@/views/dev/showcase/_showcasePages";
 
@@ -42,30 +42,30 @@ export const DevTreePanel = React.memo(() => {
     const { theme } = useUnistyles();
     const router = useRouter();
     const pathname = usePathname();
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
     const selection = React.useMemo(() => devSelectionResolve(pathname), [pathname]);
     const showcaseExpanded = selection.section === "showcase";
 
     const navigateToSection = React.useCallback(
         (section: DevSection) => {
-            if (!activeId) return;
+            if (!workspaceId) return;
             router.replace({
                 pathname: "/[workspace]/dev/[item]",
-                params: { workspace: activeId, item: section }
+                params: { workspace: workspaceId, item: section }
             });
         },
-        [activeId, router]
+        [workspaceId, router]
     );
 
     const navigateToShowcase = React.useCallback(
         (showcaseId: string) => {
-            if (!activeId) return;
+            if (!workspaceId) return;
             router.replace({
                 pathname: "/[workspace]/dev/[item]",
-                params: { workspace: activeId, item: showcaseId }
+                params: { workspace: workspaceId, item: showcaseId }
             });
         },
-        [activeId, router]
+        [workspaceId, router]
     );
 
     return (

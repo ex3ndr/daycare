@@ -8,7 +8,7 @@ import { useAuthStore } from "@/modules/auth/authContext";
 import { filesFetchPreview } from "@/modules/files/filesFetchPreview";
 import { filesPathDecode } from "@/modules/files/filesPathEncode";
 import type { FilePreview } from "@/modules/files/filesTypes";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { filesFormatSize } from "@/views/files/filesFormatSize";
 import { ImageViewer } from "@/views/files/ImageViewer";
 
@@ -17,7 +17,7 @@ export default function FilePreviewScreen() {
     const { path: encodedPath } = useLocalSearchParams<{ path: string }>();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
 
     const filePath = encodedPath ? filesPathDecode(encodedPath) : null;
     const fileName = filePath?.split("/").pop() ?? "File";
@@ -30,7 +30,7 @@ export default function FilePreviewScreen() {
         if (!filePath || !baseUrl || !token) return;
         setLoading(true);
         setError(null);
-        filesFetchPreview(baseUrl, token, activeId, filePath)
+        filesFetchPreview(baseUrl, token, workspaceId, filePath)
             .then((result) => {
                 setPreview(result);
                 setLoading(false);
@@ -39,7 +39,7 @@ export default function FilePreviewScreen() {
                 setError(err instanceof Error ? err.message : "Failed to read file.");
                 setLoading(false);
             });
-    }, [filePath, baseUrl, token, activeId]);
+    }, [filePath, baseUrl, token, workspaceId]);
 
     if (!filePath) return null;
 

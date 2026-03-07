@@ -7,7 +7,7 @@ import { ItemList } from "@/components/ItemList";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useSkillsStore } from "@/modules/skills/skillsContext";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 /** Readable label for a skill source. */
 function sourceLabel(source: string): string {
@@ -24,7 +24,7 @@ export function SkillsView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
 
     const skills = useSkillsStore((s) => s.skills);
     const loading = useSkillsStore((s) => s.loading);
@@ -33,9 +33,9 @@ export function SkillsView() {
 
     useEffect(() => {
         if (baseUrl && token) {
-            void fetchSkills(baseUrl, token, activeId);
+            void fetchSkills(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, activeId, fetchSkills]);
+    }, [baseUrl, token, workspaceId, fetchSkills]);
 
     if (loading && skills.length === 0) {
         return (

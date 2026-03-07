@@ -10,7 +10,7 @@ import { useProfileStore } from "@/modules/profile/profileContext";
 import { profileEmailConnectRequest } from "@/modules/profile/profileEmailConnectRequest";
 import { secretsFetch } from "@/modules/secrets/secretsFetch";
 import type { SecretSummary } from "@/modules/secrets/secretsTypes";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { secretPresenceSubtitleBuild } from "@/views/settings/secretPresenceSubtitleBuild";
 
 export function SettingsView() {
@@ -20,7 +20,7 @@ export function SettingsView() {
     const token = useAuthStore((s) => s.token);
     const userId = useAuthStore((s) => s.userId);
     const logout = useAuthStore((s) => s.logout);
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
 
     const profile = useProfileStore((s) => s.profile);
     const loading = useProfileStore((s) => s.loading);
@@ -54,7 +54,7 @@ export function SettingsView() {
         setSecretsLoading(true);
         setSecretsError(null);
 
-        void secretsFetch(baseUrl, token, activeId)
+        void secretsFetch(baseUrl, token, workspaceId)
             .then((items) => {
                 if (!active) {
                     return;
@@ -79,7 +79,7 @@ export function SettingsView() {
         return () => {
             active = false;
         };
-    }, [baseUrl, token, activeId]);
+    }, [baseUrl, token, workspaceId]);
 
     const connectEmailRequest = async () => {
         const normalizedEmail = email.trim().toLowerCase();

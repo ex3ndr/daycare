@@ -11,6 +11,7 @@ import { AlertProvider } from "@/components/alert";
 import { AuthProvider, useAuthStore } from "@/modules/auth/authContext";
 import { SyncProvider } from "@/modules/sync/SyncProvider";
 import { isTMA } from "@/modules/tma/isTMA";
+import { WorkspaceProvider } from "@/modules/workspaces/workspaceProvider";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -129,30 +130,32 @@ export default function RootLayout() {
         <>
             <StatusBar barStyle={theme.dark ? "light-content" : "dark-content"} />
             <AuthProvider>
-                <SyncProvider>
-                    <AlertProvider>
-                        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-                            <View style={{ flexDirection: "column", flexGrow: 1, flexBasis: 0 }}>
-                                <ThemeProvider value={navigationTheme}>
-                                    <Stack screenOptions={{ headerShown: false }}>
-                                        <Stack.Protected guard={authState === "authenticated"}>
-                                            <Stack.Screen name="(app)" />
-                                            <Stack.Screen name="fragment/[id]" options={modalScreenOptions} />
-                                            <Stack.Screen name="routine/[id]" options={modalScreenOptions} />
-                                            <Stack.Screen name="file-preview/[path]" options={modalScreenOptions} />
-                                            <Stack.Screen name="share" />
-                                        </Stack.Protected>
-                                        <Stack.Protected guard={authState === "unauthenticated"}>
-                                            <Stack.Screen name="(auth)" />
-                                        </Stack.Protected>
-                                        <Stack.Screen name="verify" />
-                                        <Stack.Screen name="invite" />
-                                    </Stack>
-                                </ThemeProvider>
-                            </View>
-                        </SafeAreaProvider>
-                    </AlertProvider>
-                </SyncProvider>
+                <WorkspaceProvider>
+                    <SyncProvider>
+                        <AlertProvider>
+                            <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+                                <View style={{ flexDirection: "column", flexGrow: 1, flexBasis: 0 }}>
+                                    <ThemeProvider value={navigationTheme}>
+                                        <Stack screenOptions={{ headerShown: false }}>
+                                            <Stack.Protected guard={authState === "authenticated"}>
+                                                <Stack.Screen name="(app)" />
+                                                <Stack.Screen name="fragment/[id]" options={modalScreenOptions} />
+                                                <Stack.Screen name="routine/[id]" options={modalScreenOptions} />
+                                                <Stack.Screen name="file-preview/[path]" options={modalScreenOptions} />
+                                                <Stack.Screen name="share" />
+                                            </Stack.Protected>
+                                            <Stack.Protected guard={authState === "unauthenticated"}>
+                                                <Stack.Screen name="(auth)" />
+                                            </Stack.Protected>
+                                            <Stack.Screen name="verify" />
+                                            <Stack.Screen name="invite" />
+                                        </Stack>
+                                    </ThemeProvider>
+                                </View>
+                            </SafeAreaProvider>
+                        </AlertProvider>
+                    </SyncProvider>
+                </WorkspaceProvider>
             </AuthProvider>
         </>
     );

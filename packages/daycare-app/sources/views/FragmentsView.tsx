@@ -5,7 +5,7 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useFragmentsStore } from "@/modules/fragments/fragmentsContext";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 export function FragmentsView() {
     const { theme } = useUnistyles();
@@ -13,7 +13,7 @@ export function FragmentsView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
 
     const fragments = useFragmentsStore((s) => s.fragments);
     const loading = useFragmentsStore((s) => s.loading);
@@ -22,9 +22,9 @@ export function FragmentsView() {
 
     React.useEffect(() => {
         if (baseUrl && token) {
-            void fetchFragments(baseUrl, token, activeId);
+            void fetchFragments(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, activeId, fetchFragments]);
+    }, [baseUrl, token, workspaceId, fetchFragments]);
 
     if (loading && fragments.length === 0) {
         return (
@@ -67,7 +67,10 @@ export function FragmentsView() {
                     <Pressable
                         key={fragment.id}
                         style={[styles.card, { backgroundColor: theme.colors.surfaceContainerLow }]}
-                        onPress={() => router.push(`/fragment/${fragment.id}`)}
+                        onPress={() => {
+                            const workspaceQuery = workspaceId ? `?workspace=${encodeURIComponent(workspaceId)}` : "";
+                            router.push(`/fragment/${fragment.id}${workspaceQuery}`);
+                        }}
                     >
                         <Text style={[styles.cardTitle, { color: theme.colors.onSurface }]} numberOfLines={1}>
                             {fragment.title}

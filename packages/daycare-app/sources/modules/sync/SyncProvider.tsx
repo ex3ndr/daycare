@@ -4,6 +4,7 @@ import { useAgentsStore } from "@/modules/agents/agentsContext";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useObservationsStore } from "@/modules/observations/observationsContext";
 import { useTasksStore } from "@/modules/tasks/tasksContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 import { useSyncStore } from "./syncContext";
 
@@ -25,7 +26,7 @@ export function SyncProvider({ children }: PropsWithChildren): ReactNode {
     const fetchObservations = useObservationsStore((s) => s.fetch);
     const fetchTasks = useTasksStore((s) => s.fetch);
     const fetchWorkspaces = useWorkspacesStore((s) => s.fetch);
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
 
     // Fetch workspaces when authenticated
     React.useEffect(() => {
@@ -37,23 +38,23 @@ export function SyncProvider({ children }: PropsWithChildren): ReactNode {
     // Connect/disconnect based on auth state and active workspace
     React.useEffect(() => {
         if (authState === "authenticated" && baseUrl && token) {
-            connect(baseUrl, token, activeId);
+            connect(baseUrl, token, workspaceId);
         } else {
             disconnect();
         }
         return () => {
             disconnect();
         };
-    }, [authState, baseUrl, token, activeId, connect, disconnect]);
+    }, [authState, baseUrl, token, workspaceId, connect, disconnect]);
 
     // Refetch stores when sync becomes connected (initial connect or reconnect)
     React.useEffect(() => {
         if (syncStatus === "connected" && baseUrl && token) {
-            void fetchAgents(baseUrl, token, activeId);
-            void fetchObservations(baseUrl, token, activeId);
-            void fetchTasks(baseUrl, token, activeId);
+            void fetchAgents(baseUrl, token, workspaceId);
+            void fetchObservations(baseUrl, token, workspaceId);
+            void fetchTasks(baseUrl, token, workspaceId);
         }
-    }, [syncStatus, baseUrl, token, activeId, fetchAgents, fetchObservations, fetchTasks]);
+    }, [syncStatus, baseUrl, token, workspaceId, fetchAgents, fetchObservations, fetchTasks]);
 
     return <>{children}</>;
 }

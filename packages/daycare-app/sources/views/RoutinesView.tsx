@@ -12,7 +12,7 @@ import { tasksFormatLastRun } from "@/modules/tasks/tasksFormatLastRun";
 import { tasksStatus } from "@/modules/tasks/tasksStatus";
 import { tasksSubtitle } from "@/modules/tasks/tasksSubtitle";
 import type { CronTriggerSummary, TaskStatus, WebhookTriggerSummary } from "@/modules/tasks/tasksTypes";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 function RoutineStatus({ status, label }: { status: TaskStatus; label: string }) {
     const { theme } = useUnistyles();
@@ -64,7 +64,7 @@ export function RoutinesView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
 
     const tasks = useTasksStore((s) => s.tasks);
     const triggers = useTasksStore((s) => s.triggers);
@@ -74,9 +74,9 @@ export function RoutinesView() {
 
     useEffect(() => {
         if (baseUrl && token) {
-            void fetchTasks(baseUrl, token, activeId);
+            void fetchTasks(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, activeId, fetchTasks]);
+    }, [baseUrl, token, workspaceId, fetchTasks]);
 
     // Index triggers by taskId for efficient lookup
     const triggersByTask = useMemo(() => {
@@ -109,9 +109,10 @@ export function RoutinesView() {
 
     const handleTaskPress = useCallback(
         (taskId: string) => {
-            router.push(`/routine/${taskId}`);
+            const workspaceQuery = workspaceId ? `?workspace=${encodeURIComponent(workspaceId)}` : "";
+            router.push(`/routine/${taskId}${workspaceQuery}`);
         },
-        [router]
+        [router, workspaceId]
     );
 
     // Recalculate "now" when tasks change so relative times are fresh

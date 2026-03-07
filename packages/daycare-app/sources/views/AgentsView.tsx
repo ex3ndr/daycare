@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { useAgentsStore } from "@/modules/agents/agentsContext";
 import type { AgentListItem } from "@/modules/agents/agentsTypes";
 import { useAuthStore } from "@/modules/auth/authContext";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 const CARD_SIZE = 120;
 
@@ -220,7 +220,7 @@ export function AgentsView() {
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
 
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
 
     const agents = useAgentsStore((s) => s.agents);
     const loading = useAgentsStore((s) => s.loading);
@@ -229,16 +229,16 @@ export function AgentsView() {
 
     useEffect(() => {
         if (baseUrl && token) {
-            void fetchAgents(baseUrl, token, activeId);
+            void fetchAgents(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, activeId, fetchAgents]);
+    }, [baseUrl, token, workspaceId, fetchAgents]);
 
     const handleAgentPress = useCallback(
         (agentId: string) => {
-            const prefix = activeId ? `/${activeId}` : "";
+            const prefix = workspaceId ? `/${workspaceId}` : "";
             router.push(`${prefix}/agents/${agentId}` as Href);
         },
-        [router, activeId]
+        [router, workspaceId]
     );
 
     if (loading && agents.length === 0) {

@@ -14,7 +14,7 @@ import { costsFormatCurrency } from "@/modules/costs/costsFormatCurrency";
 import { costsPeriodRange } from "@/modules/costs/costsPeriodRange";
 import { costsSummarize } from "@/modules/costs/costsSummarize";
 import { costsTimeSeries } from "@/modules/costs/costsTimeSeries";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { CostsBarChart } from "./costs/CostsBarChart";
 import { CostsPeriodSelector } from "./costs/CostsPeriodSelector";
 import { CostsSummaryCard } from "./costs/CostsSummaryCard";
@@ -37,7 +37,7 @@ export function CostsView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
 
     const period = useCostsStore((s) => s.period);
     const rows = useCostsStore((s) => s.rows);
@@ -49,18 +49,18 @@ export function CostsView() {
     // biome-ignore lint/correctness/useExhaustiveDependencies: period triggers re-fetch; store reads it internally
     useEffect(() => {
         if (baseUrl && token) {
-            void fetchCosts(baseUrl, token, activeId);
+            void fetchCosts(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, activeId, fetchCosts, period]);
+    }, [baseUrl, token, workspaceId, fetchCosts, period]);
 
     const agents = useAgentsStore((s) => s.agents);
     const fetchAgents = useAgentsStore((s) => s.fetch);
 
     useEffect(() => {
         if (baseUrl && token) {
-            void fetchAgents(baseUrl, token, activeId);
+            void fetchAgents(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, activeId, fetchAgents]);
+    }, [baseUrl, token, workspaceId, fetchAgents]);
 
     // Map agentId -> display name
     const agentNames = useMemo(() => {

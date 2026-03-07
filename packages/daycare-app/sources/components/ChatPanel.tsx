@@ -6,7 +6,7 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { Chat } from "@/modules/chat/Chat";
 import { chatDirectResolve } from "@/modules/chat/chatApi";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 export const CHAT_PANEL_WIDTH = 320;
 export const CHAT_COLLAPSED_WIDTH = 56;
@@ -29,7 +29,7 @@ export const ChatPanel = React.memo<ChatPanelProps>(({ onToggleCollapse, labelsO
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
     const authState = useAuthStore((s) => s.state);
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
 
     const [directAgentId, setDirectAgentId] = React.useState<string | null>(null);
     const resolvingRef = React.useRef(false);
@@ -37,12 +37,12 @@ export const ChatPanel = React.memo<ChatPanelProps>(({ onToggleCollapse, labelsO
     React.useEffect(() => {
         if (authState !== "authenticated" || !baseUrl || !token || resolvingRef.current) return;
         resolvingRef.current = true;
-        void chatDirectResolve(baseUrl, token, activeId)
+        void chatDirectResolve(baseUrl, token, workspaceId)
             .then(setDirectAgentId)
             .finally(() => {
                 resolvingRef.current = false;
             });
-    }, [authState, baseUrl, token, activeId]);
+    }, [authState, baseUrl, token, workspaceId]);
 
     const labelsAnimatedStyle = useAnimatedStyle(() => ({
         opacity: labelsOpacity ? labelsOpacity.value : 1

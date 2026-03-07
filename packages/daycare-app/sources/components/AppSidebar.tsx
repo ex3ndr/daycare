@@ -5,6 +5,7 @@ import { Pressable, ScrollView, type StyleProp, Text, View, type ViewStyle } fro
 import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { type AppMode, appModes } from "@/modules/navigation/appModes";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 import type { WorkspaceListItem } from "@/modules/workspaces/workspacesFetch";
 
@@ -54,19 +55,6 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     dev: [],
     settings: []
 };
-
-/**
- * Extracts the workspace id from the pathname.
- * E.g. "/{workspaceId}/agents" -> workspaceId, "/home" -> undefined.
- */
-function extractWorkspaceFromPath(pathname: string): string | undefined {
-    const parts = pathname.split("/").filter(Boolean);
-    // If there are at least 2 segments and the 2nd is an app mode, the 1st is the workspace
-    if (parts.length >= 2 && appModes.includes(parts[1] as AppMode)) {
-        return parts[0];
-    }
-    return parts[0] && !appModes.includes(parts[0] as AppMode) ? parts[0] : undefined;
-}
 
 /**
  * Extracts the current AppMode from the pathname.
@@ -156,10 +144,9 @@ export const WorkspaceStrip = React.memo<{ onNavigate?: () => void; style?: Styl
         const router = useRouter();
         const pathname = usePathname();
         const workspaces = useWorkspacesStore((s) => s.workspaces);
-        const activeId = useWorkspacesStore((s) => s.activeId);
+        const { workspaceId } = useWorkspace();
         const activeMode = extractModeFromPath(pathname);
-        const workspace = extractWorkspaceFromPath(pathname);
-        const wsPrefix = workspace ? `/${workspace}` : "";
+        const wsPrefix = workspaceId ? `/${workspaceId}` : "";
 
         const handleWorkspaceSwitch = React.useCallback(
             (userId: string) => {
@@ -186,7 +173,7 @@ export const WorkspaceStrip = React.memo<{ onNavigate?: () => void; style?: Styl
                             <WorkspaceButton
                                 key={ws.userId}
                                 workspace={ws}
-                                isActive={ws.userId === activeId}
+                                isActive={ws.userId === workspaceId}
                                 onPress={() => handleWorkspaceSwitch(ws.userId)}
                             />
                         ))}
@@ -199,7 +186,7 @@ export const WorkspaceStrip = React.memo<{ onNavigate?: () => void; style?: Styl
                             <WorkspaceButton
                                 key={ws.userId}
                                 workspace={ws}
-                                isActive={ws.userId === activeId}
+                                isActive={ws.userId === workspaceId}
                                 onPress={() => handleWorkspaceSwitch(ws.userId)}
                             />
                         ))}
@@ -317,13 +304,9 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         const pathname = usePathname();
         const router = useRouter();
 
-        const workspace = extractWorkspaceFromPath(pathname);
         const activeMode = extractModeFromPath(pathname);
         const selectedItem = extractItemFromPath(pathname);
-
-        const activeId = useWorkspacesStore((s) => s.activeId);
-        const workspaces = useWorkspacesStore((s) => s.workspaces);
-        const activeWorkspace = workspaces.find((ws) => ws.userId === activeId);
+        const { workspaceId, workspace: activeWorkspace } = useWorkspace();
         const visibleSegmentGroups = React.useMemo(
             () =>
                 segmentGroups.map((group) =>
@@ -332,7 +315,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(
             [activeWorkspace?.isSelf]
         );
 
-        const wsPrefix = workspace ? `/${workspace}` : "";
+        const wsPrefix = workspaceId ? `/${workspaceId}` : "";
 
         const handleModePress = React.useCallback(
             (mode: AppMode) => {

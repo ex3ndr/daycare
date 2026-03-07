@@ -1,27 +1,23 @@
 import { createId } from "@paralleldrive/cuid2";
-import { useLocalSearchParams } from "expo-router";
 import * as React from "react";
 import { ContentPanelLayout } from "@/components/layout/ContentPanelLayout";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { documentRootIdResolve } from "@/modules/documents/documentRootIdResolve";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
-import { documentWorkspaceIdResolve } from "@/modules/documents/documentWorkspaceIdResolve";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 import { DocumentsView } from "@/views/documents/DocumentsView";
 
 export default function DocumentsRoute() {
-    const { workspace } = useLocalSearchParams<{ workspace?: string | string[] }>();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
     const documentItems = useDocumentsStore((s) => s.items);
     const fetchDocuments = useDocumentsStore((s) => s.fetch);
     const createDocument = useDocumentsStore((s) => s.createDocument);
     const [createDialogVisible, setCreateDialogVisible] = React.useState(false);
     const [createParentId, setCreateParentId] = React.useState<string | null>(null);
     const documentRootId = React.useMemo(() => documentRootIdResolve(documentItems), [documentItems]);
-    const workspaceId = React.useMemo(() => documentWorkspaceIdResolve(workspace, activeId), [workspace, activeId]);
 
     React.useEffect(() => {
         if (baseUrl && token) {

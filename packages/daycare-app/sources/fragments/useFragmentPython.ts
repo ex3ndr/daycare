@@ -1,7 +1,7 @@
 import { createStateStore, type Spec, type StateStore } from "@json-render/react-native";
 import * as React from "react";
 import { useAuthStore } from "@/modules/auth/authContext";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { montyFragmentExternalFunctionsBuild } from "./montyFragmentExternalFunctionsBuild";
 import { montyFragmentHandlersBuild } from "./montyFragmentHandlersBuild";
 import { montyFragmentAction, montyFragmentInit } from "./montyFragmentRun";
@@ -26,7 +26,7 @@ export type FragmentPythonState =
 export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPythonState {
     const baseUrl = useAuthStore((state) => state.baseUrl);
     const token = useAuthStore((state) => state.token);
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
     const fallbackState = React.useMemo(() => fragmentStateNormalize(spec?.state), [spec]);
     const code = typeof spec?.code === "string" && spec.code.trim() ? spec.code : null;
     const fallbackStore = React.useMemo(() => createStateStore(fallbackState), [fallbackState]);
@@ -52,7 +52,7 @@ export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPyth
         const externalFunctions = montyFragmentExternalFunctionsBuild({
             baseUrl,
             token,
-            workspaceId: activeId
+            workspaceId
         });
         const setBusyState = () => {
             setRuntimeState((state) =>
@@ -149,7 +149,7 @@ export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPyth
         return () => {
             active = false;
         };
-    }, [activeId, baseUrl, code, fallbackReady, fallbackStore, token]);
+    }, [workspaceId, baseUrl, code, fallbackReady, fallbackStore, token]);
 
     return runtimeState;
 }

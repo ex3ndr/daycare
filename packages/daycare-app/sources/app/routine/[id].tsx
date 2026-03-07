@@ -5,7 +5,7 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useTasksStore } from "@/modules/tasks/tasksContext";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { RoutineDetailPanel } from "@/views/routines/RoutineDetailPanel";
 
 export default function RoutineDetailScreen() {
@@ -14,7 +14,7 @@ export default function RoutineDetailScreen() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
     const selectTask = useTasksStore((s) => s.selectTask);
     const detailLoading = useTasksStore((s) => s.detailLoading);
     const task = useTasksStore((s) => s.tasks.find((t) => t.id === id));
@@ -22,14 +22,14 @@ export default function RoutineDetailScreen() {
     // Select the task on mount, clear on unmount.
     React.useEffect(() => {
         if (baseUrl && token && id) {
-            selectTask(baseUrl, token, activeId, id);
+            selectTask(baseUrl, token, workspaceId, id);
         }
         return () => {
             if (baseUrl && token) {
-                selectTask(baseUrl, token, activeId, null);
+                selectTask(baseUrl, token, workspaceId, null);
             }
         };
-    }, [baseUrl, token, activeId, id, selectTask]);
+    }, [baseUrl, token, workspaceId, id, selectTask]);
 
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surface }]}>

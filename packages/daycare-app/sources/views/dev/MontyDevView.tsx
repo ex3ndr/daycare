@@ -15,7 +15,7 @@ import { FragmentBusyIndicator } from "@/fragments/FragmentBusyIndicator";
 import { fragmentsRegistry } from "@/fragments/registry";
 import { useFragmentPython } from "@/fragments/useFragmentPython";
 import { useAuthStore } from "@/modules/auth/authContext";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { type MontyDevFixtures, montyDevFixturesEnsure } from "./montyDevFixturesEnsure";
 
 const counterExampleSpec: Spec & { code: string } = {
@@ -578,7 +578,7 @@ function montyDevServerExamplesCreate(databaseId: string): FragmentExample[] {
 export function MontyDevView() {
     const baseUrl = useAuthStore((state) => state.baseUrl);
     const token = useAuthStore((state) => state.token);
-    const activeId = useWorkspacesStore((state) => state.activeId);
+    const { workspaceId } = useWorkspace();
     const [running, setRunning] = React.useState(false);
     const [runtimeStatus, setRuntimeStatus] = React.useState<"idle" | "loading" | "ready" | "error">("idle");
     const [runtimeError, setRuntimeError] = React.useState<string | null>(null);
@@ -628,7 +628,7 @@ export function MontyDevView() {
                 const fixture = await montyDevFixturesEnsure({
                     baseUrl,
                     token,
-                    workspaceId: activeId
+                    workspaceId
                 });
                 if (active) {
                     setFixtureState({ status: "ready", fixture });
@@ -646,7 +646,7 @@ export function MontyDevView() {
         return () => {
             active = false;
         };
-    }, [activeId, baseUrl, token]);
+    }, [workspaceId, baseUrl, token]);
 
     const runtimeSubtitle = runtimeError ?? (runtimeStatus === "loading" ? "Loading runtime..." : undefined);
     const fragmentExamples = React.useMemo(() => {

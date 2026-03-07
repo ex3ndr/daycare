@@ -1,13 +1,11 @@
 import { Octicons } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
 import * as React from "react";
 import { Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useUnistyles } from "react-native-unistyles";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { documentProtectedCheck } from "@/modules/documents/documentProtectedCheck";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
-import { documentWorkspaceIdResolve } from "@/modules/documents/documentWorkspaceIdResolve";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 type DocumentMetadataModalProps = {
     visible: boolean;
@@ -20,11 +18,9 @@ type DocumentMetadataModalProps = {
  */
 export const DocumentMetadataModal = React.memo<DocumentMetadataModalProps>(({ visible, onClose }) => {
     const { theme } = useUnistyles();
-    const { workspace } = useLocalSearchParams<{ workspace?: string | string[] }>();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeId = useWorkspacesStore((s) => s.activeId);
-    const workspaceId = React.useMemo(() => documentWorkspaceIdResolve(workspace, activeId), [workspace, activeId]);
+    const { workspaceId } = useWorkspace();
 
     const selectedId = useDocumentsStore((s) => s.selectedId);
     const items = useDocumentsStore((s) => s.items);

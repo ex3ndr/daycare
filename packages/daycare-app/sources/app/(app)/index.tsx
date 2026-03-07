@@ -1,10 +1,10 @@
 import { Redirect } from "expo-router";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 export default function AppIndex() {
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
 
     // Wait for workspaces to load before redirecting
-    if (!activeId) return null;
-    return <Redirect href={`/${activeId}/home`} />;
+    if (!workspaceId) return null;
+    return <Redirect href={`/${workspaceId}/home`} />;
 }

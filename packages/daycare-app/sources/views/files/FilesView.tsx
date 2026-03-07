@@ -12,7 +12,7 @@ import { useFilesStore } from "@/modules/files/filesContext";
 import { filesFetchDir } from "@/modules/files/filesFetchDir";
 import { filesPathEncode } from "@/modules/files/filesPathEncode";
 import type { FileEntry } from "@/modules/files/filesTypes";
-import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { FilesBreadcrumb } from "./FilesBreadcrumb";
 import { filesFormatSize } from "./filesFormatSize";
 
@@ -30,7 +30,7 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
     const router = useRouter();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeId = useWorkspacesStore((s) => s.activeId);
+    const { workspaceId } = useWorkspace();
 
     const roots = useFilesStore((s) => s.roots);
     const rootsLoading = useFilesStore((s) => s.loading);
@@ -45,16 +45,16 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
     // Fetch roots on mount
     React.useEffect(() => {
         if (baseUrl && token) {
-            void fetchRoots(baseUrl, token, activeId);
+            void fetchRoots(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, activeId, fetchRoots]);
+    }, [baseUrl, token, workspaceId, fetchRoots]);
 
     // Fetch directory entries when dirPath changes
     React.useEffect(() => {
         if (!dirPath || !baseUrl || !token) return;
         setLoading(true);
         setError(null);
-        filesFetchDir(baseUrl, token, activeId, dirPath)
+        filesFetchDir(baseUrl, token, workspaceId, dirPath)
             .then((result) => {
                 setEntries(result);
                 setLoading(false);
@@ -63,9 +63,9 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
                 setError(err instanceof Error ? err.message : "Failed to list directory.");
                 setLoading(false);
             });
-    }, [dirPath, baseUrl, token, activeId]);
+    }, [dirPath, baseUrl, token, workspaceId]);
 
-    const wsPrefix = activeId ? `/${activeId}` : "";
+    const wsPrefix = workspaceId ? `/${workspaceId}` : "";
 
     const handleRootPress = React.useCallback(
         (rootPath: string) => {
@@ -81,10 +81,11 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
             if (entryType === "directory") {
                 router.push(`${wsPrefix}/files/${filesPathEncode(newPath)}` as Href);
             } else {
-                router.push(`/file-preview/${filesPathEncode(newPath)}` as Href);
+                const workspaceQuery = workspaceId ? `?workspace=${encodeURIComponent(workspaceId)}` : "";
+                router.push(`/file-preview/${filesPathEncode(newPath)}${workspaceQuery}` as Href);
             }
         },
-        [dirPath, router, wsPrefix]
+        [dirPath, router, workspaceId, wsPrefix]
     );
 
     const handleBreadcrumbNavigate = React.useCallback(
