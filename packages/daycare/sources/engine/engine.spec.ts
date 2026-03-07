@@ -11,6 +11,7 @@ import * as dockerContainersStaleRemoveModule from "../sandbox/docker/dockerCont
 import * as dockerImageIdResolveModule from "../sandbox/docker/dockerImageIdResolve.js";
 import { storageOpen } from "../storage/storageOpen.js";
 import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
+import { contextForUser } from "./agents/context.js";
 import { agentPathConnector } from "./agents/ops/agentPathBuild.js";
 import { Engine } from "./engine.js";
 import { EngineEventBus } from "./ipc/events.js";
@@ -453,7 +454,19 @@ describe("Engine workspace registration", () => {
             await engine.start();
 
             const toolNames = engine.modules.tools.listTools().map((tool) => tool.name);
+            const ctx = contextForUser({ userId: "workspace-user-1" });
+            const memory = await engine.storage.documents.findBySlugAndParent(ctx, "memory", null);
+            const people = await engine.storage.documents.findBySlugAndParent(ctx, "people", null);
+            const document = await engine.storage.documents.findBySlugAndParent(ctx, "document", null);
+            const system = await engine.storage.documents.findBySlugAndParent(ctx, "system", null);
+            const soul = system ? await engine.storage.documents.findBySlugAndParent(ctx, "soul", system.id) : null;
+
             expect(toolNames).toContain("workspace_create");
+            expect(memory?.slug).toBe("memory");
+            expect(people?.slug).toBe("people");
+            expect(document?.slug).toBe("document");
+            expect(typeof soul?.body).toBe("string");
+            expect(soul?.body.length).toBeGreaterThan(0);
 
             await engine.shutdown();
         } finally {

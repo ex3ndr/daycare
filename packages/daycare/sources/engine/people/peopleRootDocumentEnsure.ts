@@ -11,7 +11,7 @@ const PEOPLE_ROOT_SLUG = "people";
  */
 export async function peopleRootDocumentEnsure(
     ctx: Context,
-    storage: Storage
+    storage: Pick<Storage, "documents">
 ): Promise<{ id: string; created: boolean }> {
     const existing = await storage.documents.findBySlugAndParent(ctx, PEOPLE_ROOT_SLUG, null);
     if (existing) {

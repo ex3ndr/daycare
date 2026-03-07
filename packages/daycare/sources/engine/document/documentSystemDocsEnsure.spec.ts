@@ -36,7 +36,7 @@ describe("documentSystemDocsEnsure", () => {
         try {
             const ctx = contextForUser({ userId: "user-1" });
 
-            const first = await documentSystemDocsEnsure(ctx, storage);
+            const first = await documentSystemDocsEnsure(ctx, storage, { soulBody: "initial soul\n" });
             const system = await storage.documents.findById(ctx, first.id);
             if (!system) {
                 throw new Error("Missing system root document.");
@@ -46,17 +46,12 @@ describe("documentSystemDocsEnsure", () => {
                 throw new Error("Missing soul system document.");
             }
 
-            await storage.documents.update(ctx, soul.id, {
-                body: "custom soul\n",
-                updatedAt: Date.now()
-            });
-
-            const second = await documentSystemDocsEnsure(ctx, storage);
+            const second = await documentSystemDocsEnsure(ctx, storage, { soulBody: "replacement soul\n" });
             expect(second.created).toBe(false);
             expect(second.id).toBe(first.id);
 
             const persistedSoul = await storage.documents.findBySlugAndParent(ctx, "soul", system.id);
-            expect(persistedSoul?.body).toBe("custom soul\n");
+            expect(persistedSoul?.body).toBe("initial soul\n");
         } finally {
             storage.connection.close();
         }

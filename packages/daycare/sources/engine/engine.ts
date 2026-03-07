@@ -33,12 +33,9 @@ import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
 import { Channels } from "./channels/channels.js";
 import { ConfigModule } from "./config/configModule.js";
 import { Crons } from "./cron/crons.js";
-import { documentRootDocumentEnsure } from "./document/documentRootDocumentEnsure.js";
-import { documentSystemDocsEnsure } from "./document/documentSystemDocsEnsure.js";
 import { FileFolder } from "./files/fileFolder.js";
 import { Friends } from "./friends/friends.js";
 import type { EngineEventBus } from "./ipc/events.js";
-import { memoryRootDocumentEnsure } from "./memory/memoryRootDocumentEnsure.js";
 import { MemoryWorker } from "./memory/memoryWorker.js";
 import { IncomingMessages } from "./messages/incomingMessages.js";
 import { messageContextEnrichIncoming } from "./messages/messageContextEnrichIncoming.js";
@@ -104,7 +101,6 @@ import { topologyTool } from "./modules/tools/topologyToolBuild.js";
 import { userProfileUpdateTool } from "./modules/tools/userProfileUpdateTool.js";
 import { buildVoiceListTool } from "./modules/tools/voice-list.js";
 import { observationQueryToolBuild } from "./observations/observationQueryToolBuild.js";
-import { peopleRootDocumentEnsure } from "./people/peopleRootDocumentEnsure.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import { PluginManager } from "./plugins/manager.js";
 import { PluginRegistry } from "./plugins/registry.js";
@@ -117,6 +113,7 @@ import { taskDeleteSuccessResolve } from "./tasks/taskDeleteSuccessResolve.js";
 import { TaskExecutions } from "./tasks/taskExecutions.js";
 import { taskListActive } from "./tasks/taskListActive.js";
 import { taskListAll } from "./tasks/taskListAll.js";
+import { userDocumentsEnsure } from "./users/userDocumentsEnsure.js";
 import { userHomeEnsure } from "./users/userHomeEnsure.js";
 import { userHomeMigrate } from "./users/userHomeMigrate.js";
 import { Webhooks } from "./webhook/webhooks.js";
@@ -679,10 +676,7 @@ export class Engine {
         const ownerCtx = await this.agentSystem.ownerCtxEnsure();
         const ownerUserHome = this.agentSystem.userHomeForUserId(ownerCtx.userId);
         await userHomeEnsure(ownerUserHome);
-        await memoryRootDocumentEnsure(ownerCtx, this.storage);
-        await peopleRootDocumentEnsure(ownerCtx, this.storage);
-        await documentRootDocumentEnsure(ownerCtx, this.storage);
-        await documentSystemDocsEnsure(ownerCtx, this.storage);
+        await userDocumentsEnsure(ownerCtx, this.storage);
         await userHomeMigrate(this.config.current, this.storage);
         const docker = this.config.current.docker.socketPath
             ? new Docker({ socketPath: this.config.current.docker.socketPath })
@@ -703,7 +697,13 @@ export class Engine {
                 "stale: Failed to remove stale Docker sandbox containers on startup"
             );
         }
-        await this.workspaces.discover(ownerCtx.userId);
+        const workspaces = await this.workspaces.discover(ownerCtx.userId);
+        for (const workspace of workspaces) {
+            await userHomeEnsure(this.agentSystem.userHomeForUserId(workspace.userId));
+            await userDocumentsEnsure(contextForUser({ userId: workspace.userId }), this.storage, {
+                soulBody: workspace.systemPrompt ? `${workspace.systemPrompt}\n` : undefined
+            });
+        }
 
         logger.debug("load: Loading model role rules");
         await this.modelRoles.load();

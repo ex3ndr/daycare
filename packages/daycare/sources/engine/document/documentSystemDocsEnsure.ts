@@ -38,7 +38,8 @@ const SYSTEM_DOCS = [
  */
 export async function documentSystemDocsEnsure(
     ctx: Context,
-    storage: Pick<Storage, "documents">
+    storage: Pick<Storage, "documents">,
+    options?: { soulBody?: string }
 ): Promise<{ id: string; created: boolean }> {
     const root = await documentEnsure(ctx, storage, {
         slug: SYSTEM_ROOT_SLUG,
@@ -49,7 +50,10 @@ export async function documentSystemDocsEnsure(
     });
 
     for (const doc of SYSTEM_DOCS) {
-        const body = await agentPromptBundledRead(doc.bundledPrompt);
+        const body =
+            doc.slug === "soul" && options?.soulBody !== undefined
+                ? options.soulBody
+                : await agentPromptBundledRead(doc.bundledPrompt);
         await documentEnsure(ctx, storage, {
             slug: doc.slug,
             title: doc.title,

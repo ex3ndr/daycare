@@ -11,7 +11,7 @@ const MEMORY_ROOT_SLUG = "memory";
  */
 export async function memoryRootDocumentEnsure(
     ctx: Context,
-    storage: Storage
+    storage: Pick<Storage, "documents">
 ): Promise<{ id: string; created: boolean }> {
     const existing = await storage.documents.findBySlugAndParent(ctx, MEMORY_ROOT_SLUG, null);
     if (existing) {

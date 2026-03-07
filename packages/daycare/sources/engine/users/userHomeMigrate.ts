@@ -6,7 +6,7 @@ import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageResolve } from "../../storage/storageResolve.js";
 import { contextForUser } from "../agents/context.js";
-import { documentSystemDocsEnsure } from "../document/documentSystemDocsEnsure.js";
+import { userDocumentsEnsure } from "./userDocumentsEnsure.js";
 import { UserHome } from "./userHome.js";
 import { userHomeEnsure } from "./userHomeEnsure.js";
 
@@ -36,7 +36,7 @@ export async function userHomeMigrate(config: Config, storageOrConfig?: Storage 
         const userHome = new UserHome(config.usersDir, user.id);
         const ctx = contextForUser({ userId: user.id });
         await userHomeEnsure(userHome);
-        await documentSystemDocsEnsure(ctx, storage);
+        await userDocumentsEnsure(ctx, storage);
         await knowledgeFilesMigrate({
             config,
             userHome,

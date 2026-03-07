@@ -10,7 +10,7 @@ import { UserHome } from "../users/userHome.js";
 import { workspaceCreate } from "./workspaceCreate.js";
 
 describe("workspaceCreate", () => {
-    it("creates a workspace user and system soul document", async () => {
+    it("creates a workspace user and full base document tree", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-workspace-create-"));
         const storage = await storageOpenTest();
         try {
@@ -36,6 +36,9 @@ describe("workspaceCreate", () => {
 
             const user = await storage.users.findById(created.userId);
             const ctx = contextForUser({ userId: created.userId });
+            const memory = await storage.documents.findBySlugAndParent(ctx, "memory", null);
+            const people = await storage.documents.findBySlugAndParent(ctx, "people", null);
+            const document = await storage.documents.findBySlugAndParent(ctx, "document", null);
             const system = await storage.documents.findBySlugAndParent(ctx, "system", null);
             const soul = system ? await storage.documents.findBySlugAndParent(ctx, "soul", system.id) : null;
 
@@ -49,6 +52,9 @@ describe("workspaceCreate", () => {
             expect(user?.about).toBe("Autonomous todo management");
             expect(user?.memory).toBe(false);
             expect(user?.emoji).toBe("📝");
+            expect(memory?.slug).toBe("memory");
+            expect(people?.slug).toBe("people");
+            expect(document?.slug).toBe("document");
             expect(soul?.body).toContain("You are the todo workspace.");
         } finally {
             storage.connection.close();
