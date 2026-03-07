@@ -1,11 +1,16 @@
+import { apiUrl } from "../api/apiUrl";
 import type { SkillListItem } from "./skillsTypes";
 
 /**
  * Fetches the list of available skills from the app-server.
  * Expects: baseUrl and token are valid (user is authenticated).
  */
-export async function skillsFetch(baseUrl: string, token: string): Promise<SkillListItem[]> {
-    const response = await fetch(`${baseUrl}/skills`, {
+export async function skillsFetch(
+    baseUrl: string,
+    token: string,
+    workspaceNametag: string | null
+): Promise<SkillListItem[]> {
+    const response = await fetch(apiUrl(baseUrl, "/skills", workspaceNametag), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; skills?: SkillListItem[]; error?: string };

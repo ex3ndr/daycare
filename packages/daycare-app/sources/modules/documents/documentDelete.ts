@@ -1,9 +1,16 @@
+import { apiUrl } from "../api/apiUrl";
+
 /**
  * Deletes a document via the API (soft-delete).
  * Expects: baseUrl and token are valid; id is a valid document identifier.
  */
-export async function documentDelete(baseUrl: string, token: string, id: string): Promise<void> {
-    const response = await fetch(`${baseUrl}/documents/${encodeURIComponent(id)}`, {
+export async function documentDelete(
+    baseUrl: string,
+    token: string,
+    workspaceNametag: string | null,
+    id: string
+): Promise<void> {
+    const response = await fetch(apiUrl(baseUrl, `/documents/${encodeURIComponent(id)}`, workspaceNametag), {
         method: "DELETE",
         headers: { authorization: `Bearer ${token}` }
     });

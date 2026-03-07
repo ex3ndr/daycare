@@ -4,6 +4,7 @@ import { Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from "r
 import { useUnistyles } from "react-native-unistyles";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
 /**
  * Panel 3: Document metadata display and editing.
@@ -13,6 +14,7 @@ export const DocumentMetadataPanel = React.memo(() => {
     const { theme } = useUnistyles();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
+    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
 
     const selectedId = useDocumentsStore((s) => s.selectedId);
     const items = useDocumentsStore((s) => s.items);
@@ -30,10 +32,10 @@ export const DocumentMetadataPanel = React.memo(() => {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         if (baseUrl && token) {
             saveTimerRef.current = setTimeout(() => {
-                void saveDraft(baseUrl, token);
+                void saveDraft(baseUrl, token, activeNametag);
             }, 1000);
         }
-    }, [saveDraft, baseUrl, token]);
+    }, [saveDraft, baseUrl, token, activeNametag]);
 
     React.useEffect(() => {
         return () => {
@@ -45,15 +47,19 @@ export const DocumentMetadataPanel = React.memo(() => {
         if (!selectedId || !baseUrl || !token) return;
         if (Platform.OS === "web") {
             if (window.confirm("Are you sure you want to delete this document?")) {
-                void deleteDocument(baseUrl, token, selectedId);
+                void deleteDocument(baseUrl, token, activeNametag, selectedId);
             }
         } else {
             Alert.alert("Delete Document", "Are you sure you want to delete this document?", [
                 { text: "Cancel", style: "cancel" },
-                { text: "Delete", style: "destructive", onPress: () => void deleteDocument(baseUrl, token, selectedId) }
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => void deleteDocument(baseUrl, token, activeNametag, selectedId)
+                }
             ]);
         }
-    }, [selectedId, baseUrl, token, deleteDocument]);
+    }, [selectedId, baseUrl, token, activeNametag, deleteDocument]);
 
     if (!selectedDoc) {
         return null;

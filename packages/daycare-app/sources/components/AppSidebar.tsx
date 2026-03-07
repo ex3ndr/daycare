@@ -11,6 +11,7 @@ import { type AppMode, appModes } from "@/components/AppHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { documentRootIdResolve } from "@/modules/documents/documentRootIdResolve";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 
 export const SIDEBAR_WIDTH = 240;
@@ -65,24 +66,51 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
 };
 
 /**
+ * Extracts the workspace nametag from the pathname.
+ * E.g. "/steve/agents" -> "steve", "/home" -> undefined.
+ */
+function extractWorkspaceFromPath(pathname: string): string | undefined {
+    const parts = pathname.split("/").filter(Boolean);
+    // If there are at least 2 segments and the 2nd is an app mode, the 1st is the workspace
+    if (parts.length >= 2 && appModes.includes(parts[1] as AppMode)) {
+        return parts[0];
+    }
+    return parts[0] && !appModes.includes(parts[0] as AppMode) ? parts[0] : undefined;
+}
+
+/**
  * Extracts the current AppMode from the pathname.
- * E.g. "/agents" -> "agents", "/agents/a1" -> "agents".
+ * Handles both /{workspace}/{mode} and /{mode} paths.
+ * E.g. "/steve/agents" -> "agents", "/steve/agents/a1" -> "agents".
  */
 function extractModeFromPath(pathname: string): AppMode {
-    const segment = pathname.split("/").filter(Boolean)[0];
-    if (segment && appModes.includes(segment as AppMode)) {
-        return segment as AppMode;
+    const parts = pathname.split("/").filter(Boolean);
+    // Try 2nd segment first (workspace-prefixed path)
+    if (parts.length >= 2 && appModes.includes(parts[1] as AppMode)) {
+        return parts[1] as AppMode;
+    }
+    // Fallback to 1st segment (for bare paths)
+    if (parts[0] && appModes.includes(parts[0] as AppMode)) {
+        return parts[0] as AppMode;
     }
     return "home";
 }
 
 /**
  * Extracts the selected item id from the pathname.
- * E.g. "/agents/a1" -> "a1", "/agents" -> undefined.
+ * E.g. "/steve/agents/a1" -> "a1", "/steve/agents" -> undefined.
  */
 function extractItemFromPath(pathname: string): string | undefined {
     const parts = pathname.split("/").filter(Boolean);
-    return parts.length >= 2 ? parts[1] : undefined;
+    // Workspace-prefixed: /{workspace}/{mode}/{item}
+    if (parts.length >= 3 && appModes.includes(parts[1] as AppMode)) {
+        return parts[2];
+    }
+    // Bare: /{mode}/{item}
+    if (parts.length >= 2 && appModes.includes(parts[0] as AppMode)) {
+        return parts[1];
+    }
+    return undefined;
 }
 
 type AppSidebarProps = {
@@ -133,8 +161,21 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         const pathname = usePathname();
         const router = useRouter();
 
+        const workspace = extractWorkspaceFromPath(pathname);
         const activeMode = extractModeFromPath(pathname);
         const selectedItem = extractItemFromPath(pathname);
+
+        // Workspaces
+        const workspaces = useWorkspacesStore((s) => s.workspaces);
+        const activeNametag = useWorkspacesStore((s) => s.activeNametag);
+
+        const handleWorkspaceSwitch = React.useCallback(
+            (nametag: string) => {
+                router.replace(`/${nametag}/home` as `/${string}`);
+                onNavigate?.();
+            },
+            [router, onNavigate]
+        );
 
         // Documents store
         const baseUrl = useAuthStore((s) => s.baseUrl);
@@ -150,9 +191,9 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         // Fetch documents when the documents mode is active
         React.useEffect(() => {
             if (activeMode === "documents" && baseUrl && token) {
-                void fetchDocuments(baseUrl, token);
+                void fetchDocuments(baseUrl, token, activeNametag);
             }
-        }, [activeMode, baseUrl, token, fetchDocuments]);
+        }, [activeMode, baseUrl, token, activeNametag, fetchDocuments]);
 
         // Documents under ~/document (children of the root "document" folder)
         const documentRootId = React.useMemo(() => documentRootIdResolve(documents), [documents]);
@@ -164,29 +205,31 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                 .sort((a, b) => a.title.localeCompare(b.title));
         }, [documents, documentRootId]);
 
+        const wsPrefix = workspace ? `/${workspace}` : "";
+
         const handleModePress = React.useCallback(
             (mode: AppMode) => {
-                router.replace(`/${mode}` as `/${string}`);
+                router.replace(`${wsPrefix}/${mode}` as `/${string}`);
                 onNavigate?.();
             },
-            [router, onNavigate]
+            [router, onNavigate, wsPrefix]
         );
 
         const handleItemPress = React.useCallback(
             (mode: AppMode, itemId: string) => {
-                router.replace(`/${mode}/${itemId}` as `/${string}`);
+                router.replace(`${wsPrefix}/${mode}/${itemId}` as `/${string}`);
                 onNavigate?.();
             },
-            [router, onNavigate]
+            [router, onNavigate, wsPrefix]
         );
 
         const handleDocumentPress = React.useCallback(
             (docId: string) => {
                 selectDocument(docId);
-                router.replace("/documents" as `/${string}`);
+                router.replace(`${wsPrefix}/documents` as `/${string}`);
                 onNavigate?.();
             },
-            [selectDocument, router, onNavigate]
+            [selectDocument, router, onNavigate, wsPrefix]
         );
 
         const handleCreateDocument = React.useCallback(
@@ -194,9 +237,14 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                 if (!baseUrl || !token) return;
                 const parentId = input.parentId ?? documentRootId;
                 if (!parentId) return;
-                void createDocument(baseUrl, token, { id: createId(), title: input.title, slug: input.slug, parentId });
+                void createDocument(baseUrl, token, activeNametag, {
+                    id: createId(),
+                    title: input.title,
+                    slug: input.slug,
+                    parentId
+                });
             },
-            [baseUrl, token, createDocument, documentRootId]
+            [baseUrl, token, activeNametag, createDocument, documentRootId]
         );
 
         return (
@@ -232,6 +280,52 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                         </Animated.View>
                     </Animated.View>
                 </Pressable>
+
+                {/* Workspace switcher */}
+                {!collapsed && workspaces.length > 1 && (
+                    <View style={styles.workspaceSwitcher}>
+                        {workspaces.map((ws) => {
+                            const isActive = ws.nametag === activeNametag;
+                            const label = ws.firstName
+                                ? `${ws.firstName}${ws.lastName ? ` ${ws.lastName}` : ""}`
+                                : ws.nametag;
+                            return (
+                                <Pressable
+                                    key={ws.nametag}
+                                    onPress={() => handleWorkspaceSwitch(ws.nametag)}
+                                    style={[
+                                        styles.workspaceItem,
+                                        isActive && {
+                                            backgroundColor: theme.colors.secondaryContainer
+                                        }
+                                    ]}
+                                >
+                                    <Octicons
+                                        name={ws.isSelf ? "person" : "iterations"}
+                                        size={12}
+                                        color={
+                                            isActive ? theme.colors.onSecondaryContainer : theme.colors.onSurfaceVariant
+                                        }
+                                    />
+                                    <Text
+                                        style={[
+                                            styles.workspaceLabel,
+                                            {
+                                                color: isActive
+                                                    ? theme.colors.onSecondaryContainer
+                                                    : theme.colors.onSurfaceVariant
+                                            },
+                                            isActive && { fontWeight: "600" }
+                                        ]}
+                                        numberOfLines={1}
+                                    >
+                                        {label}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+                )}
 
                 {/* Tree navigation */}
                 <ScrollView style={styles.treeContainer} showsVerticalScrollIndicator={false}>
@@ -534,6 +628,23 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         width: 32,
         height: 32
+    },
+    workspaceSwitcher: {
+        paddingHorizontal: 8,
+        paddingBottom: 4,
+        gap: 2
+    },
+    workspaceItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        paddingHorizontal: 12,
+        height: 30,
+        borderRadius: 6
+    },
+    workspaceLabel: {
+        fontSize: 13,
+        fontWeight: "400"
     },
     treeContainer: {
         flex: 1,

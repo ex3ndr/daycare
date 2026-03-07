@@ -12,6 +12,7 @@ import { tasksFormatLastRun } from "@/modules/tasks/tasksFormatLastRun";
 import { tasksStatus } from "@/modules/tasks/tasksStatus";
 import { tasksSubtitle } from "@/modules/tasks/tasksSubtitle";
 import type { CronTriggerSummary, TaskStatus, WebhookTriggerSummary } from "@/modules/tasks/tasksTypes";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
 function RoutineStatus({ status, label }: { status: TaskStatus; label: string }) {
     const { theme } = useUnistyles();
@@ -63,6 +64,7 @@ export function RoutinesView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
+    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
 
     const tasks = useTasksStore((s) => s.tasks);
     const triggers = useTasksStore((s) => s.triggers);
@@ -72,9 +74,9 @@ export function RoutinesView() {
 
     useEffect(() => {
         if (baseUrl && token) {
-            void fetchTasks(baseUrl, token);
+            void fetchTasks(baseUrl, token, activeNametag);
         }
-    }, [baseUrl, token, fetchTasks]);
+    }, [baseUrl, token, activeNametag, fetchTasks]);
 
     // Index triggers by taskId for efficient lookup
     const triggersByTask = useMemo(() => {

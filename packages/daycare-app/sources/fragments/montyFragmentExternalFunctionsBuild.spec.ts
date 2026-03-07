@@ -21,7 +21,8 @@ describe("montyFragmentExternalFunctionsBuild", () => {
         const externalFunctions = montyFragmentExternalFunctionsBuild({
             store,
             baseUrl: null,
-            token: null
+            token: null,
+            workspaceNametag: null
         });
 
         expect(externalFunctions.get_state()).toEqual({ count: 2 });
@@ -32,7 +33,8 @@ describe("montyFragmentExternalFunctionsBuild", () => {
         const externalFunctions = montyFragmentExternalFunctionsBuild({
             store,
             baseUrl: null,
-            token: null
+            token: null,
+            workspaceNametag: null
         });
 
         expect(externalFunctions._apply_state({ nested: { ready: true } })).toEqual({
@@ -51,13 +53,15 @@ describe("montyFragmentExternalFunctionsBuild", () => {
         const externalFunctions = montyFragmentExternalFunctionsBuild({
             store,
             baseUrl: "http://localhost:7332",
-            token: "jwt-token"
+            token: "jwt-token",
+            workspaceNametag: null
         });
 
         await expect(externalFunctions.query_database("crm", "SELECT 1", [1])).resolves.toEqual([{ id: "1" }]);
         expect(mockState.databaseQuery).toHaveBeenCalledWith(
             "http://localhost:7332",
             "jwt-token",
+            null,
             "crm",
             "SELECT 1",
             [1]
@@ -69,7 +73,8 @@ describe("montyFragmentExternalFunctionsBuild", () => {
         const externalFunctions = montyFragmentExternalFunctionsBuild({
             store,
             baseUrl: null,
-            token: null
+            token: null,
+            workspaceNametag: null
         });
 
         await expect(externalFunctions.query_database("crm", "SELECT 1")).rejects.toThrow(

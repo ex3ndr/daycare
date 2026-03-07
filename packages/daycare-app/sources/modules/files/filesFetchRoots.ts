@@ -1,11 +1,16 @@
+import { apiUrl } from "../api/apiUrl";
 import type { FileRoot } from "./filesTypes";
 
 /**
  * Fetches the list of base directory roots.
  * Expects: baseUrl and token are valid.
  */
-export async function filesFetchRoots(baseUrl: string, token: string): Promise<FileRoot[]> {
-    const response = await fetch(`${baseUrl}/files/roots`, {
+export async function filesFetchRoots(
+    baseUrl: string,
+    token: string,
+    workspaceNametag: string | null
+): Promise<FileRoot[]> {
+    const response = await fetch(apiUrl(baseUrl, "/files/roots", workspaceNametag), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; roots?: FileRoot[]; error?: string };

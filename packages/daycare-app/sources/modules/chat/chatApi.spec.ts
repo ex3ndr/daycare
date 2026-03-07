@@ -17,7 +17,7 @@ describe("chatCreate", () => {
             }))
         );
 
-        const created = await chatCreate("http://localhost", "tok", "System prompt", "Planner", "Task assistant");
+        const created = await chatCreate("http://localhost", "tok", null, "System prompt", "Planner", "Task assistant");
 
         expect(created).toEqual({ agentId: "app-agent-1", initializedAt: 1700 });
         expect(fetch).toHaveBeenCalledWith("http://localhost/agents/create", {
@@ -42,7 +42,7 @@ describe("chatCreate", () => {
             }))
         );
 
-        await expect(chatCreate("http://localhost", "tok", "")).rejects.toThrow("systemPrompt is required.");
+        await expect(chatCreate("http://localhost", "tok", null, "")).rejects.toThrow("systemPrompt is required.");
     });
 });
 
@@ -60,7 +60,7 @@ describe("chatHistoryFetch", () => {
             }))
         );
 
-        const result = await chatHistoryFetch("http://localhost", "tok", "agent-1");
+        const result = await chatHistoryFetch("http://localhost", "tok", null, "agent-1");
 
         expect(result).toEqual(records);
         expect(fetch).toHaveBeenCalledWith("http://localhost/agents/agent-1/history", {
@@ -76,7 +76,7 @@ describe("chatHistoryFetch", () => {
             }))
         );
 
-        await expect(chatHistoryFetch("http://localhost", "tok", "bad-id")).rejects.toThrow("not found");
+        await expect(chatHistoryFetch("http://localhost", "tok", null, "bad-id")).rejects.toThrow("not found");
     });
 });
 
@@ -93,7 +93,7 @@ describe("chatMessageSend", () => {
             }))
         );
 
-        await chatMessageSend("http://localhost", "tok", "agent-1", "hello");
+        await chatMessageSend("http://localhost", "tok", null, "agent-1", "hello");
 
         expect(fetch).toHaveBeenCalledWith("http://localhost/agents/agent-1/message", {
             method: "POST",
@@ -113,7 +113,9 @@ describe("chatMessageSend", () => {
             }))
         );
 
-        await expect(chatMessageSend("http://localhost", "tok", "bad-id", "hi")).rejects.toThrow("agent not found");
+        await expect(chatMessageSend("http://localhost", "tok", null, "bad-id", "hi")).rejects.toThrow(
+            "agent not found"
+        );
     });
 });
 
@@ -131,7 +133,7 @@ describe("chatMessagesPoll", () => {
             }))
         );
 
-        const result = await chatMessagesPoll("http://localhost", "tok", "agent-1", 1000);
+        const result = await chatMessagesPoll("http://localhost", "tok", null, "agent-1", 1000);
 
         expect(result).toEqual(records);
         expect(fetch).toHaveBeenCalledWith("http://localhost/agents/agent-1/messages?after=1000", {
@@ -147,7 +149,7 @@ describe("chatMessagesPoll", () => {
             }))
         );
 
-        await expect(chatMessagesPoll("http://localhost", "tok", "agent-1", -1)).rejects.toThrow(
+        await expect(chatMessagesPoll("http://localhost", "tok", null, "agent-1", -1)).rejects.toThrow(
             "after must be a non-negative unix timestamp in milliseconds."
         );
     });

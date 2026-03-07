@@ -44,9 +44,9 @@ describe("agentsStoreCreate", () => {
         ]);
 
         const store = agentsStoreCreate();
-        await store.getState().fetch("http://localhost", "tok");
+        await store.getState().fetch("http://localhost", "tok", null);
 
-        expect(agentsFetch).toHaveBeenCalledWith("http://localhost", "tok");
+        expect(agentsFetch).toHaveBeenCalledWith("http://localhost", "tok", null);
         expect(store.getState().agents).toEqual([
             {
                 agentId: "agent-1",
@@ -68,7 +68,7 @@ describe("agentsStoreCreate", () => {
         vi.mocked(agentsFetch).mockRejectedValueOnce(new Error("network down"));
 
         const store = agentsStoreCreate();
-        await store.getState().fetch("http://localhost", "tok");
+        await store.getState().fetch("http://localhost", "tok", null);
 
         expect(store.getState().agents).toEqual([]);
         expect(store.getState().error).toBe("network down");

@@ -10,6 +10,7 @@ import { useProfileStore } from "@/modules/profile/profileContext";
 import { profileEmailConnectRequest } from "@/modules/profile/profileEmailConnectRequest";
 import { secretsFetch } from "@/modules/secrets/secretsFetch";
 import type { SecretSummary } from "@/modules/secrets/secretsTypes";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 import { secretPresenceSubtitleBuild } from "@/views/settings/secretPresenceSubtitleBuild";
 
 export function SettingsView() {
@@ -19,6 +20,7 @@ export function SettingsView() {
     const token = useAuthStore((s) => s.token);
     const userId = useAuthStore((s) => s.userId);
     const logout = useAuthStore((s) => s.logout);
+    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
 
     const profile = useProfileStore((s) => s.profile);
     const loading = useProfileStore((s) => s.loading);
@@ -32,6 +34,7 @@ export function SettingsView() {
     const [secretsLoading, setSecretsLoading] = useState(false);
     const [secretsError, setSecretsError] = useState<string | null>(null);
 
+    // Profile is NOT workspace-scoped
     useEffect(() => {
         if (baseUrl && token) {
             void fetchProfile(baseUrl, token);
@@ -51,7 +54,7 @@ export function SettingsView() {
         setSecretsLoading(true);
         setSecretsError(null);
 
-        void secretsFetch(baseUrl, token)
+        void secretsFetch(baseUrl, token, activeNametag)
             .then((items) => {
                 if (!active) {
                     return;
@@ -76,7 +79,7 @@ export function SettingsView() {
         return () => {
             active = false;
         };
-    }, [baseUrl, token]);
+    }, [baseUrl, token, activeNametag]);
 
     const connectEmailRequest = async () => {
         const normalizedEmail = email.trim().toLowerCase();

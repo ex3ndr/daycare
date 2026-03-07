@@ -25,10 +25,10 @@ describe("databaseQuery", () => {
     });
 
     it("posts a query and returns rows", async () => {
-        const rows = await databaseQuery(BASE_URL, TOKEN, "crm", "SELECT * FROM contacts WHERE id = $1", ["1"]);
+        const rows = await databaseQuery(BASE_URL, TOKEN, null, "crm", "SELECT * FROM contacts WHERE id = $1", ["1"]);
 
         expect(rows).toEqual([{ id: "1", name: "Ada" }]);
-        expect(fetch).toHaveBeenCalledWith(`${BASE_URL}/databases/crm/query`, {
+        expect(fetch).toHaveBeenCalledWith(`${BASE_URL}/databases/${encodeURIComponent("crm")}/query`, {
             method: "POST",
             headers: {
                 authorization: `Bearer ${TOKEN}`,
@@ -55,7 +55,7 @@ describe("databaseQuery", () => {
             )
         );
 
-        await expect(databaseQuery(BASE_URL, TOKEN, "crm", "DELETE FROM contacts")).rejects.toThrow(
+        await expect(databaseQuery(BASE_URL, TOKEN, null, "crm", "DELETE FROM contacts")).rejects.toThrow(
             "read-only query rejected"
         );
     });

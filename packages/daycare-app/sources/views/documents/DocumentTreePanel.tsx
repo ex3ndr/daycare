@@ -6,6 +6,7 @@ import { useAuthStore } from "@/modules/auth/authContext";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
 import { documentTreeFlatten } from "@/modules/documents/documentTreeFlatten";
 import { documentTreeNodeMoveValidate } from "@/modules/documents/documentTreeNodeMove";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 import { DocumentTreeItem } from "./DocumentTreeItem";
 
 type DocumentTreePanelProps = {
@@ -16,6 +17,7 @@ export const DocumentTreePanel = React.memo<DocumentTreePanelProps>(({ onCreateP
     const { theme } = useUnistyles();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
+    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
 
     const tree = useDocumentsStore((s) => s.tree);
     const items = useDocumentsStore((s) => s.items);
@@ -43,11 +45,11 @@ export const DocumentTreePanel = React.memo<DocumentTreePanelProps>(({ onCreateP
                 setDropTarget(null);
                 return;
             }
-            void move(baseUrl, token, dragSourceId, targetId);
+            void move(baseUrl, token, activeNametag, dragSourceId, targetId);
             setDragSource(null);
             setDropTarget(null);
         },
-        [dragSourceId, items, baseUrl, token, move, setDragSource, setDropTarget]
+        [dragSourceId, items, baseUrl, token, activeNametag, move, setDragSource, setDropTarget]
     );
 
     // Allow dropping on root (the scroll area itself)
@@ -61,7 +63,7 @@ export const DocumentTreePanel = React.memo<DocumentTreePanelProps>(({ onCreateP
                   onDrop: (e: { preventDefault: () => void }) => {
                       e.preventDefault();
                       if (dragSourceId && baseUrl && token) {
-                          void move(baseUrl, token, dragSourceId, null);
+                          void move(baseUrl, token, activeNametag, dragSourceId, null);
                       }
                       setDragSource(null);
                       setDropTarget(null);

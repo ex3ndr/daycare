@@ -14,6 +14,7 @@ import { costsFormatCurrency } from "@/modules/costs/costsFormatCurrency";
 import { costsPeriodRange } from "@/modules/costs/costsPeriodRange";
 import { costsSummarize } from "@/modules/costs/costsSummarize";
 import { costsTimeSeries } from "@/modules/costs/costsTimeSeries";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 import { CostsBarChart } from "./costs/CostsBarChart";
 import { CostsPeriodSelector } from "./costs/CostsPeriodSelector";
 import { CostsSummaryCard } from "./costs/CostsSummaryCard";
@@ -36,6 +37,7 @@ export function CostsView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
+    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
 
     const period = useCostsStore((s) => s.period);
     const rows = useCostsStore((s) => s.rows);
@@ -47,18 +49,18 @@ export function CostsView() {
     // biome-ignore lint/correctness/useExhaustiveDependencies: period triggers re-fetch; store reads it internally
     useEffect(() => {
         if (baseUrl && token) {
-            void fetchCosts(baseUrl, token);
+            void fetchCosts(baseUrl, token, activeNametag);
         }
-    }, [baseUrl, token, fetchCosts, period]);
+    }, [baseUrl, token, activeNametag, fetchCosts, period]);
 
     const agents = useAgentsStore((s) => s.agents);
     const fetchAgents = useAgentsStore((s) => s.fetch);
 
     useEffect(() => {
         if (baseUrl && token) {
-            void fetchAgents(baseUrl, token);
+            void fetchAgents(baseUrl, token, activeNametag);
         }
-    }, [baseUrl, token, fetchAgents]);
+    }, [baseUrl, token, activeNametag, fetchAgents]);
 
     // Map agentId -> display name
     const agentNames = useMemo(() => {

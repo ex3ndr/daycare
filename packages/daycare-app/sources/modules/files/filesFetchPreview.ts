@@ -1,11 +1,17 @@
+import { apiUrl } from "../api/apiUrl";
 import type { FilePreview } from "./filesTypes";
 
 /**
  * Fetches file content for preview.
  * Expects: baseUrl and token are valid; filePath is a relative path.
  */
-export async function filesFetchPreview(baseUrl: string, token: string, filePath: string): Promise<FilePreview> {
-    const url = `${baseUrl}/files/read?path=${encodeURIComponent(filePath)}`;
+export async function filesFetchPreview(
+    baseUrl: string,
+    token: string,
+    workspaceNametag: string | null,
+    filePath: string
+): Promise<FilePreview> {
+    const url = `${apiUrl(baseUrl, "/files/read", workspaceNametag)}?path=${encodeURIComponent(filePath)}`;
     const response = await fetch(url, {
         headers: { authorization: `Bearer ${token}` }
     });

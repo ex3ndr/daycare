@@ -21,9 +21,9 @@ describe("chatStoreCreate", () => {
         ]);
 
         const store = chatStoreCreate();
-        await store.getState().open("http://localhost", "tok", "agent-1");
+        await store.getState().open("http://localhost", "tok", null, "agent-1");
 
-        expect(chatHistoryFetch).toHaveBeenCalledWith("http://localhost", "tok", "agent-1");
+        expect(chatHistoryFetch).toHaveBeenCalledWith("http://localhost", "tok", null, "agent-1");
         expect(store.getState().sessions["agent-1"]).toEqual({
             agentId: "agent-1",
             history: [
@@ -45,7 +45,7 @@ describe("chatStoreCreate", () => {
         vi.mocked(chatHistoryFetch).mockResolvedValueOnce([{ type: "assistant_message", at: 2000, content: [] }]);
 
         const store = chatStoreCreate();
-        const agentId = await store.getState().create("http://localhost", "tok", {
+        const agentId = await store.getState().create("http://localhost", "tok", null, {
             systemPrompt: "You are helpful.",
             name: "Helper",
             description: "Task support"
@@ -55,11 +55,12 @@ describe("chatStoreCreate", () => {
         expect(chatCreate).toHaveBeenCalledWith(
             "http://localhost",
             "tok",
+            null,
             "You are helpful.",
             "Helper",
             "Task support"
         );
-        expect(chatHistoryFetch).toHaveBeenCalledWith("http://localhost", "tok", "app-agent-2");
+        expect(chatHistoryFetch).toHaveBeenCalledWith("http://localhost", "tok", null, "app-agent-2");
         expect(store.getState().sessions["app-agent-2"]?.history).toEqual([
             { type: "assistant_message", at: 2000, content: [] }
         ]);
@@ -86,10 +87,10 @@ describe("chatStoreCreate", () => {
             }
         });
 
-        await store.getState().send("http://localhost", "tok", "agent-1", "hello");
+        await store.getState().send("http://localhost", "tok", null, "agent-1", "hello");
 
-        expect(chatMessageSend).toHaveBeenCalledWith("http://localhost", "tok", "agent-1", "hello");
-        expect(chatMessagesPoll).toHaveBeenCalledWith("http://localhost", "tok", "agent-1", 1000);
+        expect(chatMessageSend).toHaveBeenCalledWith("http://localhost", "tok", null, "agent-1", "hello");
+        expect(chatMessagesPoll).toHaveBeenCalledWith("http://localhost", "tok", null, "agent-1", 1000);
         expect(store.getState().sessions["agent-1"]?.history).toEqual([
             { type: "note", at: 1000, text: "start" },
             { type: "user_message", at: 2001, text: "hello" },
@@ -118,9 +119,9 @@ describe("chatStoreCreate", () => {
             }
         });
 
-        await store.getState().poll("http://localhost", "tok", "agent-1");
+        await store.getState().poll("http://localhost", "tok", null, "agent-1");
 
-        expect(chatMessagesPoll).toHaveBeenCalledWith("http://localhost", "tok", "agent-1", 2500);
+        expect(chatMessagesPoll).toHaveBeenCalledWith("http://localhost", "tok", null, "agent-1", 2500);
         expect(store.getState().sessions["agent-1"]?.history).toEqual([
             { type: "user_message", at: 2500, text: "status?" },
             { type: "assistant_message", at: 3000, content: [{ type: "text", text: "done" }] }
@@ -134,8 +135,8 @@ describe("chatStoreCreate", () => {
             .mockResolvedValueOnce([{ type: "note", at: 2000, text: "agent-2" }]);
 
         const store = chatStoreCreate();
-        await store.getState().open("http://localhost", "tok", "agent-1");
-        await store.getState().open("http://localhost", "tok", "agent-2");
+        await store.getState().open("http://localhost", "tok", null, "agent-1");
+        await store.getState().open("http://localhost", "tok", null, "agent-2");
 
         expect(store.getState().sessions["agent-1"]?.history).toEqual([{ type: "note", at: 1000, text: "agent-1" }]);
         expect(store.getState().sessions["agent-2"]?.history).toEqual([{ type: "note", at: 2000, text: "agent-2" }]);

@@ -9,7 +9,7 @@ export type CostsStore = {
     loading: boolean;
     error: string | null;
     setPeriod: (period: CostsPeriod) => void;
-    fetch: (baseUrl: string, token: string) => Promise<void>;
+    fetch: (baseUrl: string, token: string, workspaceNametag: string | null) => Promise<void>;
 };
 
 /**
@@ -26,12 +26,12 @@ export function costsStoreCreate() {
         setPeriod: (period) => {
             set({ period });
         },
-        fetch: async (baseUrl, token) => {
+        fetch: async (baseUrl, token, workspaceNametag) => {
             const { period } = get();
             set({ loading: true, error: null });
             try {
                 const range = costsPeriodRange(period);
-                const rows = await costsFetch(baseUrl, token, range);
+                const rows = await costsFetch(baseUrl, token, workspaceNametag, range);
                 set({ rows, loading: false });
             } catch (err) {
                 set({

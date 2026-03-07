@@ -1,11 +1,17 @@
+import { apiUrl } from "../api/apiUrl";
 import type { SecretCreateInput, SecretSummary } from "./secretsTypes";
 
 /**
  * Creates a secret in the app API and returns metadata.
  * Expects: input.variables includes at least one entry.
  */
-export async function secretCreate(baseUrl: string, token: string, input: SecretCreateInput): Promise<SecretSummary> {
-    const response = await fetch(`${baseUrl}/secrets/create`, {
+export async function secretCreate(
+    baseUrl: string,
+    token: string,
+    workspaceNametag: string | null,
+    input: SecretCreateInput
+): Promise<SecretSummary> {
+    const response = await fetch(apiUrl(baseUrl, "/secrets/create", workspaceNametag), {
         method: "POST",
         headers: {
             authorization: `Bearer ${token}`,

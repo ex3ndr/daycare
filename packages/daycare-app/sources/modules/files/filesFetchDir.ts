@@ -1,11 +1,17 @@
+import { apiUrl } from "../api/apiUrl";
 import type { FileEntry } from "./filesTypes";
 
 /**
  * Fetches directory contents for a given path.
  * Expects: baseUrl and token are valid; dirPath is a relative path.
  */
-export async function filesFetchDir(baseUrl: string, token: string, dirPath: string): Promise<FileEntry[]> {
-    const url = `${baseUrl}/files/list?path=${encodeURIComponent(dirPath)}`;
+export async function filesFetchDir(
+    baseUrl: string,
+    token: string,
+    workspaceNametag: string | null,
+    dirPath: string
+): Promise<FileEntry[]> {
+    const url = `${apiUrl(baseUrl, "/files/list", workspaceNametag)}?path=${encodeURIComponent(dirPath)}`;
     const response = await fetch(url, {
         headers: { authorization: `Bearer ${token}` }
     });

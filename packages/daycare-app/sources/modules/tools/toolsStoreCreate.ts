@@ -6,7 +6,7 @@ export type ToolsStore = {
     tools: ToolListItem[];
     loading: boolean;
     error: string | null;
-    fetch: (baseUrl: string, token: string) => Promise<void>;
+    fetch: (baseUrl: string, token: string, workspaceNametag: string | null) => Promise<void>;
 };
 
 /**
@@ -18,10 +18,10 @@ export function toolsStoreCreate() {
         tools: [],
         loading: false,
         error: null,
-        fetch: async (baseUrl, token) => {
+        fetch: async (baseUrl, token, workspaceNametag) => {
             set({ loading: true, error: null });
             try {
-                const tools = await toolsFetch(baseUrl, token);
+                const tools = await toolsFetch(baseUrl, token, workspaceNametag);
                 set({ tools, loading: false });
             } catch (err) {
                 set({

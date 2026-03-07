@@ -9,6 +9,7 @@ import { TreePanelLayout } from "@/components/layout/TreePanelLayout";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { documentRootIdResolve } from "@/modules/documents/documentRootIdResolve";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 import { AgentsView } from "@/views/AgentsView";
 import { CostsView } from "@/views/CostsView";
 import { DevView } from "@/views/DevView";
@@ -87,6 +88,7 @@ export function ModeView({ mode, selectedItem }: ModeViewProps) {
     const router = useRouter();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
+    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
     const documentItems = useDocumentsStore((s) => s.items);
     const selectedId = useDocumentsStore((s) => s.selectedId);
     const fetchDocuments = useDocumentsStore((s) => s.fetch);
@@ -99,9 +101,9 @@ export function ModeView({ mode, selectedItem }: ModeViewProps) {
 
     React.useEffect(() => {
         if (isDocuments && baseUrl && token) {
-            void fetchDocuments(baseUrl, token);
+            void fetchDocuments(baseUrl, token, activeNametag);
         }
-    }, [isDocuments, baseUrl, token, fetchDocuments]);
+    }, [isDocuments, baseUrl, token, activeNametag, fetchDocuments]);
 
     const handleCreatePress = React.useCallback((parentId?: string | null) => {
         setCreateParentId(parentId ?? null);
@@ -113,9 +115,14 @@ export function ModeView({ mode, selectedItem }: ModeViewProps) {
             if (!baseUrl || !token) return;
             const parentId = input.parentId ?? documentRootId;
             if (!parentId) return;
-            void createDocument(baseUrl, token, { id: createId(), title: input.title, slug: input.slug, parentId });
+            void createDocument(baseUrl, token, activeNametag, {
+                id: createId(),
+                title: input.title,
+                slug: input.slug,
+                parentId
+            });
         },
-        [baseUrl, token, createDocument, documentRootId]
+        [baseUrl, token, activeNametag, createDocument, documentRootId]
     );
 
     const handleItemPress = React.useCallback(

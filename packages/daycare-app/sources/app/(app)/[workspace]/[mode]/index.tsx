@@ -3,10 +3,10 @@ import { type AppMode, appModes } from "@/components/AppHeader";
 import { SidebarModeView } from "@/views/SidebarModeView";
 
 export default function ModeScreen() {
-    const { mode } = useLocalSearchParams<{ mode: string }>();
+    const { workspace, mode } = useLocalSearchParams<{ workspace: string; mode: string }>();
 
     if (!mode || !appModes.includes(mode as AppMode)) {
-        return <Redirect href="/home" />;
+        return <Redirect href={`/${workspace ?? "~"}/home`} />;
     }
 
     return <SidebarModeView mode={mode as AppMode} />;

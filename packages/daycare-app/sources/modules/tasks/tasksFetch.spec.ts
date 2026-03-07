@@ -50,7 +50,7 @@ describe("tasksFetch", () => {
     });
 
     it("returns tasks and triggers on success", async () => {
-        const result = await tasksFetch(BASE_URL, TOKEN);
+        const result = await tasksFetch(BASE_URL, TOKEN, null);
         expect(result).toEqual(sampleResult);
         expect(fetch).toHaveBeenCalledWith(`${BASE_URL}/tasks`, {
             headers: { authorization: `Bearer ${TOKEN}` }
@@ -66,7 +66,7 @@ describe("tasksFetch", () => {
                 })
             )
         );
-        await expect(tasksFetch(BASE_URL, TOKEN)).rejects.toThrow("Unauthorized");
+        await expect(tasksFetch(BASE_URL, TOKEN, null)).rejects.toThrow("Unauthorized");
     });
 
     it("throws generic message when error field is missing", async () => {
@@ -78,7 +78,7 @@ describe("tasksFetch", () => {
                 })
             )
         );
-        await expect(tasksFetch(BASE_URL, TOKEN)).rejects.toThrow("Failed to fetch tasks");
+        await expect(tasksFetch(BASE_URL, TOKEN, null)).rejects.toThrow("Failed to fetch tasks");
     });
 
     it("returns empty arrays when fields are undefined", async () => {
@@ -90,7 +90,7 @@ describe("tasksFetch", () => {
                 })
             )
         );
-        const result = await tasksFetch(BASE_URL, TOKEN);
+        const result = await tasksFetch(BASE_URL, TOKEN, null);
         expect(result).toEqual({ tasks: [], triggers: { cron: [], webhook: [] } });
     });
 });

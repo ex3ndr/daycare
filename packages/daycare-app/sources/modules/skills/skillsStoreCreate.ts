@@ -6,7 +6,7 @@ export type SkillsStore = {
     skills: SkillListItem[];
     loading: boolean;
     error: string | null;
-    fetch: (baseUrl: string, token: string) => Promise<void>;
+    fetch: (baseUrl: string, token: string, workspaceNametag: string | null) => Promise<void>;
 };
 
 /**
@@ -18,10 +18,10 @@ export function skillsStoreCreate() {
         skills: [],
         loading: false,
         error: null,
-        fetch: async (baseUrl, token) => {
+        fetch: async (baseUrl, token, workspaceNametag) => {
             set({ loading: true, error: null });
             try {
-                const skills = await skillsFetch(baseUrl, token);
+                const skills = await skillsFetch(baseUrl, token, workspaceNametag);
                 set({ skills, loading: false });
             } catch (err) {
                 set({

@@ -5,6 +5,7 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useFragmentsStore } from "@/modules/fragments/fragmentsContext";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
 export function FragmentsView() {
     const { theme } = useUnistyles();
@@ -12,6 +13,7 @@ export function FragmentsView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
+    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
 
     const fragments = useFragmentsStore((s) => s.fragments);
     const loading = useFragmentsStore((s) => s.loading);
@@ -20,9 +22,9 @@ export function FragmentsView() {
 
     React.useEffect(() => {
         if (baseUrl && token) {
-            void fetchFragments(baseUrl, token);
+            void fetchFragments(baseUrl, token, activeNametag);
         }
-    }, [baseUrl, token, fetchFragments]);
+    }, [baseUrl, token, activeNametag, fetchFragments]);
 
     if (loading && fragments.length === 0) {
         return (

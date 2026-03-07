@@ -1,11 +1,16 @@
+import { apiUrl } from "../api/apiUrl";
 import type { DocumentItem } from "./documentsTypes";
 
 /**
  * Fetches all documents as a flat array with parentId from the tree endpoint.
  * Expects: baseUrl and token are valid (user is authenticated).
  */
-export async function documentsFetch(baseUrl: string, token: string): Promise<DocumentItem[]> {
-    const response = await fetch(`${baseUrl}/documents/tree`, {
+export async function documentsFetch(
+    baseUrl: string,
+    token: string,
+    workspaceNametag: string | null
+): Promise<DocumentItem[]> {
+    const response = await fetch(apiUrl(baseUrl, "/documents/tree", workspaceNametag), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; items?: DocumentItem[]; error?: string };

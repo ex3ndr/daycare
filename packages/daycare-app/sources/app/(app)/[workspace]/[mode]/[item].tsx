@@ -6,18 +6,18 @@ import { FilesView } from "@/views/files/FilesView";
 import { SidebarModeView } from "@/views/SidebarModeView";
 
 export default function ModeItemScreen() {
-    const { mode, item } = useLocalSearchParams<{ mode: string; item: string }>();
+    const { workspace, mode, item } = useLocalSearchParams<{ workspace: string; mode: string; item: string }>();
 
     if (!mode || !appModes.includes(mode as AppMode)) {
-        return <Redirect href="/home" />;
+        return <Redirect href={`/${workspace ?? "~"}/home`} />;
     }
 
-    // Agent detail: /agents/:agentId
+    // Agent detail: /{workspace}/agents/:agentId
     if (mode === "agents" && item) {
         return <AgentDetailView agentId={item} />;
     }
 
-    // Files directory: /files/:encodedPath
+    // Files directory: /{workspace}/files/:encodedPath
     if (mode === "files" && item) {
         return <SidebarModeView mode="files" panel2Override={<FilesView dirPath={filesPathDecode(item)} />} />;
     }

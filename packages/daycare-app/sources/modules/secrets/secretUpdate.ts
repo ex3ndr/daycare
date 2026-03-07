@@ -1,3 +1,4 @@
+import { apiUrl } from "../api/apiUrl";
 import type { SecretSummary, SecretUpdateInput } from "./secretsTypes";
 
 /**
@@ -7,10 +8,11 @@ import type { SecretSummary, SecretUpdateInput } from "./secretsTypes";
 export async function secretUpdate(
     baseUrl: string,
     token: string,
+    workspaceNametag: string | null,
     name: string,
     input: SecretUpdateInput
 ): Promise<SecretSummary> {
-    const response = await fetch(`${baseUrl}/secrets/${encodeURIComponent(name)}/update`, {
+    const response = await fetch(apiUrl(baseUrl, `/secrets/${encodeURIComponent(name)}/update`, workspaceNametag), {
         method: "POST",
         headers: {
             authorization: `Bearer ${token}`,

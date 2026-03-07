@@ -3,6 +3,7 @@ import { ScrollView, Text, TextInput, View } from "react-native";
 import { useUnistyles } from "react-native-unistyles";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
 /**
  * Panel 2: Document editor with plain textarea for markdown editing.
@@ -12,6 +13,7 @@ export const DocumentsView = React.memo(() => {
     const { theme } = useUnistyles();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
+    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
 
     const selectedId = useDocumentsStore((s) => s.selectedId);
     const items = useDocumentsStore((s) => s.items);
@@ -29,11 +31,11 @@ export const DocumentsView = React.memo(() => {
             if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
             if (baseUrl && token) {
                 saveTimerRef.current = setTimeout(() => {
-                    void saveDraft(baseUrl, token);
+                    void saveDraft(baseUrl, token, activeNametag);
                 }, 1000);
             }
         },
-        [setDraftBody, saveDraft, baseUrl, token]
+        [setDraftBody, saveDraft, baseUrl, token, activeNametag]
     );
 
     // Cleanup timer on unmount

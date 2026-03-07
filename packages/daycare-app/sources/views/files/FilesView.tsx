@@ -12,6 +12,7 @@ import { useFilesStore } from "@/modules/files/filesContext";
 import { filesFetchDir } from "@/modules/files/filesFetchDir";
 import { filesPathEncode } from "@/modules/files/filesPathEncode";
 import type { FileEntry } from "@/modules/files/filesTypes";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 import { FilesBreadcrumb } from "./FilesBreadcrumb";
 import { filesFormatSize } from "./filesFormatSize";
 
@@ -29,6 +30,7 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
     const router = useRouter();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
+    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
 
     const roots = useFilesStore((s) => s.roots);
     const rootsLoading = useFilesStore((s) => s.loading);
@@ -43,16 +45,16 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
     // Fetch roots on mount
     React.useEffect(() => {
         if (baseUrl && token) {
-            void fetchRoots(baseUrl, token);
+            void fetchRoots(baseUrl, token, activeNametag);
         }
-    }, [baseUrl, token, fetchRoots]);
+    }, [baseUrl, token, activeNametag, fetchRoots]);
 
     // Fetch directory entries when dirPath changes
     React.useEffect(() => {
         if (!dirPath || !baseUrl || !token) return;
         setLoading(true);
         setError(null);
-        filesFetchDir(baseUrl, token, dirPath)
+        filesFetchDir(baseUrl, token, activeNametag, dirPath)
             .then((result) => {
                 setEntries(result);
                 setLoading(false);
@@ -61,7 +63,7 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
                 setError(err instanceof Error ? err.message : "Failed to list directory.");
                 setLoading(false);
             });
-    }, [dirPath, baseUrl, token]);
+    }, [dirPath, baseUrl, token, activeNametag]);
 
     const handleRootPress = React.useCallback(
         (rootPath: string) => {

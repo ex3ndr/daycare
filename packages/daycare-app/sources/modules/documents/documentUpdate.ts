@@ -1,3 +1,4 @@
+import { apiUrl } from "../api/apiUrl";
 import type { DocumentItem } from "./documentsTypes";
 
 /**
@@ -7,10 +8,11 @@ import type { DocumentItem } from "./documentsTypes";
 export async function documentUpdate(
     baseUrl: string,
     token: string,
+    workspaceNametag: string | null,
     id: string,
     input: { slug?: string; title?: string; description?: string; body?: string; parentId?: string | null }
 ): Promise<DocumentItem> {
-    const response = await fetch(`${baseUrl}/documents/${encodeURIComponent(id)}`, {
+    const response = await fetch(apiUrl(baseUrl, `/documents/${encodeURIComponent(id)}`, workspaceNametag), {
         method: "PUT",
         headers: {
             authorization: `Bearer ${token}`,

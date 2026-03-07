@@ -1,11 +1,16 @@
+import { apiUrl } from "../api/apiUrl";
 import type { ToolListItem } from "./toolsTypes";
 
 /**
  * Fetches the list of tools from the app-server.
  * Expects: baseUrl and token are valid (user is authenticated).
  */
-export async function toolsFetch(baseUrl: string, token: string): Promise<ToolListItem[]> {
-    const response = await fetch(`${baseUrl}/tools`, {
+export async function toolsFetch(
+    baseUrl: string,
+    token: string,
+    workspaceNametag: string | null
+): Promise<ToolListItem[]> {
+    const response = await fetch(apiUrl(baseUrl, "/tools", workspaceNametag), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; tools?: ToolListItem[]; error?: string };

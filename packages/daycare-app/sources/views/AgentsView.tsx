@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { useAgentsStore } from "@/modules/agents/agentsContext";
 import type { AgentListItem } from "@/modules/agents/agentsTypes";
 import { useAuthStore } from "@/modules/auth/authContext";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
 const CARD_SIZE = 120;
 
@@ -56,7 +57,7 @@ function agentDisplayName(agent: AgentListItem): string {
             return `Subagent #${segments[segments.length - 1]}`;
         }
         if (agent.kind === "subuser") return "Subuser";
-        if (agent.kind === "swarm") return "Swarm";
+        if (agent.kind === "workspace") return "Workspace";
     }
 
     if (agent.kind === "connector") return "Connection";
@@ -163,9 +164,9 @@ const KIND_META: Record<string, KindMeta> = {
         darkIcon: "#DFC070",
         order: 8
     },
-    swarm: {
+    workspace: {
         icon: "iterations",
-        label: "Swarms",
+        label: "Workspaces",
         lightBg: "#C6DBB6",
         darkBg: "#1C3210",
         lightIcon: "#4A5F3A",
@@ -220,6 +221,8 @@ export function AgentsView() {
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
 
+    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
+
     const agents = useAgentsStore((s) => s.agents);
     const loading = useAgentsStore((s) => s.loading);
     const error = useAgentsStore((s) => s.error);
@@ -227,9 +230,9 @@ export function AgentsView() {
 
     useEffect(() => {
         if (baseUrl && token) {
-            void fetchAgents(baseUrl, token);
+            void fetchAgents(baseUrl, token, activeNametag);
         }
-    }, [baseUrl, token, fetchAgents]);
+    }, [baseUrl, token, activeNametag, fetchAgents]);
 
     const handleAgentPress = useCallback(
         (agentId: string) => {

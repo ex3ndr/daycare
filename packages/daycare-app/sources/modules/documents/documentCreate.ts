@@ -1,3 +1,4 @@
+import { apiUrl } from "../api/apiUrl";
 import type { DocumentItem } from "./documentsTypes";
 
 /**
@@ -7,9 +8,10 @@ import type { DocumentItem } from "./documentsTypes";
 export async function documentCreate(
     baseUrl: string,
     token: string,
+    workspaceNametag: string | null,
     input: { id: string; slug: string; title: string; description?: string; body?: string; parentId: string }
 ): Promise<DocumentItem> {
-    const response = await fetch(`${baseUrl}/documents`, {
+    const response = await fetch(apiUrl(baseUrl, "/documents", workspaceNametag), {
         method: "POST",
         headers: {
             authorization: `Bearer ${token}`,

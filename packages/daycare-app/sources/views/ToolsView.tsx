@@ -7,6 +7,7 @@ import { ItemList } from "@/components/ItemList";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useToolsStore } from "@/modules/tools/toolsContext";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
 /** Counts the number of top-level parameters in a JSON Schema. */
 function parameterCount(parameters: unknown): number {
@@ -21,6 +22,7 @@ export function ToolsView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
+    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
 
     const tools = useToolsStore((s) => s.tools);
     const loading = useToolsStore((s) => s.loading);
@@ -29,9 +31,9 @@ export function ToolsView() {
 
     useEffect(() => {
         if (baseUrl && token) {
-            void fetchTools(baseUrl, token);
+            void fetchTools(baseUrl, token, activeNametag);
         }
-    }, [baseUrl, token, fetchTools]);
+    }, [baseUrl, token, activeNametag, fetchTools]);
 
     if (loading && tools.length === 0) {
         return (

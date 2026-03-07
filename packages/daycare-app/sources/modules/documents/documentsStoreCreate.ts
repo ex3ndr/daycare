@@ -20,26 +20,34 @@ export type DocumentsStore = {
     dragSourceId: string | null;
     dropTargetId: string | null;
 
-    fetch: (baseUrl: string, token: string) => Promise<void>;
+    fetch: (baseUrl: string, token: string, workspaceNametag: string | null) => Promise<void>;
     select: (id: string | null) => void;
     toggle: (id: string) => void;
     createDocument: (
         baseUrl: string,
         token: string,
+        workspaceNametag: string | null,
         input: { id: string; slug: string; title: string; parentId: string }
     ) => Promise<void>;
     updateDocument: (
         baseUrl: string,
         token: string,
+        workspaceNametag: string | null,
         id: string,
         input: { slug?: string; title?: string; description?: string; body?: string; parentId?: string | null }
     ) => Promise<void>;
-    deleteDocument: (baseUrl: string, token: string, id: string) => Promise<void>;
-    move: (baseUrl: string, token: string, id: string, newParentId: string | null) => Promise<void>;
+    deleteDocument: (baseUrl: string, token: string, workspaceNametag: string | null, id: string) => Promise<void>;
+    move: (
+        baseUrl: string,
+        token: string,
+        workspaceNametag: string | null,
+        id: string,
+        newParentId: string | null
+    ) => Promise<void>;
     setDraftBody: (body: string) => void;
     setDraftTitle: (title: string) => void;
     setDraftDescription: (description: string) => void;
-    saveDraft: (baseUrl: string, token: string) => Promise<void>;
+    saveDraft: (baseUrl: string, token: string, workspaceNametag: string | null) => Promise<void>;
     setDragSource: (id: string | null) => void;
     setDropTarget: (id: string | null) => void;
 };
@@ -63,10 +71,10 @@ export function documentsStoreCreate() {
         dragSourceId: null,
         dropTargetId: null,
 
-        fetch: async (baseUrl, token) => {
+        fetch: async (baseUrl, token, workspaceNametag) => {
             set({ loading: true, error: null });
             try {
-                const items = await documentsFetch(baseUrl, token);
+                const items = await documentsFetch(baseUrl, token, workspaceNametag);
                 const tree = documentTreeBuild(items);
                 set({ items, tree, loading: false });
             } catch (err) {
@@ -96,21 +104,21 @@ export function documentsStoreCreate() {
             set({ expandedIds: next });
         },
 
-        createDocument: async (baseUrl, token, input) => {
+        createDocument: async (baseUrl, token, workspaceNametag, input) => {
             set({ saving: true, error: null });
             try {
-                await documentCreate(baseUrl, token, input);
-                await get().fetch(baseUrl, token);
+                await documentCreate(baseUrl, token, workspaceNametag, input);
+                await get().fetch(baseUrl, token, workspaceNametag);
                 set({ saving: false });
             } catch (err) {
                 set({ saving: false, error: err instanceof Error ? err.message : "Failed to create document." });
             }
         },
 
-        updateDocument: async (baseUrl, token, id, input) => {
+        updateDocument: async (baseUrl, token, workspaceNametag, id, input) => {
             set({ saving: true, error: null });
             try {
-                const updated = await documentUpdate(baseUrl, token, id, input);
+                const updated = await documentUpdate(baseUrl, token, workspaceNametag, id, input);
                 const { items } = get();
                 const nextItems = items.map((d) => (d.id === id ? updated : d));
                 const tree = documentTreeBuild(nextItems);
@@ -120,12 +128,12 @@ export function documentsStoreCreate() {
             }
         },
 
-        deleteDocument: async (baseUrl, token, id) => {
+        deleteDocument: async (baseUrl, token, workspaceNametag, id) => {
             set({ saving: true, error: null });
             try {
-                await documentDelete(baseUrl, token, id);
+                await documentDelete(baseUrl, token, workspaceNametag, id);
                 const { selectedId } = get();
-                await get().fetch(baseUrl, token);
+                await get().fetch(baseUrl, token, workspaceNametag);
                 if (selectedId === id) {
                     set({ selectedId: null, draftBody: null, draftTitle: null, draftDescription: null });
                 }
@@ -135,11 +143,11 @@ export function documentsStoreCreate() {
             }
         },
 
-        move: async (baseUrl, token, id, newParentId) => {
+        move: async (baseUrl, token, workspaceNametag, id, newParentId) => {
             set({ saving: true, error: null });
             try {
-                await documentUpdate(baseUrl, token, id, { parentId: newParentId });
-                await get().fetch(baseUrl, token);
+                await documentUpdate(baseUrl, token, workspaceNametag, id, { parentId: newParentId });
+                await get().fetch(baseUrl, token, workspaceNametag);
                 set({ saving: false });
             } catch (err) {
                 set({ saving: false, error: err instanceof Error ? err.message : "Failed to move document." });
@@ -150,7 +158,7 @@ export function documentsStoreCreate() {
         setDraftTitle: (title) => set({ draftTitle: title }),
         setDraftDescription: (description) => set({ draftDescription: description }),
 
-        saveDraft: async (baseUrl, token) => {
+        saveDraft: async (baseUrl, token, workspaceNametag) => {
             const { selectedId, draftBody, draftTitle, draftDescription } = get();
             if (!selectedId) return;
 
@@ -161,7 +169,7 @@ export function documentsStoreCreate() {
 
             if (Object.keys(input).length === 0) return;
 
-            await get().updateDocument(baseUrl, token, selectedId, input);
+            await get().updateDocument(baseUrl, token, workspaceNametag, selectedId, input);
         },
 
         setDragSource: (id) => set({ dragSourceId: id }),

@@ -5,6 +5,7 @@ import { ContentPanelLayout } from "@/components/layout/ContentPanelLayout";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { documentRootIdResolve } from "@/modules/documents/documentRootIdResolve";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 import { AgentsView } from "@/views/AgentsView";
 import { CostsView } from "@/views/CostsView";
 import { DevView } from "@/views/DevView";
@@ -49,6 +50,7 @@ type SidebarModeViewProps = {
 export function SidebarModeView({ mode, panel2Override }: SidebarModeViewProps) {
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
+    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
     const documentItems = useDocumentsStore((s) => s.items);
     const selectedId = useDocumentsStore((s) => s.selectedId);
     const fetchDocuments = useDocumentsStore((s) => s.fetch);
@@ -61,9 +63,9 @@ export function SidebarModeView({ mode, panel2Override }: SidebarModeViewProps) 
 
     React.useEffect(() => {
         if (isDocuments && baseUrl && token) {
-            void fetchDocuments(baseUrl, token);
+            void fetchDocuments(baseUrl, token, activeNametag);
         }
-    }, [isDocuments, baseUrl, token, fetchDocuments]);
+    }, [isDocuments, baseUrl, token, activeNametag, fetchDocuments]);
 
     // Kept for future use when document creation is wired into the sidebar
     const _handleCreatePress = React.useCallback((parentId?: string | null) => {
@@ -76,9 +78,14 @@ export function SidebarModeView({ mode, panel2Override }: SidebarModeViewProps) 
             if (!baseUrl || !token) return;
             const parentId = input.parentId ?? documentRootId;
             if (!parentId) return;
-            void createDocument(baseUrl, token, { id: createId(), title: input.title, slug: input.slug, parentId });
+            void createDocument(baseUrl, token, activeNametag, {
+                id: createId(),
+                title: input.title,
+                slug: input.slug,
+                parentId
+            });
         },
-        [baseUrl, token, createDocument, documentRootId]
+        [baseUrl, token, activeNametag, createDocument, documentRootId]
     );
 
     const ViewComponent = viewComponents[mode];

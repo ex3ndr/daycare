@@ -1,3 +1,4 @@
+import { apiUrl } from "../api/apiUrl";
 import type { TokenStatsRow } from "./costsTypes";
 
 /**
@@ -7,12 +8,13 @@ import type { TokenStatsRow } from "./costsTypes";
 export async function costsFetch(
     baseUrl: string,
     token: string,
+    workspaceNametag: string | null,
     options: { from: number; to: number }
 ): Promise<TokenStatsRow[]> {
     const query = new URLSearchParams();
     query.set("from", String(options.from));
     query.set("to", String(options.to));
-    const response = await fetch(`${baseUrl}/costs/token-stats?${query}`, {
+    const response = await fetch(`${apiUrl(baseUrl, "/costs/token-stats", workspaceNametag)}?${query}`, {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; rows?: TokenStatsRow[]; error?: string };
