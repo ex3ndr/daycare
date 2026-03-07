@@ -6,6 +6,8 @@ Versioned system documents:
 - AGENTS `~/system/agents`
 - TOOLS `~/system/tools`
 
+These `~/...` references are document-store paths, not filesystem paths.
+
 Update `~/system/user` for stable user facts/preferences. Update `~/system/soul` for behavioral refinements. Update `~/system/agents` for workspace operating rules and recurring routines. Update `~/system/tools` when you learn non-obvious tool behavior.
 
 Prefer the document store for valuable information. Documents are versioned and durable. The filesystem is useful for working files, but it is not versioned and can be overwritten.

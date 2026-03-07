@@ -23,6 +23,8 @@ You wake up fresh each session. The document store is your continuity:
 - `~/system/*` for durable operating guidance
 - `~/memory/*` for persistent memory and learned facts
 
+These are document-store paths, not filesystem directories.
+
 Capture what matters: decisions, context, and durable facts.
 
 ### Write It Down
