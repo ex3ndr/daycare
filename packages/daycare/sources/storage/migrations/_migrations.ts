@@ -28,5 +28,9 @@ export const migrations: Migration[] = [
     {
         name: "20260307183000_app_auth_tables",
         fileName: "20260307183000_app_auth_tables.sql"
+    },
+    {
+        name: "20260306120000_swarm_to_workspace",
+        fileName: "20260306120000_swarm_to_workspace.sql"
     }
 ];

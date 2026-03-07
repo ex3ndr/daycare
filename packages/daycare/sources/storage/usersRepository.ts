@@ -142,7 +142,7 @@ export class UsersRepository {
                 validFrom: row.validFrom ?? row.createdAt,
                 validTo: row.validTo ?? null,
                 isOwner: row.isOwner,
-                isSwarm: row.isSwarm,
+                isWorkspace: row.isWorkspace,
                 parentUserId: row.parentUserId ?? null,
                 firstName: row.firstName ?? null,
                 lastName: row.lastName ?? null,
@@ -203,7 +203,7 @@ export class UsersRepository {
             const createdAt = input.createdAt ?? now;
             const updatedAt = input.updatedAt ?? createdAt;
             const isOwner = input.isOwner ?? false;
-            const isSwarm = input.isSwarm ?? false;
+            const isWorkspace = input.isWorkspace ?? false;
             const parentUserId = input.parentUserId ?? null;
             const firstName = textNullableNormalize(input.firstName);
             const lastName = textNullableNormalize(input.lastName);
@@ -228,7 +228,7 @@ export class UsersRepository {
                         validFrom: createdAt,
                         validTo: null,
                         isOwner,
-                        isSwarm,
+                        isWorkspace,
                         parentUserId,
                         firstName,
                         lastName,
@@ -274,7 +274,7 @@ export class UsersRepository {
                 validFrom: createdAt,
                 validTo: null,
                 isOwner,
-                isSwarm,
+                isWorkspace,
                 parentUserId,
                 firstName,
                 lastName,
@@ -308,7 +308,7 @@ export class UsersRepository {
             const next: UserWithConnectorKeysDbRecord = {
                 ...current,
                 ...(data.isOwner === undefined ? {} : { isOwner: data.isOwner }),
-                ...(data.isSwarm === undefined ? {} : { isSwarm: data.isSwarm }),
+                ...(data.isWorkspace === undefined ? {} : { isWorkspace: data.isWorkspace }),
                 ...(data.firstName === undefined ? {} : { firstName: textNullableNormalize(data.firstName) }),
                 ...(data.lastName === undefined ? {} : { lastName: textNullableNormalize(data.lastName) }),
                 ...(data.bio === undefined ? {} : { bio: textNullableNormalize(data.bio) }),
@@ -326,7 +326,7 @@ export class UsersRepository {
                     now,
                     changes: {
                         isOwner: next.isOwner,
-                        isSwarm: next.isSwarm,
+                        isWorkspace: next.isWorkspace,
                         firstName: next.firstName,
                         lastName: next.lastName,
                         bio: next.bio,
@@ -360,7 +360,7 @@ export class UsersRepository {
                             validFrom: row.validFrom ?? row.createdAt,
                             validTo: row.validTo ?? null,
                             isOwner: row.isOwner,
-                            isSwarm: row.isSwarm,
+                            isWorkspace: row.isWorkspace,
                             parentUserId: row.parentUserId,
                             firstName: row.firstName,
                             lastName: row.lastName,
@@ -488,7 +488,7 @@ export class UsersRepository {
             validFrom: userRow.validFrom ?? userRow.createdAt,
             validTo: userRow.validTo ?? null,
             isOwner: userRow.isOwner,
-            isSwarm: userRow.isSwarm,
+            isWorkspace: userRow.isWorkspace,
             parentUserId: userRow.parentUserId ?? null,
             firstName: userRow.firstName ?? null,
             lastName: userRow.lastName ?? null,

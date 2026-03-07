@@ -449,7 +449,7 @@ function agentCreateInputNormalize(input: AgentCreateInput, current: AgentDbReco
             kind,
             connectorName
         });
-    const foreground = input.foreground ?? current?.foreground ?? (kind === "connector" || kind === "swarm");
+    const foreground = input.foreground ?? current?.foreground ?? (kind === "connector" || kind === "workspace");
     const modelRole =
         input.modelRole === undefined ? (current?.modelRole ?? agentModelRoleFromKind(kind)) : input.modelRole;
     const name = input.name === undefined ? (current?.name ?? null) : input.name;
@@ -508,14 +508,14 @@ function agentPathDefaultResolve(input: {
     if (input.kind === "search") {
         return `/${userId}/search/${id}`;
     }
-    if (input.kind === "swarm") {
-        return `/${userId}/agent/swarm`;
+    if (input.kind === "workspace") {
+        return `/${userId}/agent/workspace`;
     }
     return `/${userId}/agent/${id}`;
 }
 
 function agentModelRoleFromKind(kind: AgentDbRecord["kind"]): AgentDbRecord["modelRole"] {
-    if (kind === "connector" || kind === "agent" || kind === "app" || kind === "subuser" || kind === "swarm") {
+    if (kind === "connector" || kind === "agent" || kind === "app" || kind === "subuser" || kind === "workspace") {
         return "user";
     }
     if (kind === "sub") {

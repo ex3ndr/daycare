@@ -457,20 +457,20 @@ export type ProcessDbRecord = {
     lastExitedAt: number | null;
 };
 
-export type DatabaseSwarmContactRow = {
-    swarm_user_id: string;
+export type DatabaseWorkspaceContactRow = {
+    workspace_user_id: string;
     contact_agent_id: string;
-    swarm_agent_id: string;
+    workspace_agent_id: string;
     messages_sent: number;
     messages_received: number;
     first_contact_at: number;
     last_contact_at: number;
 };
 
-export type SwarmContactDbRecord = {
-    swarmUserId: string;
+export type WorkspaceContactDbRecord = {
+    workspaceUserId: string;
     contactAgentId: string;
-    swarmAgentId: string;
+    workspaceAgentId: string;
     messagesSent: number;
     messagesReceived: number;
     firstContactAt: number;
@@ -483,7 +483,7 @@ export type DatabaseUserRow = {
     valid_from: number;
     valid_to: number | null;
     is_owner: boolean;
-    is_swarm: boolean;
+    is_workspace: boolean;
     parent_user_id: string | null;
     first_name: string | null;
     last_name: string | null;
@@ -510,7 +510,7 @@ export type UserDbRecord = {
     validFrom?: number;
     validTo?: number | null;
     isOwner: boolean;
-    isSwarm: boolean;
+    isWorkspace: boolean;
     parentUserId: string | null;
     firstName: string | null;
     lastName: string | null;
@@ -655,7 +655,7 @@ export type ObservationLogRecentOptions = {
 export type CreateUserInput = {
     id?: string;
     isOwner?: boolean;
-    isSwarm?: boolean;
+    isWorkspace?: boolean;
     parentUserId?: string;
     firstName?: string | null;
     lastName?: string | null;
@@ -707,7 +707,7 @@ export type SystemPromptDbRecord = {
 
 export type UpdateUserInput = {
     isOwner?: boolean;
-    isSwarm?: boolean;
+    isWorkspace?: boolean;
     firstName?: string | null;
     lastName?: string | null;
     bio?: string | null;

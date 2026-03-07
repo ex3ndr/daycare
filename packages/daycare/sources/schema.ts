@@ -32,7 +32,7 @@ export const usersTable = pgTable(
         validFrom: bigint("valid_from", { mode: "number" }).notNull(),
         validTo: bigint("valid_to", { mode: "number" }),
         isOwner: boolean("is_owner").notNull().default(false),
-        isSwarm: boolean("is_swarm").notNull().default(false),
+        isWorkspace: boolean("is_workspace").notNull().default(false),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
         parentUserId: text("parent_user_id"),
@@ -488,21 +488,21 @@ export const systemPromptsTable = pgTable(
     ]
 );
 
-export const swarmContactsTable = pgTable(
-    "swarm_contacts",
+export const workspaceContactsTable = pgTable(
+    "workspace_contacts",
     {
-        swarmUserId: text("swarm_user_id").notNull(),
+        workspaceUserId: text("workspace_user_id").notNull(),
         contactAgentId: text("contact_agent_id").notNull(),
-        swarmAgentId: text("swarm_agent_id").notNull(),
+        workspaceAgentId: text("workspace_agent_id").notNull(),
         messagesSent: integer("messages_sent").notNull().default(0),
         messagesReceived: integer("messages_received").notNull().default(0),
         firstContactAt: bigint("first_contact_at", { mode: "number" }).notNull(),
         lastContactAt: bigint("last_contact_at", { mode: "number" }).notNull()
     },
     (table) => [
-        primaryKey({ columns: [table.swarmUserId, table.contactAgentId] }),
-        index("idx_swarm_contacts_swarm_user_id").on(table.swarmUserId),
-        index("idx_swarm_contacts_swarm_agent_id").on(table.swarmAgentId)
+        primaryKey({ columns: [table.workspaceUserId, table.contactAgentId] }),
+        index("idx_workspace_contacts_workspace_user_id").on(table.workspaceUserId),
+        index("idx_workspace_contacts_workspace_agent_id").on(table.workspaceAgentId)
     ]
 );
 
@@ -709,7 +709,7 @@ export const schema = {
     processesTable,
     connectionsTable,
     systemPromptsTable,
-    swarmContactsTable,
+    workspaceContactsTable,
     tokenStatsHourlyTable,
     keyValuesTable,
     observationLogTable,

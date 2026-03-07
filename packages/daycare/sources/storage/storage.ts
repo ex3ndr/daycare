@@ -23,12 +23,12 @@ import { PsqlDatabasesRepository } from "./psqlDatabasesRepository.js";
 import { SessionsRepository } from "./sessionsRepository.js";
 import { SignalEventsRepository } from "./signalEventsRepository.js";
 import { SignalSubscriptionsRepository } from "./signalSubscriptionsRepository.js";
-import { SwarmContactsRepository } from "./swarmContactsRepository.js";
 import { SystemPromptsRepository } from "./systemPromptsRepository.js";
 import { TasksRepository } from "./tasksRepository.js";
 import { TokenStatsRepository } from "./tokenStatsRepository.js";
 import { UsersRepository } from "./usersRepository.js";
 import { WebhookTasksRepository } from "./webhookTasksRepository.js";
+import { WorkspaceContactsRepository } from "./workspaceContactsRepository.js";
 
 /**
  * Facade for all storage access and repository instances.
@@ -53,7 +53,7 @@ export class Storage {
     readonly connections: ConnectionsRepository;
     readonly processes: ProcessesRepository;
     readonly systemPrompts: SystemPromptsRepository;
-    readonly swarmContacts: SwarmContactsRepository;
+    readonly workspaceContacts: WorkspaceContactsRepository;
     readonly tokenStats: TokenStatsRepository;
     readonly keyValues: KeyValuesRepository;
     readonly modelRoleRules: ModelRoleRulesRepository;
@@ -86,7 +86,7 @@ export class Storage {
         this.connections = new ConnectionsRepository(db);
         this.processes = new ProcessesRepository(db);
         this.systemPrompts = new SystemPromptsRepository(db);
-        this.swarmContacts = new SwarmContactsRepository(db);
+        this.workspaceContacts = new WorkspaceContactsRepository(db);
         this.tokenStats = new TokenStatsRepository(db);
         this.keyValues = new KeyValuesRepository(db);
         this.modelRoleRules = new ModelRoleRulesRepository(db);
