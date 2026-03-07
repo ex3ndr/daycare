@@ -77,9 +77,7 @@ export async function workspaceCreate(input: WorkspaceCreateInput): Promise<Work
     const userHome = input.userHomeForUserId(record.userId);
     await userHomeEnsure(userHome);
     const workspaceCtx = contextForUser({ userId: record.userId });
-    await userDocumentsEnsure(workspaceCtx, input.storage, {
-        soulBody: `${systemPrompt}\n`
-    });
+    await userDocumentsEnsure(workspaceCtx, input.storage);
 
     return record;
 }

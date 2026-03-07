@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { contextForUser } from "../agents/context.js";
+import { agentPromptBundledRead } from "../agents/ops/agentPromptBundledRead.js";
 import { UserHome } from "../users/userHome.js";
 import { workspaceCreate } from "./workspaceCreate.js";
 
@@ -55,7 +56,7 @@ describe("workspaceCreate", () => {
             expect(memory?.slug).toBe("memory");
             expect(people?.slug).toBe("people");
             expect(document?.slug).toBe("document");
-            expect(soul?.body).toContain("You are the todo workspace.");
+            expect(soul?.body).toBe(await agentPromptBundledRead("SOUL.md"));
         } finally {
             storage.connection.close();
             await rm(dir, { recursive: true, force: true });

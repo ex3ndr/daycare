@@ -14,8 +14,8 @@ Seeded roots:
 - `doc://system/agents`
 - `doc://system/tools`
 
-For workspace creation and workspace startup repair, `doc://system/soul` uses the workspace system prompt only when that
-document is missing. Existing workspace soul documents are preserved as-is.
+For workspace startup repair, `doc://system/soul` uses the workspace system prompt only when that document is missing.
+Workspace creation itself now keeps the bundled `SOUL.md` seed. Existing workspace soul documents are preserved as-is.
 
 ```mermaid
 flowchart TD
