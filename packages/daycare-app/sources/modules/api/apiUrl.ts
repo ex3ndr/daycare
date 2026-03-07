@@ -1,8 +1,8 @@
 /**
  * Builds the full API URL with optional workspace prefix.
- * When workspaceNametag is set, prepends /w/{nametag} to the path.
+ * When workspaceId is set, prepends /w/{id} to the path.
  */
-export function apiUrl(baseUrl: string, path: string, workspaceNametag: string | null): string {
-    const prefix = workspaceNametag ? `/w/${encodeURIComponent(workspaceNametag)}` : "";
+export function apiUrl(baseUrl: string, path: string, workspaceId: string | null): string {
+    const prefix = workspaceId ? `/w/${encodeURIComponent(workspaceId)}` : "";
     return `${baseUrl}${prefix}${path}`;
 }

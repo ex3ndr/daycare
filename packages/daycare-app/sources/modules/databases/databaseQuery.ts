@@ -7,12 +7,12 @@ import { apiUrl } from "../api/apiUrl";
 export async function databaseQuery(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     dbId: string,
     sql: string,
     params: unknown[] = []
 ): Promise<Record<string, unknown>[]> {
-    const response = await fetch(apiUrl(baseUrl, `/databases/${encodeURIComponent(dbId)}/query`, workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, `/databases/${encodeURIComponent(dbId)}/query`, workspaceId), {
         method: "POST",
         headers: {
             authorization: `Bearer ${token}`,

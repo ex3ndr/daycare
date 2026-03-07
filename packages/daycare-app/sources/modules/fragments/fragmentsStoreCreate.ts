@@ -6,7 +6,7 @@ export type FragmentsStore = {
     fragments: FragmentListItem[];
     loading: boolean;
     error: string | null;
-    fetch: (baseUrl: string, token: string, workspaceNametag: string | null) => Promise<void>;
+    fetch: (baseUrl: string, token: string, workspaceId: string | null) => Promise<void>;
 };
 
 /**
@@ -18,10 +18,10 @@ export function fragmentsStoreCreate() {
         fragments: [],
         loading: false,
         error: null,
-        fetch: async (baseUrl, token, workspaceNametag) => {
+        fetch: async (baseUrl, token, workspaceId) => {
             set({ loading: true, error: null });
             try {
-                const fragments = await fragmentsFetch(baseUrl, token, workspaceNametag);
+                const fragments = await fragmentsFetch(baseUrl, token, workspaceId);
                 set({ fragments, loading: false });
             } catch (err) {
                 set({

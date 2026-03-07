@@ -279,7 +279,7 @@ export class AppServer {
             return;
         }
 
-        // Resolve workspace scope from /w/{nametag}/... prefix
+        // Resolve workspace scope from /w/{userId}/... prefix
         let effectiveUserId = auth.userId;
         let routePathname = pathname;
 

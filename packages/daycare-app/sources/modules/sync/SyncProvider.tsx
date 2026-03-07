@@ -25,7 +25,7 @@ export function SyncProvider({ children }: PropsWithChildren): ReactNode {
     const fetchObservations = useObservationsStore((s) => s.fetch);
     const fetchTasks = useTasksStore((s) => s.fetch);
     const fetchWorkspaces = useWorkspacesStore((s) => s.fetch);
-    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
+    const activeId = useWorkspacesStore((s) => s.activeId);
 
     // Fetch workspaces when authenticated
     React.useEffect(() => {
@@ -37,23 +37,23 @@ export function SyncProvider({ children }: PropsWithChildren): ReactNode {
     // Connect/disconnect based on auth state and active workspace
     React.useEffect(() => {
         if (authState === "authenticated" && baseUrl && token) {
-            connect(baseUrl, token, activeNametag);
+            connect(baseUrl, token, activeId);
         } else {
             disconnect();
         }
         return () => {
             disconnect();
         };
-    }, [authState, baseUrl, token, activeNametag, connect, disconnect]);
+    }, [authState, baseUrl, token, activeId, connect, disconnect]);
 
     // Refetch stores when sync becomes connected (initial connect or reconnect)
     React.useEffect(() => {
         if (syncStatus === "connected" && baseUrl && token) {
-            void fetchAgents(baseUrl, token, activeNametag);
-            void fetchObservations(baseUrl, token, activeNametag);
-            void fetchTasks(baseUrl, token, activeNametag);
+            void fetchAgents(baseUrl, token, activeId);
+            void fetchObservations(baseUrl, token, activeId);
+            void fetchTasks(baseUrl, token, activeId);
         }
-    }, [syncStatus, baseUrl, token, activeNametag, fetchAgents, fetchObservations, fetchTasks]);
+    }, [syncStatus, baseUrl, token, activeId, fetchAgents, fetchObservations, fetchTasks]);
 
     return <>{children}</>;
 }

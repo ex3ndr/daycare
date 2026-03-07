@@ -14,7 +14,7 @@ export const DocumentMetadataPanel = React.memo(() => {
     const { theme } = useUnistyles();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
+    const activeId = useWorkspacesStore((s) => s.activeId);
 
     const selectedId = useDocumentsStore((s) => s.selectedId);
     const items = useDocumentsStore((s) => s.items);
@@ -32,10 +32,10 @@ export const DocumentMetadataPanel = React.memo(() => {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         if (baseUrl && token) {
             saveTimerRef.current = setTimeout(() => {
-                void saveDraft(baseUrl, token, activeNametag);
+                void saveDraft(baseUrl, token, activeId);
             }, 1000);
         }
-    }, [saveDraft, baseUrl, token, activeNametag]);
+    }, [saveDraft, baseUrl, token, activeId]);
 
     React.useEffect(() => {
         return () => {
@@ -47,7 +47,7 @@ export const DocumentMetadataPanel = React.memo(() => {
         if (!selectedId || !baseUrl || !token) return;
         if (Platform.OS === "web") {
             if (window.confirm("Are you sure you want to delete this document?")) {
-                void deleteDocument(baseUrl, token, activeNametag, selectedId);
+                void deleteDocument(baseUrl, token, activeId, selectedId);
             }
         } else {
             Alert.alert("Delete Document", "Are you sure you want to delete this document?", [
@@ -55,11 +55,11 @@ export const DocumentMetadataPanel = React.memo(() => {
                 {
                     text: "Delete",
                     style: "destructive",
-                    onPress: () => void deleteDocument(baseUrl, token, activeNametag, selectedId)
+                    onPress: () => void deleteDocument(baseUrl, token, activeId, selectedId)
                 }
             ]);
         }
-    }, [selectedId, baseUrl, token, activeNametag, deleteDocument]);
+    }, [selectedId, baseUrl, token, activeId, deleteDocument]);
 
     if (!selectedDoc) {
         return null;

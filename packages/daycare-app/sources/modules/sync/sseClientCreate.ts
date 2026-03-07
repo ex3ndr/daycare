@@ -6,7 +6,7 @@ export type SseClientStatus = "connected" | "disconnected" | "error";
 export type SseClientOptions = {
     baseUrl: string;
     token: string;
-    workspaceNametag: string | null;
+    workspaceId: string | null;
     onEvent: (event: { type: string; payload?: unknown }) => void;
     onStatus: (status: SseClientStatus) => void;
 };
@@ -28,7 +28,7 @@ export function sseClientCreate(options: SseClientOptions): SseClient {
 
     const run = async () => {
         try {
-            const response = await fetch(apiUrl(options.baseUrl, "/events", options.workspaceNametag), {
+            const response = await fetch(apiUrl(options.baseUrl, "/events", options.workspaceId), {
                 headers: { authorization: `Bearer ${options.token}` },
                 signal: controller.signal
             });

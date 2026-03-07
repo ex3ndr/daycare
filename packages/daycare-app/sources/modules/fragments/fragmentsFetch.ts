@@ -8,9 +8,9 @@ import type { FragmentListItem } from "./fragmentsTypes";
 export async function fragmentsFetch(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null
+    workspaceId: string | null
 ): Promise<FragmentListItem[]> {
-    const response = await fetch(apiUrl(baseUrl, "/fragments", workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, "/fragments", workspaceId), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; fragments?: FragmentListItem[]; error?: string };

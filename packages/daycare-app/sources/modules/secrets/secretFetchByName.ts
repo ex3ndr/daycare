@@ -8,10 +8,10 @@ import type { SecretSummary } from "./secretsTypes";
 export async function secretFetchByName(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     name: string
 ): Promise<SecretSummary> {
-    const response = await fetch(apiUrl(baseUrl, `/secrets/${encodeURIComponent(name)}`, workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, `/secrets/${encodeURIComponent(name)}`, workspaceId), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; secret?: SecretSummary; error?: string };

@@ -13,7 +13,7 @@ export const DocumentsView = React.memo(() => {
     const { theme } = useUnistyles();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
+    const activeId = useWorkspacesStore((s) => s.activeId);
 
     const selectedId = useDocumentsStore((s) => s.selectedId);
     const items = useDocumentsStore((s) => s.items);
@@ -31,11 +31,11 @@ export const DocumentsView = React.memo(() => {
             if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
             if (baseUrl && token) {
                 saveTimerRef.current = setTimeout(() => {
-                    void saveDraft(baseUrl, token, activeNametag);
+                    void saveDraft(baseUrl, token, activeId);
                 }, 1000);
             }
         },
-        [setDraftBody, saveDraft, baseUrl, token, activeNametag]
+        [setDraftBody, saveDraft, baseUrl, token, activeId]
     );
 
     // Cleanup timer on unmount

@@ -30,7 +30,7 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
     const router = useRouter();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
+    const activeId = useWorkspacesStore((s) => s.activeId);
 
     const roots = useFilesStore((s) => s.roots);
     const rootsLoading = useFilesStore((s) => s.loading);
@@ -45,16 +45,16 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
     // Fetch roots on mount
     React.useEffect(() => {
         if (baseUrl && token) {
-            void fetchRoots(baseUrl, token, activeNametag);
+            void fetchRoots(baseUrl, token, activeId);
         }
-    }, [baseUrl, token, activeNametag, fetchRoots]);
+    }, [baseUrl, token, activeId, fetchRoots]);
 
     // Fetch directory entries when dirPath changes
     React.useEffect(() => {
         if (!dirPath || !baseUrl || !token) return;
         setLoading(true);
         setError(null);
-        filesFetchDir(baseUrl, token, activeNametag, dirPath)
+        filesFetchDir(baseUrl, token, activeId, dirPath)
             .then((result) => {
                 setEntries(result);
                 setLoading(false);
@@ -63,13 +63,15 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
                 setError(err instanceof Error ? err.message : "Failed to list directory.");
                 setLoading(false);
             });
-    }, [dirPath, baseUrl, token, activeNametag]);
+    }, [dirPath, baseUrl, token, activeId]);
+
+    const wsPrefix = activeId ? `/${activeId}` : "";
 
     const handleRootPress = React.useCallback(
         (rootPath: string) => {
-            router.push(`/files/${filesPathEncode(rootPath)}` as `/${string}`);
+            router.push(`${wsPrefix}/files/${filesPathEncode(rootPath)}` as `/${string}`);
         },
-        [router]
+        [router, wsPrefix]
     );
 
     const handleEntryPress = React.useCallback(
@@ -77,23 +79,23 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
             if (!dirPath) return;
             const newPath = `${dirPath}/${entryName}`;
             if (entryType === "directory") {
-                router.push(`/files/${filesPathEncode(newPath)}` as `/${string}`);
+                router.push(`${wsPrefix}/files/${filesPathEncode(newPath)}` as `/${string}`);
             } else {
                 router.push(`/file-preview/${filesPathEncode(newPath)}` as `/${string}`);
             }
         },
-        [dirPath, router]
+        [dirPath, router, wsPrefix]
     );
 
     const handleBreadcrumbNavigate = React.useCallback(
         (segmentPath: string | null) => {
             if (segmentPath === null) {
-                router.push("/files" as `/${string}`);
+                router.push(`${wsPrefix}/files` as `/${string}`);
                 return;
             }
-            router.push(`/files/${filesPathEncode(segmentPath)}` as `/${string}`);
+            router.push(`${wsPrefix}/files/${filesPathEncode(segmentPath)}` as `/${string}`);
         },
-        [router]
+        [router, wsPrefix]
     );
 
     // Roots view (no path selected)

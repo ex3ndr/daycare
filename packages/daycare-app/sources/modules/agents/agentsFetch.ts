@@ -8,9 +8,9 @@ import type { AgentListItem } from "./agentsTypes";
 export async function agentsFetch(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null
+    workspaceId: string | null
 ): Promise<AgentListItem[]> {
-    const response = await fetch(apiUrl(baseUrl, "/agents", workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, "/agents", workspaceId), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; agents?: AgentListItem[]; error?: string };

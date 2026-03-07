@@ -7,10 +7,10 @@ import { apiUrl } from "../api/apiUrl";
 export async function documentDelete(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     id: string
 ): Promise<void> {
-    const response = await fetch(apiUrl(baseUrl, `/documents/${encodeURIComponent(id)}`, workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, `/documents/${encodeURIComponent(id)}`, workspaceId), {
         method: "DELETE",
         headers: { authorization: `Bearer ${token}` }
     });

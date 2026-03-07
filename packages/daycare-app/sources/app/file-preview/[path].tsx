@@ -17,7 +17,7 @@ export default function FilePreviewScreen() {
     const { path: encodedPath } = useLocalSearchParams<{ path: string }>();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
+    const activeId = useWorkspacesStore((s) => s.activeId);
 
     const filePath = encodedPath ? filesPathDecode(encodedPath) : null;
     const fileName = filePath?.split("/").pop() ?? "File";
@@ -30,7 +30,7 @@ export default function FilePreviewScreen() {
         if (!filePath || !baseUrl || !token) return;
         setLoading(true);
         setError(null);
-        filesFetchPreview(baseUrl, token, activeNametag, filePath)
+        filesFetchPreview(baseUrl, token, activeId, filePath)
             .then((result) => {
                 setPreview(result);
                 setLoading(false);
@@ -39,7 +39,7 @@ export default function FilePreviewScreen() {
                 setError(err instanceof Error ? err.message : "Failed to read file.");
                 setLoading(false);
             });
-    }, [filePath, baseUrl, token, activeNametag]);
+    }, [filePath, baseUrl, token, activeId]);
 
     if (!filePath) return null;
 

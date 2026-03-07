@@ -8,7 +8,7 @@ type MontyFragmentExternalFunctionsBuildOptions = {
     store: StateStore;
     baseUrl: string | null;
     token: string | null;
-    workspaceNametag: string | null;
+    workspaceId: string | null;
 };
 
 /**
@@ -35,7 +35,7 @@ export function montyFragmentExternalFunctionsBuild(
             return databaseQuery(
                 options.baseUrl,
                 options.token,
-                options.workspaceNametag,
+                options.workspaceId,
                 dbId,
                 sql,
                 Array.isArray(params) ? params : params === undefined ? [] : [params]

@@ -8,10 +8,10 @@ import type { FileEntry } from "./filesTypes";
 export async function filesFetchDir(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     dirPath: string
 ): Promise<FileEntry[]> {
-    const url = `${apiUrl(baseUrl, "/files/list", workspaceNametag)}?path=${encodeURIComponent(dirPath)}`;
+    const url = `${apiUrl(baseUrl, "/files/list", workspaceId)}?path=${encodeURIComponent(dirPath)}`;
     const response = await fetch(url, {
         headers: { authorization: `Bearer ${token}` }
     });

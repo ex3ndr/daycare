@@ -8,10 +8,10 @@ import type { FilePreview } from "./filesTypes";
 export async function filesFetchPreview(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     filePath: string
 ): Promise<FilePreview> {
-    const url = `${apiUrl(baseUrl, "/files/read", workspaceNametag)}?path=${encodeURIComponent(filePath)}`;
+    const url = `${apiUrl(baseUrl, "/files/read", workspaceId)}?path=${encodeURIComponent(filePath)}`;
     const response = await fetch(url, {
         headers: { authorization: `Bearer ${token}` }
     });

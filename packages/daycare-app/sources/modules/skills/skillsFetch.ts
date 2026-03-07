@@ -8,9 +8,9 @@ import type { SkillListItem } from "./skillsTypes";
 export async function skillsFetch(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null
+    workspaceId: string | null
 ): Promise<SkillListItem[]> {
-    const response = await fetch(apiUrl(baseUrl, "/skills", workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, "/skills", workspaceId), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; skills?: SkillListItem[]; error?: string };

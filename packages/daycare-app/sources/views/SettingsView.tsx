@@ -20,7 +20,7 @@ export function SettingsView() {
     const token = useAuthStore((s) => s.token);
     const userId = useAuthStore((s) => s.userId);
     const logout = useAuthStore((s) => s.logout);
-    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
+    const activeId = useWorkspacesStore((s) => s.activeId);
 
     const profile = useProfileStore((s) => s.profile);
     const loading = useProfileStore((s) => s.loading);
@@ -54,7 +54,7 @@ export function SettingsView() {
         setSecretsLoading(true);
         setSecretsError(null);
 
-        void secretsFetch(baseUrl, token, activeNametag)
+        void secretsFetch(baseUrl, token, activeId)
             .then((items) => {
                 if (!active) {
                     return;
@@ -79,7 +79,7 @@ export function SettingsView() {
         return () => {
             active = false;
         };
-    }, [baseUrl, token, activeNametag]);
+    }, [baseUrl, token, activeId]);
 
     const connectEmailRequest = async () => {
         const normalizedEmail = email.trim().toLowerCase();

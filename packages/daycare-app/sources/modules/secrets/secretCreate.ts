@@ -8,10 +8,10 @@ import type { SecretCreateInput, SecretSummary } from "./secretsTypes";
 export async function secretCreate(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     input: SecretCreateInput
 ): Promise<SecretSummary> {
-    const response = await fetch(apiUrl(baseUrl, "/secrets/create", workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, "/secrets/create", workspaceId), {
         method: "POST",
         headers: {
             authorization: `Bearer ${token}`,

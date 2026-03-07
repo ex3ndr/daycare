@@ -8,9 +8,9 @@ import type { SecretSummary } from "./secretsTypes";
 export async function secretsFetch(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null
+    workspaceId: string | null
 ): Promise<SecretSummary[]> {
-    const response = await fetch(apiUrl(baseUrl, "/secrets", workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, "/secrets", workspaceId), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; secrets?: SecretSummary[]; error?: string };

@@ -19,21 +19,10 @@ export type ChatSessionState = {
 
 export type ChatStore = {
     sessions: Record<string, ChatSessionState>;
-    open: (baseUrl: string, token: string, workspaceNametag: string | null, agentId: string) => Promise<void>;
-    create: (
-        baseUrl: string,
-        token: string,
-        workspaceNametag: string | null,
-        input: ChatCreateInput
-    ) => Promise<string>;
-    send: (
-        baseUrl: string,
-        token: string,
-        workspaceNametag: string | null,
-        agentId: string,
-        text: string
-    ) => Promise<void>;
-    poll: (baseUrl: string, token: string, workspaceNametag: string | null, agentId: string) => Promise<void>;
+    open: (baseUrl: string, token: string, workspaceId: string | null, agentId: string) => Promise<void>;
+    create: (baseUrl: string, token: string, workspaceId: string | null, input: ChatCreateInput) => Promise<string>;
+    send: (baseUrl: string, token: string, workspaceId: string | null, agentId: string, text: string) => Promise<void>;
+    poll: (baseUrl: string, token: string, workspaceId: string | null, agentId: string) => Promise<void>;
 };
 
 function chatSessionDefault(agentId: string): ChatSessionState {
@@ -58,7 +47,7 @@ function chatLastPollAtResolve(history: AgentHistoryRecord[]): number {
 export function chatStoreCreate() {
     return create<ChatStore>((set, get) => ({
         sessions: {},
-        open: async (baseUrl, token, workspaceNametag, agentId) => {
+        open: async (baseUrl, token, workspaceId, agentId) => {
             const existing = get().sessions[agentId] ?? chatSessionDefault(agentId);
             set({
                 sessions: {
@@ -71,7 +60,7 @@ export function chatStoreCreate() {
                 }
             });
             try {
-                const history = await chatHistoryFetch(baseUrl, token, workspaceNametag, agentId);
+                const history = await chatHistoryFetch(baseUrl, token, workspaceId, agentId);
                 set({
                     sessions: {
                         ...get().sessions,
@@ -97,16 +86,16 @@ export function chatStoreCreate() {
                 });
             }
         },
-        create: async (baseUrl, token, workspaceNametag, input) => {
+        create: async (baseUrl, token, workspaceId, input) => {
             const created = await chatCreate(
                 baseUrl,
                 token,
-                workspaceNametag,
+                workspaceId,
                 input.systemPrompt,
                 input.name,
                 input.description
             );
-            const history = await chatHistoryFetch(baseUrl, token, workspaceNametag, created.agentId);
+            const history = await chatHistoryFetch(baseUrl, token, workspaceId, created.agentId);
             set({
                 sessions: {
                     ...get().sessions,
@@ -122,7 +111,7 @@ export function chatStoreCreate() {
             });
             return created.agentId;
         },
-        send: async (baseUrl, token, workspaceNametag, agentId, text) => {
+        send: async (baseUrl, token, workspaceId, agentId, text) => {
             const existing = get().sessions[agentId] ?? chatSessionDefault(agentId);
             set({
                 sessions: {
@@ -135,8 +124,8 @@ export function chatStoreCreate() {
                 }
             });
             try {
-                await chatMessageSend(baseUrl, token, workspaceNametag, agentId, text);
-                const records = await chatMessagesPoll(baseUrl, token, workspaceNametag, agentId, existing.lastPollAt);
+                await chatMessageSend(baseUrl, token, workspaceId, agentId, text);
+                const records = await chatMessagesPoll(baseUrl, token, workspaceId, agentId, existing.lastPollAt);
                 const history = [...existing.history, ...records];
                 set({
                     sessions: {
@@ -163,10 +152,10 @@ export function chatStoreCreate() {
                 });
             }
         },
-        poll: async (baseUrl, token, workspaceNametag, agentId) => {
+        poll: async (baseUrl, token, workspaceId, agentId) => {
             const existing = get().sessions[agentId] ?? chatSessionDefault(agentId);
             try {
-                const records = await chatMessagesPoll(baseUrl, token, workspaceNametag, agentId, existing.lastPollAt);
+                const records = await chatMessagesPoll(baseUrl, token, workspaceId, agentId, existing.lastPollAt);
                 if (records.length === 0) {
                     return;
                 }

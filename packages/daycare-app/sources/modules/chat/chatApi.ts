@@ -13,12 +13,12 @@ export type ChatCreatedAgent = {
 export async function chatCreate(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     systemPrompt: string,
     name?: string,
     description?: string
 ): Promise<ChatCreatedAgent> {
-    const response = await fetch(apiUrl(baseUrl, "/agents/create", workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, "/agents/create", workspaceId), {
         method: "POST",
         headers: {
             authorization: `Bearer ${token}`,
@@ -48,12 +48,8 @@ export async function chatCreate(
  * Resolves (or creates) the direct messaging agent for the current user.
  * Expects: baseUrl/token are valid authenticated values.
  */
-export async function chatDirectResolve(
-    baseUrl: string,
-    token: string,
-    workspaceNametag: string | null
-): Promise<string> {
-    const response = await fetch(apiUrl(baseUrl, "/agents/direct", workspaceNametag), {
+export async function chatDirectResolve(baseUrl: string, token: string, workspaceId: string | null): Promise<string> {
+    const response = await fetch(apiUrl(baseUrl, "/agents/direct", workspaceId), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; agentId?: string; error?: string };
@@ -70,10 +66,10 @@ export async function chatDirectResolve(
 export async function chatHistoryFetch(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     agentId: string
 ): Promise<AgentHistoryRecord[]> {
-    const response = await fetch(apiUrl(baseUrl, `/agents/${encodeURIComponent(agentId)}/history`, workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, `/agents/${encodeURIComponent(agentId)}/history`, workspaceId), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; history?: AgentHistoryRecord[]; error?: string };
@@ -90,11 +86,11 @@ export async function chatHistoryFetch(
 export async function chatMessageSend(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     agentId: string,
     text: string
 ): Promise<void> {
-    const response = await fetch(apiUrl(baseUrl, `/agents/${encodeURIComponent(agentId)}/message`, workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, `/agents/${encodeURIComponent(agentId)}/message`, workspaceId), {
         method: "POST",
         headers: {
             authorization: `Bearer ${token}`,
@@ -115,7 +111,7 @@ export async function chatMessageSend(
 export async function chatMessagesPoll(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     agentId: string,
     after: number
 ): Promise<AgentHistoryRecord[]> {
@@ -123,7 +119,7 @@ export async function chatMessagesPoll(
         after: String(after)
     });
     const response = await fetch(
-        `${apiUrl(baseUrl, `/agents/${encodeURIComponent(agentId)}/messages`, workspaceNametag)}?${search.toString()}`,
+        `${apiUrl(baseUrl, `/agents/${encodeURIComponent(agentId)}/messages`, workspaceId)}?${search.toString()}`,
         { headers: { authorization: `Bearer ${token}` } }
     );
     const data = (await response.json()) as { ok?: boolean; history?: AgentHistoryRecord[]; error?: string };

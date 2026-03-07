@@ -8,9 +8,9 @@ import type { DocumentItem } from "./documentsTypes";
 export async function documentsFetch(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null
+    workspaceId: string | null
 ): Promise<DocumentItem[]> {
-    const response = await fetch(apiUrl(baseUrl, "/documents/tree", workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, "/documents/tree", workspaceId), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; items?: DocumentItem[]; error?: string };

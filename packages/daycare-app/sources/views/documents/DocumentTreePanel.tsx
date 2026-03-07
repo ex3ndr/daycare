@@ -17,7 +17,7 @@ export const DocumentTreePanel = React.memo<DocumentTreePanelProps>(({ onCreateP
     const { theme } = useUnistyles();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
+    const activeId = useWorkspacesStore((s) => s.activeId);
 
     const tree = useDocumentsStore((s) => s.tree);
     const items = useDocumentsStore((s) => s.items);
@@ -45,11 +45,11 @@ export const DocumentTreePanel = React.memo<DocumentTreePanelProps>(({ onCreateP
                 setDropTarget(null);
                 return;
             }
-            void move(baseUrl, token, activeNametag, dragSourceId, targetId);
+            void move(baseUrl, token, activeId, dragSourceId, targetId);
             setDragSource(null);
             setDropTarget(null);
         },
-        [dragSourceId, items, baseUrl, token, activeNametag, move, setDragSource, setDropTarget]
+        [dragSourceId, items, baseUrl, token, activeId, move, setDragSource, setDropTarget]
     );
 
     // Allow dropping on root (the scroll area itself)
@@ -63,7 +63,7 @@ export const DocumentTreePanel = React.memo<DocumentTreePanelProps>(({ onCreateP
                   onDrop: (e: { preventDefault: () => void }) => {
                       e.preventDefault();
                       if (dragSourceId && baseUrl && token) {
-                          void move(baseUrl, token, activeNametag, dragSourceId, null);
+                          void move(baseUrl, token, activeId, dragSourceId, null);
                       }
                       setDragSource(null);
                       setDropTarget(null);

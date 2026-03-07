@@ -6,7 +6,7 @@ export type AgentsStore = {
     agents: AgentListItem[];
     loading: boolean;
     error: string | null;
-    fetch: (baseUrl: string, token: string, workspaceNametag: string | null) => Promise<void>;
+    fetch: (baseUrl: string, token: string, workspaceId: string | null) => Promise<void>;
     applyCreated: (agent: AgentListItem) => void;
     applyUpdated: (partial: { agentId: string; updatedAt?: number } & Partial<AgentListItem>) => void;
     applyDeleted: (agentId: string) => void;
@@ -23,10 +23,10 @@ export function agentsStoreCreate() {
         agents: [],
         loading: false,
         error: null,
-        fetch: async (baseUrl, token, workspaceNametag) => {
+        fetch: async (baseUrl, token, workspaceId) => {
             set({ loading: true, error: null });
             try {
-                const agents = await agentsFetch(baseUrl, token, workspaceNametag);
+                const agents = await agentsFetch(baseUrl, token, workspaceId);
                 set({ agents, loading: false });
             } catch (err) {
                 set({

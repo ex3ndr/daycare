@@ -18,7 +18,7 @@ export type SyncStoreCallbacks = {
 export type SyncStore = {
     status: SyncStatus;
     lastConnectedAt: number | null;
-    connect: (baseUrl: string, token: string, workspaceNametag: string | null) => void;
+    connect: (baseUrl: string, token: string, workspaceId: string | null) => void;
     disconnect: () => void;
 };
 
@@ -38,7 +38,7 @@ export function syncStoreCreate(callbacks: SyncStoreCallbacks) {
         let backoffMs = BACKOFF_INITIAL_MS;
         let currentBaseUrl = "";
         let currentToken = "";
-        let currentWorkspaceNametag: string | null = null;
+        let currentWorkspaceId: string | null = null;
 
         function resetKeepaliveTimer() {
             if (keepaliveTimer) {
@@ -103,11 +103,11 @@ export function syncStoreCreate(callbacks: SyncStoreCallbacks) {
             backoffMs = nextBackoff;
             reconnectTimer = setTimeout(() => {
                 reconnectTimer = null;
-                doConnect(currentBaseUrl, currentToken, currentWorkspaceNametag);
+                doConnect(currentBaseUrl, currentToken, currentWorkspaceId);
             }, delay);
         }
 
-        function doConnect(baseUrl: string, token: string, workspaceNametag: string | null) {
+        function doConnect(baseUrl: string, token: string, workspaceId: string | null) {
             if (client) {
                 client.close();
             }
@@ -115,7 +115,7 @@ export function syncStoreCreate(callbacks: SyncStoreCallbacks) {
             client = sseClientCreate({
                 baseUrl,
                 token,
-                workspaceNametag,
+                workspaceId,
                 onEvent: handleEvent,
                 onStatus: (status) => {
                     if (status === "disconnected" || status === "error") {
@@ -129,13 +129,13 @@ export function syncStoreCreate(callbacks: SyncStoreCallbacks) {
         return {
             status: "disconnected",
             lastConnectedAt: null,
-            connect: (baseUrl, token, workspaceNametag) => {
+            connect: (baseUrl, token, workspaceId) => {
                 currentBaseUrl = baseUrl;
                 currentToken = token;
-                currentWorkspaceNametag = workspaceNametag;
+                currentWorkspaceId = workspaceId;
                 clearTimers();
                 backoffMs = BACKOFF_INITIAL_MS;
-                doConnect(baseUrl, token, workspaceNametag);
+                doConnect(baseUrl, token, workspaceId);
             },
             disconnect: () => {
                 clearTimers();

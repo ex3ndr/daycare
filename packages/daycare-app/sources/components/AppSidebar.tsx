@@ -6,11 +6,10 @@ import * as React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { type AppMode, appModes } from "@/components/AppHeader";
-
 import { useAuthStore } from "@/modules/auth/authContext";
 import { documentRootIdResolve } from "@/modules/documents/documentRootIdResolve";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
+import { type AppMode, appModes } from "@/modules/navigation/appModes";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 
@@ -66,8 +65,8 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
 };
 
 /**
- * Extracts the workspace nametag from the pathname.
- * E.g. "/steve/agents" -> "steve", "/home" -> undefined.
+ * Extracts the workspace id from the pathname.
+ * E.g. "/{workspaceId}/agents" -> workspaceId, "/home" -> undefined.
  */
 function extractWorkspaceFromPath(pathname: string): string | undefined {
     const parts = pathname.split("/").filter(Boolean);
@@ -167,11 +166,11 @@ export const AppSidebar = React.memo<AppSidebarProps>(
 
         // Workspaces
         const workspaces = useWorkspacesStore((s) => s.workspaces);
-        const activeNametag = useWorkspacesStore((s) => s.activeNametag);
+        const activeId = useWorkspacesStore((s) => s.activeId);
 
         const handleWorkspaceSwitch = React.useCallback(
-            (nametag: string) => {
-                router.replace(`/${nametag}/home` as `/${string}`);
+            (userId: string) => {
+                router.replace(`/${userId}/home` as `/${string}`);
                 onNavigate?.();
             },
             [router, onNavigate]
@@ -191,9 +190,9 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         // Fetch documents when the documents mode is active
         React.useEffect(() => {
             if (activeMode === "documents" && baseUrl && token) {
-                void fetchDocuments(baseUrl, token, activeNametag);
+                void fetchDocuments(baseUrl, token, activeId);
             }
-        }, [activeMode, baseUrl, token, activeNametag, fetchDocuments]);
+        }, [activeMode, baseUrl, token, activeId, fetchDocuments]);
 
         // Documents under ~/document (children of the root "document" folder)
         const documentRootId = React.useMemo(() => documentRootIdResolve(documents), [documents]);
@@ -237,14 +236,14 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                 if (!baseUrl || !token) return;
                 const parentId = input.parentId ?? documentRootId;
                 if (!parentId) return;
-                void createDocument(baseUrl, token, activeNametag, {
+                void createDocument(baseUrl, token, activeId, {
                     id: createId(),
                     title: input.title,
                     slug: input.slug,
                     parentId
                 });
             },
-            [baseUrl, token, activeNametag, createDocument, documentRootId]
+            [baseUrl, token, activeId, createDocument, documentRootId]
         );
 
         return (
@@ -285,14 +284,14 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                 {!collapsed && workspaces.length > 1 && (
                     <View style={styles.workspaceSwitcher}>
                         {workspaces.map((ws) => {
-                            const isActive = ws.nametag === activeNametag;
+                            const isActive = ws.userId === activeId;
                             const label = ws.firstName
                                 ? `${ws.firstName}${ws.lastName ? ` ${ws.lastName}` : ""}`
                                 : ws.nametag;
                             return (
                                 <Pressable
-                                    key={ws.nametag}
-                                    onPress={() => handleWorkspaceSwitch(ws.nametag)}
+                                    key={ws.userId}
+                                    onPress={() => handleWorkspaceSwitch(ws.userId)}
                                     style={[
                                         styles.workspaceItem,
                                         isActive && {

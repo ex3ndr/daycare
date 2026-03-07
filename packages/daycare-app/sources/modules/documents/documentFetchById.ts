@@ -8,10 +8,10 @@ import type { DocumentItem } from "./documentsTypes";
 export async function documentFetchById(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     id: string
 ): Promise<DocumentItem> {
-    const response = await fetch(apiUrl(baseUrl, `/documents/${encodeURIComponent(id)}`, workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, `/documents/${encodeURIComponent(id)}`, workspaceId), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; document?: DocumentItem; error?: string };

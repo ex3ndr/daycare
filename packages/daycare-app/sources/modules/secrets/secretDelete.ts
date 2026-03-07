@@ -7,10 +7,10 @@ import { apiUrl } from "../api/apiUrl";
 export async function secretDelete(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     name: string
 ): Promise<void> {
-    const response = await fetch(apiUrl(baseUrl, `/secrets/${encodeURIComponent(name)}/delete`, workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, `/secrets/${encodeURIComponent(name)}/delete`, workspaceId), {
         method: "POST",
         headers: { authorization: `Bearer ${token}` }
     });

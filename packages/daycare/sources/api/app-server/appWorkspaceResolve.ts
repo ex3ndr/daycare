@@ -6,9 +6,9 @@ export type AppWorkspaceResolveResult = {
 };
 
 /**
- * Resolves workspace context from a /w/{nametag}/... URL prefix.
+ * Resolves workspace context from a /w/{userId}/... URL prefix.
  * Returns the workspace userId and stripped pathname, or null if not a /w/ route.
- * Throws if the nametag cannot be resolved or access is denied.
+ * Throws if the user cannot be found or access is denied.
  *
  * Expects: callerUserId is the authenticated user from the JWT.
  */
@@ -17,28 +17,28 @@ export async function appWorkspaceResolve(
     callerUserId: string,
     users: UsersRepository
 ): Promise<AppWorkspaceResolveResult | null> {
-    // Check for /w/{nametag}/... prefix
+    // Check for /w/{userId}/... prefix
     const match = pathname.match(/^\/w\/([^/]+)(\/.*)?$/);
     if (!match) {
         return null;
     }
 
-    const nametag = decodeURIComponent(match[1] ?? "").trim();
-    if (!nametag) {
+    const workspaceId = decodeURIComponent(match[1] ?? "").trim();
+    if (!workspaceId) {
         return null;
     }
 
     const strippedPathname = match[2] ?? "/";
 
-    // Resolve target user by nametag
-    const target = await users.findByNametag(nametag);
-    if (!target) {
-        throw new WorkspaceAccessError("Workspace not found.");
+    // Caller accessing their own workspace
+    if (workspaceId === callerUserId) {
+        return { workspaceUserId: workspaceId, strippedPathname };
     }
 
-    // Caller accessing their own workspace
-    if (target.id === callerUserId) {
-        return { workspaceUserId: target.id, strippedPathname };
+    // Resolve target user by id
+    const target = await users.findById(workspaceId);
+    if (!target) {
+        throw new WorkspaceAccessError("Workspace not found.");
     }
 
     // Caller accessing a child workspace they own

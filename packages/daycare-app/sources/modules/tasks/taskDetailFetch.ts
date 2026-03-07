@@ -8,10 +8,10 @@ import type { TaskDetailResult } from "./tasksTypes";
 export async function taskDetailFetch(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     taskId: string
 ): Promise<TaskDetailResult> {
-    const response = await fetch(apiUrl(baseUrl, `/tasks/${encodeURIComponent(taskId)}`, workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, `/tasks/${encodeURIComponent(taskId)}`, workspaceId), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as {

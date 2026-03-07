@@ -11,12 +11,12 @@ export type TasksStore = {
     };
     loading: boolean;
     error: string | null;
-    fetch: (baseUrl: string, token: string, workspaceNametag: string | null) => Promise<void>;
+    fetch: (baseUrl: string, token: string, workspaceId: string | null) => Promise<void>;
 
     selectedTaskId: string | null;
     selectedDetail: TaskDetailResult | null;
     detailLoading: boolean;
-    selectTask: (baseUrl: string, token: string, workspaceNametag: string | null, taskId: string | null) => void;
+    selectTask: (baseUrl: string, token: string, workspaceId: string | null, taskId: string | null) => void;
 };
 
 /**
@@ -30,10 +30,10 @@ export function tasksStoreCreate() {
         triggers: { cron: [], webhook: [] },
         loading: false,
         error: null,
-        fetch: async (baseUrl, token, workspaceNametag) => {
+        fetch: async (baseUrl, token, workspaceId) => {
             set({ loading: true, error: null });
             try {
-                const result = await tasksFetch(baseUrl, token, workspaceNametag);
+                const result = await tasksFetch(baseUrl, token, workspaceId);
                 set({ tasks: result.tasks, triggers: result.triggers, loading: false });
             } catch (err) {
                 set({
@@ -46,13 +46,13 @@ export function tasksStoreCreate() {
         selectedTaskId: null,
         selectedDetail: null,
         detailLoading: false,
-        selectTask: (baseUrl, token, workspaceNametag, taskId) => {
+        selectTask: (baseUrl, token, workspaceId, taskId) => {
             if (!taskId) {
                 set({ selectedTaskId: null, selectedDetail: null, detailLoading: false });
                 return;
             }
             set({ selectedTaskId: taskId, selectedDetail: null, detailLoading: true });
-            void taskDetailFetch(baseUrl, token, workspaceNametag, taskId).then(
+            void taskDetailFetch(baseUrl, token, workspaceId, taskId).then(
                 (detail) => {
                     set((state) => {
                         // Only apply if this task is still selected

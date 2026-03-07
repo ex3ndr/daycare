@@ -13,7 +13,7 @@ export function FragmentsView() {
 
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
-    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
+    const activeId = useWorkspacesStore((s) => s.activeId);
 
     const fragments = useFragmentsStore((s) => s.fragments);
     const loading = useFragmentsStore((s) => s.loading);
@@ -22,9 +22,9 @@ export function FragmentsView() {
 
     React.useEffect(() => {
         if (baseUrl && token) {
-            void fetchFragments(baseUrl, token, activeNametag);
+            void fetchFragments(baseUrl, token, activeId);
         }
-    }, [baseUrl, token, activeNametag, fetchFragments]);
+    }, [baseUrl, token, activeId, fetchFragments]);
 
     if (loading && fragments.length === 0) {
         return (

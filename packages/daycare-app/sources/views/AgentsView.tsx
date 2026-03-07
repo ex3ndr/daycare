@@ -220,7 +220,7 @@ export function AgentsView() {
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
 
-    const activeNametag = useWorkspacesStore((s) => s.activeNametag);
+    const activeId = useWorkspacesStore((s) => s.activeId);
 
     const agents = useAgentsStore((s) => s.agents);
     const loading = useAgentsStore((s) => s.loading);
@@ -229,15 +229,16 @@ export function AgentsView() {
 
     useEffect(() => {
         if (baseUrl && token) {
-            void fetchAgents(baseUrl, token, activeNametag);
+            void fetchAgents(baseUrl, token, activeId);
         }
-    }, [baseUrl, token, activeNametag, fetchAgents]);
+    }, [baseUrl, token, activeId, fetchAgents]);
 
     const handleAgentPress = useCallback(
         (agentId: string) => {
-            router.push(`/agents/${agentId}`);
+            const prefix = activeId ? `/${activeId}` : "";
+            router.push(`${prefix}/agents/${agentId}` as `/${string}`);
         },
-        [router]
+        [router, activeId]
     );
 
     if (loading && agents.length === 0) {

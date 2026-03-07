@@ -4,9 +4,9 @@ import { workspacesFetch } from "./workspacesFetch";
 
 export type WorkspacesStore = {
     workspaces: WorkspaceListItem[];
-    activeNametag: string | null;
+    activeId: string | null;
     fetch: (baseUrl: string, token: string) => Promise<void>;
-    setActive: (nametag: string) => void;
+    setActive: (id: string) => void;
 };
 
 /**
@@ -18,19 +18,19 @@ export type WorkspacesStore = {
 export function workspacesStoreCreate() {
     return create<WorkspacesStore>((set) => ({
         workspaces: [],
-        activeNametag: null,
+        activeId: null,
         fetch: async (baseUrl, token) => {
             const workspaces = await workspacesFetch(baseUrl, token);
             set((state) => {
-                const active = state.activeNametag;
+                const active = state.activeId;
                 const selfWorkspace = workspaces.find((w) => w.isSelf);
                 const resolvedActive =
-                    active && workspaces.some((w) => w.nametag === active)
+                    active && workspaces.some((w) => w.userId === active)
                         ? active
-                        : (selfWorkspace?.nametag ?? workspaces[0]?.nametag ?? null);
-                return { workspaces, activeNametag: resolvedActive };
+                        : (selfWorkspace?.userId ?? workspaces[0]?.userId ?? null);
+                return { workspaces, activeId: resolvedActive };
             });
         },
-        setActive: (nametag) => set({ activeNametag: nametag })
+        setActive: (id) => set({ activeId: id })
     }));
 }

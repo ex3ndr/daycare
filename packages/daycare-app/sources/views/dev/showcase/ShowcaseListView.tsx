@@ -2,15 +2,18 @@ import { Octicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 import { showcasePages } from "@/views/dev/showcase/_showcasePages";
 
 /**
  * Grid listing of all showcase pages with navigation.
- * Renders each page as a tappable card that navigates to /dev/<id>.
+ * Renders each page as a tappable card that navigates to /{workspace}/dev/<id>.
  */
 export function ShowcaseListView() {
     const { theme } = useUnistyles();
     const router = useRouter();
+    const activeId = useWorkspacesStore((s) => s.activeId);
+    const wsPrefix = activeId ? `/${activeId}` : "";
 
     return (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
@@ -19,7 +22,7 @@ export function ShowcaseListView() {
                     <Pressable
                         key={page.id}
                         style={[styles.card, { backgroundColor: theme.colors.surfaceContainer }]}
-                        onPress={() => router.replace(`/dev/${page.id}` as `/${string}`)}
+                        onPress={() => router.replace(`${wsPrefix}/dev/${page.id}` as `/${string}`)}
                     >
                         <View style={[styles.iconCircle, { backgroundColor: theme.colors.primaryContainer }]}>
                             <Octicons name="beaker" size={16} color={theme.colors.onPrimaryContainer} />

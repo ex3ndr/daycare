@@ -6,7 +6,7 @@ export type ObservationsStore = {
     observations: ObservationItem[];
     loading: boolean;
     error: string | null;
-    fetch: (baseUrl: string, token: string, workspaceNametag: string | null) => Promise<void>;
+    fetch: (baseUrl: string, token: string, workspaceId: string | null) => Promise<void>;
 };
 
 /**
@@ -20,10 +20,10 @@ export function observationsStoreCreate() {
         observations: [],
         loading: false,
         error: null,
-        fetch: async (baseUrl, token, workspaceNametag) => {
+        fetch: async (baseUrl, token, workspaceId) => {
             set({ loading: true, error: null });
             try {
-                const observations = await observationsFetch(baseUrl, token, workspaceNametag);
+                const observations = await observationsFetch(baseUrl, token, workspaceId);
                 set({ observations, loading: false });
             } catch (err) {
                 set({

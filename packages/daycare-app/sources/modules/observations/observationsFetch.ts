@@ -8,10 +8,10 @@ import type { ObservationItem } from "./observationsTypes";
 export async function observationsFetch(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     limit = 100
 ): Promise<ObservationItem[]> {
-    const response = await fetch(`${apiUrl(baseUrl, "/observations", workspaceNametag)}?limit=${limit}`, {
+    const response = await fetch(`${apiUrl(baseUrl, "/observations", workspaceId)}?limit=${limit}`, {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as { ok?: boolean; observations?: ObservationItem[]; error?: string };

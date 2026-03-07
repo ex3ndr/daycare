@@ -8,9 +8,9 @@ import type { TaskListAllResult } from "./tasksTypes";
 export async function tasksFetch(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null
+    workspaceId: string | null
 ): Promise<TaskListAllResult> {
-    const response = await fetch(apiUrl(baseUrl, "/tasks", workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, "/tasks", workspaceId), {
         headers: { authorization: `Bearer ${token}` }
     });
     const data = (await response.json()) as {

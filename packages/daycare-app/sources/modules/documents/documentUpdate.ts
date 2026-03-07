@@ -8,11 +8,11 @@ import type { DocumentItem } from "./documentsTypes";
 export async function documentUpdate(
     baseUrl: string,
     token: string,
-    workspaceNametag: string | null,
+    workspaceId: string | null,
     id: string,
     input: { slug?: string; title?: string; description?: string; body?: string; parentId?: string | null }
 ): Promise<DocumentItem> {
-    const response = await fetch(apiUrl(baseUrl, `/documents/${encodeURIComponent(id)}`, workspaceNametag), {
+    const response = await fetch(apiUrl(baseUrl, `/documents/${encodeURIComponent(id)}`, workspaceId), {
         method: "PUT",
         headers: {
             authorization: `Bearer ${token}`,

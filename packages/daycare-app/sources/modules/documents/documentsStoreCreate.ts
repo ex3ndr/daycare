@@ -20,34 +20,34 @@ export type DocumentsStore = {
     dragSourceId: string | null;
     dropTargetId: string | null;
 
-    fetch: (baseUrl: string, token: string, workspaceNametag: string | null) => Promise<void>;
+    fetch: (baseUrl: string, token: string, workspaceId: string | null) => Promise<void>;
     select: (id: string | null) => void;
     toggle: (id: string) => void;
     createDocument: (
         baseUrl: string,
         token: string,
-        workspaceNametag: string | null,
+        workspaceId: string | null,
         input: { id: string; slug: string; title: string; parentId: string }
     ) => Promise<void>;
     updateDocument: (
         baseUrl: string,
         token: string,
-        workspaceNametag: string | null,
+        workspaceId: string | null,
         id: string,
         input: { slug?: string; title?: string; description?: string; body?: string; parentId?: string | null }
     ) => Promise<void>;
-    deleteDocument: (baseUrl: string, token: string, workspaceNametag: string | null, id: string) => Promise<void>;
+    deleteDocument: (baseUrl: string, token: string, workspaceId: string | null, id: string) => Promise<void>;
     move: (
         baseUrl: string,
         token: string,
-        workspaceNametag: string | null,
+        workspaceId: string | null,
         id: string,
         newParentId: string | null
     ) => Promise<void>;
     setDraftBody: (body: string) => void;
     setDraftTitle: (title: string) => void;
     setDraftDescription: (description: string) => void;
-    saveDraft: (baseUrl: string, token: string, workspaceNametag: string | null) => Promise<void>;
+    saveDraft: (baseUrl: string, token: string, workspaceId: string | null) => Promise<void>;
     setDragSource: (id: string | null) => void;
     setDropTarget: (id: string | null) => void;
 };
@@ -71,10 +71,10 @@ export function documentsStoreCreate() {
         dragSourceId: null,
         dropTargetId: null,
 
-        fetch: async (baseUrl, token, workspaceNametag) => {
+        fetch: async (baseUrl, token, workspaceId) => {
             set({ loading: true, error: null });
             try {
-                const items = await documentsFetch(baseUrl, token, workspaceNametag);
+                const items = await documentsFetch(baseUrl, token, workspaceId);
                 const tree = documentTreeBuild(items);
                 set({ items, tree, loading: false });
             } catch (err) {
@@ -104,21 +104,21 @@ export function documentsStoreCreate() {
             set({ expandedIds: next });
         },
 
-        createDocument: async (baseUrl, token, workspaceNametag, input) => {
+        createDocument: async (baseUrl, token, workspaceId, input) => {
             set({ saving: true, error: null });
             try {
-                await documentCreate(baseUrl, token, workspaceNametag, input);
-                await get().fetch(baseUrl, token, workspaceNametag);
+                await documentCreate(baseUrl, token, workspaceId, input);
+                await get().fetch(baseUrl, token, workspaceId);
                 set({ saving: false });
             } catch (err) {
                 set({ saving: false, error: err instanceof Error ? err.message : "Failed to create document." });
             }
         },
 
-        updateDocument: async (baseUrl, token, workspaceNametag, id, input) => {
+        updateDocument: async (baseUrl, token, workspaceId, id, input) => {
             set({ saving: true, error: null });
             try {
-                const updated = await documentUpdate(baseUrl, token, workspaceNametag, id, input);
+                const updated = await documentUpdate(baseUrl, token, workspaceId, id, input);
                 const { items } = get();
                 const nextItems = items.map((d) => (d.id === id ? updated : d));
                 const tree = documentTreeBuild(nextItems);
@@ -128,12 +128,12 @@ export function documentsStoreCreate() {
             }
         },
 
-        deleteDocument: async (baseUrl, token, workspaceNametag, id) => {
+        deleteDocument: async (baseUrl, token, workspaceId, id) => {
             set({ saving: true, error: null });
             try {
-                await documentDelete(baseUrl, token, workspaceNametag, id);
+                await documentDelete(baseUrl, token, workspaceId, id);
                 const { selectedId } = get();
-                await get().fetch(baseUrl, token, workspaceNametag);
+                await get().fetch(baseUrl, token, workspaceId);
                 if (selectedId === id) {
                     set({ selectedId: null, draftBody: null, draftTitle: null, draftDescription: null });
                 }
@@ -143,11 +143,11 @@ export function documentsStoreCreate() {
             }
         },
 
-        move: async (baseUrl, token, workspaceNametag, id, newParentId) => {
+        move: async (baseUrl, token, workspaceId, id, newParentId) => {
             set({ saving: true, error: null });
             try {
-                await documentUpdate(baseUrl, token, workspaceNametag, id, { parentId: newParentId });
-                await get().fetch(baseUrl, token, workspaceNametag);
+                await documentUpdate(baseUrl, token, workspaceId, id, { parentId: newParentId });
+                await get().fetch(baseUrl, token, workspaceId);
                 set({ saving: false });
             } catch (err) {
                 set({ saving: false, error: err instanceof Error ? err.message : "Failed to move document." });
@@ -158,7 +158,7 @@ export function documentsStoreCreate() {
         setDraftTitle: (title) => set({ draftTitle: title }),
         setDraftDescription: (description) => set({ draftDescription: description }),
 
-        saveDraft: async (baseUrl, token, workspaceNametag) => {
+        saveDraft: async (baseUrl, token, workspaceId) => {
             const { selectedId, draftBody, draftTitle, draftDescription } = get();
             if (!selectedId) return;
 
@@ -169,7 +169,7 @@ export function documentsStoreCreate() {
 
             if (Object.keys(input).length === 0) return;
 
-            await get().updateDocument(baseUrl, token, workspaceNametag, selectedId, input);
+            await get().updateDocument(baseUrl, token, workspaceId, selectedId, input);
         },
 
         setDragSource: (id) => set({ dragSourceId: id }),
