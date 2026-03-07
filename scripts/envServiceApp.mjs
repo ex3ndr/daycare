@@ -20,7 +20,8 @@ const apiBaseUrl = `http://api.${environmentName}.localhost:${proxyPort}`;
 const child = spawn("yarn", ["workspace", "daycare-app", "web", "--port", String(appPort)], {
     env: {
         ...process.env,
-        EXPO_PUBLIC_DAYCARE_API_BASE_URL: apiBaseUrl,
+        EXPO_PUBLIC_DAYCARE_DEFAULT_BACKEND_URL: apiBaseUrl,
+        DAYCARE_APP_DEFAULT_BACKEND_URL: apiBaseUrl,
         BROWSER: "none"
     },
     stdio: "inherit"

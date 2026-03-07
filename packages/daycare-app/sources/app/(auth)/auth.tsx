@@ -1,4 +1,3 @@
-import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import * as React from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
@@ -8,6 +7,7 @@ import { authEmailConnectVerify, authEmailVerify, authTelegramExchange } from "@
 import { useAuthStore } from "@/modules/auth/authContext";
 import { authLinkPayloadFromUrl } from "@/modules/auth/authLinkPayloadFromUrl";
 import { authTelegramWebAppContextParse } from "@/modules/auth/authTelegramWebAppContextParse";
+import { useAuthLinkUrl } from "@/modules/auth/useAuthLinkUrl";
 import { useProfileStore } from "@/modules/profile/profileContext";
 import { isTMA } from "@/modules/tma/isTMA";
 import { tmaInitData } from "@/modules/tma/tmaInitData";
@@ -21,34 +21,7 @@ export default function AuthMagicLinkScreen() {
     const authUserId = useAuthStore((state) => state.userId);
     const login = useAuthStore((state) => state.login);
     const fetchProfile = useProfileStore((state) => state.fetch);
-    const incomingLinkUrl = Linking.useURL();
-    const [initialLinkUrl, setInitialLinkUrl] = React.useState<string | null | undefined>(undefined);
-    React.useEffect(() => {
-        if (Platform.OS === "web") {
-            return;
-        }
-
-        let isMounted = true;
-        void Linking.getInitialURL().then((url) => {
-            if (!isMounted) {
-                return;
-            }
-            setInitialLinkUrl(url ?? null);
-        });
-        return () => {
-            isMounted = false;
-        };
-    }, []);
-    const authUrl = React.useMemo(() => {
-        if (Platform.OS === "web") {
-            if (typeof window === "undefined") {
-                return null;
-            }
-            return window.location.href;
-        }
-        return incomingLinkUrl ?? initialLinkUrl ?? null;
-    }, [incomingLinkUrl, initialLinkUrl]);
-    const isAuthUrlPending = Platform.OS !== "web" && initialLinkUrl === undefined && !incomingLinkUrl;
+    const { url: authUrl, pending: isAuthUrlPending } = useAuthLinkUrl();
 
     const magicPayload = React.useMemo(() => {
         return authLinkPayloadFromUrl(authUrl);

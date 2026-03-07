@@ -76,3 +76,33 @@ sequenceDiagram
     API->>DB: Add user_connector_keys(email:<address>)
     API-->>App: Connected email + userId
 ```
+
+## Authenticated Connect Link Handling
+
+When a signed-in user opens a `connect-email` link, the app must keep the `/auth` route group available long enough for the verification screen to run. Otherwise Expo Router will immediately redirect back into the protected app shell and skip `POST /auth/email/connect/verify`.
+
+```mermaid
+flowchart LR
+    A[Signed-in user opens /auth#connect-email payload] --> B{Auth routes still accessible?}
+    B -- No --> C[Router redirects to /(app)]
+    C --> D[Verification skipped]
+    B -- Yes --> E[Auth screen renders]
+    E --> F[User presses Enter]
+    F --> G[POST /auth/email/connect/verify]
+    G --> H[Profile refresh shows connected email]
+```
+
+## Local Env Wiring
+
+`yarn env <name>` must wire both the API process and the web app to the same local app-server endpoints. The API side now writes top-level `appServer` settings, and the web side exports the same URL through the default backend env vars that the welcome screen reads before login.
+
+```mermaid
+flowchart LR
+    A[yarn env emailcheck] --> B[scripts/envServiceApi.mjs]
+    A --> C[scripts/envServiceApp.mjs]
+    B --> D[settings.json appServer + email]
+    C --> E[EXPO_PUBLIC_DAYCARE_DEFAULT_BACKEND_URL=http://api.<env>.localhost:<port>]
+    D --> F[Local app server]
+    E --> G[Welcome screen authEmailRequest]
+    G --> F
+```
