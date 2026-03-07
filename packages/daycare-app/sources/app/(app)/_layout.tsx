@@ -14,7 +14,10 @@ import {
 } from "@/components/AppSidebar";
 import { CHAT_COLLAPSED_WIDTH, CHAT_PANEL_WIDTH, ChatPanel } from "@/components/ChatPanel";
 import { Drawer } from "@/components/Drawer";
+import { useAuthStore } from "@/modules/auth/authContext";
+import { WorkspaceSync } from "@/modules/sync/WorkspaceSync";
 import { workspaceRouteIdResolve } from "@/modules/workspaces/workspaceIdResolve";
+import { WorkspaceProvider } from "@/modules/workspaces/workspaceProvider";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
 const SIDEBAR_KEY = "daycare:sidebar-collapsed";
@@ -44,23 +47,48 @@ function panelStateWrite(key: string, collapsed: boolean): void {
 export default function AppLayout() {
     const { theme } = useUnistyles();
     const pathname = usePathname();
+    const authState = useAuthStore((state) => state.state);
+    const baseUrl = useAuthStore((state) => state.baseUrl);
+    const token = useAuthStore((state) => state.token);
+    const fetchWorkspaces = useWorkspacesStore((state) => state.fetch);
     const loaded = useWorkspacesStore((state) => state.loaded);
     const workspaces = useWorkspacesStore((state) => state.workspaces);
     const routeWorkspaceId = React.useMemo(() => workspaceRouteIdResolve(pathname), [pathname]);
     const isMobile = theme.layout.isMobileLayout;
+    const workspace = React.useMemo(
+        () => workspaces.find((item) => item.userId === routeWorkspaceId) ?? null,
+        [routeWorkspaceId, workspaces]
+    );
+    const defaultWorkspaceId = React.useMemo(
+        () => workspaces.find((item) => item.isSelf)?.userId ?? workspaces[0]?.userId ?? null,
+        [workspaces]
+    );
+
+    React.useEffect(() => {
+        if (authState === "authenticated" && baseUrl && token) {
+            void fetchWorkspaces(baseUrl, token);
+        }
+    }, [authState, baseUrl, token, fetchWorkspaces]);
 
     if (!loaded) {
         return null;
     }
-    if (routeWorkspaceId && !workspaces.some((workspace) => workspace.userId === routeWorkspaceId)) {
+    if (!routeWorkspaceId) {
+        return defaultWorkspaceId ? (
+            <Redirect href={`/${defaultWorkspaceId}/home`} />
+        ) : (
+            <Redirect href="/workspace-not-found" />
+        );
+    }
+    if (!workspace) {
         return <Redirect href="/workspace-not-found" />;
     }
 
-    if (isMobile) {
-        return <MobileLayout />;
-    }
-
-    return <DesktopLayout />;
+    return (
+        <WorkspaceProvider workspaceId={workspace.userId} workspace={workspace}>
+            <WorkspaceSync>{isMobile ? <MobileLayout /> : <DesktopLayout />}</WorkspaceSync>
+        </WorkspaceProvider>
+    );
 }
 
 /** Desktop: sidebar on left, content in center, chat panel on right. */

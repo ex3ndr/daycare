@@ -5,7 +5,7 @@ import { syncStoreCreate } from "./syncStoreCreate";
 /**
  * Singleton sync store wired to the agent store for delta dispatching.
  * On SSE events, updates agent list directly.
- * Full refetch on reconnect is handled by SyncProvider which has access to auth.
+ * Full refetch on reconnect is handled by WorkspaceSync which has access to auth and workspace scope.
  */
 export const useSyncStore = syncStoreCreate({
     onAgentCreated: (payload) => {
@@ -18,6 +18,6 @@ export const useSyncStore = syncStoreCreate({
         useAgentsStore.getState().applyDeleted(agentId);
     },
     onRefetch: () => {
-        // Handled by SyncProvider — it watches status changes and triggers refetch with auth
+        // Handled by WorkspaceSync — it watches status changes and triggers refetch with auth
     }
 });

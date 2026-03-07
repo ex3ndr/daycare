@@ -1,8 +1,5 @@
-import { usePathname } from "expo-router";
 import type { PropsWithChildren, ReactNode } from "react";
 import * as React from "react";
-import { workspaceCurrentIdResolve, workspaceRouteIdResolve } from "./workspaceIdResolve";
-import { useWorkspacesStore } from "./workspacesContext";
 import type { WorkspaceListItem } from "./workspacesFetch";
 
 type WorkspaceContextValue = {
@@ -12,29 +9,14 @@ type WorkspaceContextValue = {
 
 const WorkspaceContext = React.createContext<WorkspaceContextValue | null>(null);
 
+type WorkspaceProviderProps = PropsWithChildren<WorkspaceContextValue>;
+
 /**
- * Provides the current workspace derived from the route and available workspaces.
- * Expects: workspace layouts gate rendering until the workspace is resolved.
+ * Provides a validated current workspace to workspace-scoped routes.
+ * Expects: layouts resolve access before rendering this provider.
  */
-export function WorkspaceProvider({ children }: PropsWithChildren): ReactNode {
-    const pathname = usePathname();
-    const workspaces = useWorkspacesStore((state) => state.workspaces);
-    const loaded = useWorkspacesStore((state) => state.loaded);
-    const routeWorkspaceId = React.useMemo(() => workspaceRouteIdResolve(pathname), [pathname]);
-
-    const workspaceId = React.useMemo(
-        () => workspaceCurrentIdResolve(routeWorkspaceId, workspaces, loaded),
-        [loaded, routeWorkspaceId, workspaces]
-    );
-    const workspace = React.useMemo(
-        () => workspaces.find((item) => item.userId === workspaceId) ?? null,
-        [workspaceId, workspaces]
-    );
-    const value = React.useMemo(
-        () => (workspaceId && workspace ? { workspaceId, workspace } : null),
-        [workspaceId, workspace]
-    );
-
+export function WorkspaceProvider({ children, workspaceId, workspace }: WorkspaceProviderProps): ReactNode {
+    const value = React.useMemo(() => ({ workspaceId, workspace }), [workspaceId, workspace]);
     return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
 
