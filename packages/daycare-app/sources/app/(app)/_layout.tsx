@@ -91,7 +91,7 @@ function DesktopLayout() {
 
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
-            <WorkspaceStrip />
+            <WorkspaceStrip style={{ paddingTop: 18 + insets.top, paddingBottom: 8 + insets.bottom }} />
             <Animated.View
                 style={[
                     styles.sidebarCard,

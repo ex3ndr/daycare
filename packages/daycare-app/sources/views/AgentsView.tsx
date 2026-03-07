@@ -236,7 +236,7 @@ export function AgentsView() {
     const handleAgentPress = useCallback(
         (agentId: string) => {
             const prefix = activeId ? `/${activeId}` : "";
-            router.push(`${prefix}/agents/${agentId}` as `/${string}`);
+            router.push(`${prefix}/agents/${agentId}` as any);
         },
         [router, activeId]
     );

@@ -160,7 +160,7 @@ export const WORKSPACE_STRIP_WIDTH = 52;
  * Vertical workspace strip with workspace buttons and bottom action icons.
  * Rendered outside the sidebar card on the page background.
  */
-export const WorkspaceStrip = React.memo<{ onNavigate?: () => void }>(({ onNavigate }) => {
+export const WorkspaceStrip = React.memo<{ onNavigate?: () => void; style?: any }>(({ onNavigate, style }) => {
     const { theme } = useUnistyles();
     const router = useRouter();
     const pathname = usePathname();
@@ -172,7 +172,7 @@ export const WorkspaceStrip = React.memo<{ onNavigate?: () => void }>(({ onNavig
 
     const handleWorkspaceSwitch = React.useCallback(
         (userId: string) => {
-            router.replace(`/${userId}/home` as `/${string}`);
+            router.replace(`/${userId}/home` as any);
             onNavigate?.();
         },
         [router, onNavigate]
@@ -180,14 +180,14 @@ export const WorkspaceStrip = React.memo<{ onNavigate?: () => void }>(({ onNavig
 
     const handleModePress = React.useCallback(
         (mode: AppMode) => {
-            router.replace(`${wsPrefix}/${mode}` as `/${string}`);
+            router.replace(`${wsPrefix}/${mode}` as any);
             onNavigate?.();
         },
         [router, onNavigate, wsPrefix]
     );
 
     return (
-        <View style={stripStyles.strip}>
+        <View style={[stripStyles.strip, style]}>
             <View style={stripStyles.stripTop}>
                 {workspaces
                     .filter((ws) => ws.isSelf)
@@ -360,7 +360,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(
 
         const handleModePress = React.useCallback(
             (mode: AppMode) => {
-                router.replace(`${wsPrefix}/${mode}` as `/${string}`);
+                router.replace(`${wsPrefix}/${mode}` as any);
                 onNavigate?.();
             },
             [router, onNavigate, wsPrefix]
@@ -368,7 +368,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(
 
         const handleItemPress = React.useCallback(
             (mode: AppMode, itemId: string) => {
-                router.replace(`${wsPrefix}/${mode}/${itemId}` as `/${string}`);
+                router.replace(`${wsPrefix}/${mode}/${itemId}` as any);
                 onNavigate?.();
             },
             [router, onNavigate, wsPrefix]
@@ -377,7 +377,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         const handleDocumentPress = React.useCallback(
             (docId: string) => {
                 selectDocument(docId);
-                router.replace(`${wsPrefix}/documents` as `/${string}`);
+                router.replace(`${wsPrefix}/documents` as any);
                 onNavigate?.();
             },
             [selectDocument, router, onNavigate, wsPrefix]

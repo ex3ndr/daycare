@@ -69,7 +69,7 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
 
     const handleRootPress = React.useCallback(
         (rootPath: string) => {
-            router.push(`${wsPrefix}/files/${filesPathEncode(rootPath)}` as `/${string}`);
+            router.push(`${wsPrefix}/files/${filesPathEncode(rootPath)}` as any);
         },
         [router, wsPrefix]
     );
@@ -79,9 +79,9 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
             if (!dirPath) return;
             const newPath = `${dirPath}/${entryName}`;
             if (entryType === "directory") {
-                router.push(`${wsPrefix}/files/${filesPathEncode(newPath)}` as `/${string}`);
+                router.push(`${wsPrefix}/files/${filesPathEncode(newPath)}` as any);
             } else {
-                router.push(`/file-preview/${filesPathEncode(newPath)}` as `/${string}`);
+                router.push(`/file-preview/${filesPathEncode(newPath)}` as any);
             }
         },
         [dirPath, router, wsPrefix]
@@ -90,10 +90,10 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
     const handleBreadcrumbNavigate = React.useCallback(
         (segmentPath: string | null) => {
             if (segmentPath === null) {
-                router.push(`${wsPrefix}/files` as `/${string}`);
+                router.push(`${wsPrefix}/files` as any);
                 return;
             }
-            router.push(`${wsPrefix}/files/${filesPathEncode(segmentPath)}` as `/${string}`);
+            router.push(`${wsPrefix}/files/${filesPathEncode(segmentPath)}` as any);
         },
         [router, wsPrefix]
     );

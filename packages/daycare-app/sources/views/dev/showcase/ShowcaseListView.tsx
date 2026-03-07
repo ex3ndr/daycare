@@ -22,7 +22,7 @@ export function ShowcaseListView() {
                     <Pressable
                         key={page.id}
                         style={[styles.card, { backgroundColor: theme.colors.surfaceContainer }]}
-                        onPress={() => router.replace(`${wsPrefix}/dev/${page.id}` as `/${string}`)}
+                        onPress={() => router.replace(`${wsPrefix}/dev/${page.id}` as any)}
                     >
                         <View style={[styles.iconCircle, { backgroundColor: theme.colors.primaryContainer }]}>
                             <Octicons name="beaker" size={16} color={theme.colors.onPrimaryContainer} />
