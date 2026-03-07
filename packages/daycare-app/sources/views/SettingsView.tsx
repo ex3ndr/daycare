@@ -138,7 +138,7 @@ export function SettingsView() {
                 )}
 
                 <ItemGroup title="Connected Emails">
-                    {profile?.emails.length ? (
+                    {profile?.emails?.length ? (
                         profile.emails.map((connectedEmail) => (
                             <Item
                                 key={connectedEmail}

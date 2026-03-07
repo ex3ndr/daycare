@@ -198,7 +198,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8
     },
     sidebarCard: {
-        borderRadius: 8,
+        borderTopLeftRadius: 16,
+        borderBottomLeftRadius: 16,
+        borderTopRightRadius: 8,
+        borderBottomRightRadius: 8,
         overflow: "hidden",
         flexShrink: 0
     },
