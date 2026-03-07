@@ -1,5 +1,5 @@
 import { Octicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import * as React from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
@@ -69,7 +69,7 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
 
     const handleRootPress = React.useCallback(
         (rootPath: string) => {
-            router.push(`${wsPrefix}/files/${filesPathEncode(rootPath)}` as any);
+            router.push(`${wsPrefix}/files/${filesPathEncode(rootPath)}` as Href);
         },
         [router, wsPrefix]
     );
@@ -79,9 +79,9 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
             if (!dirPath) return;
             const newPath = `${dirPath}/${entryName}`;
             if (entryType === "directory") {
-                router.push(`${wsPrefix}/files/${filesPathEncode(newPath)}` as any);
+                router.push(`${wsPrefix}/files/${filesPathEncode(newPath)}` as Href);
             } else {
-                router.push(`/file-preview/${filesPathEncode(newPath)}` as any);
+                router.push(`/file-preview/${filesPathEncode(newPath)}` as Href);
             }
         },
         [dirPath, router, wsPrefix]
@@ -90,10 +90,10 @@ export const FilesView = React.memo<FilesViewProps>(({ dirPath }) => {
     const handleBreadcrumbNavigate = React.useCallback(
         (segmentPath: string | null) => {
             if (segmentPath === null) {
-                router.push(`${wsPrefix}/files` as any);
+                router.push(`${wsPrefix}/files` as Href);
                 return;
             }
-            router.push(`${wsPrefix}/files/${filesPathEncode(segmentPath)}` as any);
+            router.push(`${wsPrefix}/files/${filesPathEncode(segmentPath)}` as Href);
         },
         [router, wsPrefix]
     );

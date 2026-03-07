@@ -1,5 +1,5 @@
 import { Octicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import { useCallback, useEffect } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
@@ -236,7 +236,7 @@ export function AgentsView() {
     const handleAgentPress = useCallback(
         (agentId: string) => {
             const prefix = activeId ? `/${activeId}` : "";
-            router.push(`${prefix}/agents/${agentId}` as any);
+            router.push(`${prefix}/agents/${agentId}` as Href);
         },
         [router, activeId]
     );

@@ -1,7 +1,7 @@
 import { Octicons } from "@expo/vector-icons";
-import { usePathname, useRouter } from "expo-router";
+import { type Href, usePathname, useRouter } from "expo-router";
 import * as React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, type StyleProp, Text, View, type ViewStyle } from "react-native";
 import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { type AppMode, appModes } from "@/modules/navigation/appModes";
@@ -148,84 +148,86 @@ export const WORKSPACE_STRIP_WIDTH = 52;
  * Vertical workspace strip with workspace buttons and bottom action icons.
  * Rendered outside the sidebar card on the page background.
  */
-export const WorkspaceStrip = React.memo<{ onNavigate?: () => void; style?: any }>(({ onNavigate, style }) => {
-    const { theme } = useUnistyles();
-    const router = useRouter();
-    const pathname = usePathname();
-    const workspaces = useWorkspacesStore((s) => s.workspaces);
-    const activeId = useWorkspacesStore((s) => s.activeId);
-    const activeMode = extractModeFromPath(pathname);
-    const workspace = extractWorkspaceFromPath(pathname);
-    const wsPrefix = workspace ? `/${workspace}` : "";
+export const WorkspaceStrip = React.memo<{ onNavigate?: () => void; style?: StyleProp<ViewStyle> }>(
+    ({ onNavigate, style }) => {
+        const { theme } = useUnistyles();
+        const router = useRouter();
+        const pathname = usePathname();
+        const workspaces = useWorkspacesStore((s) => s.workspaces);
+        const activeId = useWorkspacesStore((s) => s.activeId);
+        const activeMode = extractModeFromPath(pathname);
+        const workspace = extractWorkspaceFromPath(pathname);
+        const wsPrefix = workspace ? `/${workspace}` : "";
 
-    const handleWorkspaceSwitch = React.useCallback(
-        (userId: string) => {
-            router.replace(`/${userId}/home` as any);
-            onNavigate?.();
-        },
-        [router, onNavigate]
-    );
+        const handleWorkspaceSwitch = React.useCallback(
+            (userId: string) => {
+                router.replace(`/${userId}/home` as Href);
+                onNavigate?.();
+            },
+            [router, onNavigate]
+        );
 
-    const handleModePress = React.useCallback(
-        (mode: AppMode) => {
-            router.replace(`${wsPrefix}/${mode}` as any);
-            onNavigate?.();
-        },
-        [router, onNavigate, wsPrefix]
-    );
+        const handleModePress = React.useCallback(
+            (mode: AppMode) => {
+                router.replace(`${wsPrefix}/${mode}` as Href);
+                onNavigate?.();
+            },
+            [router, onNavigate, wsPrefix]
+        );
 
-    return (
-        <View style={[stripStyles.strip, style]}>
-            <View style={stripStyles.stripTop}>
-                {workspaces
-                    .filter((ws) => ws.isSelf)
-                    .map((ws) => (
-                        <WorkspaceButton
-                            key={ws.userId}
-                            workspace={ws}
-                            isActive={ws.userId === activeId}
-                            onPress={() => handleWorkspaceSwitch(ws.userId)}
-                        />
-                    ))}
-                {workspaces.some((ws) => !ws.isSelf) && (
-                    <View style={[stripStyles.divider, { backgroundColor: theme.colors.outlineVariant }]} />
-                )}
-                {workspaces
-                    .filter((ws) => !ws.isSelf)
-                    .map((ws) => (
-                        <WorkspaceButton
-                            key={ws.userId}
-                            workspace={ws}
-                            isActive={ws.userId === activeId}
-                            onPress={() => handleWorkspaceSwitch(ws.userId)}
-                        />
-                    ))}
-            </View>
-            <View style={stripStyles.stripBottom}>
-                {stripBottomSegments.map((seg) => {
-                    const isActive = activeMode === seg.mode;
-                    return (
-                        <Pressable
-                            key={seg.mode}
-                            testID={`sidebar-${seg.mode}`}
-                            onPress={() => handleModePress(seg.mode)}
-                            style={[
-                                stripStyles.workspaceButton,
-                                isActive && { backgroundColor: theme.colors.primaryContainer }
-                            ]}
-                        >
-                            <Octicons
-                                name={seg.icon}
-                                size={16}
-                                color={isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant}
+        return (
+            <View style={[stripStyles.strip, style]}>
+                <View style={stripStyles.stripTop}>
+                    {workspaces
+                        .filter((ws) => ws.isSelf)
+                        .map((ws) => (
+                            <WorkspaceButton
+                                key={ws.userId}
+                                workspace={ws}
+                                isActive={ws.userId === activeId}
+                                onPress={() => handleWorkspaceSwitch(ws.userId)}
                             />
-                        </Pressable>
-                    );
-                })}
+                        ))}
+                    {workspaces.some((ws) => !ws.isSelf) && (
+                        <View style={[stripStyles.divider, { backgroundColor: theme.colors.outlineVariant }]} />
+                    )}
+                    {workspaces
+                        .filter((ws) => !ws.isSelf)
+                        .map((ws) => (
+                            <WorkspaceButton
+                                key={ws.userId}
+                                workspace={ws}
+                                isActive={ws.userId === activeId}
+                                onPress={() => handleWorkspaceSwitch(ws.userId)}
+                            />
+                        ))}
+                </View>
+                <View style={stripStyles.stripBottom}>
+                    {stripBottomSegments.map((seg) => {
+                        const isActive = activeMode === seg.mode;
+                        return (
+                            <Pressable
+                                key={seg.mode}
+                                testID={`sidebar-${seg.mode}`}
+                                onPress={() => handleModePress(seg.mode)}
+                                style={[
+                                    stripStyles.workspaceButton,
+                                    isActive && { backgroundColor: theme.colors.primaryContainer }
+                                ]}
+                            >
+                                <Octicons
+                                    name={seg.icon}
+                                    size={16}
+                                    color={isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant}
+                                />
+                            </Pressable>
+                        );
+                    })}
+                </View>
             </View>
-        </View>
-    );
-});
+        );
+    }
+);
 
 const stripStyles = StyleSheet.create({
     strip: {
@@ -325,7 +327,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(
 
         const handleModePress = React.useCallback(
             (mode: AppMode) => {
-                router.replace(`${wsPrefix}/${mode}` as any);
+                router.replace(`${wsPrefix}/${mode}` as Href);
                 onNavigate?.();
             },
             [router, onNavigate, wsPrefix]
@@ -333,7 +335,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(
 
         const handleItemPress = React.useCallback(
             (mode: AppMode, itemId: string) => {
-                router.replace(`${wsPrefix}/${mode}/${itemId}` as any);
+                router.replace(`${wsPrefix}/${mode}/${itemId}` as Href);
                 onNavigate?.();
             },
             [router, onNavigate, wsPrefix]
