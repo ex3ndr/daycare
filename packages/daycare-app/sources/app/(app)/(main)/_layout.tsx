@@ -47,7 +47,6 @@ function panelStateWrite(key: string, collapsed: boolean): void {
 export default function AppLayout() {
     const { theme } = useUnistyles();
     const pathname = usePathname();
-    const workspacesLoaded = useWorkspacesStore((state) => state.loaded);
     const workspaces = useWorkspacesStore((state) => state.workspaces);
     const routeWorkspaceId = React.useMemo(() => workspaceRouteIdResolve(pathname), [pathname]);
     const isMobile = theme.layout.isMobileLayout;
@@ -60,10 +59,7 @@ export default function AppLayout() {
         [workspaces]
     );
 
-    // Wait for workspaces before making any redirect decisions
-    if (!workspacesLoaded) {
-        return null;
-    }
+    // Workspaces are guaranteed loaded by the (app) layout gate
     if (!routeWorkspaceId) {
         return defaultWorkspaceId ? (
             <Redirect href={`/${defaultWorkspaceId}/home`} />

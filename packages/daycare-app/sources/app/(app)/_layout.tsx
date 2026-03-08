@@ -64,8 +64,13 @@ export default function AuthenticatedLayout() {
         return <Redirect href="/" />;
     }
 
-    // Always render the Stack so Expo Router preserves URL state across loads.
-    // Child layouts handle the not-yet-loaded case themselves.
+    // Wait for workspaces before mounting the Stack.
+    // The root Stack keeps (app) as a screen-slot, so returning null here is safe
+    // and avoids child Navigator remount issues.
+    if (!workspacesLoaded) {
+        return null;
+    }
+
     return (
         <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(main)" />
