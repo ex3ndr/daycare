@@ -2,6 +2,7 @@ import type { Storage } from "../../storage/storage.js";
 import type { UserHome } from "../users/userHome.js";
 import { workspaceCreate } from "./workspaceCreate.js";
 import { workspaceDiscover } from "./workspaceDiscover.js";
+import { workspaceSystemEnsure } from "./workspaceSystemEnsure.js";
 import type { WorkspaceConfig, WorkspaceRecord } from "./workspaceTypes.js";
 
 type WorkspacesOptions = {
@@ -22,6 +23,10 @@ export class Workspaces {
     constructor(options: WorkspacesOptions) {
         this.storage = options.storage;
         this.userHomeForUserId = options.userHomeForUserId;
+    }
+
+    async ensureSystem(): Promise<void> {
+        await workspaceSystemEnsure({ storage: this.storage });
     }
 
     async discover(ownerUserId: string): Promise<WorkspaceRecord[]> {

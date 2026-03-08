@@ -672,6 +672,7 @@ export class Engine {
     async start(): Promise<void> {
         logger.debug("start: Engine.start() beginning");
         await this.migrationReady;
+        await this.workspaces.ensureSystem();
         const ownerCtx = await this.agentSystem.ownerCtxEnsure();
         const users = await this.storage.users.findMany();
         for (const user of users) {

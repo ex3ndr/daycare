@@ -416,6 +416,39 @@ describe("Engine tool registration", () => {
 });
 
 describe("Engine workspace registration", () => {
+    it("bootstraps the ownerless system workspace on startup", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            await engine.start();
+
+            const workspace = await engine.storage.users.findByNametag("system");
+            if (!workspace) {
+                throw new Error("Expected system workspace.");
+            }
+
+            const ctx = contextForUser({ userId: workspace.id });
+            const document = await engine.storage.documents.findBySlugAndParent(ctx, "document", null);
+            const system = await engine.storage.documents.findBySlugAndParent(ctx, "system", null);
+            const soul = system ? await engine.storage.documents.findBySlugAndParent(ctx, "soul", system.id) : null;
+
+            expect(workspace.isWorkspace).toBe(true);
+            expect(workspace.workspaceOwnerId).toBeNull();
+            expect(workspace.configuration).toEqual({
+                homeReady: true,
+                appReady: true
+            });
+            expect(document?.slug).toBe("document");
+            expect(system?.slug).toBe("system");
+            expect(soul?.body).toBe("You are the Daycare system workspace. Act as the internal superuser workspace.\n");
+
+            await engine.shutdown();
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("discovers workspaces on startup and exposes workspace_create", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         try {
