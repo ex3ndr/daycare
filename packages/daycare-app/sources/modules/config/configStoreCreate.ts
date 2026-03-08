@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { routeDebugLog } from "@/modules/navigation/routeDebugLog";
 import { configFetch } from "./configFetch";
 import type { WorkspaceConfig } from "./configTypes";
 
@@ -25,6 +26,10 @@ export function configStoreCreate() {
         configs: {},
         loaded: false,
         fetchAll: async (baseUrl, token, workspaceIds) => {
+            routeDebugLog("configs-fetch-start", {
+                baseUrl,
+                workspaceIds
+            });
             const results = await Promise.all(
                 workspaceIds.map(async (id) => {
                     try {
@@ -38,6 +43,10 @@ export function configStoreCreate() {
             for (const [id, config] of results) {
                 configs[id] = config;
             }
+            routeDebugLog("configs-fetch-success", {
+                workspaceIds,
+                configCount: Object.keys(configs).length
+            });
             set({ configs, loaded: true });
         },
         applySync: (workspaceId, configuration) => {

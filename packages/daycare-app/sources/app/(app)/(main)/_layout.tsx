@@ -1,5 +1,5 @@
 import { Octicons } from "@expo/vector-icons";
-import { Navigator, Redirect, type ScreenProps, usePathname } from "expo-router";
+import { Navigator, Redirect, type Href, type ScreenProps, usePathname } from "expo-router";
 import * as React from "react";
 import { Pressable, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -15,6 +15,7 @@ import {
 import { CHAT_COLLAPSED_WIDTH, CHAT_PANEL_WIDTH, ChatPanel } from "@/components/ChatPanel";
 import { Drawer } from "@/components/Drawer";
 import { useConfigStore } from "@/modules/config/configContext";
+import { routeDebugLog } from "@/modules/navigation/routeDebugLog";
 import { WorkspaceSync } from "@/modules/sync/WorkspaceSync";
 import { workspaceRouteIdResolve } from "@/modules/workspaces/workspaceIdResolve";
 import { useWorkspace, WorkspaceProvider } from "@/modules/workspaces/workspaceProvider";
@@ -48,6 +49,7 @@ export default function AppLayout() {
     const { theme } = useUnistyles();
     const pathname = usePathname();
     const workspaces = useWorkspacesStore((state) => state.workspaces);
+    const workspaceIds = React.useMemo(() => workspaces.map((workspace) => workspace.userId), [workspaces]);
     const routeWorkspaceId = React.useMemo(() => workspaceRouteIdResolve(pathname), [pathname]);
     const isMobile = theme.layout.isMobileLayout;
     const workspace = React.useMemo(
@@ -58,17 +60,52 @@ export default function AppLayout() {
         () => workspaces.find((item) => item.isSelf)?.userId ?? workspaces[0]?.userId ?? null,
         [workspaces]
     );
+    const redirect = React.useMemo<{ href: Href; reason: string } | null>(() => {
+        if (!routeWorkspaceId) {
+            return defaultWorkspaceId
+                ? {
+                      href: `/${defaultWorkspaceId}/home` as Href,
+                      reason: "missing-route-workspace"
+                  }
+                : {
+                      href: "/workspace-not-found" as Href,
+                      reason: "no-default-workspace"
+                  };
+        }
+        if (!workspace) {
+            return {
+                href: "/workspace-not-found" as Href,
+                reason: "workspace-not-in-store"
+            };
+        }
+        return null;
+    }, [routeWorkspaceId, defaultWorkspaceId, workspace]);
+    const redirectHref = React.useMemo(() => {
+        if (!redirect) {
+            return null;
+        }
+        return typeof redirect.href === "string" ? redirect.href : redirect.href.pathname;
+    }, [redirect]);
+    const redirectReason = redirect?.reason ?? null;
+
+    React.useEffect(() => {
+        routeDebugLog("main-layout-state", {
+            pathname,
+            routeWorkspaceId,
+            defaultWorkspaceId,
+            workspaceIds,
+            matchedWorkspaceId: workspace?.userId ?? null,
+            redirectReason,
+            redirectHref
+        });
+    }, [pathname, routeWorkspaceId, defaultWorkspaceId, workspaceIds, workspace?.userId, redirectReason, redirectHref]);
 
     // Workspaces are guaranteed loaded by the (app) layout gate
-    if (!routeWorkspaceId) {
-        return defaultWorkspaceId ? (
-            <Redirect href={`/${defaultWorkspaceId}/home`} />
-        ) : (
-            <Redirect href="/workspace-not-found" />
-        );
+    if (redirect) {
+        return <Redirect href={redirect.href} />;
     }
     if (!workspace) {
-        return <Redirect href="/workspace-not-found" />;
+        return null;
     }
 
     return (
