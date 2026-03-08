@@ -70,7 +70,7 @@ export function userProfileUpdateTool(): ToolDefinition {
             parameters: schema
         },
         returns,
-        visibleByDefault: (context) => context.config.foreground === true,
+        visibleByDefault: (context) => context.config.foreground === true || context.config.kind === "supervisor",
         execute: async (args, toolContext, toolCall) => {
             const payload = args as UserProfileUpdateArgs;
             const users = toolContext.agentSystem.storage.users;
