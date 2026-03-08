@@ -6,10 +6,13 @@ const contextAgentIds = new WeakMap<Context, string | null>();
  */
 export class Context {
     readonly userId: string;
+    readonly personUserId?: string;
     readonly hasAgentId?: boolean;
 
-    constructor(input: { userId: string; agentId?: string }) {
+    constructor(input: { userId: string; personUserId?: string; agentId?: string }) {
         this.userId = requiredId(input.userId, "Context userId");
+        this.personUserId =
+            input.personUserId === undefined ? undefined : requiredId(input.personUserId, "Context personUserId");
         const agentId = input.agentId === undefined ? null : requiredId(input.agentId, "Context agentId");
         contextAgentIds.set(this, agentId);
         Object.defineProperty(this, "hasAgentId", {
@@ -34,16 +37,16 @@ export class Context {
  * Creates a user-scoped context without an agent identity.
  * Expects: userId is already validated by caller.
  */
-export function contextForUser(input: { userId: string }): Context {
-    return new Context({ userId: input.userId });
+export function contextForUser(input: { userId: string; personUserId?: string }): Context {
+    return new Context({ userId: input.userId, personUserId: input.personUserId });
 }
 
 /**
  * Creates an agent-scoped context with both user and agent identity.
  * Expects: userId and agentId are already validated by caller.
  */
-export function contextForAgent(input: { userId: string; agentId: string }): Context {
-    return new Context({ userId: input.userId, agentId: input.agentId });
+export function contextForAgent(input: { userId: string; personUserId?: string; agentId: string }): Context {
+    return new Context({ userId: input.userId, personUserId: input.personUserId, agentId: input.agentId });
 }
 
 function requiredId(value: string, field: string): string {

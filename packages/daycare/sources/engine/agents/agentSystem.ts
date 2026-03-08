@@ -216,7 +216,7 @@ export class AgentSystem {
 
         for (const record of records) {
             const agentId = record.id;
-            const ctx = contextForAgent({ userId: record.userId, agentId });
+            const ctx = await this.agentContextCreate(record.userId, agentId, record.foreground);
             let state: Awaited<ReturnType<typeof agentStateRead>> = null;
             try {
                 state = await agentStateRead(this.storage, ctx);
@@ -330,7 +330,7 @@ export class AgentSystem {
         const frontendAgents = records.filter((record) => record.foreground);
         await Promise.all(
             frontendAgents.map(async (record) => {
-                const targetCtx = contextForAgent({ userId: targetUserId, agentId: record.id });
+                const targetCtx = await this.agentContextCreate(targetUserId, record.id, true);
                 await this.post(targetCtx, { agentId: record.id }, item);
             })
         );
@@ -379,7 +379,7 @@ export class AgentSystem {
         if (!record) {
             return null;
         }
-        return contextForAgent({ userId: record.userId, agentId: record.id });
+        return this.agentContextCreate(record.userId, record.id, record.foreground);
     }
 
     async signalDeliver(signal: Signal, subscriptions: SignalSubscription[]): Promise<void> {
@@ -717,7 +717,7 @@ export class AgentSystem {
         if (userId !== ctx.userId) {
             throw new Error(`Cannot create agent for another user: ${agentId}`);
         }
-        const createdCtx = contextForAgent({ userId, agentId });
+        const createdCtx = await this.agentContextCreate(userId, agentId, config.foreground === true);
         const userHome = this.userHomeForCtx(createdCtx);
         const agent = await Agent.create(createdCtx, path, config, inbox, this, userHome);
         const persisted = await this.storage.agents.findById(agentId);
@@ -1156,8 +1156,23 @@ export class AgentSystem {
         return ctx.userId;
     }
 
+    private async agentContextCreate(userId: string, agentId: string, isUserFacing: boolean): Promise<Context> {
+        const personUserId = isUserFacing ? await this.personUserIdResolve(userId) : undefined;
+        return contextForAgent({ userId, personUserId, agentId });
+    }
+
+    private async personUserIdResolve(userId: string): Promise<string | undefined> {
+        const user = await this.storage.users.findById(userId);
+        if (!user) {
+            return undefined;
+        }
+        return user.parentUserId ?? user.id;
+    }
+
     async ownerCtxEnsure(): Promise<Context> {
-        const owner = await this.storage.users.findOwner();
+        const owner = (await this.storage.users.findMany()).find(
+            (user) => !user.isWorkspace && user.parentUserId === null
+        );
         if (owner) {
             return contextForUser({ userId: owner.id });
         }
@@ -1171,7 +1186,9 @@ export class AgentSystem {
             });
             return contextForUser({ userId: ownerId });
         } catch {
-            const recovered = await this.storage.users.findOwner();
+            const recovered = (await this.storage.users.findMany()).find(
+                (user) => !user.isWorkspace && user.parentUserId === null
+            );
             if (recovered) {
                 return contextForUser({ userId: recovered.id });
             }

@@ -156,7 +156,8 @@ describe("MemoryWorker", () => {
                 expect(postFn).toHaveBeenCalledOnce();
             });
 
-            const [, , item] = postFn.mock.calls[0];
+            const [ctx, , item] = postFn.mock.calls[0];
+            expect(ctx.personUserId).toBe(ownerId);
             // Foreground agent (user) gets standard labels and no preamble
             expect(item.text).toContain("## User");
             expect(item.text).not.toContain("## System Message");

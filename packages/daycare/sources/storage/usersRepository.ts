@@ -178,24 +178,6 @@ export class UsersRepository {
         return records.map((record) => userClone(record));
     }
 
-    async findOwner(): Promise<UserWithConnectorKeysDbRecord | null> {
-        if (this.allUsersLoaded) {
-            const cachedOwner = usersSort(Array.from(this.usersById.values())).find(userIsPrimary);
-            return cachedOwner ? userClone(cachedOwner) : null;
-        }
-        const rows = await this.db
-            .select({ id: usersTable.id })
-            .from(usersTable)
-            .where(and(eq(usersTable.isWorkspace, false), isNull(usersTable.parentUserId), isNull(usersTable.validTo)))
-            .orderBy(asc(usersTable.createdAt), asc(usersTable.id))
-            .limit(1);
-        const userId = rows[0]?.id?.trim() ?? "";
-        if (!userId) {
-            return null;
-        }
-        return this.findById(userId);
-    }
-
     async create(input: CreateUserInput): Promise<UserWithConnectorKeysDbRecord> {
         return this.createLock.inLock(async () => {
             const now = Date.now();
@@ -545,10 +527,6 @@ function userClone(record: UserWithConnectorKeysDbRecord): UserWithConnectorKeys
 
 function usersSort(records: UserWithConnectorKeysDbRecord[]): UserWithConnectorKeysDbRecord[] {
     return records.slice().sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id));
-}
-
-function userIsPrimary(record: UserWithConnectorKeysDbRecord): boolean {
-    return !record.isWorkspace && record.parentUserId === null;
 }
 
 function textNullableNormalize(value: string | null | undefined): string | null {

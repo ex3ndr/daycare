@@ -1,8 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { createId } from "@paralleldrive/cuid2";
 import type { Config } from "@/types";
-import { getLogger } from "../../log.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageResolve } from "../../storage/storageResolve.js";
 import { contextForUser } from "../agents/context.js";
@@ -11,7 +9,6 @@ import { UserHome } from "./userHome.js";
 import { userHomeEnsure } from "./userHomeEnsure.js";
 
 const MARKER_FILENAME = ".migrated";
-const logger = getLogger("engine.users.migrate");
 const SYSTEM_PROMPT_FILES = [
     { slug: "soul", filename: "SOUL.md" },
     { slug: "user", filename: "USER.md" },
@@ -30,8 +27,8 @@ export async function userHomeMigrate(config: Config, storageOrConfig?: Storage 
         return;
     }
 
-    const ownerUserId = await primaryUserIdEnsure(storage);
     const users = await storage.users.findMany();
+    const fallbackUserId = users.find((user) => !user.isWorkspace && user.parentUserId === null)?.id ?? null;
     for (const user of users) {
         const userHome = new UserHome(config.usersDir, user.id);
         const ctx = contextForUser({ userId: user.id });
@@ -42,34 +39,15 @@ export async function userHomeMigrate(config: Config, storageOrConfig?: Storage 
             userHome,
             ctx,
             storage,
-            includeGlobalFallback: user.id === ownerUserId
+            includeGlobalFallback: user.id === fallbackUserId
         });
     }
     await fs.mkdir(config.usersDir, { recursive: true });
     await fs.writeFile(
         markerPath,
-        `${JSON.stringify({ migratedAt: Date.now(), ownerUserId, migratedUserIds: users.map((user) => user.id) }, null, 2)}\n`,
+        `${JSON.stringify({ migratedAt: Date.now(), fallbackUserId, migratedUserIds: users.map((user) => user.id) }, null, 2)}\n`,
         "utf8"
     );
-}
-
-async function primaryUserIdEnsure(storage: Storage): Promise<string> {
-    const users = await storage.users.findMany();
-    const primary = users.find((entry) => !entry.isWorkspace && entry.parentUserId === null);
-    if (primary) {
-        return primary.id;
-    }
-    if (users.length > 0) {
-        logger.warn("warn: User table had no personal root user; creating one for migration fallback");
-    }
-    const now = Date.now();
-    const ownerId = createId();
-    await storage.users.create({
-        id: ownerId,
-        createdAt: now,
-        updatedAt: now
-    });
-    return ownerId;
 }
 
 async function knowledgeFilesMigrate(input: {

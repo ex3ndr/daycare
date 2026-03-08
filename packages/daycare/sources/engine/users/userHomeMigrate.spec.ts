@@ -106,6 +106,11 @@ describe("userHomeMigrate", () => {
         );
         await storageUpgrade(config);
         const storage = storageResolve(config);
+        await storage.users.create({
+            id: "owner-1",
+            createdAt: 1,
+            updatedAt: 1
+        });
         await writeFile(path.join(dataDir, "SOUL.md"), "legacy soul\n", "utf8");
 
         await userHomeMigrate(config);
@@ -132,7 +137,7 @@ describe("userHomeMigrate", () => {
         expect((await storage.documents.findBySlugAndParent(ctx, "soul", system.id))?.body).toBe("already migrated\n");
     });
 
-    it("creates a personal root user when only workspaces exist", async () => {
+    it("does not synthesize a personal root user when only workspaces exist", async () => {
         const dataDir = path.join(rootDir, "data");
         const config = configResolve(
             {
@@ -155,6 +160,6 @@ describe("userHomeMigrate", () => {
 
         const afterUsers = await storage.users.findMany();
         const owner = afterUsers.find((entry) => !entry.isWorkspace && entry.parentUserId === null) ?? null;
-        expect(owner?.id).toBeTruthy();
+        expect(owner).toBeNull();
     });
 });

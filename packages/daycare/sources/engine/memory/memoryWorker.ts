@@ -153,7 +153,8 @@ export class MemoryWorker {
                 const text = `${preamble}\n\n${transcript}`;
 
                 const path = agentPathMemory(sourcePath);
-                const ctx = contextForAgent({ userId: agent.userId, agentId: session.agentId });
+                const personUserId = isForeground ? (agentUser?.parentUserId ?? agent.userId) : undefined;
+                const ctx = contextForAgent({ userId: agent.userId, personUserId, agentId: session.agentId });
                 await memoryRootDocumentEnsure(ctx, this.storage);
                 await this.postToAgent(
                     ctx,

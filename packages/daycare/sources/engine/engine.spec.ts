@@ -425,14 +425,12 @@ describe("Engine workspace registration", () => {
                 autoMigrate: true
             });
             try {
-                const owner =
-                    (await seedStorage.users.findOwner()) ??
-                    (await seedStorage.users.create({
-                        id: "sy45wijd1hmr03ef2wu7busv",
-                        createdAt: 0,
-                        updatedAt: 0,
-                        nametag: "owner"
-                    }));
+                const owner = await seedStorage.users.create({
+                    id: "sy45wijd1hmr03ef2wu7busv",
+                    createdAt: 0,
+                    updatedAt: 0,
+                    nametag: "owner"
+                });
                 await seedStorage.users.create({
                     id: "workspace-user-1",
                     parentUserId: owner.id,
@@ -482,14 +480,12 @@ describe("Engine workspace registration", () => {
                 autoMigrate: true
             });
             try {
-                const owner =
-                    (await seedStorage.users.findOwner()) ??
-                    (await seedStorage.users.create({
-                        id: "sy45wijd1hmr03ef2wu7busv",
-                        createdAt: 0,
-                        updatedAt: 0,
-                        nametag: "owner"
-                    }));
+                const owner = await seedStorage.users.create({
+                    id: "sy45wijd1hmr03ef2wu7busv",
+                    createdAt: 0,
+                    updatedAt: 0,
+                    nametag: "owner"
+                });
                 await seedStorage.users.create({
                     id: "workspace-user-2",
                     parentUserId: owner.id,

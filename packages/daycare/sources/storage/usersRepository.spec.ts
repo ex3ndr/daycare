@@ -67,9 +67,8 @@ describe("UsersRepository", () => {
                 showApp: false
             });
 
-            const owner = await users.findOwner();
-            expect(owner).toBeTruthy();
-            expect(owner?.id).not.toBe(created.id);
+            const usersList = await users.findMany();
+            expect(usersList.some((entry) => entry.id === "sy45wijd1hmr03ef2wu7busv")).toBe(true);
 
             await users.delete(created.id);
             expect(await users.findById(created.id)).toBeNull();
@@ -124,11 +123,10 @@ describe("UsersRepository", () => {
         }
     });
 
-    it("findOwner resolves the earliest personal user", async () => {
+    it("keeps the seeded personal user row alongside newer personal and workspace users", async () => {
         const storage = await storageOpenTest();
         try {
             const users = new UsersRepository(storage.db);
-            const owner = await users.findOwner();
             const second = await users.create({
                 createdAt: 2,
                 updatedAt: 2,
@@ -143,8 +141,9 @@ describe("UsersRepository", () => {
                 nametag: "workspace-1"
             });
 
-            expect(owner?.id).toBe("sy45wijd1hmr03ef2wu7busv");
-            expect(second.id).not.toBe(owner?.id);
+            const all = await users.findMany();
+            expect(all.some((entry) => entry.id === "sy45wijd1hmr03ef2wu7busv")).toBe(true);
+            expect(all.some((entry) => entry.id === second.id)).toBe(true);
         } finally {
             storage.connection.close();
         }

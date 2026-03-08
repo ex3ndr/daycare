@@ -7,7 +7,7 @@ describe("workspaceCreateToolBuild", () => {
     it("builds shape and creates workspaces for personal users", async () => {
         const storage = await storageOpenTest();
         try {
-            const owner = await storage.users.findOwner();
+            const owner = await storage.users.findById("sy45wijd1hmr03ef2wu7busv");
             if (!owner) {
                 throw new Error("Owner user not found.");
             }
@@ -58,7 +58,7 @@ describe("workspaceCreateToolBuild", () => {
     it("rejects workspace callers", async () => {
         const storage = await storageOpenTest();
         try {
-            const owner = await storage.users.findOwner();
+            const owner = await storage.users.findById("sy45wijd1hmr03ef2wu7busv");
             if (!owner) {
                 throw new Error("Owner user not found.");
             }

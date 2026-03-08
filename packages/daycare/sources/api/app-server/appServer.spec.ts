@@ -518,7 +518,9 @@ describe("AppServer auth endpoints", () => {
     it("creates invites, accepts them, lists joined workspaces, and revokes member access after kick", async () => {
         const secret = "valid-secret-for-tests-1234567890";
         const built = await appServerCreateForTests({ secret });
-        const owner = await built.storage.users.findOwner();
+        const owner = (await built.storage.users.findMany()).find(
+            (user) => !user.isWorkspace && user.parentUserId === null
+        );
         if (!owner) {
             throw new Error("Expected seeded owner user.");
         }

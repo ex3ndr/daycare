@@ -6,12 +6,14 @@ describe("Context", () => {
     it("builds a user-only context", () => {
         const context = contextForUser({ userId: "user-1" });
         expect(context.userId).toBe("user-1");
+        expect(context.personUserId).toBeUndefined();
         expect(context.hasAgentId).toBe(false);
     });
 
     it("builds an agent context", () => {
-        const context = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+        const context = contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" });
         expect(context.userId).toBe("user-1");
+        expect(context.personUserId).toBe("person-1");
         expect(context.agentId).toBe("agent-1");
         expect(context.hasAgentId).toBe(true);
     });
@@ -22,15 +24,18 @@ describe("Context", () => {
     });
 
     it("is readonly", () => {
-        const context = new Context({ userId: "user-1", agentId: "agent-1" });
+        const context = new Context({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" });
         const readonlyAssertion = (value: Context): void => {
             // @ts-expect-error Context fields are readonly
             value.agentId = "agent-2";
             // @ts-expect-error Context fields are readonly
             value.userId = "user-2";
+            // @ts-expect-error Context fields are readonly
+            value.personUserId = "person-2";
         };
         void readonlyAssertion;
         expect(context.agentId).toBe("agent-1");
         expect(context.userId).toBe("user-1");
+        expect(context.personUserId).toBe("person-1");
     });
 });

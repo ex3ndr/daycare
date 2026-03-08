@@ -15,7 +15,7 @@ describe("workspaceCreate", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-workspace-create-"));
         const storage = await storageOpenTest();
         try {
-            const owner = await storage.users.findOwner();
+            const owner = await storage.users.findById("sy45wijd1hmr03ef2wu7busv");
             if (!owner) {
                 throw new Error("Owner user not found.");
             }

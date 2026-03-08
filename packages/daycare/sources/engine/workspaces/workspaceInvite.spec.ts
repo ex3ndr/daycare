@@ -35,7 +35,14 @@ describe("workspaceInviteTokenCreate/workspaceInviteTokenVerify", () => {
         if (!header || !payload || !signature) {
             throw new Error("Expected invite token to contain three segments.");
         }
-        const tampered = [header, payload, `${signature.slice(0, -1)}A`].join(".");
+        const tamperedPayload = Buffer.from(
+            JSON.stringify({
+                workspaceId: "workspace-2",
+                kind: "workspace-invite"
+            }),
+            "utf8"
+        ).toString("base64url");
+        const tampered = [header, tamperedPayload, signature].join(".");
 
         await expect(workspaceInviteTokenVerify(tampered, "secret-1")).rejects.toThrow();
     });
