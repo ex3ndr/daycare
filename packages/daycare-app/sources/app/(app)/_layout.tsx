@@ -29,6 +29,7 @@ export default function AuthenticatedLayout() {
     const workspacesLoaded = useWorkspacesStore((s) => s.loaded);
     const workspaces = useWorkspacesStore((s) => s.workspaces);
     const fetchAllConfigs = useConfigStore((s) => s.fetchAll);
+    const configLoaded = useConfigStore((s) => s.loaded);
 
     // Load workspaces on mount
     React.useEffect(() => {
@@ -67,7 +68,7 @@ export default function AuthenticatedLayout() {
     // Wait for workspaces before mounting the Stack.
     // The root Stack keeps (app) as a screen-slot, so returning null here is safe
     // and avoids child Navigator remount issues.
-    if (!workspacesLoaded) {
+    if (!workspacesLoaded || !configLoaded) {
         return null;
     }
 
