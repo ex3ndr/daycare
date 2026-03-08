@@ -8,5 +8,7 @@ describe("agentsSupervisorBootstrapTextBuild", () => {
         expect(result).toContain("todo_create");
         expect(result).toContain("document_write");
         expect(result).toContain('"mission"');
+        expect(result).toContain("user_profile_update");
+        expect(result).toContain("homeReady: true, appReady: true");
     });
 });

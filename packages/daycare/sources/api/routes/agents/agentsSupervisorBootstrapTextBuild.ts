@@ -21,6 +21,10 @@ export function agentsSupervisorBootstrapTextBuild(text: string): string {
         "- Update todo status as work progresses (unstarted → started → finished).",
         "- The user sees todos in the app, so keep titles clear and descriptive.",
         "",
+        "When done, mark the workspace as ready:",
+        "- Call user_profile_update with configuration: { homeReady: true, appReady: true }.",
+        "- Do this only after documents and todos are populated.",
+        "",
         "<bootstrap_request>",
         text,
         "</bootstrap_request>"
