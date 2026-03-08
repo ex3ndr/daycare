@@ -4,20 +4,11 @@ import { ActivityIndicator, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { ItemList } from "@/components/ItemList";
 import { PageHeader } from "@/components/PageHeader";
-import { WorkspaceModalWrapper } from "@/components/WorkspaceModalWrapper";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { type TodoTreeItem, todosFetch } from "@/modules/todos/todosFetch";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 export default function TodoDetailScreen() {
-    return (
-        <WorkspaceModalWrapper>
-            <TodoDetailContent />
-        </WorkspaceModalWrapper>
-    );
-}
-
-function TodoDetailContent() {
     const { theme } = useUnistyles();
     const { id } = useLocalSearchParams<{ id: string }>();
     const baseUrl = useAuthStore((s) => s.baseUrl);

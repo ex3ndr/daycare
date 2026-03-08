@@ -4,21 +4,12 @@ import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { ItemList } from "@/components/ItemList";
 import { PageHeader } from "@/components/PageHeader";
-import { WorkspaceModalWrapper } from "@/components/WorkspaceModalWrapper";
 import { FragmentBusyIndicator } from "@/fragments/FragmentBusyIndicator";
 import { fragmentsRegistry } from "@/fragments/registry";
 import { useFragmentPython } from "@/fragments/useFragmentPython";
 import { useFragmentsStore } from "@/modules/fragments/fragmentsContext";
 
 export default function FragmentDetailScreen() {
-    return (
-        <WorkspaceModalWrapper>
-            <FragmentDetailContent />
-        </WorkspaceModalWrapper>
-    );
-}
-
-function FragmentDetailContent() {
     const { theme } = useUnistyles();
     const { id } = useLocalSearchParams<{ id: string }>();
 
