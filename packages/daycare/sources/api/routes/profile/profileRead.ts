@@ -1,4 +1,4 @@
-import type { Context } from "@/types";
+import type { Context, UserConfiguration } from "@/types";
 
 export type ProfileUserRecord = {
     firstName: string | null;
@@ -9,6 +9,7 @@ export type ProfileUserRecord = {
     timezone: string | null;
     systemPrompt: string | null;
     memory: boolean;
+    configuration: UserConfiguration;
     nametag: string;
     connectorKeys: Array<{ connectorKey: string }>;
 };
@@ -32,6 +33,7 @@ export type ProfileReadResult =
               timezone: string | null;
               systemPrompt: string | null;
               memory: boolean;
+              configuration: UserConfiguration;
               nametag: string;
               emails: string[];
           };
@@ -62,6 +64,7 @@ export async function profileRead(input: ProfileReadInput): Promise<ProfileReadR
             timezone: user.timezone,
             systemPrompt: user.systemPrompt,
             memory: user.memory,
+            configuration: user.configuration,
             nametag: user.nametag,
             emails: profileEmailsList(user.connectorKeys)
         }

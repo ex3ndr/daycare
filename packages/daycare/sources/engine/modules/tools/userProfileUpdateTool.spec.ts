@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
+import { USER_CONFIGURATION_SYNC_EVENT } from "../../users/userConfigurationSyncEventBuild.js";
 import { userProfileUpdateTool } from "./userProfileUpdateTool.js";
 
 const toolCall = { id: "tool-1", name: "user_profile_update" };
@@ -73,6 +74,51 @@ describe("userProfileUpdateTool", () => {
         }
     });
 
+    it("updates configuration flags and emits sync event", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const created = await storage.users.create({
+                id: "user-5",
+                nametag: "steady-otter-71"
+            });
+            const tool = userProfileUpdateTool();
+            const eventCalls: Array<{ type: string; payload: unknown; userId?: string }> = [];
+
+            const result = await tool.execute(
+                {
+                    configuration: {
+                        showHome: true
+                    }
+                },
+                contextBuild(created.id, storage, {
+                    emit: (type, payload, userId) => {
+                        eventCalls.push({ type, payload, userId });
+                    }
+                }),
+                toolCall
+            );
+
+            expect(result.typedResult.configuration).toEqual({
+                showHome: true,
+                showApp: false
+            });
+            expect(eventCalls).toEqual([
+                {
+                    type: USER_CONFIGURATION_SYNC_EVENT,
+                    payload: {
+                        configuration: {
+                            showHome: true,
+                            showApp: false
+                        }
+                    },
+                    userId: created.id
+                }
+            ]);
+        } finally {
+            storage.connection.close();
+        }
+    });
+
     it("rejects invalid timezone values", async () => {
         const storage = await storageOpenTest();
         try {
@@ -114,7 +160,13 @@ describe("userProfileUpdateTool", () => {
     });
 });
 
-function contextBuild(userId: string, storage: Storage): ToolExecutionContext {
+function contextBuild(
+    userId: string,
+    storage: Storage,
+    eventBus: { emit: (type: string, payload: unknown, userId?: string) => void } = {
+        emit: () => undefined
+    }
+): ToolExecutionContext {
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: null as unknown as ToolExecutionContext["sandbox"],
@@ -129,7 +181,8 @@ function contextBuild(userId: string, storage: Storage): ToolExecutionContext {
         source: "test",
         messageContext: {},
         agentSystem: {
-            storage
+            storage,
+            eventBus
         } as unknown as ToolExecutionContext["agentSystem"]
     };
 }

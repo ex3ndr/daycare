@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { EngineEventBus } from "../../../engine/ipc/events.js";
+import { userConfigurationSyncEventBuild } from "../../../engine/users/userConfigurationSyncEventBuild.js";
 import { eventsStream } from "./eventsStream.js";
 
 type MockResponse = {
@@ -39,7 +40,14 @@ function responseMockCreate(): MockResponse {
     };
 }
 
-function streamCreate(userId = "user-1") {
+function streamCreate(
+    userId = "user-1",
+    options?: Parameters<typeof eventsStream>[0] extends infer T
+        ? T extends { initialEvents?: infer TInitial; eventFilter?: infer TFilter }
+            ? { initialEvents?: TInitial; eventFilter?: TFilter }
+            : never
+        : never
+) {
     const request = new EventEmitter();
     const response = responseMockCreate();
     const eventBus = new EngineEventBus();
@@ -47,7 +55,9 @@ function streamCreate(userId = "user-1") {
         request: request as never,
         response: response as never,
         eventBus,
-        userId
+        userId,
+        initialEvents: options?.initialEvents,
+        eventFilter: options?.eventFilter
     });
     return { request, response, eventBus };
 }
@@ -66,6 +76,20 @@ describe("eventsStream", () => {
         expect(response.headers.connection).toBe("keep-alive");
         expect(response.headers["access-control-allow-origin"]).toBe("*");
         expect(response.chunks[0]).toContain('"type":"connected"');
+    });
+
+    it("sends initial events after connected", () => {
+        const { response } = streamCreate("user-1", {
+            initialEvents: [
+                userConfigurationSyncEventBuild("user-1", {
+                    showHome: true,
+                    showApp: false
+                })
+            ]
+        });
+
+        expect(response.chunks[0]).toContain('"type":"connected"');
+        expect(response.chunks[1]).toContain('"type":"user.configuration.sync"');
     });
 
     it("streams emitted events", () => {
@@ -95,6 +119,25 @@ describe("eventsStream", () => {
 
         expect(response.chunks).toHaveLength(2);
         expect(response.chunks[1]).toContain('"type":"agent.updated"');
+    });
+
+    it("supports custom event filters", () => {
+        const request = new EventEmitter();
+        const response = responseMockCreate();
+        const eventBus = new EngineEventBus();
+        eventsStream({
+            request: request as never,
+            response: response as never,
+            eventBus,
+            userId: "workspace-1",
+            eventFilter: (event) => event.userId === "caller-1"
+        });
+
+        eventBus.emit("user.configuration.sync", { configuration: { showHome: true, showApp: false } }, "caller-1");
+        eventBus.emit("agent.updated", { agentId: "a1" }, "workspace-1");
+
+        expect(response.chunks).toHaveLength(2);
+        expect(response.chunks[1]).toContain('"type":"user.configuration.sync"');
     });
 
     it("forwards events without userId (global events)", () => {

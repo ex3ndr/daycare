@@ -6,17 +6,22 @@ import type {
     ConnectorTarget,
     Context,
     TaskActiveSummary,
-    TaskListAllResult
+    TaskListAllResult,
+    UserConfiguration
 } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import { emailSend } from "../../email/emailSend.js";
 import { contextForUser } from "../../engine/agents/context.js";
 import type { ConfigModule } from "../../engine/config/configModule.js";
-import type { EngineEventBus } from "../../engine/ipc/events.js";
+import type { EngineEvent, EngineEventBus } from "../../engine/ipc/events.js";
 import type { CommandRegistry } from "../../engine/modules/commandRegistry.js";
 import type { ConnectorRegistry } from "../../engine/modules/connectorRegistry.js";
 import type { ToolResolver } from "../../engine/modules/toolResolver.js";
 import type { Secret } from "../../engine/secrets/secretTypes.js";
+import {
+    USER_CONFIGURATION_SYNC_EVENT,
+    userConfigurationSyncEventBuild
+} from "../../engine/users/userConfigurationSyncEventBuild.js";
 import type { Webhooks } from "../../engine/webhook/webhooks.js";
 import { getLogger } from "../../log.js";
 import type { DaycareDb } from "../../schema.js";
@@ -312,10 +317,13 @@ export class AppServer {
         // Profile is always scoped to the authenticated user, not the workspace
         const callerCtx = contextForUser({ userId: auth.userId });
         const ctx = contextForUser({ userId: effectiveUserId });
+        const initialEvents = routePathname === "/events" ? await this.eventsInitialResolve(auth.userId) : [];
 
         const eventsHandled = await eventsRouteHandle(request, response, routePathname, {
             eventBus: this.eventBus,
             userId: effectiveUserId,
+            initialEvents,
+            eventFilter: (event) => this.eventsVisible(event, effectiveUserId, auth.userId),
             sendJson: appSendJson
         });
         if (eventsHandled) {
@@ -413,6 +421,24 @@ export class AppServer {
         return this.userIdResolveByTelegramConnectorKey(users, telegramUserId);
     }
 
+    private async eventsInitialResolve(userId: string): Promise<EngineEvent[]> {
+        const configuration = await this.userConfigurationResolve(userId);
+        if (!configuration) {
+            return [];
+        }
+        return [userConfigurationSyncEventBuild(userId, configuration)];
+    }
+
+    private eventsVisible(event: EngineEvent, effectiveUserId: string, callerUserId: string): boolean {
+        if (!event.userId) {
+            return true;
+        }
+        if (event.type === USER_CONFIGURATION_SYNC_EVENT) {
+            return event.userId === callerUserId;
+        }
+        return event.userId === effectiveUserId;
+    }
+
     private async sessionAuthUserIdNormalize(userId: string): Promise<string> {
         const users = this.users;
         const normalizedUserId = userId.trim();
@@ -451,6 +477,15 @@ export class AppServer {
             }
             throw error;
         }
+    }
+
+    private async userConfigurationResolve(userId: string): Promise<UserConfiguration | null> {
+        const users = this.users;
+        if (!users) {
+            return null;
+        }
+        const user = await users.findById(userId);
+        return user?.configuration ?? null;
     }
 
     private async secretResolve(): Promise<string> {

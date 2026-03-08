@@ -29,6 +29,10 @@ describe("UsersRepository", () => {
             expect(created.lastName).toBe("Jobs");
             expect(created.country).toBe("US");
             expect(created.timezone).toBe("America/Los_Angeles");
+            expect(created.configuration).toEqual({
+                showHome: false,
+                showApp: false
+            });
 
             const byId = await users.findById(created.id);
             expect(byId?.id).toBe(created.id);
@@ -49,6 +53,10 @@ describe("UsersRepository", () => {
                 lastName: null,
                 country: "USA",
                 timezone: "America/New_York",
+                configuration: {
+                    showHome: true,
+                    showApp: false
+                },
                 updatedAt: 3
             });
             const updatedOwner = await users.findById(created.id);
@@ -58,6 +66,10 @@ describe("UsersRepository", () => {
             expect(updatedOwner?.lastName).toBeNull();
             expect(updatedOwner?.country).toBe("USA");
             expect(updatedOwner?.timezone).toBe("America/New_York");
+            expect(updatedOwner?.configuration).toEqual({
+                showHome: true,
+                showApp: false
+            });
 
             const owner = await users.findOwner();
             expect(owner).toBeTruthy();

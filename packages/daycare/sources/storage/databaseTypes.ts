@@ -475,6 +475,8 @@ export type ProcessDbRecord = {
     lastExitedAt: number | null;
 };
 
+import type { UserConfiguration } from "../engine/users/userConfigurationTypes.js";
+
 export type DatabaseUserRow = {
     id: string;
     version: number;
@@ -491,6 +493,7 @@ export type DatabaseUserRow = {
     timezone: string | null;
     system_prompt: string | null;
     memory: boolean;
+    configuration: UserConfiguration;
     nametag: string;
     emoji: string | null;
     created_at: number;
@@ -519,6 +522,7 @@ export type UserDbRecord = {
     timezone: string | null;
     systemPrompt: string | null;
     memory: boolean;
+    configuration: UserConfiguration;
     nametag: string;
     emoji: string | null;
     createdAt: number;
@@ -665,6 +669,7 @@ export type CreateUserInput = {
     timezone?: string | null;
     systemPrompt?: string | null;
     memory?: boolean;
+    configuration?: UserConfiguration;
     nametag?: string;
     emoji?: string | null;
     createdAt?: number;
@@ -717,6 +722,7 @@ export type UpdateUserInput = {
     timezone?: string | null;
     systemPrompt?: string | null;
     memory?: boolean;
+    configuration?: UserConfiguration;
     emoji?: string | null;
     createdAt?: number;
     updatedAt?: number;

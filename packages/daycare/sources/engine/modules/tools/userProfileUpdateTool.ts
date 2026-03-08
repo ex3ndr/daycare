@@ -3,6 +3,7 @@ import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { UpdateUserInput } from "../../../storage/databaseTypes.js";
+import { USER_CONFIGURATION_SYNC_EVENT } from "../../users/userConfigurationSyncEventBuild.js";
 
 const schema = Type.Object(
     {
@@ -14,6 +15,15 @@ const schema = Type.Object(
                 Type.String({ minLength: 1, description: "IANA timezone (for example America/New_York)." }),
                 Type.Null()
             ])
+        ),
+        configuration: Type.Optional(
+            Type.Object(
+                {
+                    showHome: Type.Optional(Type.Boolean()),
+                    showApp: Type.Optional(Type.Boolean())
+                },
+                { additionalProperties: false }
+            )
         )
     },
     { additionalProperties: false }
@@ -29,6 +39,10 @@ const resultSchema = Type.Object(
         lastName: Type.Union([Type.String(), Type.Null()]),
         country: Type.Union([Type.String(), Type.Null()]),
         timezone: Type.Union([Type.String(), Type.Null()]),
+        configuration: Type.Object({
+            showHome: Type.Boolean(),
+            showApp: Type.Boolean()
+        }),
         nametag: Type.String()
     },
     { additionalProperties: false }
@@ -50,18 +64,20 @@ export function userProfileUpdateTool(): ToolDefinition {
         tool: {
             name: "user_profile_update",
             description:
-                "Update your user profile fields: firstName, optional lastName, country, and timezone. Use null to clear optional fields.",
+                "Update your user profile fields and app configuration: firstName, optional lastName, country, timezone, and configuration flags. Use null to clear optional fields.",
             parameters: schema
         },
         returns,
         visibleByDefault: (context) => context.config.foreground === true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as UserProfileUpdateArgs;
+            const users = toolContext.agentSystem.storage.users;
             if (
                 payload.firstName === undefined &&
                 payload.lastName === undefined &&
                 payload.country === undefined &&
-                payload.timezone === undefined
+                payload.timezone === undefined &&
+                payload.configuration === undefined
             ) {
                 throw new Error("At least one profile field must be provided.");
             }
@@ -70,6 +86,7 @@ export function userProfileUpdateTool(): ToolDefinition {
                 updatedAt: Date.now()
             };
             const changed: string[] = [];
+            let configurationUpdated = false;
 
             if (payload.firstName !== undefined) {
                 updates.firstName = valueRequiredNormalize(payload.firstName, "firstName");
@@ -88,13 +105,30 @@ export function userProfileUpdateTool(): ToolDefinition {
                 updates.timezone = timezoneOptionalNormalize(payload.timezone);
                 changed.push("timezone");
             }
+            if (payload.configuration !== undefined) {
+                const current = await users.findById(toolContext.ctx.userId);
+                if (!current) {
+                    throw new Error(`User not found: ${toolContext.ctx.userId}`);
+                }
+                updates.configuration = configurationMerge(current.configuration, payload.configuration);
+                changed.push("configuration");
+                configurationUpdated = true;
+            }
 
-            const users = toolContext.agentSystem.storage.users;
             await users.update(toolContext.ctx.userId, updates);
 
             const user = await users.findById(toolContext.ctx.userId);
             if (!user) {
                 throw new Error(`User not found: ${toolContext.ctx.userId}`);
+            }
+            if (configurationUpdated) {
+                toolContext.agentSystem.eventBus.emit(
+                    USER_CONFIGURATION_SYNC_EVENT,
+                    {
+                        configuration: user.configuration
+                    },
+                    toolContext.ctx.userId
+                );
             }
 
             const summary = `Updated ${changed.join(", ")} for @${user.nametag}.`;
@@ -116,6 +150,7 @@ export function userProfileUpdateTool(): ToolDefinition {
                     lastName: user.lastName,
                     country: user.country,
                     timezone: user.timezone,
+                    configuration: user.configuration,
                     nametag: user.nametag
                 }
             };
@@ -156,4 +191,14 @@ function timezoneOptionalNormalize(value: string | null): string | null {
     } catch {
         throw new Error(`Invalid timezone: ${normalized}`);
     }
+}
+
+function configurationMerge(
+    current: UserProfileUpdateResult["configuration"],
+    configuration: NonNullable<UserProfileUpdateArgs["configuration"]>
+) {
+    return {
+        ...current,
+        ...configuration
+    };
 }

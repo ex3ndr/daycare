@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { contextForUser } from "../../../engine/agents/context.js";
+import { USER_CONFIGURATION_SYNC_EVENT } from "../../../engine/users/userConfigurationSyncEventBuild.js";
 import { profileUpdate } from "./profileUpdate.js";
 
 describe("profileUpdate", () => {
@@ -14,6 +15,10 @@ describe("profileUpdate", () => {
             timezone: null,
             systemPrompt: null,
             memory: false,
+            configuration: {
+                showHome: false,
+                showApp: false
+            },
             nametag: "ada",
             connectorKeys: []
         };
@@ -44,6 +49,10 @@ describe("profileUpdate", () => {
                 timezone: null,
                 systemPrompt: null,
                 memory: true,
+                configuration: {
+                    showHome: false,
+                    showApp: false
+                },
                 nametag: "ada",
                 emails: []
             }
@@ -65,6 +74,10 @@ describe("profileUpdate", () => {
             timezone: "Europe/London",
             systemPrompt: "prompt",
             memory: true,
+            configuration: {
+                showHome: false,
+                showApp: true
+            },
             nametag: "ada",
             connectorKeys: []
         };
@@ -95,16 +108,114 @@ describe("profileUpdate", () => {
                 timezone: "UTC",
                 systemPrompt: "prompt",
                 memory: true,
+                configuration: {
+                    showHome: false,
+                    showApp: true
+                },
                 nametag: "ada",
                 emails: []
             }
         });
     });
 
+    it("merges configuration updates and emits sync event", async () => {
+        const ctx = contextForUser({ userId: "user-1" });
+        const state = {
+            firstName: "Ada",
+            lastName: null,
+            bio: null,
+            about: null,
+            country: null,
+            timezone: null,
+            systemPrompt: null,
+            memory: false,
+            configuration: {
+                showHome: false,
+                showApp: true
+            },
+            nametag: "ada",
+            connectorKeys: []
+        };
+        const users = {
+            findById: vi.fn(async () => ({ ...state })),
+            update: vi.fn(async (_id: string, patch: Record<string, unknown>) => {
+                Object.assign(state, patch);
+            })
+        };
+        const eventBus = {
+            emit: vi.fn()
+        };
+
+        const result = await profileUpdate({
+            ctx,
+            users,
+            eventBus,
+            body: {
+                configuration: {
+                    showHome: true
+                }
+            }
+        });
+
+        expect(result).toEqual({
+            ok: true,
+            profile: {
+                firstName: "Ada",
+                lastName: null,
+                bio: null,
+                about: null,
+                country: null,
+                timezone: null,
+                systemPrompt: null,
+                memory: false,
+                configuration: {
+                    showHome: true,
+                    showApp: true
+                },
+                nametag: "ada",
+                emails: []
+            }
+        });
+        expect(users.update).toHaveBeenCalledWith(
+            "user-1",
+            expect.objectContaining({
+                configuration: {
+                    showHome: true,
+                    showApp: true
+                }
+            })
+        );
+        expect(eventBus.emit).toHaveBeenCalledWith(
+            USER_CONFIGURATION_SYNC_EVENT,
+            {
+                configuration: {
+                    showHome: true,
+                    showApp: true
+                }
+            },
+            "user-1"
+        );
+    });
+
     it("rejects invalid field types", async () => {
         const ctx = contextForUser({ userId: "user-1" });
         const users = {
-            findById: vi.fn(async () => null),
+            findById: vi.fn(async () => ({
+                firstName: null,
+                lastName: null,
+                bio: null,
+                about: null,
+                country: null,
+                timezone: null,
+                systemPrompt: null,
+                memory: false,
+                configuration: {
+                    showHome: false,
+                    showApp: false
+                },
+                nametag: "ada",
+                connectorKeys: []
+            })),
             update: vi.fn(async () => undefined)
         };
 
@@ -123,6 +234,30 @@ describe("profileUpdate", () => {
                 body: { memory: "yes" }
             })
         ).resolves.toEqual({ ok: false, error: "memory must be a boolean." });
+
+        await expect(
+            profileUpdate({
+                ctx,
+                users,
+                body: { configuration: "yes" }
+            })
+        ).resolves.toEqual({ ok: false, error: "configuration must be an object." });
+
+        await expect(
+            profileUpdate({
+                ctx,
+                users,
+                body: { configuration: { showHome: "yes" } }
+            })
+        ).resolves.toEqual({ ok: false, error: "configuration.showHome must be a boolean." });
+
+        await expect(
+            profileUpdate({
+                ctx,
+                users,
+                body: { configuration: { extra: true } }
+            })
+        ).resolves.toEqual({ ok: false, error: "configuration.extra is not supported." });
     });
 
     it("returns error when user update fails", async () => {

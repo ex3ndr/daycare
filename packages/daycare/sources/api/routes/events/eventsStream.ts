@@ -1,5 +1,5 @@
 import type http from "node:http";
-import type { EngineEventBus } from "../../../engine/ipc/events.js";
+import type { EngineEvent, EngineEventBus } from "../../../engine/ipc/events.js";
 import { appCorsApply } from "../../app-server/appHttp.js";
 
 const KEEPALIVE_INTERVAL_MS = 30_000;
@@ -9,6 +9,8 @@ export type EventsStreamInput = {
     response: http.ServerResponse;
     eventBus: EngineEventBus;
     userId: string;
+    eventFilter?: (event: EngineEvent) => boolean;
+    initialEvents?: EngineEvent[];
 };
 
 /**
@@ -32,12 +34,17 @@ export function eventsStream(input: EventsStreamInput): void {
     };
     input.response.write(`data: ${JSON.stringify(connected)}\n\n`);
 
+    for (const event of input.initialEvents ?? []) {
+        if (eventVisible(input, event)) {
+            input.response.write(`data: ${JSON.stringify(event)}\n\n`);
+        }
+    }
+
     const unsubscribe = input.eventBus.onEvent((event) => {
         if (input.response.writableEnded) {
             return;
         }
-        // Skip events scoped to a different user
-        if (event.userId && event.userId !== input.userId) {
+        if (!eventVisible(input, event)) {
             return;
         }
         input.response.write(`data: ${JSON.stringify(event)}\n\n`);
@@ -58,4 +65,14 @@ export function eventsStream(input: EventsStreamInput): void {
             input.response.end();
         }
     });
+}
+
+function eventVisible(input: EventsStreamInput, event: EngineEvent): boolean {
+    if (input.eventFilter) {
+        return input.eventFilter(event);
+    }
+    if (event.userId && event.userId !== input.userId) {
+        return false;
+    }
+    return true;
 }

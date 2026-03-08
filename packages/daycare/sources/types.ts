@@ -139,6 +139,7 @@ export type {
     TaskSummary,
     WebhookTriggerSummary
 } from "./engine/tasks/taskListAll.js";
+export type { UserConfiguration } from "./engine/users/userConfigurationTypes.js";
 // Workspaces
 export type { WorkspaceConfig, WorkspaceRecord } from "./engine/workspaces/workspaceTypes.js";
 // Files

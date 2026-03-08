@@ -1,10 +1,12 @@
 import type http from "node:http";
-import type { EngineEventBus } from "../../../engine/ipc/events.js";
+import type { EngineEvent, EngineEventBus } from "../../../engine/ipc/events.js";
 import { eventsStream } from "./eventsStream.js";
 
 export type EventsRouteContext = {
     eventBus: EngineEventBus | null;
     userId: string;
+    eventFilter?: (event: EngineEvent) => boolean;
+    initialEvents?: EngineEvent[];
     sendJson: (response: http.ServerResponse, statusCode: number, payload: Record<string, unknown>) => void;
 };
 
@@ -34,7 +36,9 @@ export async function eventsRouteHandle(
         request,
         response,
         eventBus: context.eventBus,
-        userId: context.userId
+        userId: context.userId,
+        eventFilter: context.eventFilter,
+        initialEvents: context.initialEvents
     });
     return true;
 }

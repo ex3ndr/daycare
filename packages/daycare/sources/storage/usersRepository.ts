@@ -1,6 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
+import { userConfigurationNormalize } from "../engine/users/userConfigurationNormalize.js";
 import type { DaycareDb } from "../schema.js";
 import { userConnectorKeysTable, usersTable } from "../schema.js";
 import { AsyncLock } from "../utils/lock.js";
@@ -152,6 +153,7 @@ export class UsersRepository {
                 timezone: row.timezone ?? null,
                 systemPrompt: row.systemPrompt ?? null,
                 memory: row.memory,
+                configuration: userConfigurationNormalize(row.configuration),
                 nametag: row.nametag,
                 emoji: row.emoji ?? null,
                 createdAt: row.createdAt,
@@ -215,6 +217,7 @@ export class UsersRepository {
             const systemPrompt = textNullableNormalize(input.systemPrompt);
             const emoji = textNullableNormalize(input.emoji);
             const memory = input.memory ?? false;
+            const configuration = userConfigurationNormalize(input.configuration);
             const connectorKey = input.connectorKey?.trim() ?? "";
             const explicitNametag = input.nametag?.trim() ?? "";
             const shouldGenerateNametag = explicitNametag.length === 0;
@@ -240,6 +243,7 @@ export class UsersRepository {
                         timezone,
                         systemPrompt,
                         memory,
+                        configuration,
                         nametag,
                         emoji,
                         createdAt,
@@ -287,6 +291,7 @@ export class UsersRepository {
                 timezone,
                 systemPrompt,
                 memory,
+                configuration,
                 nametag,
                 emoji,
                 createdAt,
@@ -321,6 +326,9 @@ export class UsersRepository {
                 ...(data.timezone === undefined ? {} : { timezone: textNullableNormalize(data.timezone) }),
                 ...(data.systemPrompt === undefined ? {} : { systemPrompt: textNullableNormalize(data.systemPrompt) }),
                 ...(data.memory === undefined ? {} : { memory: data.memory }),
+                ...(data.configuration === undefined
+                    ? {}
+                    : { configuration: userConfigurationNormalize(data.configuration) }),
                 ...(data.emoji === undefined ? {} : { emoji: textNullableNormalize(data.emoji) }),
                 createdAt: current.createdAt,
                 updatedAt: now
@@ -340,6 +348,7 @@ export class UsersRepository {
                         timezone: next.timezone,
                         systemPrompt: next.systemPrompt,
                         memory: next.memory,
+                        configuration: next.configuration,
                         emoji: next.emoji,
                         createdAt: current.createdAt,
                         updatedAt: now
@@ -376,6 +385,7 @@ export class UsersRepository {
                             timezone: row.timezone,
                             systemPrompt: row.systemPrompt,
                             memory: row.memory,
+                            configuration: row.configuration,
                             nametag: row.nametag,
                             emoji: row.emoji,
                             createdAt: row.createdAt,
@@ -505,6 +515,7 @@ export class UsersRepository {
             timezone: userRow.timezone ?? null,
             systemPrompt: userRow.systemPrompt ?? null,
             memory: userRow.memory,
+            configuration: userConfigurationNormalize(userRow.configuration),
             nametag: userRow.nametag,
             emoji: userRow.emoji ?? null,
             createdAt: userRow.createdAt,
@@ -537,6 +548,7 @@ function sqliteUniqueConstraintOnNametagIs(error: unknown): boolean {
 function userClone(record: UserWithConnectorKeysDbRecord): UserWithConnectorKeysDbRecord {
     return {
         ...record,
+        configuration: { ...record.configuration },
         connectorKeys: record.connectorKeys.map((entry) => ({ ...entry }))
     };
 }

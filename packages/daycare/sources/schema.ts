@@ -18,6 +18,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { drizzle as drizzlePglite, type PgliteDatabase } from "drizzle-orm/pglite";
 import type { Client as PostgresClient } from "pg";
+import type { UserConfiguration } from "./engine/users/userConfigurationTypes.js";
 
 export const migrationsTable = pgTable("_migrations", {
     name: text("name").primaryKey(),
@@ -44,6 +45,10 @@ export const usersTable = pgTable(
         timezone: text("timezone"),
         systemPrompt: text("system_prompt"),
         memory: boolean("memory").notNull().default(false),
+        configuration: jsonb("configuration")
+            .$type<UserConfiguration>()
+            .notNull()
+            .default(sql`'{"showHome": false, "showApp": false}'::jsonb`),
         nametag: text("nametag").notNull(),
         emoji: text("emoji")
     },

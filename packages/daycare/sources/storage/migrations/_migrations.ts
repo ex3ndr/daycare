@@ -40,5 +40,9 @@ export const migrations: Migration[] = [
     {
         name: "20260306130000_user_emoji",
         fileName: "20260306130000_user_emoji.sql"
+    },
+    {
+        name: "20260308090000_user_configuration",
+        fileName: "20260308090000_user_configuration.sql"
     }
 ];

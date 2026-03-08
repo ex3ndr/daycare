@@ -1,4 +1,5 @@
-import type { Context } from "@/types";
+import type { Context, UserConfiguration } from "@/types";
+import { USER_CONFIGURATION_SYNC_EVENT } from "../../../engine/users/userConfigurationSyncEventBuild.js";
 import type { UpdateUserInput } from "../../../storage/databaseTypes.js";
 import { type ProfileUserRecord, profileRead } from "./profileRead.js";
 
@@ -13,10 +14,14 @@ export type ProfileUpdateBody = {
     timezone?: string | null;
     systemPrompt?: string | null;
     memory?: boolean;
+    configuration?: Partial<UserConfiguration>;
 };
 
 export type ProfileUpdateInput = {
     ctx: Context;
+    eventBus?: {
+        emit: (type: string, payload: unknown, userId?: string) => void;
+    } | null;
     users: {
         findById: (id: string) => Promise<ProfileUserRecord | null>;
         update: (id: string, input: UpdateUserInput) => Promise<void>;
@@ -32,6 +37,8 @@ export type ProfileUpdateResult = Awaited<ReturnType<typeof profileRead>>;
  */
 export async function profileUpdate(input: ProfileUpdateInput): Promise<ProfileUpdateResult> {
     const updates: UpdateUserInput = {};
+    let configurationUpdated = false;
+    let currentUser: ProfileUserRecord | null = null;
 
     for (const field of PROFILE_TEXT_FIELDS) {
         const value = input.body[field];
@@ -52,6 +59,21 @@ export async function profileUpdate(input: ProfileUpdateInput): Promise<ProfileU
         updates.memory = memoryValue;
     }
 
+    const configurationValue = input.body.configuration;
+    if (configurationValue !== undefined) {
+        currentUser = await input.users.findById(input.ctx.userId);
+        if (!currentUser) {
+            return { ok: false, error: "User not found." };
+        }
+
+        const configuration = profileConfigurationMerge(currentUser.configuration, configurationValue);
+        if (!configuration.ok) {
+            return configuration;
+        }
+        updates.configuration = configuration.configuration;
+        configurationUpdated = true;
+    }
+
     updates.updatedAt = Date.now();
 
     try {
@@ -61,5 +83,37 @@ export async function profileUpdate(input: ProfileUpdateInput): Promise<ProfileU
         return { ok: false, error: message };
     }
 
-    return profileRead({ ctx: input.ctx, users: input.users });
+    const result = await profileRead({ ctx: input.ctx, users: input.users });
+    if (result.ok && configurationUpdated) {
+        input.eventBus?.emit(
+            USER_CONFIGURATION_SYNC_EVENT,
+            {
+                configuration: result.profile.configuration
+            },
+            input.ctx.userId
+        );
+    }
+    return result;
+}
+
+function profileConfigurationMerge(
+    current: UserConfiguration,
+    value: unknown
+): { ok: true; configuration: UserConfiguration } | { ok: false; error: string } {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return { ok: false, error: "configuration must be an object." };
+    }
+
+    const next = { ...current };
+    for (const [key, entry] of Object.entries(value)) {
+        if (key !== "showHome" && key !== "showApp") {
+            return { ok: false, error: `configuration.${key} is not supported.` };
+        }
+        if (typeof entry !== "boolean") {
+            return { ok: false, error: `configuration.${key} must be a boolean.` };
+        }
+        next[key] = entry;
+    }
+
+    return { ok: true, configuration: next };
 }

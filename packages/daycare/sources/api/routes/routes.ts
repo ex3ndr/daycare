@@ -79,6 +79,7 @@ export async function apiRouteHandle(
         return profileRouteHandle(request, response, pathname, {
             ctx: context.ctx,
             users: context.users,
+            eventBus: context.eventBus,
             emailConnectRequest: context.emailConnectRequest,
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody

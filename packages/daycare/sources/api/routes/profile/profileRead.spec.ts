@@ -16,6 +16,10 @@ describe("profileRead", () => {
                 timezone: "Europe/London",
                 systemPrompt: "prompt",
                 memory: true,
+                configuration: {
+                    showHome: true,
+                    showApp: false
+                },
                 nametag: "ada",
                 connectorKeys: [{ connectorKey: "email:ada@example.com" }, { connectorKey: "telegram:123" }]
             }))
@@ -34,6 +38,10 @@ describe("profileRead", () => {
                 timezone: "Europe/London",
                 systemPrompt: "prompt",
                 memory: true,
+                configuration: {
+                    showHome: true,
+                    showApp: false
+                },
                 nametag: "ada",
                 emails: ["ada@example.com"]
             }
