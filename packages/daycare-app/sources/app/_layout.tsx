@@ -50,17 +50,6 @@ async function loadFonts() {
     });
 }
 
-const modalScreenOptions = {
-    presentation: "modal" as const,
-    animation: "fade_from_bottom" as const,
-    webModalStyle: {
-        width: "90vw",
-        height: "90vh",
-        minWidth: "min(1100px, 90vw)",
-        minHeight: "min(800px, 90vh)"
-    }
-};
-
 export default function RootLayout() {
     const { theme } = useUnistyles();
     const ready = useAuthStore((state) => state.ready);
@@ -111,7 +100,7 @@ export default function RootLayout() {
             colors: {
                 ...DefaultTheme.colors,
                 primary: theme.colors.primary,
-                background: theme.colors.surfaceDim,
+                background: theme.colors.surfaceContainerLow,
                 card: theme.colors.surfaceContainer,
                 text: theme.colors.onSurface,
                 border: theme.colors.outlineVariant,
@@ -135,14 +124,6 @@ export default function RootLayout() {
                                 <Stack screenOptions={{ headerShown: false }}>
                                     <Stack.Protected guard={authState === "authenticated"}>
                                         <Stack.Screen name="(app)" />
-                                        <Stack.Screen name="[workspace]/fragment/[id]" options={modalScreenOptions} />
-                                        <Stack.Screen name="[workspace]/routine/[id]" options={modalScreenOptions} />
-                                        <Stack.Screen
-                                            name="[workspace]/file-preview/[path]"
-                                            options={modalScreenOptions}
-                                        />
-                                        <Stack.Screen name="share" />
-                                        <Stack.Screen name="workspace-not-found" />
                                     </Stack.Protected>
                                     <Stack.Protected guard={authState === "unauthenticated"}>
                                         <Stack.Screen name="(auth)" />

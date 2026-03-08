@@ -146,7 +146,7 @@ export const WorkspaceStrip = React.memo<{ onNavigate?: () => void; style?: Styl
         const pathname = usePathname();
         const workspaces = useWorkspacesStore((s) => s.workspaces);
         const { workspaceId } = useWorkspace();
-        const appReady = useConfigStore((s) => s.config.appReady);
+        const appReady = useConfigStore((s) => s.configFor(workspaceId).appReady);
         const activeMode = extractModeFromPath(pathname);
         const wsPrefix = workspaceId ? `/${workspaceId}` : "";
 

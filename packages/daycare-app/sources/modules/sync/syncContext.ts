@@ -18,8 +18,8 @@ export const useSyncStore = syncStoreCreate({
     onAgentDeleted: (agentId) => {
         useAgentsStore.getState().applyDeleted(agentId);
     },
-    onConfigurationSync: (configuration) => {
-        useConfigStore.getState().applySync(configuration);
+    onConfigurationSync: (workspaceId, configuration) => {
+        useConfigStore.getState().applySync(workspaceId, configuration);
     },
     onRefetch: () => {
         // Handled by WorkspaceSync — it watches status changes and triggers refetch with auth

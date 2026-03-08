@@ -8,35 +8,48 @@ const CONFIG_DEFAULT: WorkspaceConfig = {
 };
 
 export type ConfigStore = {
-    config: WorkspaceConfig;
+    configs: Record<string, WorkspaceConfig>;
     loaded: boolean;
-    fetch: (baseUrl: string, token: string, workspaceId: string) => Promise<void>;
-    applySync: (configuration: WorkspaceConfig) => void;
+    fetchAll: (baseUrl: string, token: string, workspaceIds: string[]) => Promise<void>;
+    applySync: (workspaceId: string, configuration: WorkspaceConfig) => void;
+    configFor: (workspaceId: string) => WorkspaceConfig;
     reset: () => void;
 };
 
 /**
  * Creates a zustand store for workspace configuration flags.
- * Manages initial fetch and realtime SSE sync.
+ * Stores configs keyed by workspaceId; fetches all at once from (app) layout.
  */
 export function configStoreCreate() {
-    return create<ConfigStore>((set) => ({
-        config: CONFIG_DEFAULT,
+    return create<ConfigStore>((set, get) => ({
+        configs: {},
         loaded: false,
-        fetch: async (baseUrl, token, workspaceId) => {
-            try {
-                const config = await configFetch(baseUrl, token, workspaceId);
-                set({ config, loaded: true });
-            } catch {
-                // On failure, use defaults so the app can still render
-                set({ config: CONFIG_DEFAULT, loaded: true });
+        fetchAll: async (baseUrl, token, workspaceIds) => {
+            const results = await Promise.all(
+                workspaceIds.map(async (id) => {
+                    try {
+                        return [id, await configFetch(baseUrl, token, id)] as const;
+                    } catch {
+                        return [id, CONFIG_DEFAULT] as const;
+                    }
+                })
+            );
+            const configs: Record<string, WorkspaceConfig> = {};
+            for (const [id, config] of results) {
+                configs[id] = config;
             }
+            set({ configs, loaded: true });
         },
-        applySync: (configuration) => {
-            set({ config: configuration });
+        applySync: (workspaceId, configuration) => {
+            set((state) => ({
+                configs: { ...state.configs, [workspaceId]: configuration }
+            }));
+        },
+        configFor: (workspaceId) => {
+            return get().configs[workspaceId] ?? CONFIG_DEFAULT;
         },
         reset: () => {
-            set({ config: CONFIG_DEFAULT, loaded: false });
+            set({ configs: {}, loaded: false });
         }
     }));
 }
