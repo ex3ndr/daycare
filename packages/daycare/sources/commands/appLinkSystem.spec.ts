@@ -32,7 +32,6 @@ describe("appLinkSystemCommand", () => {
     const storageOpenMock = vi.mocked(storageOpen);
     const databaseCloseMock = vi.mocked(databaseClose);
     const appLinkCommandMock = vi.mocked(appLinkCommand);
-    let findByNametagMock = vi.fn();
 
     beforeEach(() => {
         process.exitCode = undefined;
@@ -50,17 +49,12 @@ describe("appLinkSystemCommand", () => {
                 autoMigrate: true
             }
         } as never);
-        findByNametagMock = vi.fn(async () => ({
-            id: "workspace-system-1",
-            isWorkspace: true
-        }));
         storageOpenMock.mockResolvedValue({
-            users: {
-                findByNametag: findByNametagMock
-            },
+            users: {},
             connection: { close: vi.fn(async () => undefined) }
         } as never);
         appLinkCommandMock.mockResolvedValue(undefined);
+        workspaceSystemEnsureMock.mockResolvedValue(undefined);
         databaseCloseMock.mockResolvedValue(undefined);
     });
 
@@ -76,29 +70,22 @@ describe("appLinkSystemCommand", () => {
                 users: expect.any(Object)
             })
         });
-        expect(findByNametagMock).toHaveBeenCalledWith("##system##");
-        expect(appLinkCommandMock).toHaveBeenCalledWith("workspace-system-1", {
+        expect(appLinkCommandMock).toHaveBeenCalledWith("system", {
             json: true,
             settings: "/tmp/settings.json"
         });
         expect(databaseCloseMock).toHaveBeenCalledWith(expect.objectContaining({ close: expect.any(Function) }));
     });
 
-    it("sets non-zero exit code when the system workspace cannot be resolved", async () => {
-        findByNametagMock = vi.fn(async () => null);
-        storageOpenMock.mockResolvedValue({
-            users: {
-                findByNametag: findByNametagMock
-            },
-            connection: { close: vi.fn(async () => undefined) }
-        } as never);
+    it("sets non-zero exit code when bootstrap fails", async () => {
+        workspaceSystemEnsureMock.mockRejectedValue(new Error("The reserved system id is occupied by another user."));
 
         await appLinkSystemCommand({});
 
         expect(appLinkCommandMock).not.toHaveBeenCalled();
         expect(process.exitCode).toBe(1);
         expect(console.error).toHaveBeenCalledWith(
-            "Failed to generate system workspace app link: System workspace not found."
+            "Failed to generate system workspace app link: The reserved system id is occupied by another user."
         );
     });
 });

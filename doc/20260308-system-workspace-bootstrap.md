@@ -2,6 +2,7 @@
 
 Daycare now bootstraps a reserved ownerless `##system##` workspace during engine startup.
 
+- The workspace always uses the reserved user id `system`.
 - The workspace is created only when the `##system##` nametag is missing.
 - It is stored as a normal workspace user with `workspaceOwnerId = null`.
 - It is created with the `❌` emoji.
@@ -12,8 +13,8 @@ Daycare now bootstraps a reserved ownerless `##system##` workspace during engine
 ```mermaid
 flowchart TD
     A[Engine.start] --> B[workspaceSystemEnsure]
-    B -->|system missing| C[Create workspace user nametag=##system##]
-    B -->|system exists| D[Validate ownerless workspace]
+    B -->|system missing| C[Create workspace user id=system nametag=##system##]
+    B -->|system exists| D[Validate id plus ownerless workspace]
     C --> E[users.findMany]
     D --> E
     E --> F[userHomeEnsure for each user]

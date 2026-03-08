@@ -434,6 +434,7 @@ describe("Engine workspace registration", () => {
             const soul = system ? await engine.storage.documents.findBySlugAndParent(ctx, "soul", system.id) : null;
 
             expect(workspace.isWorkspace).toBe(true);
+            expect(workspace.id).toBe("system");
             expect(workspace.workspaceOwnerId).toBeNull();
             expect(workspace.emoji).toBe("❌");
             expect(workspace.systemPrompt).toBeNull();

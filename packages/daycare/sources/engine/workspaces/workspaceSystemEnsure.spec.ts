@@ -11,6 +11,7 @@ describe("workspaceSystemEnsure", () => {
 
             const workspace = await storage.users.findByNametag("##system##");
             expect(workspace).toMatchObject({
+                id: "system",
                 isWorkspace: true,
                 workspaceOwnerId: null,
                 firstName: "System",
@@ -39,6 +40,23 @@ describe("workspaceSystemEnsure", () => {
             const systemUsers = (await storage.users.findMany()).filter((user) => user.nametag === "##system##");
             expect(second?.id).toBe(first?.id);
             expect(systemUsers).toHaveLength(1);
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it('rejects a reserved nametag record that does not use id "system"', async () => {
+        const storage = await storageOpenTest();
+        try {
+            await storage.users.create({
+                id: "workspace-system-1",
+                isWorkspace: true,
+                nametag: "##system##"
+            });
+
+            await expect(workspaceSystemEnsure({ storage })).rejects.toThrow(
+                'The reserved system workspace must use id "system".'
+            );
         } finally {
             storage.connection.close();
         }

@@ -8,7 +8,7 @@ import { type AppLinkOptions, appLinkCommand } from "./appLink.js";
 
 /**
  * Generates a terminal-friendly Daycare app auth URL for the reserved system workspace.
- * Expects: settings points to a valid settings file and the system workspace nametag can be resolved.
+ * Expects: settings points to a valid settings file and bootstrap reserves the `system` user id.
  */
 export async function appLinkSystemCommand(options: AppLinkOptions): Promise<void> {
     const settingsPath = path.resolve(options.settings ?? DEFAULT_SETTINGS_PATH);
@@ -21,13 +21,7 @@ export async function appLinkSystemCommand(options: AppLinkOptions): Promise<voi
             autoMigrate: config.db.autoMigrate
         });
         await workspaceSystemEnsure({ storage });
-
-        const workspace = await storage.users.findByNametag("##system##");
-        if (!workspace?.isWorkspace) {
-            throw new Error("System workspace not found.");
-        }
-
-        await appLinkCommand(workspace.id, { ...options, settings: settingsPath });
+        await appLinkCommand("system", { ...options, settings: settingsPath });
     } catch (error) {
         process.exitCode = 1;
         const message = error instanceof Error ? error.message : String(error);
