@@ -18,10 +18,7 @@ import type { CommandRegistry } from "../../engine/modules/commandRegistry.js";
 import type { ConnectorRegistry } from "../../engine/modules/connectorRegistry.js";
 import type { ToolResolver } from "../../engine/modules/toolResolver.js";
 import type { Secret } from "../../engine/secrets/secretTypes.js";
-import {
-    USER_CONFIGURATION_SYNC_EVENT,
-    userConfigurationSyncEventBuild
-} from "../../engine/users/userConfigurationSyncEventBuild.js";
+import { userConfigurationSyncEventBuild } from "../../engine/users/userConfigurationSyncEventBuild.js";
 import type { Webhooks } from "../../engine/webhook/webhooks.js";
 import { getLogger } from "../../log.js";
 import type { DaycareDb } from "../../schema.js";
@@ -317,7 +314,8 @@ export class AppServer {
         // Profile is always scoped to the authenticated user, not the workspace
         const callerCtx = contextForUser({ userId: auth.userId });
         const ctx = contextForUser({ userId: effectiveUserId });
-        const initialEvents = routePathname === "/events" ? await this.eventsInitialResolve(auth.userId) : [];
+        // Workspace config is scoped to the effective (workspace) user
+        const initialEvents = routePathname === "/events" ? await this.eventsInitialResolve(effectiveUserId) : [];
 
         const eventsHandled = await eventsRouteHandle(request, response, routePathname, {
             eventBus: this.eventBus,
@@ -429,12 +427,9 @@ export class AppServer {
         return [userConfigurationSyncEventBuild(userId, configuration)];
     }
 
-    private eventsVisible(event: EngineEvent, effectiveUserId: string, callerUserId: string): boolean {
+    private eventsVisible(event: EngineEvent, effectiveUserId: string, _callerUserId: string): boolean {
         if (!event.userId) {
             return true;
-        }
-        if (event.type === USER_CONFIGURATION_SYNC_EVENT) {
-            return event.userId === callerUserId;
         }
         return event.userId === effectiveUserId;
     }

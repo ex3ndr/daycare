@@ -35,7 +35,22 @@ export type SyncEventConnected = {
     type: "connected";
 };
 
-export type SyncEvent = SyncEventAgentCreated | SyncEventAgentUpdated | SyncEventAgentDeleted | SyncEventConnected;
+export type SyncEventConfigurationSync = {
+    type: "user.configuration.sync";
+    payload: {
+        configuration: {
+            homeReady: boolean;
+            appReady: boolean;
+        };
+    };
+};
+
+export type SyncEvent =
+    | SyncEventAgentCreated
+    | SyncEventAgentUpdated
+    | SyncEventAgentDeleted
+    | SyncEventConnected
+    | SyncEventConfigurationSync;
 
 /**
  * Parses a raw SSE event object into a typed SyncEvent if recognized.
@@ -51,6 +66,11 @@ export function syncEventParse(raw: { type: string; payload?: unknown }): SyncEv
             return { type: "agent.sync.updated", payload: raw.payload as SyncAgentPayload };
         case "agent.sync.deleted":
             return { type: "agent.sync.deleted", payload: raw.payload as { agentId: string } };
+        case "user.configuration.sync":
+            return {
+                type: "user.configuration.sync",
+                payload: raw.payload as SyncEventConfigurationSync["payload"]
+            };
         default:
             return null;
     }

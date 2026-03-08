@@ -15,6 +15,7 @@ import {
 import { CHAT_COLLAPSED_WIDTH, CHAT_PANEL_WIDTH, ChatPanel } from "@/components/ChatPanel";
 import { Drawer } from "@/components/Drawer";
 import { useAuthStore } from "@/modules/auth/authContext";
+import { useConfigStore } from "@/modules/config/configContext";
 import { WorkspaceSync } from "@/modules/sync/WorkspaceSync";
 import { workspaceRouteIdResolve } from "@/modules/workspaces/workspaceIdResolve";
 import { WorkspaceProvider } from "@/modules/workspaces/workspaceProvider";
@@ -95,6 +96,7 @@ export default function AppLayout() {
 function DesktopLayout() {
     const { theme } = useUnistyles();
     const insets = useSafeAreaInsets();
+    const appReady = useConfigStore((s) => s.config.appReady);
     const initialSidebarCollapsed = React.useMemo(() => panelStateRead(SIDEBAR_KEY, true), []);
     const sidebarWidth = useSharedValue(initialSidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH);
     const labelsOpacity = useSharedValue(initialSidebarCollapsed ? 0 : 1);
@@ -141,25 +143,29 @@ function DesktopLayout() {
             <LayoutScreen name="index" />
             <LayoutScreen name="[workspace]" dangerouslySingular={workspaceRouteSingularId} />
             <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
-                <WorkspaceStrip style={{ paddingTop: 18 + insets.top, paddingBottom: 8 + insets.bottom }} />
-                <Animated.View
-                    style={[
-                        styles.sidebarCard,
-                        sidebarAnimatedStyle,
-                        {
-                            ...cardMargins,
-                            backgroundColor: theme.colors.surface,
-                            boxShadow: cardShadow
-                        }
-                    ]}
-                >
-                    <AppSidebar
-                        onToggleCollapse={toggleSidebar}
-                        labelsOpacity={labelsOpacity}
-                        sidebarWidth={sidebarWidth}
-                        collapsed={sidebarCollapsed}
-                    />
-                </Animated.View>
+                {appReady && (
+                    <WorkspaceStrip style={{ paddingTop: 18 + insets.top, paddingBottom: 8 + insets.bottom }} />
+                )}
+                {appReady && (
+                    <Animated.View
+                        style={[
+                            styles.sidebarCard,
+                            sidebarAnimatedStyle,
+                            {
+                                ...cardMargins,
+                                backgroundColor: theme.colors.surface,
+                                boxShadow: cardShadow
+                            }
+                        ]}
+                    >
+                        <AppSidebar
+                            onToggleCollapse={toggleSidebar}
+                            labelsOpacity={labelsOpacity}
+                            sidebarWidth={sidebarWidth}
+                            collapsed={sidebarCollapsed}
+                        />
+                    </Animated.View>
+                )}
                 <View
                     style={[
                         styles.contentCard,
@@ -168,19 +174,25 @@ function DesktopLayout() {
                 >
                     <Navigator.Slot />
                 </View>
-                <Animated.View
-                    style={[
-                        styles.chatCard,
-                        chatAnimatedStyle,
-                        {
-                            ...cardMargins,
-                            backgroundColor: theme.colors.surface,
-                            boxShadow: cardShadow
-                        }
-                    ]}
-                >
-                    <ChatPanel onToggleCollapse={toggleChat} labelsOpacity={chatLabelsOpacity} panelWidth={chatWidth} />
-                </Animated.View>
+                {appReady && (
+                    <Animated.View
+                        style={[
+                            styles.chatCard,
+                            chatAnimatedStyle,
+                            {
+                                ...cardMargins,
+                                backgroundColor: theme.colors.surface,
+                                boxShadow: cardShadow
+                            }
+                        ]}
+                    >
+                        <ChatPanel
+                            onToggleCollapse={toggleChat}
+                            labelsOpacity={chatLabelsOpacity}
+                            panelWidth={chatWidth}
+                        />
+                    </Animated.View>
+                )}
             </View>
         </Navigator>
     );
@@ -190,6 +202,7 @@ function DesktopLayout() {
 function MobileLayout() {
     const { theme } = useUnistyles();
     const insets = useSafeAreaInsets();
+    const appReady = useConfigStore((s) => s.config.appReady);
     const [drawerOpen, setDrawerOpen] = React.useState(false);
 
     const openDrawer = React.useCallback(() => setDrawerOpen(true), []);
@@ -204,6 +217,21 @@ function MobileLayout() {
         ),
         [closeDrawer]
     );
+
+    // When sidebars are hidden, render content directly without the drawer wrapper
+    if (!appReady) {
+        return (
+            <Navigator>
+                <LayoutScreen name="index" />
+                <LayoutScreen name="[workspace]" dangerouslySingular={workspaceRouteSingularId} />
+                <View style={[styles.mobileRoot, { backgroundColor: theme.colors.surfaceContainerLow }]}>
+                    <View style={styles.content}>
+                        <Navigator.Slot />
+                    </View>
+                </View>
+            </Navigator>
+        );
+    }
 
     return (
         <Navigator>

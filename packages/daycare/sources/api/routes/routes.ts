@@ -13,6 +13,7 @@ import type { ObservationLogRepository } from "../../storage/observationLogRepos
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import type { WorkspaceMembersRepository } from "../../storage/workspaceMembersRepository.js";
 import { agentsRouteHandle } from "./agents/agentsRoutes.js";
+import { configRouteHandle } from "./config/configRoutes.js";
 import type { TokenStatsFetchOptions } from "./costs/costsRoutes.js";
 import { costsRouteHandle } from "./costs/costsRoutes.js";
 import { databasesRouteHandle } from "./databases/databasesRoutes.js";
@@ -75,6 +76,13 @@ export async function apiRouteHandle(
     pathname: string,
     context: ApiRouteContext
 ): Promise<boolean> {
+    if (pathname === "/config") {
+        return configRouteHandle(request, response, pathname, {
+            ctx: context.ctx,
+            users: context.users,
+            sendJson: context.sendJson
+        });
+    }
     if (pathname.startsWith("/profile")) {
         return profileRouteHandle(request, response, pathname, {
             ctx: context.ctx,

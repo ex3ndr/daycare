@@ -12,6 +12,7 @@ export type SyncStoreCallbacks = {
     onAgentCreated: (payload: Partial<AgentListItem> & { agentId: string }) => void;
     onAgentUpdated: (payload: { agentId: string; updatedAt?: number } & Partial<AgentListItem>) => void;
     onAgentDeleted: (agentId: string) => void;
+    onConfigurationSync: (configuration: { homeReady: boolean; appReady: boolean }) => void;
     onRefetch: () => void;
 };
 
@@ -89,6 +90,9 @@ export function syncStoreCreate(callbacks: SyncStoreCallbacks) {
                     break;
                 case "agent.sync.deleted":
                     callbacks.onAgentDeleted(event.payload.agentId);
+                    break;
+                case "user.configuration.sync":
+                    callbacks.onConfigurationSync(event.payload.configuration);
                     break;
             }
         }
