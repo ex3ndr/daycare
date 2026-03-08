@@ -15,6 +15,7 @@ describe("workspaceSystemEnsure", () => {
                 workspaceOwnerId: null,
                 firstName: "System",
                 lastName: "Workspace",
+                emoji: "❌",
                 systemPrompt: null,
                 configuration: {
                     homeReady: true,

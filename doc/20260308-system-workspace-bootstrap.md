@@ -4,6 +4,7 @@ Daycare now bootstraps a reserved ownerless `##system##` workspace during engine
 
 - The workspace is created only when the `##system##` nametag is missing.
 - It is stored as a normal workspace user with `workspaceOwnerId = null`.
+- It is created with the `❌` emoji.
 - Its initial configuration enables `homeReady` and `appReady`.
 - It does not set a custom workspace `systemPrompt`.
 - The normal startup user bootstrap then creates its home and default documents.

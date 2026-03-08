@@ -435,6 +435,7 @@ describe("Engine workspace registration", () => {
 
             expect(workspace.isWorkspace).toBe(true);
             expect(workspace.workspaceOwnerId).toBeNull();
+            expect(workspace.emoji).toBe("❌");
             expect(workspace.systemPrompt).toBeNull();
             expect(workspace.configuration).toEqual({
                 homeReady: true,
