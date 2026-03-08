@@ -1,4 +1,4 @@
 export type UserConfiguration = {
-    showHome: boolean;
-    showApp: boolean;
+    homeReady: boolean;
+    appReady: boolean;
 };

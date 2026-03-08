@@ -87,7 +87,7 @@ describe("userProfileUpdateTool", () => {
             const result = await tool.execute(
                 {
                     configuration: {
-                        showHome: true
+                        homeReady: true
                     }
                 },
                 contextBuild(created.id, storage, {
@@ -99,16 +99,16 @@ describe("userProfileUpdateTool", () => {
             );
 
             expect(result.typedResult.configuration).toEqual({
-                showHome: true,
-                showApp: false
+                homeReady: true,
+                appReady: false
             });
             expect(eventCalls).toEqual([
                 {
                     type: USER_CONFIGURATION_SYNC_EVENT,
                     payload: {
                         configuration: {
-                            showHome: true,
-                            showApp: false
+                            homeReady: true,
+                            appReady: false
                         }
                     },
                     userId: created.id

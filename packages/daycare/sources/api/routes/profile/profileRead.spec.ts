@@ -17,8 +17,8 @@ describe("profileRead", () => {
                 systemPrompt: "prompt",
                 memory: true,
                 configuration: {
-                    showHome: true,
-                    showApp: false
+                    homeReady: true,
+                    appReady: false
                 },
                 nametag: "ada",
                 connectorKeys: [{ connectorKey: "email:ada@example.com" }, { connectorKey: "telegram:123" }]
@@ -39,8 +39,8 @@ describe("profileRead", () => {
                 systemPrompt: "prompt",
                 memory: true,
                 configuration: {
-                    showHome: true,
-                    showApp: false
+                    homeReady: true,
+                    appReady: false
                 },
                 nametag: "ada",
                 emails: ["ada@example.com"]

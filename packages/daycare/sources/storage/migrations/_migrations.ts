@@ -52,5 +52,9 @@ export const migrations: Migration[] = [
     {
         name: "20260308090000_user_configuration",
         fileName: "20260308090000_user_configuration.sql"
+    },
+    {
+        name: "20260308093000_user_configuration_ready_flags",
+        fileName: "20260308093000_user_configuration_ready_flags.sql"
     }
 ];

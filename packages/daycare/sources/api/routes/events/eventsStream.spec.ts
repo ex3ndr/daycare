@@ -82,8 +82,8 @@ describe("eventsStream", () => {
         const { response } = streamCreate("user-1", {
             initialEvents: [
                 userConfigurationSyncEventBuild("user-1", {
-                    showHome: true,
-                    showApp: false
+                    homeReady: true,
+                    appReady: false
                 })
             ]
         });
@@ -133,7 +133,7 @@ describe("eventsStream", () => {
             eventFilter: (event) => event.userId === "caller-1"
         });
 
-        eventBus.emit("user.configuration.sync", { configuration: { showHome: true, showApp: false } }, "caller-1");
+        eventBus.emit("user.configuration.sync", { configuration: { homeReady: true, appReady: false } }, "caller-1");
         eventBus.emit("agent.updated", { agentId: "a1" }, "workspace-1");
 
         expect(response.chunks).toHaveLength(2);

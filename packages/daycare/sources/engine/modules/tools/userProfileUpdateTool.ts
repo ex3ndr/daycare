@@ -19,8 +19,8 @@ const schema = Type.Object(
         configuration: Type.Optional(
             Type.Object(
                 {
-                    showHome: Type.Optional(Type.Boolean()),
-                    showApp: Type.Optional(Type.Boolean())
+                    homeReady: Type.Optional(Type.Boolean()),
+                    appReady: Type.Optional(Type.Boolean())
                 },
                 { additionalProperties: false }
             )
@@ -40,8 +40,8 @@ const resultSchema = Type.Object(
         country: Type.Union([Type.String(), Type.Null()]),
         timezone: Type.Union([Type.String(), Type.Null()]),
         configuration: Type.Object({
-            showHome: Type.Boolean(),
-            showApp: Type.Boolean()
+            homeReady: Type.Boolean(),
+            appReady: Type.Boolean()
         }),
         nametag: Type.String()
     },

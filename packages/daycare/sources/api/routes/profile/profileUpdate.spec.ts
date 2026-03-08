@@ -16,8 +16,8 @@ describe("profileUpdate", () => {
             systemPrompt: null,
             memory: false,
             configuration: {
-                showHome: false,
-                showApp: false
+                homeReady: false,
+                appReady: false
             },
             nametag: "ada",
             connectorKeys: []
@@ -50,8 +50,8 @@ describe("profileUpdate", () => {
                 systemPrompt: null,
                 memory: true,
                 configuration: {
-                    showHome: false,
-                    showApp: false
+                    homeReady: false,
+                    appReady: false
                 },
                 nametag: "ada",
                 emails: []
@@ -75,8 +75,8 @@ describe("profileUpdate", () => {
             systemPrompt: "prompt",
             memory: true,
             configuration: {
-                showHome: false,
-                showApp: true
+                homeReady: false,
+                appReady: true
             },
             nametag: "ada",
             connectorKeys: []
@@ -109,8 +109,8 @@ describe("profileUpdate", () => {
                 systemPrompt: "prompt",
                 memory: true,
                 configuration: {
-                    showHome: false,
-                    showApp: true
+                    homeReady: false,
+                    appReady: true
                 },
                 nametag: "ada",
                 emails: []
@@ -130,8 +130,8 @@ describe("profileUpdate", () => {
             systemPrompt: null,
             memory: false,
             configuration: {
-                showHome: false,
-                showApp: true
+                homeReady: false,
+                appReady: true
             },
             nametag: "ada",
             connectorKeys: []
@@ -152,7 +152,7 @@ describe("profileUpdate", () => {
             eventBus,
             body: {
                 configuration: {
-                    showHome: true
+                    homeReady: true
                 }
             }
         });
@@ -169,8 +169,8 @@ describe("profileUpdate", () => {
                 systemPrompt: null,
                 memory: false,
                 configuration: {
-                    showHome: true,
-                    showApp: true
+                    homeReady: true,
+                    appReady: true
                 },
                 nametag: "ada",
                 emails: []
@@ -180,8 +180,8 @@ describe("profileUpdate", () => {
             "user-1",
             expect.objectContaining({
                 configuration: {
-                    showHome: true,
-                    showApp: true
+                    homeReady: true,
+                    appReady: true
                 }
             })
         );
@@ -189,8 +189,8 @@ describe("profileUpdate", () => {
             USER_CONFIGURATION_SYNC_EVENT,
             {
                 configuration: {
-                    showHome: true,
-                    showApp: true
+                    homeReady: true,
+                    appReady: true
                 }
             },
             "user-1"
@@ -210,8 +210,8 @@ describe("profileUpdate", () => {
                 systemPrompt: null,
                 memory: false,
                 configuration: {
-                    showHome: false,
-                    showApp: false
+                    homeReady: false,
+                    appReady: false
                 },
                 nametag: "ada",
                 connectorKeys: []
@@ -247,9 +247,9 @@ describe("profileUpdate", () => {
             profileUpdate({
                 ctx,
                 users,
-                body: { configuration: { showHome: "yes" } }
+                body: { configuration: { homeReady: "yes" } }
             })
-        ).resolves.toEqual({ ok: false, error: "configuration.showHome must be a boolean." });
+        ).resolves.toEqual({ ok: false, error: "configuration.homeReady must be a boolean." });
 
         await expect(
             profileUpdate({

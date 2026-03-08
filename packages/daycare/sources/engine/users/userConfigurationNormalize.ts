@@ -1,8 +1,8 @@
 import type { UserConfiguration } from "./userConfigurationTypes.js";
 
 const USER_CONFIGURATION_DEFAULT: UserConfiguration = {
-    showHome: false,
-    showApp: false
+    homeReady: false,
+    appReady: false
 };
 
 /**
@@ -16,7 +16,7 @@ export function userConfigurationNormalize(input: unknown): UserConfiguration {
 
     const value = input as Record<string, unknown>;
     return {
-        showHome: value.showHome === true,
-        showApp: value.showApp === true
+        homeReady: value.homeReady === true,
+        appReady: value.appReady === true
     };
 }

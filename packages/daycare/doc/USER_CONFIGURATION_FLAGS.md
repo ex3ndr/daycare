@@ -6,15 +6,15 @@ Initial shape:
 
 ```json
 {
-    "showHome": false,
-    "showApp": false
+    "homeReady": false,
+    "appReady": false
 }
 ```
 
 Behavior:
 
-- `showHome`: switches between onboarding-style home and the real home view.
-- `showApp`: controls whether navigation chrome such as sidebars is visible.
+- `homeReady`: switches between onboarding-style home and the real home view.
+- `appReady`: controls whether navigation chrome such as sidebars is visible.
 - Missing or malformed stored values normalize back to `false`.
 - `POST /profile/update` accepts partial `configuration` updates and merges them into the current value.
 - `GET /events` always emits the latest configuration snapshot on connect, then forwards live `user.configuration.sync` updates.

@@ -47,7 +47,7 @@ export const usersTable = pgTable(
         configuration: jsonb("configuration")
             .$type<UserConfiguration>()
             .notNull()
-            .default(sql`'{"showHome": false, "showApp": false}'::jsonb`),
+            .default(sql`'{"homeReady": false, "appReady": false}'::jsonb`),
         nametag: text("nametag").notNull(),
         emoji: text("emoji")
     },
