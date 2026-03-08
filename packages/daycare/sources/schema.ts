@@ -171,6 +171,30 @@ export const tasksTable = pgTable(
     ]
 );
 
+export const todosTable = pgTable(
+    "todos",
+    {
+        id: text("id").notNull(),
+        workspaceId: text("workspace_id").notNull(),
+        parentId: text("parent_id"),
+        title: text("title").notNull(),
+        description: text("description").notNull().default(""),
+        status: text("status").notNull().default("unstarted"),
+        rank: text("rank").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
+        createdAt: bigint("created_at", { mode: "number" }).notNull(),
+        updatedAt: bigint("updated_at", { mode: "number" }).notNull()
+    },
+    (table) => [
+        primaryKey({ columns: [table.workspaceId, table.id, table.version] }),
+        check("todos_status_valid", sql`${table.status} IN ('draft', 'unstarted', 'started', 'finished', 'abandoned')`),
+        index("idx_todos_workspace_parent_rank").on(table.workspaceId, table.parentId, table.rank),
+        index("idx_todos_workspace_valid_to").on(table.workspaceId, table.validTo)
+    ]
+);
+
 export const documentsTable = pgTable(
     "documents",
     {
@@ -700,6 +724,7 @@ export const schema = {
     sessionHistoryTable,
     inboxTable,
     tasksTable,
+    todosTable,
     documentsTable,
     fragmentsTable,
     documentReferencesTable,
