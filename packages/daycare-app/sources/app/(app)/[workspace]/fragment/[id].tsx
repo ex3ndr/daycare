@@ -4,16 +4,23 @@ import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { ItemList } from "@/components/ItemList";
 import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceModalWrapper } from "@/components/WorkspaceModalWrapper";
 import { FragmentBusyIndicator } from "@/fragments/FragmentBusyIndicator";
 import { fragmentsRegistry } from "@/fragments/registry";
 import { useFragmentPython } from "@/fragments/useFragmentPython";
 import { useFragmentsStore } from "@/modules/fragments/fragmentsContext";
-import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 export default function FragmentDetailScreen() {
+    return (
+        <WorkspaceModalWrapper>
+            <FragmentDetailContent />
+        </WorkspaceModalWrapper>
+    );
+}
+
+function FragmentDetailContent() {
     const { theme } = useUnistyles();
     const { id } = useLocalSearchParams<{ id: string }>();
-    useWorkspace();
 
     const fragment = useFragmentsStore((s) => s.fragments.find((f) => f.id === id) ?? null);
     const fragmentPython = useFragmentPython((fragment?.spec as Spec | null) ?? null);

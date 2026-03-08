@@ -3,12 +3,21 @@ import * as React from "react";
 import { ActivityIndicator, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceModalWrapper } from "@/components/WorkspaceModalWrapper";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useTasksStore } from "@/modules/tasks/tasksContext";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { RoutineDetailPanel } from "@/views/routines/RoutineDetailPanel";
 
 export default function RoutineDetailScreen() {
+    return (
+        <WorkspaceModalWrapper>
+            <RoutineDetailContent />
+        </WorkspaceModalWrapper>
+    );
+}
+
+function RoutineDetailContent() {
     const { theme } = useUnistyles();
     const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -19,7 +28,6 @@ export default function RoutineDetailScreen() {
     const detailLoading = useTasksStore((s) => s.detailLoading);
     const task = useTasksStore((s) => s.tasks.find((t) => t.id === id));
 
-    // Select the task on mount, clear on unmount.
     React.useEffect(() => {
         if (baseUrl && token && id) {
             selectTask(baseUrl, token, workspaceId, id);

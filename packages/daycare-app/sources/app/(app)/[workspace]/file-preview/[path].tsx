@@ -4,6 +4,7 @@ import * as React from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceModalWrapper } from "@/components/WorkspaceModalWrapper";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { filesFetchPreview } from "@/modules/files/filesFetchPreview";
 import { filesPathDecode } from "@/modules/files/filesPathEncode";
@@ -13,6 +14,14 @@ import { filesFormatSize } from "@/views/files/filesFormatSize";
 import { ImageViewer } from "@/views/files/ImageViewer";
 
 export default function FilePreviewScreen() {
+    return (
+        <WorkspaceModalWrapper>
+            <FilePreviewContent />
+        </WorkspaceModalWrapper>
+    );
+}
+
+function FilePreviewContent() {
     const { theme } = useUnistyles();
     const { path: encodedPath } = useLocalSearchParams<{ path: string }>();
     const baseUrl = useAuthStore((s) => s.baseUrl);
