@@ -7,13 +7,15 @@ import { FragmentBusyIndicator } from "@/fragments/FragmentBusyIndicator";
 import { fragmentsRegistry } from "@/fragments/registry";
 import { useFragmentPython } from "@/fragments/useFragmentPython";
 import { useFragmentsStore } from "@/modules/fragments/fragmentsContext";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 export default function ShareFragmentScreen() {
     const { theme } = useUnistyles();
     const { id } = useLocalSearchParams<{ id: string }>();
+    const { workspaceId } = useWorkspace();
 
     const fragment = useFragmentsStore((s) => s.fragments.find((f) => f.id === id) ?? null);
-    const fragmentPython = useFragmentPython((fragment?.spec as Spec | null) ?? null);
+    const fragmentPython = useFragmentPython((fragment?.spec as Spec | null) ?? null, workspaceId);
 
     if (!fragment) return null;
 

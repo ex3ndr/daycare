@@ -1,7 +1,6 @@
 import { createStateStore, type Spec, type StateStore } from "@json-render/react-native";
 import * as React from "react";
 import { useAuthStore } from "@/modules/auth/authContext";
-import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { montyFragmentExternalFunctionsBuild } from "./montyFragmentExternalFunctionsBuild";
 import { montyFragmentHandlersBuild } from "./montyFragmentHandlersBuild";
 import { montyFragmentAction, montyFragmentInit } from "./montyFragmentRun";
@@ -23,10 +22,9 @@ export type FragmentPythonState =
  * Resolves a fragment's state store and custom action handlers, including optional Python init/action code.
  * Expects: spec is a fragment spec object or null while the fragment record is unavailable.
  */
-export function useFragmentPython(spec: FragmentPythonSpec | null): FragmentPythonState {
+export function useFragmentPython(spec: FragmentPythonSpec | null, workspaceId: string): FragmentPythonState {
     const baseUrl = useAuthStore((state) => state.baseUrl);
     const token = useAuthStore((state) => state.token);
-    const { workspaceId } = useWorkspace();
     const fallbackState = React.useMemo(() => fragmentStateNormalize(spec?.state), [spec]);
     const code = typeof spec?.code === "string" && spec.code.trim() ? spec.code : null;
     const fallbackStore = React.useMemo(() => createStateStore(fallbackState), [fallbackState]);

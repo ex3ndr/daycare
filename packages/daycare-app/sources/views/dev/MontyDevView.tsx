@@ -297,7 +297,8 @@ function montyProbeSubtitle(result: ProbeResult | null): string {
 }
 
 function FragmentPythonExample(props: { spec: Spec & { code?: string } }) {
-    const fragmentPython = useFragmentPython(props.spec);
+    const { workspaceId } = useWorkspace();
+    const fragmentPython = useFragmentPython(props.spec, workspaceId);
 
     if (fragmentPython.status === "error") {
         return (
