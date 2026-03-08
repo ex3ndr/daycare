@@ -1,177 +1,118 @@
 import * as React from "react";
-import { Text, View } from "react-native";
-import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { Platform, Text, View } from "react-native";
+import { useUnistyles } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
-import { TodoList } from "@/views/todos/TodoList";
-import type { TodoItem } from "@/views/todos/todoTypes";
+import { ReorderingList } from "@/components/ReorderingList";
+import { ReorderingList2 } from "@/components/ReorderingList2";
+import { useAuthStore } from "@/modules/auth/authContext";
+import { type TodoTreeItem, todosFetch } from "@/modules/todos/todosFetch";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
+import { TodoCardView } from "@/views/todos/TodoCardView";
 
-const INITIAL_TODOS: TodoItem[] = [
-    {
-        id: "hdr-daycare",
-        title: "# Daycare",
-        done: false,
-        favorite: false
-    },
-    {
-        id: "todo-setup",
-        title: "Audit current onboarding flow",
-        done: false,
-        favorite: true,
-        notes: "Collect baseline screenshots for web and mobile.",
-        due: { date: "2026-03-03" },
-        hint: "Capture key states",
-        subtasks: [
-            { id: "sub-1", text: "Entry screen", rank: "a", done: true },
-            { id: "sub-2", text: "Profile screen", rank: "b", done: false }
-        ]
-    },
-    {
-        id: "todo-copy",
-        title: "Prepare launch copy",
-        done: false,
-        favorite: false,
-        hint: "Keep it concise"
-    },
-    {
-        id: "hdr-product",
-        title: "# Product",
-        done: false,
-        favorite: false
-    },
-    {
-        id: "todo-release",
-        title: "Review release checklist",
-        done: true,
-        favorite: false,
-        due: { date: "2026-03-01" },
-        magic: true,
-        magicProcessed: false
-    },
-    {
-        id: "todo-dnd",
-        title: "Test drag-and-drop interactions",
-        done: false,
-        favorite: true,
-        notes: "Validate long-press reorder on touch devices."
-    }
-];
+const POLL_INTERVAL = 5000;
+const ITEM_HEIGHT = Platform.OS === "web" ? 44 : 52;
+const ITEM_GAP = Platform.OS === "web" ? 4 : 6;
+
+type FlatTodoEntry = {
+    item: TodoTreeItem;
+    depth: number;
+};
 
 /**
- * Todos screen with local-only state so the list UI works without backend wiring.
- * Includes task editing, toggles, and drag-and-drop reordering in the center panel.
+ * Computes depth for each todo in a preordered flat tree.
+ * Expects: items are in depth-first preorder from the /todos/tree endpoint.
+ */
+function todosComputeDepths(items: TodoTreeItem[]): FlatTodoEntry[] {
+    const depthMap = new Map<string, number>();
+    const result: FlatTodoEntry[] = [];
+
+    for (const item of items) {
+        const depth = item.parentId ? (depthMap.get(item.parentId) ?? 0) + 1 : 0;
+        depthMap.set(item.id, depth);
+        result.push({ item, depth });
+    }
+
+    return result;
+}
+
+/**
+ * Todos screen with server-backed data, polling every 5 seconds.
+ * Read-only view with animated reordering when data changes.
  */
 export function TodosView() {
     const { theme } = useUnistyles();
-    const [todos, setTodos] = React.useState<TodoItem[]>(INITIAL_TODOS);
-    const [selectedId, setSelectedId] = React.useState<string | null>(null);
+    const baseUrl = useAuthStore((s) => s.baseUrl);
+    const token = useAuthStore((s) => s.token);
+    const { workspaceId } = useWorkspace();
 
-    const handleToggleTodo = React.useCallback((id: string, done: boolean) => {
-        setTodos((prev) => prev.map((todo) => (todo.id === id ? { ...todo, done } : todo)));
-    }, []);
+    const [entries, setEntries] = React.useState<FlatTodoEntry[]>([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
 
-    const handleToggleFavorite = React.useCallback((id: string, favorite: boolean) => {
-        setTodos((prev) => prev.map((todo) => (todo.id === id ? { ...todo, favorite } : todo)));
-    }, []);
+    const fetchTodos = React.useCallback(async () => {
+        if (!baseUrl || !token) return;
+        try {
+            const todos = await todosFetch(baseUrl, token, workspaceId);
+            setEntries(todosComputeDepths(todos));
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to fetch todos");
+        } finally {
+            setLoading(false);
+        }
+    }, [baseUrl, token, workspaceId]);
 
-    const handleUpdateTodo = React.useCallback((id: string, title: string) => {
-        setTodos((prev) => prev.map((todo) => (todo.id === id ? { ...todo, title } : todo)));
-    }, []);
+    // Initial fetch + polling
+    React.useEffect(() => {
+        void fetchTodos();
+        const interval = setInterval(() => void fetchTodos(), POLL_INTERVAL);
+        return () => clearInterval(interval);
+    }, [fetchTodos]);
 
-    const handleReorderTodo = React.useCallback((id: string, newIndex: number) => {
-        setTodos((prev) => {
-            const fromIndex = prev.findIndex((todo) => todo.id === id);
-            if (fromIndex === -1 || fromIndex === newIndex) {
-                return prev;
-            }
+    const renderItem = React.useCallback(
+        (entry: FlatTodoEntry) => <TodoCardView item={entry.item} depth={entry.depth} />,
+        []
+    );
 
-            const clampedIndex = Math.max(0, Math.min(prev.length - 1, newIndex));
-            const next = [...prev];
-            const [item] = next.splice(fromIndex, 1);
-            next.splice(clampedIndex, 0, item);
-            return next;
-        });
-    }, []);
+    const keyExtractor = React.useCallback((entry: FlatTodoEntry) => entry.item.id, []);
 
-    const selectedTodo = React.useMemo(() => {
-        return selectedId ? todos.find((todo) => todo.id === selectedId) || null : null;
-    }, [selectedId, todos]);
+    const header = <View style={{ paddingTop: 12 }} />;
+
+    const ReorderComponent = Platform.OS === "web" ? ReorderingList : ReorderingList2;
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-            <PageHeader title="Todo List UI" subtitle="No backend wiring" icon="checklist" />
-            <View style={styles.inner}>
-                <TodoList
-                    todos={todos}
-                    onToggleTodo={handleToggleTodo}
-                    onToggleFavorite={handleToggleFavorite}
-                    onUpdateTodo={handleUpdateTodo}
-                    onReorderTodo={handleReorderTodo}
-                    onTaskPress={setSelectedId}
-                    editable={true}
-                    footer={
-                        selectedTodo ? (
-                            <View
-                                style={[
-                                    styles.selection,
-                                    {
-                                        backgroundColor: theme.colors.surfaceContainer,
-                                        borderColor: theme.colors.outlineVariant
-                                    }
-                                ]}
-                            >
-                                <Text style={[styles.selectionTitle, { color: theme.colors.onSurface }]}>
-                                    Selected task
-                                </Text>
-                                <Text style={[styles.selectionValue, { color: theme.colors.onSurfaceVariant }]}>
-                                    {selectedTodo.title}
-                                </Text>
-                            </View>
-                        ) : (
-                            <View
-                                style={[
-                                    styles.selection,
-                                    {
-                                        backgroundColor: theme.colors.surfaceContainer,
-                                        borderColor: theme.colors.outlineVariant
-                                    }
-                                ]}
-                            >
-                                <Text style={[styles.selectionValue, { color: theme.colors.onSurfaceVariant }]}>
-                                    Select a task
-                                </Text>
-                            </View>
-                        )
-                    }
-                />
+        <View style={{ flex: 1, backgroundColor: theme.colors.surface }}>
+            <PageHeader title="Todos" icon="checklist" />
+            <View style={{ flex: 1, maxWidth: theme.layout.maxWidth, width: "100%", alignSelf: "center" }}>
+                {loading && entries.length === 0 ? (
+                    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                        <Text style={{ color: theme.colors.onSurfaceVariant, fontFamily: "IBMPlexSans-Regular" }}>
+                            Loading...
+                        </Text>
+                    </View>
+                ) : error && entries.length === 0 ? (
+                    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                        <Text style={{ color: theme.colors.error, fontFamily: "IBMPlexSans-Regular" }}>{error}</Text>
+                    </View>
+                ) : entries.length === 0 ? (
+                    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                        <Text style={{ color: theme.colors.onSurfaceVariant, fontFamily: "IBMPlexSans-Regular" }}>
+                            No todos yet
+                        </Text>
+                    </View>
+                ) : (
+                    <View style={{ flexGrow: 1, flexBasis: 0 }}>
+                        <ReorderComponent
+                            items={entries}
+                            renderItem={renderItem}
+                            keyExtractor={keyExtractor}
+                            itemHeight={ITEM_HEIGHT}
+                            gap={ITEM_GAP}
+                            header={header}
+                        />
+                    </View>
+                )}
             </View>
         </View>
     );
 }
-
-const styles = StyleSheet.create((theme) => ({
-    container: {
-        flex: 1
-    },
-    inner: {
-        flex: 1,
-        maxWidth: theme.layout.maxWidth,
-        width: "100%",
-        alignSelf: "center"
-    },
-    selection: {
-        marginHorizontal: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        paddingHorizontal: 12,
-        paddingVertical: 10
-    },
-    selectionTitle: {
-        fontFamily: "IBMPlexSans-SemiBold",
-        fontSize: 12,
-        marginBottom: 4
-    },
-    selectionValue: {
-        fontFamily: "IBMPlexSans-Regular",
-        fontSize: 13
-    }
-}));
