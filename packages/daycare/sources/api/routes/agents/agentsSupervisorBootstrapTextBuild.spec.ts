@@ -3,8 +3,8 @@ import { agentsSupervisorBootstrapTextBuild } from "./agentsSupervisorBootstrapT
 
 describe("agentsSupervisorBootstrapTextBuild", () => {
     it("wraps bootstrap text in supervisor instructions", () => {
-        expect(agentsSupervisorBootstrapTextBuild("Ship the bugfix.")).toContain(
-            "<bootstrap_request>\nShip the bugfix."
-        );
+        const result = agentsSupervisorBootstrapTextBuild("Ship the bugfix.");
+        expect(result).toContain("<bootstrap_request>\nShip the bugfix.");
+        expect(result).toContain("todo_create");
     });
 });
