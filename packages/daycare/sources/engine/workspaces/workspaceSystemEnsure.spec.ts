@@ -9,7 +9,7 @@ describe("workspaceSystemEnsure", () => {
         try {
             await workspaceSystemEnsure({ storage });
 
-            const workspace = await storage.users.findByNametag("system");
+            const workspace = await storage.users.findByNametag("##system##");
             expect(workspace).toMatchObject({
                 isWorkspace: true,
                 workspaceOwnerId: null,
@@ -30,12 +30,12 @@ describe("workspaceSystemEnsure", () => {
         const storage = await storageOpenTest();
         try {
             await workspaceSystemEnsure({ storage });
-            const first = await storage.users.findByNametag("system");
+            const first = await storage.users.findByNametag("##system##");
 
             await workspaceSystemEnsure({ storage });
 
-            const second = await storage.users.findByNametag("system");
-            const systemUsers = (await storage.users.findMany()).filter((user) => user.nametag === "system");
+            const second = await storage.users.findByNametag("##system##");
+            const systemUsers = (await storage.users.findMany()).filter((user) => user.nametag === "##system##");
             expect(second?.id).toBe(first?.id);
             expect(systemUsers).toHaveLength(1);
         } finally {

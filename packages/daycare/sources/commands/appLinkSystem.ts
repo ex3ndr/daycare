@@ -22,7 +22,7 @@ export async function appLinkSystemCommand(options: AppLinkOptions): Promise<voi
         });
         await workspaceSystemEnsure({ storage });
 
-        const workspace = await storage.users.findByNametag("system");
+        const workspace = await storage.users.findByNametag("##system##");
         if (!workspace?.isWorkspace) {
             throw new Error("System workspace not found.");
         }

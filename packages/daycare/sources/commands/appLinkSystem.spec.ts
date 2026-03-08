@@ -32,6 +32,7 @@ describe("appLinkSystemCommand", () => {
     const storageOpenMock = vi.mocked(storageOpen);
     const databaseCloseMock = vi.mocked(databaseClose);
     const appLinkCommandMock = vi.mocked(appLinkCommand);
+    let findByNametagMock = vi.fn();
 
     beforeEach(() => {
         process.exitCode = undefined;
@@ -49,12 +50,13 @@ describe("appLinkSystemCommand", () => {
                 autoMigrate: true
             }
         } as never);
+        findByNametagMock = vi.fn(async () => ({
+            id: "workspace-system-1",
+            isWorkspace: true
+        }));
         storageOpenMock.mockResolvedValue({
             users: {
-                findByNametag: vi.fn(async () => ({
-                    id: "workspace-system-1",
-                    isWorkspace: true
-                }))
+                findByNametag: findByNametagMock
             },
             connection: { close: vi.fn(async () => undefined) }
         } as never);
@@ -74,6 +76,7 @@ describe("appLinkSystemCommand", () => {
                 users: expect.any(Object)
             })
         });
+        expect(findByNametagMock).toHaveBeenCalledWith("##system##");
         expect(appLinkCommandMock).toHaveBeenCalledWith("workspace-system-1", {
             json: true,
             settings: "/tmp/settings.json"
@@ -82,9 +85,10 @@ describe("appLinkSystemCommand", () => {
     });
 
     it("sets non-zero exit code when the system workspace cannot be resolved", async () => {
+        findByNametagMock = vi.fn(async () => null);
         storageOpenMock.mockResolvedValue({
             users: {
-                findByNametag: vi.fn(async () => null)
+                findByNametag: findByNametagMock
             },
             connection: { close: vi.fn(async () => undefined) }
         } as never);

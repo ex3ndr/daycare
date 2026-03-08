@@ -423,7 +423,7 @@ describe("Engine workspace registration", () => {
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             await engine.start();
 
-            const workspace = await engine.storage.users.findByNametag("system");
+            const workspace = await engine.storage.users.findByNametag("##system##");
             if (!workspace) {
                 throw new Error("Expected system workspace.");
             }

@@ -1,10 +1,10 @@
 import type { Storage } from "../../storage/storage.js";
 
-const SYSTEM_WORKSPACE_NAMETAG = "system";
+const SYSTEM_WORKSPACE_NAMETAG = "##system##";
 
 /**
- * Ensures the reserved ownerless `system` workspace exists for engine startup.
- * Expects: migrations are applied and no non-workspace user occupies the `system` nametag.
+ * Ensures the reserved ownerless `##system##` workspace exists for engine startup.
+ * Expects: migrations are applied and no non-workspace user occupies the reserved nametag.
  */
 export async function workspaceSystemEnsure(input: { storage: Pick<Storage, "users"> }): Promise<void> {
     const existing = await input.storage.users.findByNametag(SYSTEM_WORKSPACE_NAMETAG);

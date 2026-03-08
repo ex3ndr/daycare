@@ -1,8 +1,8 @@
 # System Workspace Bootstrap
 
-Daycare now bootstraps a reserved ownerless `system` workspace during engine startup.
+Daycare now bootstraps a reserved ownerless `##system##` workspace during engine startup.
 
-- The workspace is created only when the `system` nametag is missing.
+- The workspace is created only when the `##system##` nametag is missing.
 - It is stored as a normal workspace user with `workspaceOwnerId = null`.
 - Its initial configuration enables `homeReady` and `appReady`.
 - It does not set a custom workspace `systemPrompt`.
@@ -11,7 +11,7 @@ Daycare now bootstraps a reserved ownerless `system` workspace during engine sta
 ```mermaid
 flowchart TD
     A[Engine.start] --> B[workspaceSystemEnsure]
-    B -->|system missing| C[Create workspace user nametag=system]
+    B -->|system missing| C[Create workspace user nametag=##system##]
     B -->|system exists| D[Validate ownerless workspace]
     C --> E[users.findMany]
     D --> E
