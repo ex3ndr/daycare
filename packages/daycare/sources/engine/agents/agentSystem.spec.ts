@@ -518,6 +518,40 @@ describe("AgentSystem", () => {
         }
     });
 
+    it("does not derive personUserId from workspace parent ownership", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
+        try {
+            const harness = await harnessCreate(dir);
+            const owner = await harness.agentSystem.ownerCtxEnsure();
+            const workspace = await harness.storage.users.create({
+                id: "workspace-1",
+                isWorkspace: true,
+                parentUserId: owner.userId,
+                nametag: "workspace-1"
+            });
+            await harness.storage.agents.create({
+                id: "workspace-agent-1",
+                userId: workspace.id,
+                kind: "connector",
+                type: "user",
+                descriptor: { type: "user", connector: "telegram", userId: "workspace-user", channelId: "workspace" },
+                path: agentPath(`/${workspace.id}/telegram`),
+                activeSessionId: null,
+                permissions: { workingDir: "/tmp", writeDirs: ["/tmp"] },
+                lifecycle: "active",
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            const ctx = await harness.agentSystem.contextForAgentId("workspace-agent-1");
+
+            expect(ctx?.userId).toBe(workspace.id);
+            expect(ctx?.personUserId).toBeUndefined();
+        } finally {
+            await tempDirRemove(dir);
+        }
+    });
+
     it("inherits parent userId for subagents", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
         try {

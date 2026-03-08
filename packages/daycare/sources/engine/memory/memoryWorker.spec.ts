@@ -169,6 +169,59 @@ describe("MemoryWorker", () => {
         }
     });
 
+    it("does not resolve personUserId from workspace ownership", async () => {
+        const { storage, ownerId } = await createTestStorage();
+        try {
+            await storage.users.create({
+                id: "workspace-1",
+                isWorkspace: true,
+                parentUserId: ownerId,
+                memory: true,
+                createdAt: 2,
+                updatedAt: 2,
+                nametag: "workspace-1"
+            });
+            await storage.agents.create({
+                id: "workspace-agent-1",
+                userId: "workspace-1",
+                kind: "connector",
+                type: "user",
+                descriptor: { type: "user", connector: "web", userId: "u2", channelId: "ch2" },
+                activeSessionId: null,
+                permissions,
+                lifecycle: "active",
+                createdAt: 2,
+                updatedAt: 2
+            });
+            const sessionId = await storage.sessions.create({ agentId: "workspace-agent-1", createdAt: 1000 });
+            await storage.agents.update("workspace-agent-1", { activeSessionId: sessionId });
+            await storage.history.append(sessionId, {
+                type: "user_message",
+                at: 1001,
+                text: "workspace hi",
+                files: []
+            });
+            const maxId = await storage.history.maxId(sessionId);
+            await storage.sessions.invalidate(sessionId, maxId!);
+
+            const postFn = vi.fn().mockResolvedValue(undefined);
+            const worker = createWorker(storage, postFn, 20);
+            worker.start();
+
+            await expectEventuallyReal(() => {
+                expect(postFn).toHaveBeenCalledOnce();
+            });
+
+            const [ctx] = postFn.mock.calls[0];
+            expect(ctx.userId).toBe("workspace-1");
+            expect(ctx.personUserId).toBeUndefined();
+
+            worker.stop();
+        } finally {
+            storage.connection.close();
+        }
+    });
+
     it("skips sessions belonging to memory-agent descriptors", async () => {
         vi.useFakeTimers();
         const { storage, ownerId } = await createTestStorage();

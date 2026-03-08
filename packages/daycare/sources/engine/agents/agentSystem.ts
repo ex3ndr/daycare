@@ -1163,10 +1163,10 @@ export class AgentSystem {
 
     private async personUserIdResolve(userId: string): Promise<string | undefined> {
         const user = await this.storage.users.findById(userId);
-        if (!user) {
+        if (!user || user.isWorkspace) {
             return undefined;
         }
-        return user.parentUserId ?? user.id;
+        return user.id;
     }
 
     async ownerCtxEnsure(): Promise<Context> {

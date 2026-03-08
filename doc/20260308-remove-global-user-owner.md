@@ -13,7 +13,7 @@
 - Legacy global fallback files are only applied when an existing personal user is present; migrations do not create one.
 - Workspace secret management, workspace-targeted secret tools, and workspace skill installs now require the caller to own the target workspace.
 - `workspace_create` is available to personal users, not workspace users.
-- Foreground agent contexts now carry both `userId` and `personUserId`; workspace foreground agents keep workspace scope while pointing `personUserId` at their owning person user.
+- Foreground agent contexts now carry `personUserId` only for non-workspace users; workspace foreground agents keep workspace scope and leave `personUserId` unset.
 
 ```mermaid
 flowchart TD
@@ -26,5 +26,5 @@ flowchart TD
     H[Generic user tables] --> I[No global isOwner field]
     J[Workspace members response] --> K[Owner row keeps isOwner=true]
     L[Foreground agent context] --> M[userId = workspace or person scope]
-    L --> N[personUserId = owning person user]
+    L --> N[personUserId only for personal users]
 ```
