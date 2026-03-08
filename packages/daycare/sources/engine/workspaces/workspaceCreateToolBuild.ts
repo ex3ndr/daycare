@@ -68,7 +68,11 @@ export function workspaceCreateToolBuild(workspaces: WorkspacesFacade): ToolDefi
         returns: workspaceCreateToolReturns,
         visibleByDefault: (context) => context.config.foreground === true,
         execute: async (args, toolContext, toolCall) => {
-            const caller = await toolContext.agentSystem.storage.users.findById(toolContext.ctx.userId);
+            const personUserId = toolContext.ctx.personUserId?.trim() ?? "";
+            if (!personUserId) {
+                throw new Error("Workspace creation requires personUserId.");
+            }
+            const caller = await toolContext.agentSystem.storage.users.findById(personUserId);
             if (!caller || caller.isWorkspace) {
                 throw new Error("Only personal users can create workspaces.");
             }
@@ -96,9 +100,9 @@ export function workspaceCreateToolBuild(workspaces: WorkspacesFacade): ToolDefi
                 throw new Error("Workspace emoji is required.");
             }
 
-            const created = await workspaces.create(toolContext.ctx.userId, config);
-            await workspaces.discover(toolContext.ctx.userId);
-            toolContext.agentSystem.refreshSandboxesForUserId(toolContext.ctx.userId);
+            const created = await workspaces.create(personUserId, config);
+            await workspaces.discover(personUserId);
+            toolContext.agentSystem.refreshSandboxesForUserId(personUserId);
 
             const summary = `Workspace created: ${created.nametag} (${created.userId}).`;
             const toolMessage: ToolResultMessage = {

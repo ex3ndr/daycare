@@ -33,7 +33,7 @@ describe("workspaceCreateToolBuild", () => {
                     memory: undefined
                 },
                 {
-                    ctx: contextForAgent({ userId: owner.id, agentId: "agent-1" }),
+                    ctx: contextForAgent({ userId: owner.id, personUserId: owner.id, agentId: "agent-1" }),
                     agentSystem: {
                         storage,
                         refreshSandboxesForUserId
@@ -85,6 +85,49 @@ describe("workspaceCreateToolBuild", () => {
                     },
                     {
                         ctx: contextForAgent({ userId: "workspace-1", agentId: "agent-1" }),
+                        agentSystem: {
+                            storage,
+                            refreshSandboxesForUserId: vi.fn(() => 0)
+                        }
+                    } as never,
+                    { id: "call-1", name: "workspace_create" }
+                )
+            ).rejects.toThrow("Workspace creation requires personUserId.");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("rejects when personUserId points to a workspace user", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const owner = await storage.users.findById("sy45wijd1hmr03ef2wu7busv");
+            if (!owner) {
+                throw new Error("Owner user not found.");
+            }
+            await storage.users.create({
+                id: "workspace-1",
+                isWorkspace: true,
+                parentUserId: owner.id,
+                nametag: "workspace-1",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            const tool = workspaceCreateToolBuild({
+                create: vi.fn(),
+                discover: vi.fn(async () => [])
+            });
+
+            await expect(
+                tool.execute(
+                    {
+                        firstName: "todo",
+                        bio: "todo",
+                        systemPrompt: "prompt",
+                        emoji: "📝"
+                    },
+                    {
+                        ctx: contextForAgent({ userId: owner.id, personUserId: "workspace-1", agentId: "agent-1" }),
                         agentSystem: {
                             storage,
                             refreshSandboxesForUserId: vi.fn(() => 0)
