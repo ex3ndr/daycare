@@ -435,13 +435,15 @@ describe("Engine workspace registration", () => {
 
             expect(workspace.isWorkspace).toBe(true);
             expect(workspace.workspaceOwnerId).toBeNull();
+            expect(workspace.systemPrompt).toBeNull();
             expect(workspace.configuration).toEqual({
                 homeReady: true,
                 appReady: true
             });
             expect(document?.slug).toBe("document");
             expect(system?.slug).toBe("system");
-            expect(soul?.body).toBe("You are the Daycare system workspace. Act as the internal superuser workspace.\n");
+            expect(typeof soul?.body).toBe("string");
+            expect(soul?.body.length).toBeGreaterThan(0);
 
             await engine.shutdown();
         } finally {

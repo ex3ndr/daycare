@@ -5,6 +5,7 @@ Daycare now bootstraps a reserved ownerless `system` workspace during engine sta
 - The workspace is created only when the `system` nametag is missing.
 - It is stored as a normal workspace user with `workspaceOwnerId = null`.
 - Its initial configuration enables `homeReady` and `appReady`.
+- It does not set a custom workspace `systemPrompt`.
 - The normal startup user bootstrap then creates its home and default documents.
 
 ```mermaid
@@ -16,5 +17,5 @@ flowchart TD
     D --> E
     E --> F[userHomeEnsure for each user]
     F --> G[userDocumentsEnsure for each user]
-    G --> H[workspace soul seeded from systemPrompt]
+    G --> H[default workspace documents ensured]
 ```

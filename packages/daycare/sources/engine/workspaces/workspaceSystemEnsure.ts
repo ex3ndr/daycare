@@ -21,7 +21,6 @@ export async function workspaceSystemEnsure(input: { storage: Pick<Storage, "use
             lastName: "Workspace",
             bio: "Internal superuser workspace.",
             about: "Ownerless workspace bootstrapped automatically at engine startup.",
-            systemPrompt: "You are the Daycare system workspace. Act as the internal superuser workspace.",
             memory: false,
             configuration: {
                 homeReady: true,

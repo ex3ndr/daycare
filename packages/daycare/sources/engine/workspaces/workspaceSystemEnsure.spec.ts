@@ -15,6 +15,7 @@ describe("workspaceSystemEnsure", () => {
                 workspaceOwnerId: null,
                 firstName: "System",
                 lastName: "Workspace",
+                systemPrompt: null,
                 configuration: {
                     homeReady: true,
                     appReady: true
