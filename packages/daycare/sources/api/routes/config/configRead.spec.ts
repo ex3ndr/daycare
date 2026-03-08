@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { contextForUser } from "../../../engine/agents/context.js";
 import { configRead } from "./configRead.js";
 
 describe("configRead", () => {
     it("returns normalized config when user exists", async () => {
         const result = await configRead({
-            ctx: { userId: "u1" },
+            ctx: contextForUser({ userId: "u1" }),
             users: {
                 findById: async () => ({
                     configuration: { homeReady: true, appReady: false }
@@ -19,7 +20,7 @@ describe("configRead", () => {
 
     it("returns defaults when user not found", async () => {
         const result = await configRead({
-            ctx: { userId: "missing" },
+            ctx: contextForUser({ userId: "missing" }),
             users: { findById: async () => null }
         });
         expect(result).toEqual({
@@ -30,7 +31,7 @@ describe("configRead", () => {
 
     it("normalizes malformed configuration", async () => {
         const result = await configRead({
-            ctx: { userId: "u1" },
+            ctx: contextForUser({ userId: "u1" }),
             users: {
                 findById: async () => ({
                     configuration: { homeReady: "yes", appReady: 1 } as unknown as {

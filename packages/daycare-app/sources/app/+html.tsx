@@ -61,12 +61,13 @@ export default function Root({ children }: { children: React.ReactNode }) {
     );
 }
 
+// Match surfaceContainerLow from the app theme to avoid a flash on load
 const responsiveBackground = `
 body {
-  background-color: #fff;
+  background-color: #F9F3E9;
 }
 @media (prefers-color-scheme: dark) {
   body {
-    background-color: #000;
+    background-color: #1C1A15;
   }
 }`;

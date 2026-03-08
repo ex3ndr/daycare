@@ -4,6 +4,7 @@ import * as React from "react";
 import { Pressable, ScrollView, type StyleProp, Text, View, type ViewStyle } from "react-native";
 import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { useConfigStore } from "@/modules/config/configContext";
 import { type AppMode, appModes } from "@/modules/navigation/appModes";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
@@ -145,6 +146,7 @@ export const WorkspaceStrip = React.memo<{ onNavigate?: () => void; style?: Styl
         const pathname = usePathname();
         const workspaces = useWorkspacesStore((s) => s.workspaces);
         const { workspaceId } = useWorkspace();
+        const appReady = useConfigStore((s) => s.config.appReady);
         const activeMode = extractModeFromPath(pathname);
         const wsPrefix = workspaceId ? `/${workspaceId}` : "";
 
@@ -191,28 +193,32 @@ export const WorkspaceStrip = React.memo<{ onNavigate?: () => void; style?: Styl
                             />
                         ))}
                 </View>
-                <View style={stripStyles.stripBottom}>
-                    {stripBottomSegments.map((seg) => {
-                        const isActive = activeMode === seg.mode;
-                        return (
-                            <Pressable
-                                key={seg.mode}
-                                testID={`sidebar-${seg.mode}`}
-                                onPress={() => handleModePress(seg.mode)}
-                                style={[
-                                    stripStyles.workspaceButton,
-                                    isActive && { backgroundColor: theme.colors.primaryContainer }
-                                ]}
-                            >
-                                <Octicons
-                                    name={seg.icon}
-                                    size={16}
-                                    color={isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant}
-                                />
-                            </Pressable>
-                        );
-                    })}
-                </View>
+                {appReady && (
+                    <View style={stripStyles.stripBottom}>
+                        {stripBottomSegments.map((seg) => {
+                            const isActive = activeMode === seg.mode;
+                            return (
+                                <Pressable
+                                    key={seg.mode}
+                                    testID={`sidebar-${seg.mode}`}
+                                    onPress={() => handleModePress(seg.mode)}
+                                    style={[
+                                        stripStyles.workspaceButton,
+                                        isActive && { backgroundColor: theme.colors.primaryContainer }
+                                    ]}
+                                >
+                                    <Octicons
+                                        name={seg.icon}
+                                        size={16}
+                                        color={
+                                            isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant
+                                        }
+                                    />
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+                )}
             </View>
         );
     }

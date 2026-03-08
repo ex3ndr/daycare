@@ -97,7 +97,7 @@ export default function RootLayout() {
                 colors: {
                     ...DarkTheme.colors,
                     primary: theme.colors.primary,
-                    background: theme.colors.surfaceDim,
+                    background: theme.colors.surfaceContainerLow,
                     card: theme.colors.surfaceContainer,
                     text: theme.colors.onSurface,
                     border: theme.colors.outlineVariant,
