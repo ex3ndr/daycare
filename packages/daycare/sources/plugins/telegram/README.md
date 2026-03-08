@@ -21,6 +21,7 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 - `polling` (optional): enable/disable polling (default true).
 - `clearWebhook` (optional): clear Telegram webhook before polling (default true).
 - `statePath` (optional): override `lastUpdateId` storage path (default `${dataDir}/telegram-offset.json`).
+- `enableDrafts` (optional): enables editable Telegram live drafts for long-running replies. Defaults to `false`.
 
 ## Auth
 - Onboarding prompts for the bot token and stores it in the auth store under the plugin instance id.
@@ -43,7 +44,7 @@ It normalizes incoming messages into `ConnectorMessage` objects and sends respon
 - Supports inline callback buttons (`callback_data`) and URL buttons on text messages.
 - Renders Daycare app-origin buttons as Telegram `web_app` buttons in private chats so they open inside the Mini App window with Telegram auth context.
 - Falls back to normal `url` buttons for group chats and non-Daycare origins.
-- Supports editable text drafts for long-running foreground replies, so Telegram users see live text + tool progress in a single message while `run_python` continues.
+- Supports optional editable text drafts for long-running foreground replies when `enableDrafts` is `true`, so Telegram users see live text + tool progress in a single message while `run_python` continues.
 - Supports typing indicators and emoji reactions.
 
 ## Slash commands

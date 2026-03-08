@@ -28,6 +28,7 @@ export type TelegramConnectorOptions = {
     token: string;
     allowedUids: string[];
     mode?: "public" | "private";
+    enableDrafts?: boolean;
     sendReplies?: boolean;
     sendRepliesInGroups?: boolean;
     polling?: boolean;
@@ -92,6 +93,7 @@ export class TelegramConnector implements Connector {
     private webAppUrl: string | null = null;
     private allowedUids: Set<string>;
     private mode: "public" | "private";
+    private enableDrafts: boolean;
     private sendReplies: boolean;
     private sendRepliesInGroups: boolean;
     private shuttingDown = false;
@@ -110,6 +112,7 @@ export class TelegramConnector implements Connector {
         this.fileStore = options.fileStore;
         this.dataDir = options.dataDir;
         this.mode = options.mode ?? "private";
+        this.enableDrafts = options.enableDrafts ?? false;
         this.sendReplies = options.sendReplies ?? false;
         this.sendRepliesInGroups = options.sendRepliesInGroups ?? true;
         this.allowedUids = new Set(options.allowedUids.map((uid) => String(uid)));
@@ -342,6 +345,9 @@ export class TelegramConnector implements Connector {
     }
 
     async createDraft(targetId: string, message: ConnectorMessage): Promise<ConnectorDraft | null> {
+        if (!this.enableDrafts) {
+            return null;
+        }
         if (!this.isAllowedTarget(targetId, "createDraft")) {
             return null;
         }
@@ -370,6 +376,9 @@ export class TelegramConnector implements Connector {
     }
 
     async resumeDraft(targetId: string, reference: ConnectorDraftReference): Promise<ConnectorDraft | null> {
+        if (!this.enableDrafts) {
+            return null;
+        }
         if (!this.isAllowedTarget(targetId, "resumeDraft")) {
             return null;
         }

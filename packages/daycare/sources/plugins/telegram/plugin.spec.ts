@@ -162,8 +162,9 @@ describe("telegram plugin settings schema", () => {
         const parsed = plugin.settingsSchema.parse({
             mode: "private",
             allowedUids: ["123"]
-        }) as { sendReplies: boolean; sendRepliesInGroups: boolean };
+        }) as { enableDrafts: boolean; sendReplies: boolean; sendRepliesInGroups: boolean };
 
+        expect(parsed.enableDrafts).toBe(false);
         expect(parsed.sendReplies).toBe(false);
         expect(parsed.sendRepliesInGroups).toBe(true);
     });
@@ -629,6 +630,23 @@ describe("telegram plugin web app menu", () => {
         expect(connector).toBeDefined();
         expect(connector?.options).toMatchObject({
             sendReplies: false
+        });
+    });
+
+    it("passes enableDrafts=true to connector options when enabled", async () => {
+        const dataDir = await tempDirCreate();
+        const built = pluginApiBuild(dataDir, {
+            settings: {
+                enableDrafts: true
+            }
+        });
+
+        const instance = await plugin.create(built.api as never);
+        await instance.load?.();
+        const connector = connectorInstances[0];
+        expect(connector).toBeDefined();
+        expect(connector?.options).toMatchObject({
+            enableDrafts: true
         });
     });
 });

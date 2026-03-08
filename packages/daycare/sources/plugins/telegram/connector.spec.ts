@@ -908,6 +908,7 @@ describe("TelegramConnector file uploads", () => {
         const connector = new TelegramConnector({
             token: "token",
             allowedUids: ["123"],
+            enableDrafts: true,
             sendReplies: true,
             polling: false,
             clearWebhook: false,
@@ -957,6 +958,7 @@ describe("TelegramConnector file uploads", () => {
         const connector = new TelegramConnector({
             token: "token",
             allowedUids: ["123"],
+            enableDrafts: true,
             polling: false,
             clearWebhook: false,
             statePath: null,
@@ -988,6 +990,33 @@ describe("TelegramConnector file uploads", () => {
             message_id: 101,
             parse_mode: "HTML"
         });
+    });
+
+    it("disables drafts by default", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await expect(
+            connector.createDraft?.("123", {
+                text: "Working",
+                replyToMessageId: "77"
+            })
+        ).resolves.toBeNull();
+        await expect(connector.resumeDraft?.("123", { type: "telegram", messageId: "101" })).resolves.toBeNull();
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        expect(bot!.sendMessage).not.toHaveBeenCalled();
+        expect(bot!.editMessageText).not.toHaveBeenCalled();
     });
 
     it("allows private composite targets and sends to chat id", async () => {
