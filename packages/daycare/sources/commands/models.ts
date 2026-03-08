@@ -80,7 +80,8 @@ const RULE_KIND_CHOICES = [
     { value: "subuser", name: "Subuser", description: "Sub-user agents" },
     { value: "sub", name: "Sub", description: "Subagents" },
     { value: "memory", name: "Memory", description: "Memory agents" },
-    { value: "search", name: "Search", description: "Search agents" }
+    { value: "search", name: "Search", description: "Search agents" },
+    { value: "supervisor", name: "Supervisor", description: "Singleton supervisor agents" }
 ];
 
 export type ModelAssignmentTarget = { type: "role"; key: ModelRoleKey } | { type: "flavor"; key: string };

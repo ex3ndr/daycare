@@ -1172,7 +1172,7 @@ export class Engine {
     }
 }
 
-const RESERVED_USER_SCOPE_SEGMENTS = new Set(["agent", "cron", "task", "subuser", "app"]);
+const RESERVED_USER_SCOPE_SEGMENTS = new Set(["agent", "cron", "task", "subuser", "app", "supervisor"]);
 
 type ConnectorPath = {
     ownerId: string;

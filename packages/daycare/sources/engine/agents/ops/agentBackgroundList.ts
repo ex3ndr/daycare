@@ -53,5 +53,8 @@ function agentNameResolve(kind: AgentKind, name: string | null): string | null {
     if (kind === "app") {
         return "app";
     }
+    if (kind === "supervisor") {
+        return "supervisor";
+    }
     return null;
 }

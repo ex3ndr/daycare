@@ -126,7 +126,7 @@ const modelRoleRuleSetSchema = z.object({
     id: z.string().min(1).optional(),
     role: z.enum(["user", "memory", "memorySearch", "subagent", "task"]).nullable().optional(),
     kind: z
-        .enum(["connector", "agent", "app", "cron", "task", "subuser", "sub", "memory", "search"])
+        .enum(["connector", "agent", "app", "cron", "task", "subuser", "sub", "memory", "search", "supervisor"])
         .nullable()
         .optional(),
     userId: z.string().min(1).nullable().optional(),
@@ -151,7 +151,7 @@ const messageContextSchema = z.object({
         .optional()
 });
 const agentCreationConfigSchema = z.object({
-    kind: z.enum(["connector", "agent", "app", "cron", "task", "subuser", "sub", "memory", "search"]),
+    kind: z.enum(["connector", "agent", "app", "cron", "task", "subuser", "sub", "memory", "search", "supervisor"]),
     modelRole: z.enum(["user", "memory", "memorySearch", "subagent", "task"]).nullable().optional(),
     connectorName: z.string().nullable().optional(),
     parentAgentId: z.string().nullable().optional(),

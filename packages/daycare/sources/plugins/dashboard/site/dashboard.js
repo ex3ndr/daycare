@@ -96,6 +96,9 @@ function formatAgentType(path) {
   if (segments[1] === "subuser") {
     return "subuser";
   }
+  if (segments[1] === "supervisor") {
+    return "supervisor";
+  }
   return "connection";
 }
 

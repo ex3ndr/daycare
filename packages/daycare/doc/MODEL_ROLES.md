@@ -22,11 +22,11 @@ Each rule has optional matchers. A rule matches when **all** its non-null matche
 | Matcher   | Matches against         | Values |
 |-----------|------------------------|--------|
 | `role`    | Agent's model role key | `user`, `memory`, `memorySearch`, `subagent`, `task` |
-| `kind`    | Agent's kind           | `connector`, `agent`, `app`, `cron`, `task`, `subuser`, `sub`, `memory`, `search` |
+| `kind`    | Agent's kind           | `connector`, `agent`, `app`, `cron`, `task`, `subuser`, `sub`, `memory`, `search`, `supervisor` |
 | `userId`  | Owner user ID          | Any user ID string |
 | `agentId` | Specific agent ID      | Any agent ID string |
 
-**Relationship:** `role` is derived from `kind` (e.g., connector/agent/app → `user`, sub → `subagent`). Use `role` for broad targeting, `kind` for narrow.
+**Relationship:** `role` is derived from `kind` (e.g., connector/agent/app/supervisor → `user`, sub → `subagent`). Use `role` for broad targeting, `kind` for narrow.
 
 ## Specificity
 
