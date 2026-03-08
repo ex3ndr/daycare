@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import * as React from "react";
 import { Platform, Text, View } from "react-native";
 import { useUnistyles } from "react-native-unistyles";
@@ -41,6 +42,7 @@ function todosComputeDepths(items: TodoTreeItem[]): FlatTodoEntry[] {
  */
 export function TodosView() {
     const { theme } = useUnistyles();
+    const router = useRouter();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
     const { workspaceId } = useWorkspace();
@@ -76,6 +78,13 @@ export function TodosView() {
 
     const keyExtractor = React.useCallback((entry: FlatTodoEntry) => entry.item.id, []);
 
+    const handleItemPress = React.useCallback(
+        (_entry: FlatTodoEntry, key: string) => {
+            router.push(`/${workspaceId}/todo/${key}`);
+        },
+        [router, workspaceId]
+    );
+
     const header = <View style={{ paddingTop: 12 }} />;
 
     const ReorderComponent = Platform.OS === "web" ? ReorderingList : ReorderingList2;
@@ -108,6 +117,7 @@ export function TodosView() {
                             keyExtractor={keyExtractor}
                             itemHeight={ITEM_HEIGHT}
                             gap={ITEM_GAP}
+                            onItemPress={handleItemPress}
                             header={header}
                         />
                     </View>
