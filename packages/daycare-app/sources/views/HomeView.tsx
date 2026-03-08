@@ -1,6 +1,7 @@
 import { Octicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import * as React from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
@@ -12,12 +13,13 @@ import Animated, {
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Card } from "@/components/Card";
 import { HtmlView } from "@/components/HtmlView";
+import { ItemList } from "@/components/ItemList";
 import { useAgentsStore } from "@/modules/agents/agentsContext";
 import type { AgentListItem } from "@/modules/agents/agentsTypes";
-import { useObservationsStore } from "@/modules/observations/observationsContext";
-import type { ObservationItem } from "@/modules/observations/observationsTypes";
-import { useTasksStore } from "@/modules/tasks/tasksContext";
-import type { CronTriggerSummary, TaskSummary } from "@/modules/tasks/tasksTypes";
+import { useAuthStore } from "@/modules/auth/authContext";
+import { useFragmentsStore } from "@/modules/fragments/fragmentsContext";
+import type { FragmentListItem } from "@/modules/fragments/fragmentsTypes";
+import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 // --- Simulated data ---
 
@@ -150,19 +152,6 @@ function timeFormat(timestamp: number): string {
     return `${Math.floor(diff / 86_400_000)}d`;
 }
 
-function obsIcon(type: string): "pulse" | "alert" | "info" | "zap" {
-    if (type === "error" || type === "warn") return "alert";
-    if (type === "action") return "zap";
-    return "info";
-}
-
-function uptimeFormat(seconds: number): string {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
-
 // --- Sub-components ---
 
 function ThinkingDots({ color }: { color: string }) {
@@ -292,55 +281,79 @@ function NeuralLogBox({
     );
 }
 
-function ActivityFeedBox({
-    observations,
+function RecentFragmentsBox({
+    fragments,
+    loading,
+    error,
+    workspaceId,
     theme
 }: {
-    observations: ObservationItem[];
+    fragments: FragmentListItem[];
+    loading: boolean;
+    error: string | null;
+    workspaceId: string | null;
     theme: ReturnType<typeof useUnistyles>["theme"];
 }) {
-    const pulseDot = useSharedValue(0.4);
-
-    React.useEffect(() => {
-        pulseDot.value = withRepeat(
-            withSequence(withTiming(1, { duration: 1000 }), withTiming(0.4, { duration: 1000 })),
-            -1
-        );
-    }, [pulseDot]);
-
-    const pulseStyle = useAnimatedStyle(() => ({ opacity: pulseDot.value }));
-    const recent = observations.slice(0, 8);
+    const router = useRouter();
+    const recentFragments = React.useMemo(
+        () => [...fragments].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6),
+        [fragments]
+    );
 
     return (
-        <Card variant="filled" size="sm" style={styles.feedBox}>
-            <View style={styles.feedHeader}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Animated.View style={[styles.liveDot, { backgroundColor: theme.colors.error }, pulseStyle]} />
-                    <Text style={[styles.boxLabel, { color: theme.colors.onSurfaceVariant }]}>LIVE FEED</Text>
-                </View>
-                <Octicons name="pulse" size={14} color={theme.colors.onSurfaceVariant} />
+        <Card variant="filled" size="md" style={styles.recentFragmentsBox}>
+            <View style={styles.recentFragmentsHeader}>
+                <Text style={[styles.boxLabel, { color: theme.colors.onSurfaceVariant }]}>RECENT FRAGMENTS</Text>
+                <Octicons name="note" size={14} color={theme.colors.onSurfaceVariant} />
             </View>
-            {recent.length === 0 ? (
-                <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
-                    Waiting for activity...
-                </Text>
+            {loading && recentFragments.length === 0 ? (
+                <View style={styles.centeredState}>
+                    <ActivityIndicator color={theme.colors.primary} />
+                </View>
+            ) : error && recentFragments.length === 0 ? (
+                <Text style={[styles.emptyText, { color: theme.colors.error }]}>{error}</Text>
+            ) : recentFragments.length === 0 ? (
+                <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>No fragments yet</Text>
             ) : (
-                <View style={styles.feedList}>
-                    {recent.map((obs) => (
-                        <View key={obs.id} style={styles.feedRow}>
-                            <Octicons
-                                name={obsIcon(obs.type)}
-                                size={12}
-                                color={theme.colors.onSurfaceVariant}
-                                style={{ marginTop: 2 }}
-                            />
-                            <Text style={[styles.feedMessage, { color: theme.colors.onSurface }]} numberOfLines={1}>
-                                {obs.message}
+                <View style={styles.recentFragmentsList}>
+                    {recentFragments.map((fragment, index) => (
+                        <Pressable
+                            key={fragment.id}
+                            style={[
+                                styles.fragmentRow,
+                                index > 0 && { borderTopWidth: 1, borderTopColor: theme.colors.outlineVariant }
+                            ]}
+                            disabled={!workspaceId}
+                            onPress={() => {
+                                if (!workspaceId) {
+                                    return;
+                                }
+                                router.push(`/${workspaceId}/fragment/${fragment.id}`);
+                            }}
+                        >
+                            <View style={styles.fragmentRowTop}>
+                                <Text
+                                    style={[styles.fragmentTitle, { color: theme.colors.onSurface }]}
+                                    numberOfLines={1}
+                                >
+                                    {fragment.title}
+                                </Text>
+                                <Text style={[styles.fragmentTime, { color: theme.colors.onSurfaceVariant }]}>
+                                    {timeFormat(fragment.updatedAt)}
+                                </Text>
+                            </View>
+                            {fragment.description ? (
+                                <Text
+                                    style={[styles.fragmentDescription, { color: theme.colors.onSurfaceVariant }]}
+                                    numberOfLines={2}
+                                >
+                                    {fragment.description}
+                                </Text>
+                            ) : null}
+                            <Text style={[styles.fragmentMeta, { color: theme.colors.tertiary }]}>
+                                v{fragment.version} · kit {fragment.kitVersion}
                             </Text>
-                            <Text style={[styles.feedTime, { color: theme.colors.onSurfaceVariant }]}>
-                                {timeFormat(obs.createdAt)}
-                            </Text>
-                        </View>
+                        </Pressable>
                     ))}
                 </View>
             )}
@@ -348,151 +361,32 @@ function ActivityFeedBox({
     );
 }
 
-function TasksBox({
-    tasks,
-    cronTriggers,
-    theme
-}: {
-    tasks: TaskSummary[];
-    cronTriggers: CronTriggerSummary[];
-    theme: ReturnType<typeof useUnistyles>["theme"];
-}) {
-    const recentlyRan = React.useMemo(
-        () =>
-            tasks
-                .filter((t) => t.lastExecutedAt !== null)
-                .sort((a, b) => (b.lastExecutedAt ?? 0) - (a.lastExecutedAt ?? 0))
-                .slice(0, 3),
-        [tasks]
-    );
-
-    const scheduled = React.useMemo(() => {
-        const taskIds = new Set(cronTriggers.map((c) => c.taskId));
-        return tasks.filter((t) => taskIds.has(t.id)).slice(0, 3);
-    }, [tasks, cronTriggers]);
-
-    const cronByTask = React.useMemo(() => {
-        const map = new Map<string, string>();
-        for (const c of cronTriggers) {
-            if (!map.has(c.taskId)) map.set(c.taskId, c.schedule);
-        }
-        return map;
-    }, [cronTriggers]);
-
-    return (
-        <Card variant="filled" size="sm" style={styles.tasksBox}>
-            <View style={styles.feedHeader}>
-                <Text style={[styles.boxLabel, { color: theme.colors.onSurfaceVariant }]}>ROUTINES</Text>
-                <Octicons name="clock" size={14} color={theme.colors.onSurfaceVariant} />
-            </View>
-            {tasks.length === 0 ? (
-                <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>No tasks yet</Text>
-            ) : (
-                <>
-                    {recentlyRan.length > 0 && (
-                        <View style={styles.taskSection}>
-                            <Text style={[styles.taskSectionLabel, { color: theme.colors.onSurfaceVariant }]}>
-                                RECENTLY RAN
-                            </Text>
-                            {recentlyRan.map((t) => (
-                                <View key={t.id} style={styles.taskRow}>
-                                    <Octicons
-                                        name="check-circle"
-                                        size={12}
-                                        color={theme.colors.tertiary}
-                                        style={{ marginTop: 2 }}
-                                    />
-                                    <Text
-                                        style={[styles.taskTitle, { color: theme.colors.onSurface }]}
-                                        numberOfLines={1}
-                                    >
-                                        {t.title}
-                                    </Text>
-                                    <Text style={[styles.feedTime, { color: theme.colors.onSurfaceVariant }]}>
-                                        {timeFormat(t.lastExecutedAt!)}
-                                    </Text>
-                                </View>
-                            ))}
-                        </View>
-                    )}
-                    {scheduled.length > 0 && (
-                        <View style={styles.taskSection}>
-                            <Text style={[styles.taskSectionLabel, { color: theme.colors.onSurfaceVariant }]}>
-                                SCHEDULED
-                            </Text>
-                            {scheduled.map((t) => (
-                                <View key={t.id} style={styles.taskRow}>
-                                    <Octicons
-                                        name="clock"
-                                        size={12}
-                                        color={theme.colors.onSurfaceVariant}
-                                        style={{ marginTop: 2 }}
-                                    />
-                                    <Text
-                                        style={[styles.taskTitle, { color: theme.colors.onSurface }]}
-                                        numberOfLines={1}
-                                    >
-                                        {t.title}
-                                    </Text>
-                                    <Text style={[styles.taskSchedule, { color: theme.colors.tertiary }]}>
-                                        {cronByTask.get(t.id) ?? ""}
-                                    </Text>
-                                </View>
-                            ))}
-                        </View>
-                    )}
-                </>
-            )}
-        </Card>
-    );
-}
-
-function SystemTicker({
-    agentCount,
-    eventCount,
-    uptime,
-    theme
-}: {
-    agentCount: number;
-    eventCount: number;
-    uptime: number;
-    theme: ReturnType<typeof useUnistyles>["theme"];
-}) {
-    return (
-        <View
-            style={[
-                styles.ticker,
-                { backgroundColor: theme.colors.surfaceContainerHigh, borderColor: theme.colors.outlineVariant }
-            ]}
-        >
-            <Text style={[styles.tickerText, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
-                {agentCount} agents online {"  ·  "}
-                {eventCount} events logged {"  ·  "}
-                uptime: {uptimeFormat(uptime)} {"  ·  "}
-                system nominal {"  ·  "}
-                have a great day
-            </Text>
-        </View>
-    );
-}
-
 // --- Main view ---
 
 /**
- * Home dashboard — bento-box layout with agent character, neural log,
- * live activity feed, task routines, and system ticker.
+ * Home dashboard with the primary agent, live neural log, and recent fragments.
  */
 export function HomeView() {
     const { theme } = useUnistyles();
+    const baseUrl = useAuthStore((s) => s.baseUrl);
+    const token = useAuthStore((s) => s.token);
+    const { workspaceId } = useWorkspace();
     const agents = useAgentsStore((s) => s.agents);
-    const observations = useObservationsStore((s) => s.observations);
-    const tasks = useTasksStore((s) => s.tasks);
-    const triggers = useTasksStore((s) => s.triggers);
+    const fragments = useFragmentsStore((s) => s.fragments);
+    const fragmentsError = useFragmentsStore((s) => s.error);
+    const fragmentsLoading = useFragmentsStore((s) => s.loading);
+    const fetchFragments = useFragmentsStore((s) => s.fetch);
 
     const primaryAgent = React.useMemo(
         () => agents.find((a) => a.lifecycle === "active") ?? agents[0] ?? null,
         [agents]
     );
+
+    React.useEffect(() => {
+        if (baseUrl && token) {
+            void fetchFragments(baseUrl, token, workspaceId);
+        }
+    }, [baseUrl, token, workspaceId, fetchFragments]);
 
     // Cycling thoughts for neural log
     const [thoughtLines, setThoughtLines] = React.useState(seedThoughts);
@@ -512,40 +406,40 @@ export function HomeView() {
         return () => clearInterval(id);
     }, []);
 
-    // Live clock for neural log header
+    // Live clock for the neural log header.
     const [clock, setClock] = React.useState(() => new Date().toLocaleTimeString());
-    const mountTime = React.useRef(Date.now());
-    const [uptime, setUptime] = React.useState(0);
     React.useEffect(() => {
         const id = setInterval(() => {
             setClock(new Date().toLocaleTimeString());
-            setUptime(Math.floor((Date.now() - mountTime.current) / 1000));
         }, 1_000);
         return () => clearInterval(id);
     }, []);
 
     return (
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-            <View style={styles.grid}>
+        <ItemList containerStyle={styles.listContent}>
+            <View style={styles.topGrid}>
                 <AgentBox agent={primaryAgent} actionText={AGENT_ACTIONS[actionIdx]} theme={theme} />
                 <NeuralLogBox lines={thoughtLines} clock={clock} theme={theme} />
-                <ActivityFeedBox observations={observations} theme={theme} />
-                <TasksBox tasks={tasks} cronTriggers={triggers.cron} theme={theme} />
             </View>
-            <SystemTicker agentCount={agents.length} eventCount={observations.length} uptime={uptime} theme={theme} />
-        </ScrollView>
+            <RecentFragmentsBox
+                fragments={fragments}
+                loading={fragmentsLoading}
+                error={fragmentsError}
+                workspaceId={workspaceId}
+                theme={theme}
+            />
+        </ItemList>
     );
 }
 
 // --- Styles ---
 
 const styles = StyleSheet.create({
-    scroll: { flex: 1 },
-    scrollContent: {
+    listContent: {
         padding: 12,
-        flexGrow: 1
+        gap: 12
     },
-    grid: {
+    topGrid: {
         flexDirection: "row",
         flexWrap: "wrap",
         gap: 12
@@ -575,41 +469,25 @@ const styles = StyleSheet.create({
     neuralLine: { fontFamily: "monospace", fontSize: 12, lineHeight: 18 },
     clockText: { fontFamily: "monospace", fontSize: 11 },
 
-    // Activity feed
-    feedBox: { flexGrow: 2, flexShrink: 1, flexBasis: "55%", minWidth: 300, height: 280 },
-    feedHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-    feedList: { flex: 1, gap: 4 },
-    feedRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-    feedMessage: { flex: 1, fontFamily: "IBMPlexSans-Regular", fontSize: 13, lineHeight: 18 },
-    feedTime: { fontFamily: "monospace", fontSize: 11, lineHeight: 18 },
-
-    // Tasks box
-    tasksBox: { flexGrow: 1, flexShrink: 1, flexBasis: "30%", minWidth: 260, height: 280 },
-    taskSection: { marginTop: 8, gap: 4 },
-    taskSectionLabel: {
-        fontFamily: "IBMPlexSans-SemiBold",
-        fontSize: 10,
-        letterSpacing: 1,
-        textTransform: "uppercase",
-        marginBottom: 2
+    // Recent fragments
+    recentFragmentsBox: { width: "100%", minHeight: 260 },
+    recentFragmentsHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 8
     },
-    taskRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-    taskTitle: { flex: 1, fontFamily: "IBMPlexSans-Regular", fontSize: 13, lineHeight: 18 },
-    taskSchedule: { fontFamily: "monospace", fontSize: 11, lineHeight: 18 },
+    recentFragmentsList: { gap: 0 },
+    fragmentRow: { paddingVertical: 14, gap: 4 },
+    fragmentRowTop: { flexDirection: "row", alignItems: "center", gap: 12 },
+    fragmentTitle: { flex: 1, fontFamily: "IBMPlexSans-SemiBold", fontSize: 16, lineHeight: 20 },
+    fragmentTime: { fontFamily: "monospace", fontSize: 11, lineHeight: 18 },
+    fragmentDescription: { fontFamily: "IBMPlexSans-Regular", fontSize: 14, lineHeight: 20 },
+    fragmentMeta: { fontFamily: "monospace", fontSize: 11, lineHeight: 18 },
+    centeredState: { minHeight: 180, alignItems: "center", justifyContent: "center" },
 
     // Shared
     boxLabel: { fontFamily: "IBMPlexSans-SemiBold", fontSize: 11, letterSpacing: 1, textTransform: "uppercase" },
     liveDot: { width: 6, height: 6, borderRadius: 3 },
-    emptyText: { fontFamily: "IBMPlexSans-Regular", fontSize: 13, fontStyle: "italic" },
-
-    // Ticker
-    ticker: {
-        marginTop: 12,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        alignItems: "center"
-    },
-    tickerText: { fontFamily: "monospace", fontSize: 12 }
+    emptyText: { fontFamily: "IBMPlexSans-Regular", fontSize: 13, fontStyle: "italic" }
 });
