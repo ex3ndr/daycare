@@ -115,7 +115,6 @@ import { taskListActive } from "./tasks/taskListActive.js";
 import { taskListAll } from "./tasks/taskListAll.js";
 import { userDocumentsEnsure } from "./users/userDocumentsEnsure.js";
 import { userHomeEnsure } from "./users/userHomeEnsure.js";
-import { userHomeMigrate } from "./users/userHomeMigrate.js";
 import { Webhooks } from "./webhook/webhooks.js";
 import { workspaceCreateToolBuild } from "./workspaces/workspaceCreateToolBuild.js";
 import { Workspaces } from "./workspaces/workspaces.js";
@@ -674,7 +673,6 @@ export class Engine {
         logger.debug("start: Engine.start() beginning");
         await this.migrationReady;
         const ownerCtx = await this.agentSystem.ownerCtxEnsure();
-        await userHomeMigrate(this.config.current, this.storage);
         const users = await this.storage.users.findMany();
         for (const user of users) {
             await userHomeEnsure(this.agentSystem.userHomeForUserId(user.id));

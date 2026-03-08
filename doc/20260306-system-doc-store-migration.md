@@ -1,5 +1,7 @@
 # System Prompt Document Store Migration
 
+Historical note: the one-time startup migration described below was removed on 2026-03-08 after rollout completed.
+
 This change moves core prompt persistence from per-user filesystem files under `~/knowledge/` into versioned documents under `~/system/`.
 
 ## What Changed
@@ -32,7 +34,7 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     participant Engine
-    participant Migrate as userHomeMigrate
+    participant Migrate as Historical startup migration
     participant FS as Legacy Filesystem
     participant Docs as Document Store
 

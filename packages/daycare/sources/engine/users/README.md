@@ -39,7 +39,6 @@ doc://system/
 
 - `userHome.ts`: `UserHome` facade for user-scoped path resolution.
 - `userHomeEnsure.ts`: creates the user directory tree for filesystem workspaces.
-- `userHomeMigrate.ts`: one-time migration of legacy prompt files into each user's system documents.
 
 ## Resolution Flow
 
@@ -53,31 +52,4 @@ flowchart TD
     B --> H[Agent files facade: home/downloads, home/desktop, home/tmp]
     A --> I[documentSystemDocsEnsure]
     I --> J[doc://system/{soul,user,agents,tools}]
-```
-
-## Migration Flow
-
-```mermaid
-sequenceDiagram
-    participant Engine
-    participant Migrate as userHomeMigrate
-    participant DB as SQLite Users
-    participant FS as Filesystem
-
-    Engine->>Migrate: start(config)
-    Migrate->>FS: check users/.migrated
-    alt marker exists
-        Migrate-->>Engine: skip
-    else no marker
-        Migrate->>DB: resolve/create owner user
-        Migrate->>DB: load all users
-        loop for each user
-            Migrate->>FS: ensure that user's UserHome
-            Migrate->>DB: ensure that user's doc://system documents
-            Migrate->>FS: read that user's home/knowledge files
-            Migrate->>DB: update that user's doc://system child documents
-        end
-        Migrate->>FS: write users/.migrated
-        Migrate-->>Engine: complete
-    end
 ```

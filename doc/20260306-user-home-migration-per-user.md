@@ -1,10 +1,12 @@
 # Per-User Prompt Migration
 
+Historical note: this migration was removed from engine startup on 2026-03-08 after all environments had been migrated.
+
 Legacy prompt migration now imports from each user's own filesystem home instead of only the owner user's home.
 
 ## What Changed
 
-- `userHomeMigrate()` now loads all users after resolving the owner record
+- The historical startup migration loaded all users after resolving the owner record
 - For each user, it ensures that user's `doc://system/*` documents exist
 - It imports legacy prompt files from `<usersDir>/<userId>/home/knowledge/{SOUL,USER,AGENTS,TOOLS}.md`
 - The old global `config.dataDir/*.md` files remain only as a fallback for the owner user
@@ -17,7 +19,7 @@ The previous migration assumed legacy prompt files only existed in the owner use
 
 ```mermaid
 flowchart TD
-    A[Engine start] --> B[Resolve or create owner user]
+    A[Historical engine start] --> B[Resolve or create owner user]
     B --> C[Load all users]
     C --> D{For each user}
     D --> E[Ensure UserHome]
