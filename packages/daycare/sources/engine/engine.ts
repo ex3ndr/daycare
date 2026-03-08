@@ -49,6 +49,7 @@ import { InferenceRouter } from "./modules/inference/router.js";
 import { ModuleRegistry } from "./modules/moduleRegistry.js";
 import { taskParameterInputsNormalize } from "./modules/tasks/taskParameterInputsNormalize.js";
 import { taskParameterValidate } from "./modules/tasks/taskParameterValidate.js";
+import { agentAskTool } from "./modules/tools/agentAskTool.js";
 import { agentCompactToolBuild } from "./modules/tools/agentCompactTool.js";
 import { agentModelSetToolBuild } from "./modules/tools/agentModelSetToolBuild.js";
 import { agentResetToolBuild } from "./modules/tools/agentResetTool.js";
@@ -765,6 +766,7 @@ export class Engine {
         this.modules.tools.register("core", todoBatchStatusToolBuild());
         this.modules.tools.register("core", buildStartBackgroundAgentTool());
         this.modules.tools.register("core", buildSendAgentMessageTool());
+        this.modules.tools.register("core", agentAskTool());
         this.modules.tools.register("core", documentSearchToolBuild());
         this.modules.tools.register("core", inferenceSummaryToolBuild(this.inferenceRouter, this.config));
         this.modules.tools.register("core", inferenceClassifyToolBuild(this.inferenceRouter, this.config));
@@ -819,7 +821,7 @@ export class Engine {
             this.modules.tools.register("core", tool);
         }
         logger.debug(
-            "register: Core tools registered: tasks, todos, topology, user_profile_update, background, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, workspaces, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, document_read, document_append, document_patch, document_write, fragment_create, fragment_read, fragment_list, fragment_update, fragment_archive"
+            "register: Core tools registered: tasks, todos, topology, user_profile_update, background, agent_ask, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, workspaces, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, document_read, document_append, document_patch, document_write, fragment_create, fragment_read, fragment_list, fragment_update, fragment_archive"
         );
 
         await this.pluginManager.preStartAll();
