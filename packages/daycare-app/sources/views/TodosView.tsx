@@ -1,4 +1,3 @@
-import { useRouter } from "expo-router";
 import * as React from "react";
 import { Platform, Text, View } from "react-native";
 import { useUnistyles } from "react-native-unistyles";
@@ -9,6 +8,7 @@ import { useAuthStore } from "@/modules/auth/authContext";
 import { type TodoTreeItem, todosFetch } from "@/modules/todos/todosFetch";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { TodoCardView } from "@/views/todos/TodoCardView";
+import { TodoDetailModal } from "@/views/todos/TodoDetailModal";
 
 const POLL_INTERVAL = 5000;
 const ITEM_HEIGHT = Platform.OS === "web" ? 44 : 52;
@@ -42,19 +42,21 @@ function todosComputeDepths(items: TodoTreeItem[]): FlatTodoEntry[] {
  */
 export function TodosView() {
     const { theme } = useUnistyles();
-    const router = useRouter();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
     const { workspaceId } = useWorkspace();
 
     const [entries, setEntries] = React.useState<FlatTodoEntry[]>([]);
+    const [allTodos, setAllTodos] = React.useState<TodoTreeItem[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
+    const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
     const fetchTodos = React.useCallback(async () => {
         if (!baseUrl || !token) return;
         try {
             const todos = await todosFetch(baseUrl, token, workspaceId);
+            setAllTodos(todos);
             setEntries(todosComputeDepths(todos));
             setError(null);
         } catch (err) {
@@ -78,11 +80,22 @@ export function TodosView() {
 
     const keyExtractor = React.useCallback((entry: FlatTodoEntry) => entry.item.id, []);
 
-    const handleItemPress = React.useCallback(
-        (_entry: FlatTodoEntry, key: string) => {
-            router.push(`/${workspaceId}/todo/${key}`);
-        },
-        [router, workspaceId]
+    const handleItemPress = React.useCallback((_entry: FlatTodoEntry, key: string) => {
+        setSelectedId(key);
+    }, []);
+
+    const handleCloseModal = React.useCallback(() => {
+        setSelectedId(null);
+    }, []);
+
+    const selectedTodo = React.useMemo(
+        () => (selectedId ? (allTodos.find((t) => t.id === selectedId) ?? null) : null),
+        [selectedId, allTodos]
+    );
+
+    const selectedChildren = React.useMemo(
+        () => (selectedId ? allTodos.filter((t) => t.parentId === selectedId) : []),
+        [selectedId, allTodos]
     );
 
     const header = <View style={{ paddingTop: 12 }} />;
@@ -123,6 +136,7 @@ export function TodosView() {
                     </View>
                 )}
             </View>
+            <TodoDetailModal todo={selectedTodo} subtasks={selectedChildren} onClose={handleCloseModal} />
         </View>
     );
 }
