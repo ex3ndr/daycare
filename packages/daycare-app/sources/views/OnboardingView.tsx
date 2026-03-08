@@ -1,15 +1,22 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { useAgentsStore } from "@/modules/agents/agentsContext";
 import { useAuthStore } from "@/modules/auth/authContext";
+import { ChatMessageList } from "@/modules/chat/ChatMessageList";
+import { ChatThinkingBar } from "@/modules/chat/ChatThinkingBar";
+import { chatSupervisorResolve } from "@/modules/chat/chatApi";
+import { useChat, useChatStore } from "@/modules/chat/chatContext";
 import { useConfigStore } from "@/modules/config/configContext";
 import { supervisorBootstrap } from "@/modules/supervisor/supervisorBootstrap";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
+const POLL_INTERVAL_MS = 3000;
+
 /**
  * Onboarding view shown when homeReady is false.
  * If bootstrap hasn't started, shows a mission input.
- * If bootstrap has started, shows a working indicator.
+ * If bootstrap has started, shows supervisor agent messages (read-only).
  */
 export function OnboardingView() {
     const { theme } = useUnistyles();
@@ -37,18 +44,7 @@ export function OnboardingView() {
     }, [mission, baseUrl, token, workspaceId]);
 
     if (bootstrapStarted) {
-        return (
-            <View style={styles.root}>
-                <View style={styles.content}>
-                    <ActivityIndicator size="large" color={theme.colors.primary} />
-                    <Text style={[styles.title, { color: theme.colors.onSurface }]}>Working on your mission</Text>
-                    <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-                        Your agent is researching and preparing tasks. This page will update automatically once
-                        everything is ready.
-                    </Text>
-                </View>
-            </View>
-        );
+        return <OnboardingSupervisorOutput />;
     }
 
     return (
@@ -109,7 +105,86 @@ export function OnboardingView() {
     );
 }
 
-const styles = StyleSheet.create({
+/**
+ * Read-only supervisor message output shown during onboarding.
+ * Resolves the supervisor agent, polls for messages, and displays them without a text input.
+ */
+function OnboardingSupervisorOutput() {
+    const { theme } = useUnistyles();
+    const { workspaceId } = useWorkspace();
+    const baseUrl = useAuthStore((s) => s.baseUrl);
+    const token = useAuthStore((s) => s.token);
+
+    const open = useChatStore((s) => s.open);
+    const poll = useChatStore((s) => s.poll);
+
+    const [supervisorAgentId, setSupervisorAgentId] = useState<string | null>(null);
+    const [resolveError, setResolveError] = useState<string | null>(null);
+
+    const session = useChat(supervisorAgentId);
+
+    const agentLifecycle = useAgentsStore((s) => {
+        if (!supervisorAgentId) return null;
+        return s.agents.find((a) => a.agentId === supervisorAgentId)?.lifecycle ?? null;
+    });
+    const thinking = agentLifecycle === "active";
+
+    // Resolve supervisor agent id and open its chat session
+    useEffect(() => {
+        if (!baseUrl || !token) return;
+        let cancelled = false;
+
+        chatSupervisorResolve(baseUrl, token, workspaceId)
+            .then((agentId) => {
+                if (cancelled) return;
+                setSupervisorAgentId(agentId);
+                void open(baseUrl, token, workspaceId, agentId);
+            })
+            .catch((e) => {
+                if (cancelled) return;
+                setResolveError(e instanceof Error ? e.message : "Failed to resolve supervisor");
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [baseUrl, token, workspaceId, open]);
+
+    // Poll for new messages
+    useEffect(() => {
+        if (!baseUrl || !token || !supervisorAgentId) return;
+
+        const interval = setInterval(() => {
+            void poll(baseUrl, token, workspaceId, supervisorAgentId);
+        }, POLL_INTERVAL_MS);
+
+        return () => {
+            clearInterval(interval);
+        };
+    }, [baseUrl, token, workspaceId, supervisorAgentId, poll]);
+
+    return (
+        <View style={styles.outputRoot}>
+            <View style={styles.outputHeader}>
+                <Text style={[styles.title, { color: theme.colors.onSurface }]}>Working on your mission</Text>
+            </View>
+
+            {resolveError ? (
+                <View style={styles.outputErrorContainer}>
+                    <Text style={[styles.outputErrorText, { color: theme.colors.error }]}>{resolveError}</Text>
+                </View>
+            ) : null}
+
+            <View style={styles.outputList}>
+                <ChatMessageList records={session.history} loading={session.loading} />
+            </View>
+
+            <ChatThinkingBar thinking={thinking} />
+        </View>
+    );
+}
+
+const styles = StyleSheet.create((theme) => ({
     root: {
         flex: 1,
         alignItems: "center",
@@ -159,5 +234,29 @@ const styles = StyleSheet.create({
     buttonText: {
         fontFamily: "IBMPlexSans-SemiBold",
         fontSize: 15
+    },
+    outputRoot: {
+        flex: 1,
+        maxWidth: theme.layout.maxWidth,
+        width: "100%",
+        alignSelf: "center"
+    },
+    outputHeader: {
+        paddingHorizontal: 16,
+        paddingTop: 24,
+        paddingBottom: 8,
+        alignItems: "center"
+    },
+    outputList: {
+        flex: 1
+    },
+    outputErrorContainer: {
+        paddingHorizontal: 12,
+        paddingTop: 8,
+        paddingBottom: 4
+    },
+    outputErrorText: {
+        fontSize: 12,
+        fontFamily: "IBMPlexMono-Regular"
     }
-});
+}));
