@@ -779,7 +779,13 @@ describe("AppServer authenticated routes", () => {
             }
         };
         const built = await appServerCreateForTests({ secret, agentCallbacks: callbacks });
-        const token = await jwtSign({ userId: "user-1" }, secret, 3600);
+        const owner = (await built.storage.users.findMany()).find(
+            (user) => !user.isWorkspace && user.workspaceOwnerId === null
+        );
+        if (!owner) {
+            throw new Error("Expected seeded owner user.");
+        }
+        const token = await jwtSign({ userId: owner.id }, secret, 3600);
 
         const created = await fetch(`http://127.0.0.1:${built.port}/agents/create`, {
             method: "POST",
@@ -841,6 +847,13 @@ describe("AppServer authenticated routes", () => {
         await expect(bootstrap.json()).resolves.toEqual({
             ok: true,
             agentId: "supervisor-agent-id"
+        });
+        await expect(built.storage.users.findById(owner.id)).resolves.toMatchObject({
+            configuration: {
+                homeReady: false,
+                appReady: false,
+                bootstrapStarted: true
+            }
         });
 
         const sent = await fetch(`http://127.0.0.1:${built.port}/agents/app-agent-1/messages/create`, {

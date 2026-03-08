@@ -1,5 +1,7 @@
 import type http from "node:http";
 import type { Context } from "@/types";
+import type { EngineEventBus } from "../../../engine/ipc/events.js";
+import type { UsersRepository } from "../../../storage/usersRepository.js";
 import type { RouteAgentCallbacks } from "../routeTypes.js";
 import { agentsChats } from "./agentsChats.js";
 import { agentsCreate } from "./agentsCreate.js";
@@ -17,6 +19,8 @@ export type AgentsRouteContext = {
     sendJson: (response: http.ServerResponse, statusCode: number, payload: Record<string, unknown>) => void;
     readJsonBody: (request: http.IncomingMessage) => Promise<Record<string, unknown>>;
     callbacks: RouteAgentCallbacks | null;
+    users: UsersRepository | null;
+    eventBus: EngineEventBus | null;
 };
 
 /**
@@ -78,12 +82,18 @@ export async function agentsRouteHandle(
     }
 
     if (pathname === "/agents/supervisor/bootstrap" && request.method === "POST") {
+        if (!context.users) {
+            context.sendJson(response, 503, { ok: false, error: "Users repository unavailable." });
+            return true;
+        }
         const body = await context.readJsonBody(request);
         const result = await agentsSupervisorBootstrap({
             ctx: context.ctx,
             body,
             agentSupervisorResolve: context.callbacks.agentSupervisorResolve,
-            agentPost: context.callbacks.agentPost
+            agentPost: context.callbacks.agentPost,
+            users: context.users,
+            eventBus: context.eventBus
         });
         context.sendJson(response, result.ok ? 200 : 400, result);
         return true;

@@ -20,7 +20,8 @@ Behavior:
 - `bootstrapStarted`: keeps workspace onboarding in its in-progress state after the initial supervisor bootstrap request.
 - Missing or malformed stored values normalize back to `false`.
 - `GET /config` (workspace-scoped) returns the workspace's configuration.
-- `POST /w/{workspaceId}/profile/update` accepts partial `configuration` updates and merges them into the workspace value.
+- `POST /w/{workspaceId}/agents/supervisor/bootstrap` enqueues the mission and then marks `bootstrapStarted: true` on the workspace record.
+- `POST /w/{workspaceId}/profile/update` still accepts partial `configuration` updates for other server-side or agent-driven changes.
 - `GET /events` always emits the latest workspace configuration snapshot on connect, then forwards live `user.configuration.sync` updates.
 
 ## App loading order
@@ -43,8 +44,9 @@ sequenceDiagram
     API->>DB: read workspace configuration
     API-->>App: { homeReady, appReady, bootstrapStarted }
 
-    Agent->>API: POST /w/{id}/profile/update { configuration }
-    API->>DB: versioned user row update
+    App->>API: POST /w/{id}/agents/supervisor/bootstrap { text }
+    API->>API: enqueue message to supervisor
+    API->>DB: set bootstrapStarted = true
     API->>SSE: emit user.configuration.sync
     SSE-->>App: live configuration event
     App->>SSE: reconnect

@@ -3,7 +3,6 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-nativ
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useConfigStore } from "@/modules/config/configContext";
-import { configUpdate } from "@/modules/config/configUpdate";
 import { supervisorBootstrap } from "@/modules/supervisor/supervisorBootstrap";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
@@ -31,7 +30,6 @@ export function OnboardingView() {
         setError(null);
         try {
             await supervisorBootstrap(baseUrl, token, workspaceId, text);
-            await configUpdate(baseUrl, token, workspaceId, { bootstrapStarted: true });
         } catch (e) {
             setError(e instanceof Error ? e.message : "Something went wrong");
             setSubmitting(false);

@@ -101,7 +101,9 @@ export async function apiRouteHandle(
             ctx: context.ctx,
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody,
-            callbacks: context.agentCallbacks
+            callbacks: context.agentCallbacks,
+            users: context.users,
+            eventBus: context.eventBus
         });
     }
     if (pathname.startsWith("/tasks")) {
