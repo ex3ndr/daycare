@@ -106,7 +106,7 @@ function profileConfigurationMerge(
 
     const next = { ...current };
     for (const [key, entry] of Object.entries(value)) {
-        if (key !== "homeReady" && key !== "appReady") {
+        if (key !== "homeReady" && key !== "appReady" && key !== "bootstrapStarted") {
             return { ok: false, error: `configuration.${key} is not supported.` };
         }
         if (typeof entry !== "boolean") {

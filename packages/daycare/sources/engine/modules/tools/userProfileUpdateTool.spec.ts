@@ -100,7 +100,8 @@ describe("userProfileUpdateTool", () => {
 
             expect(result.typedResult.configuration).toEqual({
                 homeReady: true,
-                appReady: false
+                appReady: false,
+                bootstrapStarted: false
             });
             expect(eventCalls).toEqual([
                 {
@@ -108,7 +109,8 @@ describe("userProfileUpdateTool", () => {
                     payload: {
                         configuration: {
                             homeReady: true,
-                            appReady: false
+                            appReady: false,
+                            bootstrapStarted: false
                         }
                     },
                     userId: created.id

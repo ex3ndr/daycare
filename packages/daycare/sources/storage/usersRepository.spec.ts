@@ -29,7 +29,8 @@ describe("UsersRepository", () => {
             expect(created.timezone).toBe("America/Los_Angeles");
             expect(created.configuration).toEqual({
                 homeReady: false,
-                appReady: false
+                appReady: false,
+                bootstrapStarted: false
             });
 
             const byId = await users.findById(created.id);
@@ -52,7 +53,8 @@ describe("UsersRepository", () => {
                 timezone: "America/New_York",
                 configuration: {
                     homeReady: true,
-                    appReady: false
+                    appReady: false,
+                    bootstrapStarted: false
                 },
                 updatedAt: 3
             });
@@ -64,7 +66,8 @@ describe("UsersRepository", () => {
             expect(updatedOwner?.timezone).toBe("America/New_York");
             expect(updatedOwner?.configuration).toEqual({
                 homeReady: true,
-                appReady: false
+                appReady: false,
+                bootstrapStarted: false
             });
 
             const usersList = await users.findMany();

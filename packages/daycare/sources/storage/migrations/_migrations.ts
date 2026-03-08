@@ -60,5 +60,9 @@ export const migrations: Migration[] = [
     {
         name: "20260308120000_todos",
         fileName: "20260308120000_todos.sql"
+    },
+    {
+        name: "20260309090000_user_configuration_bootstrap_started",
+        fileName: "20260309090000_user_configuration_bootstrap_started.sql"
     }
 ];

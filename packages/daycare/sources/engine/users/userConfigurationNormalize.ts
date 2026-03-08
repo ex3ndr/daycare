@@ -2,7 +2,8 @@ import type { UserConfiguration } from "./userConfigurationTypes.js";
 
 const USER_CONFIGURATION_DEFAULT: UserConfiguration = {
     homeReady: false,
-    appReady: false
+    appReady: false,
+    bootstrapStarted: false
 };
 
 /**
@@ -17,6 +18,7 @@ export function userConfigurationNormalize(input: unknown): UserConfiguration {
     const value = input as Record<string, unknown>;
     return {
         homeReady: value.homeReady === true,
-        appReady: value.appReady === true
+        appReady: value.appReady === true,
+        bootstrapStarted: value.bootstrapStarted === true
     };
 }

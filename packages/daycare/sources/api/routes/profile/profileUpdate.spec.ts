@@ -17,7 +17,8 @@ describe("profileUpdate", () => {
             memory: false,
             configuration: {
                 homeReady: false,
-                appReady: false
+                appReady: false,
+                bootstrapStarted: false
             },
             nametag: "ada",
             connectorKeys: []
@@ -51,7 +52,8 @@ describe("profileUpdate", () => {
                 memory: true,
                 configuration: {
                     homeReady: false,
-                    appReady: false
+                    appReady: false,
+                    bootstrapStarted: false
                 },
                 nametag: "ada",
                 emails: []
@@ -76,7 +78,8 @@ describe("profileUpdate", () => {
             memory: true,
             configuration: {
                 homeReady: false,
-                appReady: true
+                appReady: true,
+                bootstrapStarted: false
             },
             nametag: "ada",
             connectorKeys: []
@@ -110,7 +113,8 @@ describe("profileUpdate", () => {
                 memory: true,
                 configuration: {
                     homeReady: false,
-                    appReady: true
+                    appReady: true,
+                    bootstrapStarted: false
                 },
                 nametag: "ada",
                 emails: []
@@ -131,7 +135,8 @@ describe("profileUpdate", () => {
             memory: false,
             configuration: {
                 homeReady: false,
-                appReady: true
+                appReady: true,
+                bootstrapStarted: false
             },
             nametag: "ada",
             connectorKeys: []
@@ -170,7 +175,8 @@ describe("profileUpdate", () => {
                 memory: false,
                 configuration: {
                     homeReady: true,
-                    appReady: true
+                    appReady: true,
+                    bootstrapStarted: false
                 },
                 nametag: "ada",
                 emails: []
@@ -181,7 +187,8 @@ describe("profileUpdate", () => {
             expect.objectContaining({
                 configuration: {
                     homeReady: true,
-                    appReady: true
+                    appReady: true,
+                    bootstrapStarted: false
                 }
             })
         );
@@ -190,7 +197,8 @@ describe("profileUpdate", () => {
             {
                 configuration: {
                     homeReady: true,
-                    appReady: true
+                    appReady: true,
+                    bootstrapStarted: false
                 }
             },
             "user-1"
@@ -211,7 +219,8 @@ describe("profileUpdate", () => {
                 memory: false,
                 configuration: {
                     homeReady: false,
-                    appReady: false
+                    appReady: false,
+                    bootstrapStarted: false
                 },
                 nametag: "ada",
                 connectorKeys: []

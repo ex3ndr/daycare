@@ -440,7 +440,8 @@ describe("Engine workspace registration", () => {
             expect(workspace.systemPrompt).toBeNull();
             expect(workspace.configuration).toEqual({
                 homeReady: true,
-                appReady: true
+                appReady: true,
+                bootstrapStarted: false
             });
             expect(document?.slug).toBe("document");
             expect(system?.slug).toBe("system");

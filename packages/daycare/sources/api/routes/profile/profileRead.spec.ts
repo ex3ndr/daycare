@@ -18,7 +18,8 @@ describe("profileRead", () => {
                 memory: true,
                 configuration: {
                     homeReady: true,
-                    appReady: false
+                    appReady: false,
+                    bootstrapStarted: false
                 },
                 nametag: "ada",
                 connectorKeys: [{ connectorKey: "email:ada@example.com" }, { connectorKey: "telegram:123" }]
@@ -40,7 +41,8 @@ describe("profileRead", () => {
                 memory: true,
                 configuration: {
                     homeReady: true,
-                    appReady: false
+                    appReady: false,
+                    bootstrapStarted: false
                 },
                 nametag: "ada",
                 emails: ["ada@example.com"]

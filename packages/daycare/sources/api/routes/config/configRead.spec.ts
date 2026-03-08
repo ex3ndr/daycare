@@ -8,13 +8,13 @@ describe("configRead", () => {
             ctx: contextForUser({ userId: "u1" }),
             users: {
                 findById: async () => ({
-                    configuration: { homeReady: true, appReady: false }
+                    configuration: { homeReady: true, appReady: false, bootstrapStarted: false }
                 })
             }
         });
         expect(result).toEqual({
             ok: true,
-            configuration: { homeReady: true, appReady: false }
+            configuration: { homeReady: true, appReady: false, bootstrapStarted: false }
         });
     });
 
@@ -25,7 +25,7 @@ describe("configRead", () => {
         });
         expect(result).toEqual({
             ok: true,
-            configuration: { homeReady: false, appReady: false }
+            configuration: { homeReady: false, appReady: false, bootstrapStarted: false }
         });
     });
 
@@ -37,13 +37,14 @@ describe("configRead", () => {
                     configuration: { homeReady: "yes", appReady: 1 } as unknown as {
                         homeReady: boolean;
                         appReady: boolean;
+                        bootstrapStarted: boolean;
                     }
                 })
             }
         });
         expect(result).toEqual({
             ok: true,
-            configuration: { homeReady: false, appReady: false }
+            configuration: { homeReady: false, appReady: false, bootstrapStarted: false }
         });
     });
 });

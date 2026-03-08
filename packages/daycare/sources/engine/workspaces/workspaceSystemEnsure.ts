@@ -32,7 +32,8 @@ export async function workspaceSystemEnsure(input: { storage: Pick<Storage, "use
             memory: false,
             configuration: {
                 homeReady: true,
-                appReady: true
+                appReady: true,
+                bootstrapStarted: false
             }
         });
     } catch {

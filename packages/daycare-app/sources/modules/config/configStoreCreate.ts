@@ -5,7 +5,8 @@ import type { WorkspaceConfig } from "./configTypes";
 
 const CONFIG_DEFAULT: WorkspaceConfig = {
     homeReady: false,
-    appReady: false
+    appReady: false,
+    bootstrapStarted: false
 };
 
 export type ConfigStore = {
