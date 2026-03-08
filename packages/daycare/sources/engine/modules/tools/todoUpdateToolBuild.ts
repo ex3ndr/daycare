@@ -39,7 +39,8 @@ export function todoUpdateToolBuild(): ToolDefinition<typeof schema, TodoUpdateR
     return {
         tool: {
             name: "todo_update",
-            description: "Update a workspace todo title, description, or status.",
+            description:
+                "Update a todo's title, description, or status. Setting status to abandoned archives the todo and all children.",
             parameters: schema
         },
         returns,

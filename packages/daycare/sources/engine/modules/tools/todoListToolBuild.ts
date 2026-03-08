@@ -37,7 +37,7 @@ export function todoListToolBuild(): ToolDefinition<typeof schema, TodoListResul
         tool: {
             name: "todo_list",
             description:
-                "List workspace todos as an ASCII tree. Omitting rootId returns the top two levels by default.",
+                "List workspace todos as an indented ASCII tree. Returns top two levels by default. Pass rootId to view a subtree, depth to control levels.",
             parameters: schema
         },
         returns,

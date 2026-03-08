@@ -39,7 +39,8 @@ export function todoCreateToolBuild(): ToolDefinition<typeof schema, TodoCreateR
     return {
         tool: {
             name: "todo_create",
-            description: "Create a workspace todo with an optional parent and initial status.",
+            description:
+                "Create a todo. Pass parentId to nest it under an existing todo. Defaults to unstarted status.",
             parameters: schema
         },
         returns,

@@ -36,7 +36,8 @@ export function todoBatchStatusToolBuild(): ToolDefinition<typeof schema, TodoBa
     return {
         tool: {
             name: "todo_batch_status",
-            description: "Update the status of multiple todos in one call.",
+            description:
+                "Change the status of multiple todos at once. Statuses: draft, unstarted, started, finished, abandoned.",
             parameters: schema
         },
         returns,

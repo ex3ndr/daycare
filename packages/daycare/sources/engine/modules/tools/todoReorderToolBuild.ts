@@ -37,7 +37,7 @@ export function todoReorderToolBuild(): ToolDefinition<typeof schema, TodoReorde
     return {
         tool: {
             name: "todo_reorder",
-            description: "Move a todo to a new parent and sibling index.",
+            description: "Move a todo to a new position. Set index (0 = first) and optionally parentId to reparent.",
             parameters: schema
         },
         returns,
