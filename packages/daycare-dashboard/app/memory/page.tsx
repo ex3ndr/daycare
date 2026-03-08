@@ -67,8 +67,7 @@ export default function MemoryPage() {
       .then((loadedUsers) => {
         setUsers(loadedUsers);
         if (loadedUsers.length > 0) {
-          const owner = loadedUsers.find((u) => u.isOwner);
-          const first = owner ?? loadedUsers[0]!;
+          const first = loadedUsers[0]!;
           setActiveUserId(first.id);
           void loadGraph(first.id);
         }
@@ -140,7 +139,7 @@ export default function MemoryPage() {
             <SelectContent>
               {users.map((user) => (
                 <SelectItem key={user.id} value={user.id}>
-                  {user.id}{user.isOwner ? " (owner)" : ""}
+                  {user.id}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -4,7 +4,7 @@ import { contextForAgent } from "../agents/context.js";
 import { workspaceCreateToolBuild } from "./workspaceCreateToolBuild.js";
 
 describe("workspaceCreateToolBuild", () => {
-    it("builds shape and creates workspaces for owner users", async () => {
+    it("builds shape and creates workspaces for personal users", async () => {
         const storage = await storageOpenTest();
         try {
             const owner = await storage.users.findOwner();
@@ -55,12 +55,18 @@ describe("workspaceCreateToolBuild", () => {
         }
     });
 
-    it("rejects non-owner callers", async () => {
+    it("rejects workspace callers", async () => {
         const storage = await storageOpenTest();
         try {
+            const owner = await storage.users.findOwner();
+            if (!owner) {
+                throw new Error("Owner user not found.");
+            }
             await storage.users.create({
-                id: "user-1",
-                nametag: "user-1",
+                id: "workspace-1",
+                isWorkspace: true,
+                parentUserId: owner.id,
+                nametag: "workspace-1",
                 createdAt: 1,
                 updatedAt: 1
             });
@@ -78,7 +84,7 @@ describe("workspaceCreateToolBuild", () => {
                         emoji: "📝"
                     },
                     {
-                        ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
+                        ctx: contextForAgent({ userId: "workspace-1", agentId: "agent-1" }),
                         agentSystem: {
                             storage,
                             refreshSandboxesForUserId: vi.fn(() => 0)
@@ -86,7 +92,7 @@ describe("workspaceCreateToolBuild", () => {
                     } as never,
                     { id: "call-1", name: "workspace_create" }
                 )
-            ).rejects.toThrow("Only the owner user can create workspaces.");
+            ).rejects.toThrow("Only personal users can create workspaces.");
         } finally {
             storage.connection.close();
         }

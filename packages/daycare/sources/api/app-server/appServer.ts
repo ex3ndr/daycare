@@ -463,10 +463,8 @@ export class AppServer {
             return existing.id;
         }
 
-        const allUsers = await users.findMany();
         try {
             const created = await users.create({
-                isOwner: allUsers.length === 0,
                 connectorKey
             });
             return created.id;

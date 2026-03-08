@@ -2,7 +2,7 @@ import type { Context } from "@/types";
 import { contextForUser } from "../../../engine/agents/context.js";
 
 export type WorkspacesUsersRuntime = {
-    findById: (id: string) => Promise<{ id: string; isOwner: boolean } | null>;
+    findById: (id: string) => Promise<{ id: string } | null>;
     findByNametag: (
         nametag: string
     ) => Promise<{ id: string; isWorkspace: boolean; parentUserId: string | null } | null>;
@@ -26,8 +26,8 @@ export type WorkspacesSecretScopeResolveResult =
       };
 
 /**
- * Resolves a workspace scope by nametag for owner-only workspace secret management routes.
- * Expects: caller is the owner and target nametag belongs to their workspace user.
+ * Resolves a workspace scope by nametag for workspace-owner secret management routes.
+ * Expects: caller owns the target workspace via parentUserId.
  */
 export async function workspacesSecretScopeResolve(
     input: WorkspacesSecretScopeResolveInput
@@ -38,13 +38,16 @@ export async function workspacesSecretScopeResolve(
     }
 
     const caller = await input.users.findById(input.ctx.userId);
-    if (!caller?.isOwner) {
-        return { ok: false, error: "Only the owner user can manage workspace secrets." };
+    if (!caller) {
+        return { ok: false, error: "Only workspace owners can manage workspace secrets." };
     }
 
     const workspace = await input.users.findByNametag(normalizedNametag);
-    if (!workspace || !workspace.isWorkspace || workspace.parentUserId !== caller.id) {
+    if (!workspace || !workspace.isWorkspace) {
         return { ok: false, error: "Workspace not found." };
+    }
+    if (workspace.parentUserId !== caller.id) {
+        return { ok: false, error: "Only workspace owners can manage workspace secrets." };
     }
 
     return {

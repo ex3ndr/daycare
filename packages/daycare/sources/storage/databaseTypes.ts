@@ -482,7 +482,6 @@ export type DatabaseUserRow = {
     version: number;
     valid_from: number;
     valid_to: number | null;
-    is_owner: boolean;
     is_workspace: boolean;
     parent_user_id: string | null;
     first_name: string | null;
@@ -511,7 +510,6 @@ export type UserDbRecord = {
     version?: number;
     validFrom?: number;
     validTo?: number | null;
-    isOwner: boolean;
     isWorkspace: boolean;
     parentUserId: string | null;
     firstName: string | null;
@@ -658,7 +656,6 @@ export type ObservationLogRecentOptions = {
 
 export type CreateUserInput = {
     id?: string;
-    isOwner?: boolean;
     isWorkspace?: boolean;
     parentUserId?: string;
     firstName?: string | null;
@@ -712,7 +709,6 @@ export type SystemPromptDbRecord = {
 };
 
 export type UpdateUserInput = {
-    isOwner?: boolean;
     isWorkspace?: boolean;
     firstName?: string | null;
     lastName?: string | null;

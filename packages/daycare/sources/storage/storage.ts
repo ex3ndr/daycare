@@ -124,10 +124,8 @@ export class Storage {
             if (existing) {
                 return existing;
             }
-            const users = await this.users.findMany();
             try {
                 return await this.userCreateWithGeneratedNametag({
-                    isOwner: users.length === 0,
                     connectorKey: normalized
                 });
             } catch (error) {

@@ -124,7 +124,7 @@ async function secretTargetResolve(
     const workspaceUser = await workspaceOwnedUserResolve({
         toolContext,
         userId: normalizedUserId,
-        ownerError: "Only the owner user can manage workspace secrets."
+        ownerError: "Only workspace owners can manage workspace secrets."
     });
     return {
         ctx: contextForUser({ userId: workspaceUser.id }),

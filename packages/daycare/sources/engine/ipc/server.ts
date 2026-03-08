@@ -405,7 +405,6 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         const users = await options.runtime.storage.users.findMany();
         const mapped = users.map((user) => ({
             id: user.id,
-            isOwner: user.isOwner,
             firstName: user.firstName,
             lastName: user.lastName,
             country: user.country,

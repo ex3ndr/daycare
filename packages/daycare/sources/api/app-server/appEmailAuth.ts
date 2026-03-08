@@ -146,10 +146,8 @@ export class AppEmailAuth {
             return existing.id;
         }
 
-        const allUsers = await this.users.findMany();
         try {
             const created = await this.users.create({
-                isOwner: allUsers.length === 0,
                 connectorKey
             });
             return created.id;

@@ -8,8 +8,8 @@ export type WorkspaceOwnedUserResolveInput = {
 };
 
 /**
- * Resolves a workspace user id owned by the calling owner user.
- * Expects: caller is owner and target user is a workspace child of the caller.
+ * Resolves a workspace user id owned by the calling user.
+ * Expects: target user is a workspace child of the caller.
  */
 export async function workspaceOwnedUserResolve(
     input: WorkspaceOwnedUserResolveInput
@@ -19,14 +19,12 @@ export async function workspaceOwnedUserResolve(
         throw new Error("userId is required.");
     }
 
-    const caller = await input.toolContext.agentSystem.storage.users.findById(input.toolContext.ctx.userId);
-    if (!caller?.isOwner) {
-        throw new Error(input.ownerError);
-    }
-
     const target = await input.toolContext.agentSystem.storage.users.findById(targetUserId);
-    if (!target || !target.isWorkspace || target.parentUserId !== caller.id) {
+    if (!target || !target.isWorkspace) {
         throw new Error(`Workspace not found: ${targetUserId}`);
+    }
+    if (target.parentUserId !== input.toolContext.ctx.userId) {
+        throw new Error(input.ownerError);
     }
 
     return target;

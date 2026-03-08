@@ -179,7 +179,7 @@ export async function workspacesRouteHandle(
 
 function errorStatusResolve(error: string): number {
     if (
-        error === "Only the owner user can manage workspace secrets." ||
+        error === "Only workspace owners can manage workspace secrets." ||
         error === "Only workspace owners can create invite links." ||
         error === "Only workspace owners can manage workspace members." ||
         error === "Workspace access denied."

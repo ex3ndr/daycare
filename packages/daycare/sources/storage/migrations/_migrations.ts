@@ -34,6 +34,10 @@ export const migrations: Migration[] = [
         fileName: "20260307190000_workspace_members.sql"
     },
     {
+        name: "20260308090000_remove_user_is_owner",
+        fileName: "20260308090000_remove_user_is_owner.sql"
+    },
+    {
         name: "20260306120000_swarm_to_workspace",
         fileName: "20260306120000_swarm_to_workspace.sql"
     },

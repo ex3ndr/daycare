@@ -16,7 +16,6 @@ async function createTestEntities(
             validFrom: 1,
             validTo: null,
             nametag: `tag-${userId}`,
-            isOwner: false,
             createdAt: 1,
             updatedAt: 1
         });

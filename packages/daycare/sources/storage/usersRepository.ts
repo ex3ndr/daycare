@@ -142,7 +142,6 @@ export class UsersRepository {
                 version: row.version ?? 1,
                 validFrom: row.validFrom ?? row.createdAt,
                 validTo: row.validTo ?? null,
-                isOwner: row.isOwner,
                 isWorkspace: row.isWorkspace,
                 parentUserId: row.parentUserId ?? null,
                 firstName: row.firstName ?? null,
@@ -180,17 +179,15 @@ export class UsersRepository {
     }
 
     async findOwner(): Promise<UserWithConnectorKeysDbRecord | null> {
-        const cachedOwner = Array.from(this.usersById.values()).find((user) => user.isOwner);
-        if (cachedOwner) {
-            return userClone(cachedOwner);
-        }
         if (this.allUsersLoaded) {
-            return null;
+            const cachedOwner = usersSort(Array.from(this.usersById.values())).find(userIsPrimary);
+            return cachedOwner ? userClone(cachedOwner) : null;
         }
         const rows = await this.db
             .select({ id: usersTable.id })
             .from(usersTable)
-            .where(and(eq(usersTable.isOwner, true), isNull(usersTable.validTo)))
+            .where(and(eq(usersTable.isWorkspace, false), isNull(usersTable.parentUserId), isNull(usersTable.validTo)))
+            .orderBy(asc(usersTable.createdAt), asc(usersTable.id))
             .limit(1);
         const userId = rows[0]?.id?.trim() ?? "";
         if (!userId) {
@@ -205,7 +202,6 @@ export class UsersRepository {
             const id = input.id ?? createId();
             const createdAt = input.createdAt ?? now;
             const updatedAt = input.updatedAt ?? createdAt;
-            const isOwner = input.isOwner ?? false;
             const isWorkspace = input.isWorkspace ?? false;
             const parentUserId = input.parentUserId ?? null;
             const firstName = textNullableNormalize(input.firstName);
@@ -232,7 +228,6 @@ export class UsersRepository {
                         version: 1,
                         validFrom: createdAt,
                         validTo: null,
-                        isOwner,
                         isWorkspace,
                         parentUserId,
                         firstName,
@@ -280,7 +275,6 @@ export class UsersRepository {
                 version: 1,
                 validFrom: createdAt,
                 validTo: null,
-                isOwner,
                 isWorkspace,
                 parentUserId,
                 firstName,
@@ -316,7 +310,6 @@ export class UsersRepository {
 
             const next: UserWithConnectorKeysDbRecord = {
                 ...current,
-                ...(data.isOwner === undefined ? {} : { isOwner: data.isOwner }),
                 ...(data.isWorkspace === undefined ? {} : { isWorkspace: data.isWorkspace }),
                 ...(data.firstName === undefined ? {} : { firstName: textNullableNormalize(data.firstName) }),
                 ...(data.lastName === undefined ? {} : { lastName: textNullableNormalize(data.lastName) }),
@@ -338,7 +331,6 @@ export class UsersRepository {
                 versionAdvance<UserWithConnectorKeysDbRecord>({
                     now,
                     changes: {
-                        isOwner: next.isOwner,
                         isWorkspace: next.isWorkspace,
                         firstName: next.firstName,
                         lastName: next.lastName,
@@ -374,7 +366,6 @@ export class UsersRepository {
                             version: row.version ?? 1,
                             validFrom: row.validFrom ?? row.createdAt,
                             validTo: row.validTo ?? null,
-                            isOwner: row.isOwner,
                             isWorkspace: row.isWorkspace,
                             parentUserId: row.parentUserId,
                             firstName: row.firstName,
@@ -504,7 +495,6 @@ export class UsersRepository {
             version: userRow.version ?? 1,
             validFrom: userRow.validFrom ?? userRow.createdAt,
             validTo: userRow.validTo ?? null,
-            isOwner: userRow.isOwner,
             isWorkspace: userRow.isWorkspace,
             parentUserId: userRow.parentUserId ?? null,
             firstName: userRow.firstName ?? null,
@@ -555,6 +545,10 @@ function userClone(record: UserWithConnectorKeysDbRecord): UserWithConnectorKeys
 
 function usersSort(records: UserWithConnectorKeysDbRecord[]): UserWithConnectorKeysDbRecord[] {
     return records.slice().sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id));
+}
+
+function userIsPrimary(record: UserWithConnectorKeysDbRecord): boolean {
+    return !record.isWorkspace && record.parentUserId === null;
 }
 
 function textNullableNormalize(value: string | null | undefined): string | null {

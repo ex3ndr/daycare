@@ -12,7 +12,6 @@ describe("UsersRepository", () => {
         try {
             const users = new UsersRepository(storage.db);
             const created = await users.create({
-                isOwner: false,
                 createdAt: 1,
                 updatedAt: 2,
                 firstName: "Steve",
@@ -22,7 +21,6 @@ describe("UsersRepository", () => {
                 nametag: "swift-fox-42",
                 connectorKey: "telegram:1"
             });
-            expect(created.isOwner).toBe(false);
             expect(created.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:1"]);
             expect(created.nametag).toBe("swift-fox-42");
             expect(created.firstName).toBe("Steve");
@@ -48,7 +46,6 @@ describe("UsersRepository", () => {
 
             vi.spyOn(Date, "now").mockReturnValue(3);
             await users.update(created.id, {
-                isOwner: false,
                 firstName: "Steven",
                 lastName: null,
                 country: "USA",
@@ -60,7 +57,6 @@ describe("UsersRepository", () => {
                 updatedAt: 3
             });
             const updatedOwner = await users.findById(created.id);
-            expect(updatedOwner?.isOwner).toBe(false);
             expect(updatedOwner?.updatedAt).toBe(3);
             expect(updatedOwner?.firstName).toBe("Steven");
             expect(updatedOwner?.lastName).toBeNull();
@@ -107,7 +103,7 @@ describe("UsersRepository", () => {
             const users = new UsersRepository(storage.db);
             storage.connection
                 .prepare(
-                    "INSERT INTO users (id, version, valid_from, valid_to, is_owner, nametag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO users (id, version, valid_from, valid_to, is_workspace, nametag, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                 )
                 .run("user-1", 1, 10, null, false, "brave-wolf-99", 10, 11);
             storage.connection
@@ -128,34 +124,27 @@ describe("UsersRepository", () => {
         }
     });
 
-    it("keeps current user row when version advance insert fails", async () => {
+    it("findOwner resolves the earliest personal user", async () => {
         const storage = await storageOpenTest();
         try {
             const users = new UsersRepository(storage.db);
             const owner = await users.findOwner();
             const second = await users.create({
-                isOwner: false,
                 createdAt: 2,
                 updatedAt: 2,
                 nametag: "owner-2"
             });
+            await users.create({
+                id: "workspace-1",
+                isWorkspace: true,
+                parentUserId: second.id,
+                createdAt: 3,
+                updatedAt: 3,
+                nametag: "workspace-1"
+            });
 
-            expect(owner?.isOwner).toBe(true);
-            await expect(
-                users.update(second.id, {
-                    isOwner: true,
-                    updatedAt: 3
-                })
-            ).rejects.toThrow();
-
-            const persisted = await users.findById(second.id);
-            expect(persisted?.id).toBe(second.id);
-            expect(persisted?.isOwner).toBe(false);
-
-            const rows = (await storage.connection
-                .prepare("SELECT id FROM users WHERE id = ? AND valid_to IS NULL")
-                .all(second.id)) as Array<{ id: string }>;
-            expect(rows).toHaveLength(1);
+            expect(owner?.id).toBe("sy45wijd1hmr03ef2wu7busv");
+            expect(second.id).not.toBe(owner?.id);
         } finally {
             storage.connection.close();
         }

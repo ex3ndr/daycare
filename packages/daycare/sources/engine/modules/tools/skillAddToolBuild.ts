@@ -117,7 +117,7 @@ async function skillAddTargetResolve(
     const workspaceUser = await workspaceOwnedUserResolve({
         toolContext,
         userId: targetUserId,
-        ownerError: "Only the owner user can install skills to workspaces."
+        ownerError: "Only workspace owners can install skills to workspaces."
     });
     return {
         personalRoot: toolContext.agentSystem.userHomeForUserId(workspaceUser.id).skillsPersonal,

@@ -200,8 +200,8 @@ async function routeCall(input: RouteCallInput): Promise<{
                                     createdAt: 1
                                 }
                               : id === "owner-1"
-                                ? { id: "owner-1", nametag: "owner-1", isOwner: true, firstName: null, lastName: null }
-                                : { id, nametag: id, isOwner: false, firstName: null, lastName: null },
+                                ? { id: "owner-1", nametag: "owner-1", firstName: null, lastName: null }
+                                : { id, nametag: id, firstName: null, lastName: null },
                       findByNametag: async (nametag: string) =>
                           nametag === "reviewer"
                               ? {

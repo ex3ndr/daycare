@@ -55,8 +55,8 @@ type WorkspacesFacade = {
 };
 
 /**
- * Builds the workspace_create tool available to owner user agents.
- * Expects: caller context belongs to the owner user.
+ * Builds the workspace_create tool available to personal user agents.
+ * Expects: caller context belongs to a non-workspace user.
  */
 export function workspaceCreateToolBuild(workspaces: WorkspacesFacade): ToolDefinition {
     return {
@@ -69,8 +69,8 @@ export function workspaceCreateToolBuild(workspaces: WorkspacesFacade): ToolDefi
         visibleByDefault: (context) => context.config.foreground === true,
         execute: async (args, toolContext, toolCall) => {
             const caller = await toolContext.agentSystem.storage.users.findById(toolContext.ctx.userId);
-            if (!caller?.isOwner) {
-                throw new Error("Only the owner user can create workspaces.");
+            if (!caller || caller.isWorkspace) {
+                throw new Error("Only personal users can create workspaces.");
             }
 
             const payload = args as WorkspaceCreateToolArgs;

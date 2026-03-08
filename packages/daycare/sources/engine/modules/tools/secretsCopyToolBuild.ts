@@ -32,8 +32,8 @@ const returns: ToolResultContract<SecretsCopyResult> = {
 };
 
 /**
- * Copies one named secret from the owner user to a target owned workspace user.
- * Expects: caller is owner and userId belongs to a workspace owned by caller.
+ * Copies one named secret from the caller to a target owned workspace user.
+ * Expects: userId belongs to a workspace owned by caller.
  */
 export function secretCopyToolBuild(): ToolDefinition {
     return {
@@ -53,7 +53,7 @@ export function secretCopyToolBuild(): ToolDefinition {
             const workspaceUser = await workspaceOwnedUserResolve({
                 toolContext,
                 userId: payload.userId,
-                ownerError: "Only the owner user can copy secrets to workspaces."
+                ownerError: "Only workspace owners can copy secrets to workspaces."
             });
             const requestedName = payload.secret.trim();
             if (!requestedName) {

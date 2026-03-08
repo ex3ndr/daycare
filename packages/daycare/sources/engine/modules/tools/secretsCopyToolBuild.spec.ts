@@ -41,8 +41,8 @@ describe("secretCopyToolBuild", () => {
         const result = await tool.execute(
             { userId: "workspace-1", secret: "openai-key" },
             contextBuild(ownerCtx, secrets, {
-                owner: { id: "owner-1", isOwner: true, isWorkspace: false, parentUserId: null },
-                workspace: { id: "workspace-1", isOwner: false, isWorkspace: true, parentUserId: "owner-1" }
+                owner: { id: "owner-1", isWorkspace: false, parentUserId: null },
+                workspace: { id: "workspace-1", isWorkspace: true, parentUserId: "owner-1" }
             }),
             toolCall
         );
@@ -71,12 +71,12 @@ describe("secretCopyToolBuild", () => {
             tool.execute(
                 { userId: "workspace-1", secret: "openai-key" },
                 contextBuild(contextForUser({ userId: "user-1" }), secrets, {
-                    owner: { id: "user-1", isOwner: false, isWorkspace: false, parentUserId: null },
-                    workspace: { id: "workspace-1", isOwner: false, isWorkspace: true, parentUserId: "owner-1" }
+                    owner: { id: "user-1", isWorkspace: false, parentUserId: null },
+                    workspace: { id: "workspace-1", isWorkspace: true, parentUserId: "owner-1" }
                 }),
                 toolCall
             )
-        ).rejects.toThrow("Only the owner user can copy secrets to workspaces.");
+        ).rejects.toThrow("Only workspace owners can copy secrets to workspaces.");
     });
 
     it("throws when target workspace is not found", async () => {
@@ -91,7 +91,7 @@ describe("secretCopyToolBuild", () => {
             tool.execute(
                 { userId: "missing-workspace", secret: "openai-key" },
                 contextBuild(contextForUser({ userId: "owner-1" }), secrets, {
-                    owner: { id: "owner-1", isOwner: true, isWorkspace: false, parentUserId: null }
+                    owner: { id: "owner-1", isWorkspace: false, parentUserId: null }
                 }),
                 toolCall
             )
@@ -110,8 +110,8 @@ describe("secretCopyToolBuild", () => {
             tool.execute(
                 { userId: "workspace-1", secret: "missing" },
                 contextBuild(contextForUser({ userId: "owner-1" }), secrets, {
-                    owner: { id: "owner-1", isOwner: true, isWorkspace: false, parentUserId: null },
-                    workspace: { id: "workspace-1", isOwner: false, isWorkspace: true, parentUserId: "owner-1" }
+                    owner: { id: "owner-1", isWorkspace: false, parentUserId: null },
+                    workspace: { id: "workspace-1", isWorkspace: true, parentUserId: "owner-1" }
                 }),
                 toolCall
             )
@@ -123,8 +123,8 @@ function contextBuild(
     ctx: ToolExecutionContext["ctx"],
     secrets: Secrets,
     users: {
-        owner: { id: string; isOwner: boolean; isWorkspace: boolean; parentUserId: string | null };
-        workspace?: { id: string; isOwner: boolean; isWorkspace: boolean; parentUserId: string | null };
+        owner: { id: string; isWorkspace: boolean; parentUserId: string | null };
+        workspace?: { id: string; isWorkspace: boolean; parentUserId: string | null };
     }
 ): ToolExecutionContext {
     return {

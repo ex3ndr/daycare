@@ -32,7 +32,6 @@ export const usersTable = pgTable(
         version: integer("version").notNull().default(1),
         validFrom: bigint("valid_from", { mode: "number" }).notNull(),
         validTo: bigint("valid_to", { mode: "number" }),
-        isOwner: boolean("is_owner").notNull().default(false),
         isWorkspace: boolean("is_workspace").notNull().default(false),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
@@ -56,9 +55,6 @@ export const usersTable = pgTable(
         primaryKey({ columns: [table.id, table.version] }),
         check("users_nametag_required", sql`trim(${table.nametag}) <> ''`),
         uniqueIndex("idx_users_nametag").on(table.nametag).where(sql`${table.validTo} IS NULL`),
-        uniqueIndex("idx_users_single_owner")
-            .on(table.isOwner)
-            .where(sql`${table.isOwner} = true AND ${table.validTo} IS NULL`),
         index("idx_users_parent").on(table.parentUserId).where(sql`${table.parentUserId} IS NOT NULL`),
         index("idx_users_id_valid_to").on(table.id, table.validTo)
     ]

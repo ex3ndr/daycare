@@ -1166,7 +1166,6 @@ export class AgentSystem {
         try {
             await this.storage.users.create({
                 id: ownerId,
-                isOwner: true,
                 createdAt: now,
                 updatedAt: now
             });

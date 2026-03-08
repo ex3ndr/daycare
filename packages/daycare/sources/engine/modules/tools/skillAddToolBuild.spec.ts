@@ -175,7 +175,6 @@ describe("skillAddToolBuild", () => {
                                 if (id === "owner-1") {
                                     return {
                                         id: "owner-1",
-                                        isOwner: true,
                                         isWorkspace: false,
                                         parentUserId: null
                                     };
@@ -183,7 +182,6 @@ describe("skillAddToolBuild", () => {
                                 if (id === workspaceUserId) {
                                     return {
                                         id: workspaceUserId,
-                                        isOwner: false,
                                         isWorkspace: true,
                                         parentUserId: "owner-1"
                                     };
@@ -222,15 +220,23 @@ describe("skillAddToolBuild", () => {
                 agentSystem: {
                     storage: {
                         users: {
-                            findById: async (id: string) =>
-                                id === "user-1"
-                                    ? {
-                                          id: "user-1",
-                                          isOwner: false,
-                                          isWorkspace: false,
-                                          parentUserId: null
-                                      }
-                                    : null
+                            findById: async (id: string) => {
+                                if (id === "user-1") {
+                                    return {
+                                        id: "user-1",
+                                        isWorkspace: false,
+                                        parentUserId: null
+                                    };
+                                }
+                                if (id === "workspace-1") {
+                                    return {
+                                        id: "workspace-1",
+                                        isWorkspace: true,
+                                        parentUserId: "owner-1"
+                                    };
+                                }
+                                return null;
+                            }
                         }
                     }
                 } as unknown as ToolExecutionContext["agentSystem"]
@@ -238,7 +244,7 @@ describe("skillAddToolBuild", () => {
 
             await expect(
                 tool.execute({ path: "source-skill", userId: "workspace-1" }, context, toolCall)
-            ).rejects.toThrow("Only the owner user can install skills to workspaces.");
+            ).rejects.toThrow("Only workspace owners can install skills to workspaces.");
         } finally {
             await dirs.cleanup();
         }
@@ -262,7 +268,6 @@ describe("skillAddToolBuild", () => {
                                 id === "owner-1"
                                     ? {
                                           id: "owner-1",
-                                          isOwner: true,
                                           isWorkspace: false,
                                           parentUserId: null
                                       }

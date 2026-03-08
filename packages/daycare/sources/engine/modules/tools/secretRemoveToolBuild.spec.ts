@@ -78,8 +78,8 @@ describe("secretRemoveToolBuild", () => {
         const result = await tool.execute(
             { name: "workspace-secret", userId: "workspace-1" },
             contextBuild(contextForUser({ userId: "owner-1" }), secrets, {
-                owner: { id: "owner-1", isOwner: true, isWorkspace: false, parentUserId: null },
-                workspace: { id: "workspace-1", isOwner: false, isWorkspace: true, parentUserId: "owner-1" }
+                owner: { id: "owner-1", isWorkspace: false, parentUserId: null },
+                workspace: { id: "workspace-1", isWorkspace: true, parentUserId: "owner-1" }
             }),
             toolCall
         );
@@ -100,12 +100,12 @@ describe("secretRemoveToolBuild", () => {
             tool.execute(
                 { name: "workspace-secret", userId: "workspace-1" },
                 contextBuild(contextForUser({ userId: "user-1" }), secrets, {
-                    owner: { id: "user-1", isOwner: false, isWorkspace: false, parentUserId: null },
-                    workspace: { id: "workspace-1", isOwner: false, isWorkspace: true, parentUserId: "owner-1" }
+                    owner: { id: "user-1", isWorkspace: false, parentUserId: null },
+                    workspace: { id: "workspace-1", isWorkspace: true, parentUserId: "owner-1" }
                 }),
                 toolCall
             )
-        ).rejects.toThrow("Only the owner user can manage workspace secrets.");
+        ).rejects.toThrow("Only workspace owners can manage workspace secrets.");
     });
 
     it("throws when target workspace does not exist", async () => {
@@ -120,7 +120,7 @@ describe("secretRemoveToolBuild", () => {
             tool.execute(
                 { name: "workspace-secret", userId: "missing-workspace" },
                 contextBuild(contextForUser({ userId: "owner-1" }), secrets, {
-                    owner: { id: "owner-1", isOwner: true, isWorkspace: false, parentUserId: null }
+                    owner: { id: "owner-1", isWorkspace: false, parentUserId: null }
                 }),
                 toolCall
             )
@@ -132,8 +132,8 @@ function contextBuild(
     ctx: ToolExecutionContext["ctx"],
     secrets: Secrets,
     users?: {
-        owner: { id: string; isOwner: boolean; isWorkspace: boolean; parentUserId: string | null };
-        workspace?: { id: string; isOwner: boolean; isWorkspace: boolean; parentUserId: string | null };
+        owner: { id: string; isWorkspace: boolean; parentUserId: string | null };
+        workspace?: { id: string; isWorkspace: boolean; parentUserId: string | null };
     }
 ): ToolExecutionContext {
     return {

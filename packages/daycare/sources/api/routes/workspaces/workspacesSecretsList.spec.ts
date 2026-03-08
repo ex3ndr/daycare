@@ -47,17 +47,17 @@ describe("workspacesSecretsList", () => {
 
         expect(result).toEqual({
             ok: false,
-            error: "Only the owner user can manage workspace secrets."
+            error: "Only workspace owners can manage workspace secrets."
         });
     });
 });
 
 function usersBuild(): {
-    findById: (id: string) => Promise<{ id: string; isOwner: boolean } | null>;
+    findById: (id: string) => Promise<{ id: string } | null>;
     findByNametag: (nametag: string) => Promise<{ id: string; isWorkspace: boolean; parentUserId: string } | null>;
 } {
     return {
-        findById: async (id) => (id === "owner-1" ? { id: "owner-1", isOwner: true } : { id, isOwner: false }),
+        findById: async (id) => ({ id }),
         findByNametag: async (nametag) =>
             nametag === "reviewer" ? { id: "workspace-1", isWorkspace: true, parentUserId: "owner-1" } : null
     };

@@ -429,7 +429,6 @@ describe("Engine workspace registration", () => {
                     (await seedStorage.users.findOwner()) ??
                     (await seedStorage.users.create({
                         id: "sy45wijd1hmr03ef2wu7busv",
-                        isOwner: true,
                         createdAt: 0,
                         updatedAt: 0,
                         nametag: "owner"
@@ -487,7 +486,6 @@ describe("Engine workspace registration", () => {
                     (await seedStorage.users.findOwner()) ??
                     (await seedStorage.users.create({
                         id: "sy45wijd1hmr03ef2wu7busv",
-                        isOwner: true,
                         createdAt: 0,
                         updatedAt: 0,
                         nametag: "owner"

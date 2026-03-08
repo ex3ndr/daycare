@@ -33,7 +33,6 @@ describe("userHomeMigrate", () => {
         const storage = storageResolve(config);
         const owner = await storage.users.create({
             id: "owner-1",
-            isOwner: true,
             createdAt: 1,
             updatedAt: 1
         });
@@ -44,7 +43,6 @@ describe("userHomeMigrate", () => {
         await writeFile(path.join(dataDir, "TOOLS.md"), "legacy tools\n", "utf8");
         const workspace = await storage.users.create({
             id: "workspace-1",
-            isOwner: false,
             isWorkspace: true,
             parentUserId: owner.id,
             createdAt: 2,
@@ -65,7 +63,7 @@ describe("userHomeMigrate", () => {
         await userHomeMigrate(config);
 
         const users = await storage.users.findMany();
-        const migratedOwner = users.find((entry) => entry.isOwner) ?? users[0];
+        const migratedOwner = users.find((entry) => !entry.isWorkspace && entry.parentUserId === null) ?? users[0];
         expect(migratedOwner?.id).toBeTruthy();
         if (!migratedOwner) {
             throw new Error("Owner user missing");
@@ -112,7 +110,7 @@ describe("userHomeMigrate", () => {
 
         await userHomeMigrate(config);
         const users = await storage.users.findMany();
-        const owner = users.find((entry) => entry.isOwner) ?? users[0];
+        const owner = users.find((entry) => !entry.isWorkspace && entry.parentUserId === null) ?? users[0];
         if (!owner) {
             throw new Error("Owner user missing");
         }
@@ -134,7 +132,7 @@ describe("userHomeMigrate", () => {
         expect((await storage.documents.findBySlugAndParent(ctx, "soul", system.id))?.body).toBe("already migrated\n");
     });
 
-    it("promotes a fallback owner when users table has no owner", async () => {
+    it("creates a personal root user when only workspaces exist", async () => {
         const dataDir = path.join(rootDir, "data");
         const config = configResolve(
             {
@@ -144,23 +142,19 @@ describe("userHomeMigrate", () => {
         );
         await storageUpgrade(config);
         const storage = storageResolve(config);
-        const firstUser = await storage.users.create({
-            id: "user-no-owner",
-            isOwner: false,
+        await storage.users.create({
+            id: "workspace-only",
+            isWorkspace: true,
+            parentUserId: "missing-parent",
             createdAt: 1,
             updatedAt: 1,
-            nametag: "user-no-owner"
-        });
-
-        await storage.users.update(firstUser.id, {
-            isOwner: false,
-            updatedAt: Date.now()
+            nametag: "workspace-only"
         });
 
         await userHomeMigrate(config);
 
         const afterUsers = await storage.users.findMany();
-        const owner = afterUsers.find((entry) => entry.isOwner) ?? null;
-        expect(owner?.id).toBe(firstUser.id);
+        const owner = afterUsers.find((entry) => !entry.isWorkspace && entry.parentUserId === null) ?? null;
+        expect(owner?.id).toBeTruthy();
     });
 });

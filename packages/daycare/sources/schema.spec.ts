@@ -29,6 +29,7 @@ describe("schema", () => {
             const userColumnNames = new Set(
                 userColumns.map((entry) => entry.name).filter((entry): entry is string => !!entry)
             );
+            expect(userColumnNames.has("is_owner")).toBe(false);
             expect(userColumnNames.has("first_name")).toBe(true);
             expect(userColumnNames.has("last_name")).toBe(true);
             expect(userColumnNames.has("country")).toBe(true);
@@ -60,7 +61,7 @@ describe("schema", () => {
             const indexNames = new Set(indexes.map((entry) => entry.name).filter((entry): entry is string => !!entry));
 
             expect(indexNames.has("idx_users_nametag")).toBe(true);
-            expect(indexNames.has("idx_users_single_owner")).toBe(true);
+            expect(indexNames.has("idx_users_single_owner")).toBe(false);
             expect(indexNames.has("idx_tasks_cron_task_id")).toBe(true);
             expect(indexNames.has("idx_token_stats_hourly_agent_hour")).toBe(true);
             expect(indexNames.has("workspace_members_workspace_user_unique")).toBe(true);

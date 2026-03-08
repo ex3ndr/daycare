@@ -8,7 +8,6 @@ CREATE TABLE "users" (
     "version" integer DEFAULT 1 NOT NULL,
     "valid_from" bigint NOT NULL,
     "valid_to" bigint,
-    "is_owner" boolean DEFAULT false NOT NULL,
     "is_swarm" boolean DEFAULT false NOT NULL,
     "created_at" bigint NOT NULL,
     "updated_at" bigint NOT NULL,
@@ -326,7 +325,6 @@ CREATE TABLE "observation_log" (
 );
 
 CREATE UNIQUE INDEX "idx_users_nametag" ON "users" USING btree ("nametag") WHERE "users"."valid_to" IS NULL;
-CREATE UNIQUE INDEX "idx_users_single_owner" ON "users" USING btree ("is_owner") WHERE "users"."is_owner" = true AND "users"."valid_to" IS NULL;
 CREATE INDEX "idx_users_parent" ON "users" USING btree ("parent_user_id") WHERE "users"."parent_user_id" IS NOT NULL;
 CREATE INDEX "idx_users_id_valid_to" ON "users" USING btree ("id", "valid_to");
 

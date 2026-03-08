@@ -30,7 +30,7 @@ export async function userHomeMigrate(config: Config, storageOrConfig?: Storage 
         return;
     }
 
-    const ownerUserId = await ownerUserIdEnsure(storage);
+    const ownerUserId = await primaryUserIdEnsure(storage);
     const users = await storage.users.findMany();
     for (const user of users) {
         const userHome = new UserHome(config.usersDir, user.id);
@@ -53,26 +53,19 @@ export async function userHomeMigrate(config: Config, storageOrConfig?: Storage 
     );
 }
 
-async function ownerUserIdEnsure(storage: Storage): Promise<string> {
+async function primaryUserIdEnsure(storage: Storage): Promise<string> {
     const users = await storage.users.findMany();
-    const owner = users.find((entry) => entry.isOwner);
-    if (owner) {
-        return owner.id;
+    const primary = users.find((entry) => !entry.isWorkspace && entry.parentUserId === null);
+    if (primary) {
+        return primary.id;
     }
-    const fallbackOwner = users[0];
-    if (fallbackOwner) {
-        logger.warn(
-            { userId: fallbackOwner.id },
-            "warn: User table had no owner; promoting earliest user to owner for migration"
-        );
-        await storage.users.update(fallbackOwner.id, { isOwner: true, updatedAt: Date.now() });
-        return fallbackOwner.id;
+    if (users.length > 0) {
+        logger.warn("warn: User table had no personal root user; creating one for migration fallback");
     }
     const now = Date.now();
     const ownerId = createId();
     await storage.users.create({
         id: ownerId,
-        isOwner: true,
         createdAt: now,
         updatedAt: now
     });
