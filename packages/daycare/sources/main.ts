@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { Command } from "commander";
 import { addCommand } from "./commands/add.js";
 import { appLinkCommand } from "./commands/appLink.js";
+import { appLinkSystemCommand } from "./commands/appLinkSystem.js";
 import { setAuthCommand } from "./commands/auth.js";
 import { channelAddMemberCommand } from "./commands/channelAddMember.js";
 import { channelCreateCommand } from "./commands/channelCreate.js";
@@ -50,6 +51,18 @@ program
     .option("--expires-in-seconds <seconds>", "Token expiration in seconds")
     .option("--json", "Print full json payload instead of plain URL")
     .action(appLinkCommand);
+
+program
+    .command("system-link")
+    .description("Generate a Daycare app auth link URL for the system workspace")
+    .option("-s, --settings <path>", "Path to settings file", DEFAULT_SETTINGS_PATH)
+    .option("--host <host>", "Override host in the generated URL")
+    .option("--port <port>", "Override port in the generated URL")
+    .option("--app-endpoint <endpoint>", "Override app endpoint URL where the auth link opens")
+    .option("--server-endpoint <endpoint>", "Override backend endpoint URL embedded in the auth hash payload")
+    .option("--expires-in-seconds <seconds>", "Token expiration in seconds")
+    .option("--json", "Print full json payload instead of plain URL")
+    .action(appLinkSystemCommand);
 
 program
     .command("add")
