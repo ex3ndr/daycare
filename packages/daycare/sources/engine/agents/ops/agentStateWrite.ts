@@ -65,6 +65,9 @@ function agentLabelResolve(config: Pick<AgentConfig, "kind" | "name">): string {
     if (config.kind === "app") {
         return config.name?.trim() || "app";
     }
+    if (config.kind === "supervisor") {
+        return config.name?.trim() || "supervisor";
+    }
     if (config.kind === "task") {
         return `task ${config.name?.trim() || "task"}`;
     }

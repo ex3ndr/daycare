@@ -56,6 +56,23 @@ describe("agentPromptResolve", () => {
         expect(resolved.replaceSystemPrompt).toBe(true);
     });
 
+    it("resolves supervisor prompt without replacing the base system prompt", async () => {
+        const resolved = await agentPromptResolve("/u1/supervisor", {
+            kind: "supervisor",
+            modelRole: "user",
+            connectorName: null,
+            parentAgentId: null,
+            foreground: false,
+            name: "Supervisor",
+            description: null,
+            systemPrompt: null,
+            workspaceDir: null
+        });
+
+        expect(resolved.agentPrompt.length).toBeGreaterThan(0);
+        expect(resolved.replaceSystemPrompt).toBe(false);
+    });
+
     it("returns empty prompt for non-system paths", async () => {
         const resolved = await agentPromptResolve("/u1/telegram", {
             kind: "connector",

@@ -60,6 +60,25 @@ export async function chatDirectResolve(baseUrl: string, token: string, workspac
 }
 
 /**
+ * Resolves (or creates) the singleton supervisor agent for the current user.
+ * Expects: baseUrl/token are valid authenticated values.
+ */
+export async function chatSupervisorResolve(
+    baseUrl: string,
+    token: string,
+    workspaceId: string | null
+): Promise<string> {
+    const response = await fetch(apiUrl(baseUrl, "/agents/supervisor", workspaceId), {
+        headers: { authorization: `Bearer ${token}` }
+    });
+    const data = (await response.json()) as { ok?: boolean; agentId?: string; error?: string };
+    if (data.ok !== true || typeof data.agentId !== "string") {
+        throw new Error(data.error ?? "Failed to resolve supervisor agent");
+    }
+    return data.agentId;
+}
+
+/**
  * Fetches full history for a chat agent.
  * Expects: baseUrl/token/agentId are valid.
  */
@@ -102,6 +121,31 @@ export async function chatMessageSend(
     if (data.ok !== true) {
         throw new Error(data.error ?? "Failed to send chat message");
     }
+}
+
+/**
+ * Sends a bootstrap message to the singleton supervisor agent and returns its id.
+ * Expects: baseUrl/token are valid and text is non-empty.
+ */
+export async function chatSupervisorBootstrapSend(
+    baseUrl: string,
+    token: string,
+    workspaceId: string | null,
+    text: string
+): Promise<string> {
+    const response = await fetch(apiUrl(baseUrl, "/agents/supervisor/bootstrap", workspaceId), {
+        method: "POST",
+        headers: {
+            authorization: `Bearer ${token}`,
+            "content-type": "application/json"
+        },
+        body: JSON.stringify({ text })
+    });
+    const data = (await response.json()) as { ok?: boolean; agentId?: string; error?: string };
+    if (data.ok !== true || typeof data.agentId !== "string") {
+        throw new Error(data.error ?? "Failed to bootstrap supervisor agent");
+    }
+    return data.agentId;
 }
 
 /**

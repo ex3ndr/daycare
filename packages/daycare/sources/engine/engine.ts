@@ -26,7 +26,13 @@ import { valueDeepEqual } from "../utils/valueDeepEqual.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForAgent, contextForUser } from "./agents/context.js";
 import { agentHistoryLoad } from "./agents/ops/agentHistoryLoad.js";
-import { agentPathApp, agentPathConnector, agentPathDirect, agentPathTask } from "./agents/ops/agentPathBuild.js";
+import {
+    agentPathApp,
+    agentPathConnector,
+    agentPathDirect,
+    agentPathSupervisor,
+    agentPathTask
+} from "./agents/ops/agentPathBuild.js";
 import { agentPath } from "./agents/ops/agentPathTypes.js";
 import { contextEstimateTokens } from "./agents/ops/contextEstimateTokens.js";
 import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
@@ -483,6 +489,19 @@ export class Engine {
                             kind: "connector",
                             foreground: true,
                             name: "Direct"
+                        }
+                    );
+                },
+                agentSupervisorResolve: async (ctx) => {
+                    const supervisorPath = agentPathSupervisor(ctx.userId);
+                    return this.agentSystem.agentIdForTarget(
+                        ctx,
+                        { path: supervisorPath },
+                        {
+                            kind: "supervisor",
+                            foreground: false,
+                            name: "Supervisor",
+                            description: "Supervises, executes, and delegates tasks."
                         }
                     );
                 }

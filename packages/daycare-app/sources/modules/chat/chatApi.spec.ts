@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chatCreate, chatHistoryFetch, chatMessageSend, chatMessagesPoll } from "./chatApi";
+import {
+    chatCreate,
+    chatDirectResolve,
+    chatHistoryFetch,
+    chatMessageSend,
+    chatMessagesPoll,
+    chatSupervisorBootstrapSend,
+    chatSupervisorResolve
+} from "./chatApi";
 
 describe("chatCreate", () => {
     afterEach(() => {
@@ -80,6 +88,50 @@ describe("chatHistoryFetch", () => {
     });
 });
 
+describe("chatDirectResolve", () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it("returns the direct agent id", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                json: async () => ({ ok: true, agentId: "direct-1" })
+            }))
+        );
+
+        const result = await chatDirectResolve("http://localhost", "tok", null);
+
+        expect(result).toBe("direct-1");
+        expect(fetch).toHaveBeenCalledWith("http://localhost/agents/direct", {
+            headers: { authorization: "Bearer tok" }
+        });
+    });
+});
+
+describe("chatSupervisorResolve", () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it("returns the supervisor agent id", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                json: async () => ({ ok: true, agentId: "supervisor-1" })
+            }))
+        );
+
+        const result = await chatSupervisorResolve("http://localhost", "tok", null);
+
+        expect(result).toBe("supervisor-1");
+        expect(fetch).toHaveBeenCalledWith("http://localhost/agents/supervisor", {
+            headers: { authorization: "Bearer tok" }
+        });
+    });
+});
+
 describe("chatMessageSend", () => {
     afterEach(() => {
         vi.unstubAllGlobals();
@@ -116,6 +168,33 @@ describe("chatMessageSend", () => {
         await expect(chatMessageSend("http://localhost", "tok", null, "bad-id", "hi")).rejects.toThrow(
             "agent not found"
         );
+    });
+});
+
+describe("chatSupervisorBootstrapSend", () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it("posts bootstrap text and returns the supervisor agent id", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                json: async () => ({ ok: true, agentId: "supervisor-1" })
+            }))
+        );
+
+        const result = await chatSupervisorBootstrapSend("http://localhost", "tok", null, "Kick off planning");
+
+        expect(result).toBe("supervisor-1");
+        expect(fetch).toHaveBeenCalledWith("http://localhost/agents/supervisor/bootstrap", {
+            method: "POST",
+            headers: {
+                authorization: "Bearer tok",
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({ text: "Kick off planning" })
+        });
     });
 });
 

@@ -1313,7 +1313,7 @@ function configForCreation(
 }
 
 function modelRoleForKind(kind: NonNullable<AgentConfig["kind"]>): AgentConfig["modelRole"] {
-    if (kind === "connector" || kind === "agent" || kind === "app" || kind === "subuser") {
+    if (kind === "connector" || kind === "agent" || kind === "app" || kind === "subuser" || kind === "supervisor") {
         return "user";
     }
     if (kind === "sub") {

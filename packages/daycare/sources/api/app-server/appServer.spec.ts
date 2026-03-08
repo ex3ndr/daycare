@@ -773,6 +773,9 @@ describe("AppServer authenticated routes", () => {
             },
             agentDirectResolve: async (_ctx) => {
                 return "direct-agent-id";
+            },
+            agentSupervisorResolve: async (_ctx) => {
+                return "supervisor-agent-id";
             }
         };
         const built = await appServerCreateForTests({ secret, agentCallbacks: callbacks });
@@ -813,6 +816,31 @@ describe("AppServer authenticated routes", () => {
                     updatedAt: 1_700_000_000_000
                 }
             ]
+        });
+
+        const supervisor = await fetch(`http://127.0.0.1:${built.port}/agents/supervisor`, {
+            headers: { authorization: `Bearer ${token}` }
+        });
+        expect(supervisor.status).toBe(200);
+        await expect(supervisor.json()).resolves.toEqual({
+            ok: true,
+            agentId: "supervisor-agent-id"
+        });
+
+        const bootstrap = await fetch(`http://127.0.0.1:${built.port}/agents/supervisor/bootstrap`, {
+            method: "POST",
+            headers: {
+                authorization: `Bearer ${token}`,
+                "content-type": "application/json"
+            },
+            body: JSON.stringify({
+                text: "Take over release coordination."
+            })
+        });
+        expect(bootstrap.status).toBe(200);
+        await expect(bootstrap.json()).resolves.toEqual({
+            ok: true,
+            agentId: "supervisor-agent-id"
         });
 
         const sent = await fetch(`http://127.0.0.1:${built.port}/agents/app-agent-1/messages/create`, {

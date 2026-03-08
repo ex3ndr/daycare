@@ -9,6 +9,8 @@ import { agentsHistory } from "./agentsHistory.js";
 import { agentsList } from "./agentsList.js";
 import { agentsMessage } from "./agentsMessage.js";
 import { agentsMessagesRead } from "./agentsMessagesRead.js";
+import { agentsSupervisor } from "./agentsSupervisor.js";
+import { agentsSupervisorBootstrap } from "./agentsSupervisorBootstrap.js";
 
 export type AgentsRouteContext = {
     ctx: Context;
@@ -61,6 +63,27 @@ export async function agentsRouteHandle(
         const result = await agentsDirect({
             ctx: context.ctx,
             agentDirectResolve: context.callbacks.agentDirectResolve
+        });
+        context.sendJson(response, result.ok ? 200 : 400, result);
+        return true;
+    }
+
+    if (pathname === "/agents/supervisor" && request.method === "GET") {
+        const result = await agentsSupervisor({
+            ctx: context.ctx,
+            agentSupervisorResolve: context.callbacks.agentSupervisorResolve
+        });
+        context.sendJson(response, result.ok ? 200 : 400, result);
+        return true;
+    }
+
+    if (pathname === "/agents/supervisor/bootstrap" && request.method === "POST") {
+        const body = await context.readJsonBody(request);
+        const result = await agentsSupervisorBootstrap({
+            ctx: context.ctx,
+            body,
+            agentSupervisorResolve: context.callbacks.agentSupervisorResolve,
+            agentPost: context.callbacks.agentPost
         });
         context.sendJson(response, result.ok ? 200 : 400, result);
         return true;

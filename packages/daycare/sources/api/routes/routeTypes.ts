@@ -100,6 +100,7 @@ export type RouteAgentCallbacks = {
     agentKill: (ctx: Context, agentId: string) => Promise<boolean>;
     agentPost: (ctx: Context, target: AgentPostTarget, item: AgentInboxItem) => Promise<void>;
     agentDirectResolve: (ctx: Context) => Promise<string>;
+    agentSupervisorResolve: (ctx: Context) => Promise<string>;
 };
 
 export type RouteCostsCallback = {

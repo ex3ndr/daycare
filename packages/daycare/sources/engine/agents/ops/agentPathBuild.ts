@@ -25,6 +25,14 @@ export function agentPathApp(userId: string, id: string): AgentPath {
 }
 
 /**
+ * Builds the singleton supervisor path under a user.
+ * Expects: userId is a non-empty path segment.
+ */
+export function agentPathSupervisor(userId: string): AgentPath {
+    return agentPath(`/${segmentRequire(userId, "userId")}/supervisor`);
+}
+
+/**
  * Builds a cron agent path under a user.
  * Expects: userId and id are non-empty path segments.
  */
