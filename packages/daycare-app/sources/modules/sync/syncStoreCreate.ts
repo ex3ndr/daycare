@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { AgentListItem } from "@/modules/agents/agentsTypes";
+import type { WorkspaceConfig } from "@/modules/config/configTypes";
 import type { SseClient } from "./sseClientCreate";
 import { sseClientCreate } from "./sseClientCreate";
 import { BACKOFF_INITIAL_MS, syncBackoffCompute } from "./syncBackoff";
@@ -12,7 +13,7 @@ export type SyncStoreCallbacks = {
     onAgentCreated: (payload: Partial<AgentListItem> & { agentId: string }) => void;
     onAgentUpdated: (payload: { agentId: string; updatedAt?: number } & Partial<AgentListItem>) => void;
     onAgentDeleted: (agentId: string) => void;
-    onConfigurationSync: (workspaceId: string, configuration: { homeReady: boolean; appReady: boolean }) => void;
+    onConfigurationSync: (workspaceId: string, configuration: WorkspaceConfig) => void;
     onRefetch: () => void;
 };
 

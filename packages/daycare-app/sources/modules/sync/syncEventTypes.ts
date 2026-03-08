@@ -1,3 +1,5 @@
+import type { WorkspaceConfig } from "@/modules/config/configTypes";
+
 /**
  * Typed SSE event definitions for app-server sync.
  * Mirrors the event types emitted by the server's EngineEventBus.
@@ -38,10 +40,7 @@ export type SyncEventConnected = {
 export type SyncEventConfigurationSync = {
     type: "user.configuration.sync";
     payload: {
-        configuration: {
-            homeReady: boolean;
-            appReady: boolean;
-        };
+        configuration: WorkspaceConfig;
     };
 };
 

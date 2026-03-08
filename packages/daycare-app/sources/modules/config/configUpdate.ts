@@ -1,15 +1,17 @@
+import { apiUrl } from "../api/apiUrl";
 import type { WorkspaceConfig } from "./configTypes";
 
 /**
- * Updates workspace configuration flags via the profile endpoint.
- * Expects: baseUrl and token are valid.
+ * Updates workspace configuration flags via the workspace-scoped profile endpoint.
+ * Expects: baseUrl, token, and workspaceId are valid.
  */
 export async function configUpdate(
     baseUrl: string,
     token: string,
+    workspaceId: string,
     configuration: Partial<WorkspaceConfig>
 ): Promise<void> {
-    const response = await fetch(`${baseUrl}/profile/update`, {
+    const response = await fetch(apiUrl(baseUrl, "/profile/update", workspaceId), {
         method: "POST",
         headers: {
             authorization: `Bearer ${token}`,

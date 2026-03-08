@@ -31,7 +31,7 @@ export function OnboardingView() {
         setError(null);
         try {
             await supervisorBootstrap(baseUrl, token, workspaceId, text);
-            await configUpdate(baseUrl, token, { bootstrapStarted: true });
+            await configUpdate(baseUrl, token, workspaceId, { bootstrapStarted: true });
         } catch (e) {
             setError(e instanceof Error ? e.message : "Something went wrong");
             setSubmitting(false);

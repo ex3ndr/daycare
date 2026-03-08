@@ -8,7 +8,8 @@ Initial shape:
 ```json
 {
     "homeReady": false,
-    "appReady": false
+    "appReady": false,
+    "bootstrapStarted": false
 }
 ```
 
@@ -16,9 +17,10 @@ Behavior:
 
 - `homeReady`: switches between onboarding-style home and the real home view.
 - `appReady`: controls whether navigation chrome such as sidebars is visible.
+- `bootstrapStarted`: keeps workspace onboarding in its in-progress state after the initial supervisor bootstrap request.
 - Missing or malformed stored values normalize back to `false`.
 - `GET /config` (workspace-scoped) returns the workspace's configuration.
-- `POST /profile/update` accepts partial `configuration` updates and merges them into the current value.
+- `POST /w/{workspaceId}/profile/update` accepts partial `configuration` updates and merges them into the workspace value.
 - `GET /events` always emits the latest workspace configuration snapshot on connect, then forwards live `user.configuration.sync` updates.
 
 ## App loading order
@@ -39,9 +41,9 @@ sequenceDiagram
 
     App->>API: GET /w/{id}/config
     API->>DB: read workspace configuration
-    API-->>App: { homeReady, appReady }
+    API-->>App: { homeReady, appReady, bootstrapStarted }
 
-    Agent->>API: POST /profile/update { configuration }
+    Agent->>API: POST /w/{id}/profile/update { configuration }
     API->>DB: versioned user row update
     API->>SSE: emit user.configuration.sync
     SSE-->>App: live configuration event
