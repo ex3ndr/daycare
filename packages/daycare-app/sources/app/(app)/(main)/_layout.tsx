@@ -1,5 +1,5 @@
 import { Octicons } from "@expo/vector-icons";
-import { Navigator, Redirect, type Href, type ScreenProps, usePathname } from "expo-router";
+import { type Href, Navigator, Redirect, type ScreenProps, usePathname } from "expo-router";
 import * as React from "react";
 import { Pressable, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
