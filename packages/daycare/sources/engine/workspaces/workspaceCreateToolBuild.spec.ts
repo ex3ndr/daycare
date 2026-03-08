@@ -65,7 +65,7 @@ describe("workspaceCreateToolBuild", () => {
             await storage.users.create({
                 id: "workspace-1",
                 isWorkspace: true,
-                parentUserId: owner.id,
+                workspaceOwnerId: owner.id,
                 nametag: "workspace-1",
                 createdAt: 1,
                 updatedAt: 1
@@ -108,7 +108,7 @@ describe("workspaceCreateToolBuild", () => {
             await storage.users.create({
                 id: "workspace-1",
                 isWorkspace: true,
-                parentUserId: owner.id,
+                workspaceOwnerId: owner.id,
                 nametag: "workspace-1",
                 createdAt: 1,
                 updatedAt: 1

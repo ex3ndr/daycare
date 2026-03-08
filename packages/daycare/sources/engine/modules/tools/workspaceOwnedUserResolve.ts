@@ -23,7 +23,7 @@ export async function workspaceOwnedUserResolve(
     if (!target || !target.isWorkspace) {
         throw new Error(`Workspace not found: ${targetUserId}`);
     }
-    if (target.parentUserId !== input.toolContext.ctx.userId) {
+    if (target.workspaceOwnerId !== input.toolContext.ctx.userId) {
         throw new Error(input.ownerError);
     }
 

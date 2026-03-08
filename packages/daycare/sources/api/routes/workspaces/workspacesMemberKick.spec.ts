@@ -17,7 +17,7 @@ describe("workspacesMemberKick", () => {
                         id: "workspace-1",
                         nametag: "workspace-a",
                         isWorkspace: true,
-                        parentUserId: "owner-1"
+                        workspaceOwnerId: "owner-1"
                     }) as never
             } as never,
             workspaceMembers: {
@@ -44,7 +44,7 @@ describe("workspacesMemberKick", () => {
                             id: "workspace-1",
                             nametag: "workspace-a",
                             isWorkspace: true,
-                            parentUserId: "owner-1"
+                            workspaceOwnerId: "owner-1"
                         }) as never
                 } as never,
                 workspaceMembers: {
@@ -70,7 +70,7 @@ describe("workspacesMemberKick", () => {
                             id: "workspace-1",
                             nametag: "workspace-a",
                             isWorkspace: true,
-                            parentUserId: "owner-1"
+                            workspaceOwnerId: "owner-1"
                         }) as never
                 } as never,
                 workspaceMembers: {

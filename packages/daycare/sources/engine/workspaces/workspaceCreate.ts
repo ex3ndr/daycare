@@ -46,7 +46,7 @@ export async function workspaceCreate(input: WorkspaceCreateInput): Promise<Work
     const createdUser = await input.storage.users.create({
         id: createId(),
         isWorkspace: true,
-        parentUserId: ownerUserId,
+        workspaceOwnerId: ownerUserId,
         firstName,
         lastName,
         bio,

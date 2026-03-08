@@ -21,7 +21,7 @@ describe("inviteAccept", () => {
                               id,
                               nametag: "workspace-a",
                               isWorkspace: true,
-                              parentUserId: "owner-1"
+                              workspaceOwnerId: "owner-1"
                           } as never)
                         : null
             } as never,
@@ -78,7 +78,7 @@ describe("inviteAccept", () => {
                           id,
                           nametag: "workspace-a",
                           isWorkspace: true,
-                          parentUserId: "owner-1"
+                          workspaceOwnerId: "owner-1"
                       } as never)
                     : null
         };

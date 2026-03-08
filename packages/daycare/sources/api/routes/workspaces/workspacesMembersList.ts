@@ -44,7 +44,7 @@ export async function workspacesMembersList(input: WorkspacesMembersListInput): 
         return { ok: false, error: scope.error };
     }
 
-    const ownerId = scope.workspace.parentUserId?.trim() ?? "";
+    const ownerId = scope.workspace.workspaceOwnerId?.trim() ?? "";
     const owner = ownerId ? await input.users.findById(ownerId) : null;
     if (!owner) {
         return { ok: false, error: "Workspace not found." };

@@ -3,7 +3,7 @@
 ## Summary
 - Removed the persisted `users.is_owner` column and its single-owner index.
 - Generic user payloads no longer expose `isOwner`.
-- Workspace management now authorizes from the actual ownership edge: `workspace.parent_user_id === caller.id`.
+- Workspace management now authorizes from the actual ownership edge: `workspace.workspace_owner_id === caller.id`.
 - Workspace member listings still expose `isOwner` so the UI can label the workspace owner row.
 - Removed the `UsersRepository.findOwner()` shortcut and the migration-time synthetic primary-user bootstrap.
 - Added optional `personUserId` on `Context` and populate it for foreground user-facing agent contexts.
@@ -18,8 +18,8 @@
 ```mermaid
 flowchart TD
     A[Personal user] -->|creates workspace| B[Workspace user]
-    B -->|parent_user_id| A
-    C[Workspace secret routes] --> D{workspace.parent_user_id === caller.id}
+    B -->|workspace_owner_id| A
+    C[Workspace secret routes] --> D{workspace.workspace_owner_id === caller.id}
     E[Workspace tools] --> D
     D -->|yes| F[Allow workspace-owner action]
     D -->|no| G[Reject action]

@@ -30,7 +30,7 @@ describe("workspacesList", () => {
                     }
                     return null;
                 },
-                findByParentUserId: async () => [
+                findByWorkspaceOwnerId: async () => [
                     {
                         id: "workspace-owned",
                         nametag: "owned-space",

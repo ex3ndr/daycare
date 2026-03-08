@@ -11,7 +11,7 @@ CREATE TABLE "users" (
     "is_swarm" boolean DEFAULT false NOT NULL,
     "created_at" bigint NOT NULL,
     "updated_at" bigint NOT NULL,
-    "parent_user_id" text,
+    "workspace_owner_id" text,
     "first_name" text,
     "last_name" text,
     "bio" text,
@@ -325,7 +325,7 @@ CREATE TABLE "observation_log" (
 );
 
 CREATE UNIQUE INDEX "idx_users_nametag" ON "users" USING btree ("nametag") WHERE "users"."valid_to" IS NULL;
-CREATE INDEX "idx_users_parent" ON "users" USING btree ("parent_user_id") WHERE "users"."parent_user_id" IS NOT NULL;
+CREATE INDEX "idx_users_workspace_owner" ON "users" USING btree ("workspace_owner_id") WHERE "users"."workspace_owner_id" IS NOT NULL;
 CREATE INDEX "idx_users_id_valid_to" ON "users" USING btree ("id", "valid_to");
 
 CREATE INDEX "idx_user_connector_keys_user_id" ON "user_connector_keys" USING btree ("user_id");

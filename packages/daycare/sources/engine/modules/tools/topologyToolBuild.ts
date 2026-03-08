@@ -271,8 +271,8 @@ export function topologyTool(
 
             // Determine if caller is a subuser (has parent)
             const callerUser = await storage.users.findById(callerUserId);
-            const isSubuser = callerUser?.parentUserId != null;
-            const ownerSubusers = isSubuser ? [] : await storage.users.findByParentUserId(callerUserId);
+            const isSubuser = callerUser?.workspaceOwnerId != null;
+            const ownerSubusers = isSubuser ? [] : await storage.users.findByWorkspaceOwnerId(callerUserId);
 
             // Owners can see their own user scope plus owned subusers. Subusers only see their own scope.
             const visibleUserIds = isSubuser
@@ -505,7 +505,7 @@ async function friendsListBuild(
         users: {
             findById: (id: string) => Promise<{
                 id: string;
-                parentUserId: string | null;
+                workspaceOwnerId: string | null;
                 nametag: string | null;
                 firstName: string | null;
                 lastName: string | null;
@@ -518,7 +518,7 @@ async function friendsListBuild(
         string,
         {
             id: string;
-            parentUserId: string | null;
+            workspaceOwnerId: string | null;
             nametag: string | null;
             firstName: string | null;
             lastName: string | null;
@@ -535,7 +535,7 @@ async function friendsListBuild(
 
                 const cached = userCache.get(friendId);
                 if (cached) {
-                    return cached.parentUserId ? null : cached;
+                    return cached.workspaceOwnerId ? null : cached;
                 }
 
                 const user = await storage.users.findById(friendId);
@@ -543,7 +543,7 @@ async function friendsListBuild(
                     return null;
                 }
                 userCache.set(friendId, user);
-                if (user.parentUserId) {
+                if (user.workspaceOwnerId) {
                     return null;
                 }
                 return user;
@@ -555,7 +555,7 @@ async function friendsListBuild(
                 entry
             ): entry is {
                 id: string;
-                parentUserId: string | null;
+                workspaceOwnerId: string | null;
                 nametag: string | null;
                 firstName: string | null;
                 lastName: string | null;
@@ -606,7 +606,7 @@ async function sharedSubusersBuild(options: {
     users: {
         findById: (id: string) => Promise<{
             id: string;
-            parentUserId: string | null;
+            workspaceOwnerId: string | null;
             nametag: string | null;
             firstName: string | null;
             lastName: string | null;
@@ -616,7 +616,7 @@ async function sharedSubusersBuild(options: {
         string,
         {
             id: string;
-            parentUserId: string | null;
+            workspaceOwnerId: string | null;
             nametag: string | null;
             firstName: string | null;
             lastName: string | null;

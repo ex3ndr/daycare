@@ -20,7 +20,7 @@ describe("appWorkspaceResolve", () => {
                     ? {
                           id,
                           isWorkspace: true,
-                          parentUserId: "owner-1"
+                          workspaceOwnerId: "owner-1"
                       }
                     : null
         };
@@ -55,7 +55,7 @@ describe("appWorkspaceResolve", () => {
                     findById: async () => ({
                         id: "workspace-1",
                         isWorkspace: true,
-                        parentUserId: "owner-1"
+                        workspaceOwnerId: "owner-1"
                     })
                 } as never,
                 {

@@ -196,7 +196,7 @@ async function routeCall(input: RouteCallInput): Promise<{
                                     id: "workspace-1",
                                     nametag: "reviewer",
                                     isWorkspace: true,
-                                    parentUserId: "owner-1",
+                                    workspaceOwnerId: "owner-1",
                                     createdAt: 1
                                 }
                               : id === "owner-1"
@@ -211,7 +211,7 @@ async function routeCall(input: RouteCallInput): Promise<{
                                     lastName: null,
                                     createdAt: 1,
                                     isWorkspace: true,
-                                    parentUserId: "owner-1"
+                                    workspaceOwnerId: "owner-1"
                                 }
                               : null
                   } as never)

@@ -44,7 +44,7 @@ export async function appWorkspaceResolve(
     }
 
     // Caller accessing a child workspace they own
-    if (target.isWorkspace && target.parentUserId === callerUserId) {
+    if (target.isWorkspace && target.workspaceOwnerId === callerUserId) {
         return { workspaceUserId: target.id, strippedPathname };
     }
 

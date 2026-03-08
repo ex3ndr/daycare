@@ -43,7 +43,7 @@ describe("workspaceCreate", () => {
             const system = await storage.documents.findBySlugAndParent(ctx, "system", null);
             const soul = system ? await storage.documents.findBySlugAndParent(ctx, "soul", system.id) : null;
 
-            expect(user?.parentUserId).toBe(owner.id);
+            expect(user?.workspaceOwnerId).toBe(owner.id);
             expect(user?.isWorkspace).toBe(true);
             expect(typeof user?.nametag).toBe("string");
             expect(user?.nametag?.length).toBeGreaterThan(0);

@@ -45,7 +45,7 @@ export async function workspacesAccessResolve(
         return { ok: false, error: "Workspace not found.", statusCode: 404 };
     }
 
-    if (workspace.parentUserId === caller.id) {
+    if (workspace.workspaceOwnerId === caller.id) {
         return {
             ok: true,
             workspace,

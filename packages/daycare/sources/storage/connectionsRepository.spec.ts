@@ -75,9 +75,9 @@ describe("ConnectionsRepository", () => {
             await storage.users.create({ id: "alice", nametag: "alice-tag-42" });
             await storage.users.create({ id: "bob", nametag: "bob-tag-42" });
             await storage.users.create({ id: "charlie", nametag: "charlie-tag-42" });
-            await storage.users.create({ id: "alice-sub-1", parentUserId: "alice", nametag: "alice-sub-1-tag-42" });
-            await storage.users.create({ id: "alice-sub-2", parentUserId: "alice", nametag: "alice-sub-2-tag-42" });
-            await storage.users.create({ id: "bob-sub-1", parentUserId: "bob", nametag: "bob-sub-1-tag-42" });
+            await storage.users.create({ id: "alice-sub-1", workspaceOwnerId: "alice", nametag: "alice-sub-1-tag-42" });
+            await storage.users.create({ id: "alice-sub-2", workspaceOwnerId: "alice", nametag: "alice-sub-2-tag-42" });
+            await storage.users.create({ id: "bob-sub-1", workspaceOwnerId: "bob", nametag: "bob-sub-1-tag-42" });
 
             await storage.connections.upsertRequest("alice-sub-1", "bob", 100);
             await storage.connections.upsertRequest("alice-sub-2", "bob", 200);
@@ -102,11 +102,11 @@ describe("ConnectionsRepository", () => {
             await storage.users.create({ id: "alice", nametag: "alice-tag-42" });
             await storage.users.create({ id: "bob", nametag: "bob-tag-42" });
             await storage.users.create({ id: "charlie", nametag: "charlie-tag-42" });
-            await storage.users.create({ id: "alice-sub-1", parentUserId: "alice", nametag: "alice-sub-1-tag-42" });
-            await storage.users.create({ id: "alice-sub-2", parentUserId: "alice", nametag: "alice-sub-2-tag-42" });
+            await storage.users.create({ id: "alice-sub-1", workspaceOwnerId: "alice", nametag: "alice-sub-1-tag-42" });
+            await storage.users.create({ id: "alice-sub-2", workspaceOwnerId: "alice", nametag: "alice-sub-2-tag-42" });
             await storage.users.create({
                 id: "charlie-sub-1",
-                parentUserId: "charlie",
+                workspaceOwnerId: "charlie",
                 nametag: "charlie-sub-1-tag-42"
             });
 

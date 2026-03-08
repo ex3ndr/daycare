@@ -483,7 +483,7 @@ export type DatabaseUserRow = {
     valid_from: number;
     valid_to: number | null;
     is_workspace: boolean;
-    parent_user_id: string | null;
+    workspace_owner_id: string | null;
     first_name: string | null;
     last_name: string | null;
     bio: string | null;
@@ -511,7 +511,7 @@ export type UserDbRecord = {
     validFrom?: number;
     validTo?: number | null;
     isWorkspace: boolean;
-    parentUserId: string | null;
+    workspaceOwnerId: string | null;
     firstName: string | null;
     lastName: string | null;
     bio: string | null;
@@ -657,7 +657,7 @@ export type ObservationLogRecentOptions = {
 export type CreateUserInput = {
     id?: string;
     isWorkspace?: boolean;
-    parentUserId?: string;
+    workspaceOwnerId?: string;
     firstName?: string | null;
     lastName?: string | null;
     bio?: string | null;

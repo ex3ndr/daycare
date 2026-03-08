@@ -1,4 +1,4 @@
--- Drop swarm_contacts table (replaced by direct membership via users.is_workspace + parent_user_id)
+-- Drop swarm_contacts table (replaced by direct membership via users.is_workspace + workspace_owner_id)
 DROP TABLE IF EXISTS "swarm_contacts";
 
 -- Rename is_swarm column in users table

@@ -17,7 +17,7 @@ export async function workspaceDiscover(input: WorkspaceDiscoverInput): Promise<
     }
 
     const records: WorkspaceRecord[] = [];
-    const users = await input.storage.users.findByParentUserId(ownerUserId);
+    const users = await input.storage.users.findByWorkspaceOwnerId(ownerUserId);
 
     for (const user of users) {
         if (!user.isWorkspace) {

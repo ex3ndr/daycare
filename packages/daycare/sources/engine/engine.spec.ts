@@ -433,7 +433,7 @@ describe("Engine workspace registration", () => {
                 });
                 await seedStorage.users.create({
                     id: "workspace-user-1",
-                    parentUserId: owner.id,
+                    workspaceOwnerId: owner.id,
                     isWorkspace: true,
                     nametag: "github-reviewer",
                     firstName: "GitHub",
@@ -488,7 +488,7 @@ describe("Engine workspace registration", () => {
                 });
                 await seedStorage.users.create({
                     id: "workspace-user-2",
-                    parentUserId: owner.id,
+                    workspaceOwnerId: owner.id,
                     isWorkspace: true,
                     nametag: "support-reviewer",
                     firstName: "Support",

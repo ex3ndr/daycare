@@ -227,7 +227,7 @@ export class ConnectionsRepository {
             )
             .where(
                 and(
-                    eq(usersTable.parentUserId, ownerUserId),
+                    eq(usersTable.workspaceOwnerId, ownerUserId),
                     isNull(usersTable.validTo),
                     isNull(connectionsTable.validTo)
                 )
@@ -262,7 +262,7 @@ export class ConnectionsRepository {
             )
             .where(
                 and(
-                    eq(usersTable.parentUserId, ownerUserId),
+                    eq(usersTable.workspaceOwnerId, ownerUserId),
                     isNull(usersTable.validTo),
                     isNull(connectionsTable.validTo)
                 )

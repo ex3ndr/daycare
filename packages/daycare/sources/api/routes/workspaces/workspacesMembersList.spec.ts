@@ -27,7 +27,7 @@ describe("workspacesMembersList", () => {
                             firstName: "Workspace",
                             lastName: null,
                             isWorkspace: true,
-                            parentUserId: "owner-1",
+                            workspaceOwnerId: "owner-1",
                             createdAt: 10
                         } as never;
                     }
@@ -48,7 +48,7 @@ describe("workspacesMembersList", () => {
                         firstName: "Workspace",
                         lastName: null,
                         isWorkspace: true,
-                        parentUserId: "owner-1",
+                        workspaceOwnerId: "owner-1",
                         createdAt: 10
                     }) as never
             } as never,

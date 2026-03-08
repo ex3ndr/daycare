@@ -176,14 +176,14 @@ describe("skillAddToolBuild", () => {
                                     return {
                                         id: "owner-1",
                                         isWorkspace: false,
-                                        parentUserId: null
+                                        workspaceOwnerId: null
                                     };
                                 }
                                 if (id === workspaceUserId) {
                                     return {
                                         id: workspaceUserId,
                                         isWorkspace: true,
-                                        parentUserId: "owner-1"
+                                        workspaceOwnerId: "owner-1"
                                     };
                                 }
                                 return null;
@@ -225,14 +225,14 @@ describe("skillAddToolBuild", () => {
                                     return {
                                         id: "user-1",
                                         isWorkspace: false,
-                                        parentUserId: null
+                                        workspaceOwnerId: null
                                     };
                                 }
                                 if (id === "workspace-1") {
                                     return {
                                         id: "workspace-1",
                                         isWorkspace: true,
-                                        parentUserId: "owner-1"
+                                        workspaceOwnerId: "owner-1"
                                     };
                                 }
                                 return null;
@@ -269,7 +269,7 @@ describe("skillAddToolBuild", () => {
                                     ? {
                                           id: "owner-1",
                                           isWorkspace: false,
-                                          parentUserId: null
+                                          workspaceOwnerId: null
                                       }
                                     : null
                         }

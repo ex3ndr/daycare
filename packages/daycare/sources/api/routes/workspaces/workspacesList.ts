@@ -45,7 +45,7 @@ export async function workspacesList(input: WorkspacesListInput): Promise<Worksp
     });
 
     // Find child workspaces owned by this user
-    const children = await input.users.findByParentUserId(caller.id);
+    const children = await input.users.findByWorkspaceOwnerId(caller.id);
     for (const child of children) {
         if (child.isWorkspace) {
             workspaces.set(child.id, {

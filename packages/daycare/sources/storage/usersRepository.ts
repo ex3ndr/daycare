@@ -143,7 +143,7 @@ export class UsersRepository {
                 validFrom: row.validFrom ?? row.createdAt,
                 validTo: row.validTo ?? null,
                 isWorkspace: row.isWorkspace,
-                parentUserId: row.parentUserId ?? null,
+                workspaceOwnerId: row.workspaceOwnerId ?? null,
                 firstName: row.firstName ?? null,
                 lastName: row.lastName ?? null,
                 bio: row.bio ?? null,
@@ -185,7 +185,7 @@ export class UsersRepository {
             const createdAt = input.createdAt ?? now;
             const updatedAt = input.updatedAt ?? createdAt;
             const isWorkspace = input.isWorkspace ?? false;
-            const parentUserId = input.parentUserId ?? null;
+            const workspaceOwnerId = input.workspaceOwnerId ?? null;
             const firstName = textNullableNormalize(input.firstName);
             const lastName = textNullableNormalize(input.lastName);
             const bio = textNullableNormalize(input.bio);
@@ -211,7 +211,7 @@ export class UsersRepository {
                         validFrom: createdAt,
                         validTo: null,
                         isWorkspace,
-                        parentUserId,
+                        workspaceOwnerId,
                         firstName,
                         lastName,
                         bio,
@@ -258,7 +258,7 @@ export class UsersRepository {
                 validFrom: createdAt,
                 validTo: null,
                 isWorkspace,
-                parentUserId,
+                workspaceOwnerId,
                 firstName,
                 lastName,
                 bio,
@@ -349,7 +349,7 @@ export class UsersRepository {
                             validFrom: row.validFrom ?? row.createdAt,
                             validTo: row.validTo ?? null,
                             isWorkspace: row.isWorkspace,
-                            parentUserId: row.parentUserId,
+                            workspaceOwnerId: row.workspaceOwnerId,
                             firstName: row.firstName,
                             lastName: row.lastName,
                             bio: row.bio,
@@ -405,17 +405,17 @@ export class UsersRepository {
         });
     }
 
-    async findByParentUserId(parentUserId: string): Promise<UserWithConnectorKeysDbRecord[]> {
+    async findByWorkspaceOwnerId(workspaceOwnerId: string): Promise<UserWithConnectorKeysDbRecord[]> {
         if (this.allUsersLoaded) {
-            return usersSort(Array.from(this.usersById.values()).filter((u) => u.parentUserId === parentUserId)).map(
-                (u) => userClone(u)
-            );
+            return usersSort(
+                Array.from(this.usersById.values()).filter((u) => u.workspaceOwnerId === workspaceOwnerId)
+            ).map((u) => userClone(u));
         }
         // Load all users to populate the cache, then filter
         await this.findMany();
-        return usersSort(Array.from(this.usersById.values()).filter((u) => u.parentUserId === parentUserId)).map((u) =>
-            userClone(u)
-        );
+        return usersSort(
+            Array.from(this.usersById.values()).filter((u) => u.workspaceOwnerId === workspaceOwnerId)
+        ).map((u) => userClone(u));
     }
 
     async addConnectorKey(userId: string, connectorKey: string): Promise<void> {
@@ -478,7 +478,7 @@ export class UsersRepository {
             validFrom: userRow.validFrom ?? userRow.createdAt,
             validTo: userRow.validTo ?? null,
             isWorkspace: userRow.isWorkspace,
-            parentUserId: userRow.parentUserId ?? null,
+            workspaceOwnerId: userRow.workspaceOwnerId ?? null,
             firstName: userRow.firstName ?? null,
             lastName: userRow.lastName ?? null,
             bio: userRow.bio ?? null,

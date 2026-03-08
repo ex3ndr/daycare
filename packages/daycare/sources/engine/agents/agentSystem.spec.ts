@@ -526,7 +526,7 @@ describe("AgentSystem", () => {
             const workspace = await harness.storage.users.create({
                 id: "workspace-1",
                 isWorkspace: true,
-                parentUserId: owner.userId,
+                workspaceOwnerId: owner.userId,
                 nametag: "workspace-1"
             });
             await harness.storage.agents.create({

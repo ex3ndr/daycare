@@ -519,7 +519,7 @@ describe("AppServer auth endpoints", () => {
         const secret = "valid-secret-for-tests-1234567890";
         const built = await appServerCreateForTests({ secret });
         const owner = (await built.storage.users.findMany()).find(
-            (user) => !user.isWorkspace && user.parentUserId === null
+            (user) => !user.isWorkspace && user.workspaceOwnerId === null
         );
         if (!owner) {
             throw new Error("Expected seeded owner user.");
@@ -531,7 +531,7 @@ describe("AppServer auth endpoints", () => {
             firstName: "Product",
             lastName: "Ops",
             isWorkspace: true,
-            parentUserId: owner.id,
+            workspaceOwnerId: owner.id,
             createdAt: 10,
             updatedAt: 10
         });

@@ -1171,7 +1171,7 @@ export class AgentSystem {
 
     async ownerCtxEnsure(): Promise<Context> {
         const owner = (await this.storage.users.findMany()).find(
-            (user) => !user.isWorkspace && user.parentUserId === null
+            (user) => !user.isWorkspace && user.workspaceOwnerId === null
         );
         if (owner) {
             return contextForUser({ userId: owner.id });
@@ -1187,7 +1187,7 @@ export class AgentSystem {
             return contextForUser({ userId: ownerId });
         } catch {
             const recovered = (await this.storage.users.findMany()).find(
-                (user) => !user.isWorkspace && user.parentUserId === null
+                (user) => !user.isWorkspace && user.workspaceOwnerId === null
             );
             if (recovered) {
                 return contextForUser({ userId: recovered.id });

@@ -135,7 +135,7 @@ describe("UsersRepository", () => {
             await users.create({
                 id: "workspace-1",
                 isWorkspace: true,
-                parentUserId: second.id,
+                workspaceOwnerId: second.id,
                 createdAt: 3,
                 updatedAt: 3,
                 nametag: "workspace-1"

@@ -66,7 +66,7 @@ describe("friendAddToolBuild", () => {
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
-                parentUserId: alice.id,
+                workspaceOwnerId: alice.id,
                 firstName: "helper",
                 nametag: "cool-cat-11"
             });
@@ -106,7 +106,7 @@ describe("friendAddToolBuild", () => {
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
-                parentUserId: alice.id,
+                workspaceOwnerId: alice.id,
                 firstName: "helper",
                 nametag: "cool-cat-11"
             });
@@ -146,7 +146,7 @@ describe("friendAddToolBuild", () => {
             const bob = await storage.users.create({ id: "bob", nametag: "swift-fox-42" });
             const subuser = await storage.users.create({
                 id: "alice-sub-1",
-                parentUserId: alice.id,
+                workspaceOwnerId: alice.id,
                 firstName: "helper",
                 nametag: "cool-cat-11"
             });

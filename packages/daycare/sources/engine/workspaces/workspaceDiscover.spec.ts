@@ -13,7 +13,7 @@ describe("workspaceDiscover", () => {
             }
             await storage.users.create({
                 id: "workspace-1",
-                parentUserId: owner.id,
+                workspaceOwnerId: owner.id,
                 isWorkspace: true,
                 nametag: "todo",
                 firstName: "Todo",
@@ -25,7 +25,7 @@ describe("workspaceDiscover", () => {
             });
             await storage.users.create({
                 id: "workspace-2",
-                parentUserId: owner.id,
+                workspaceOwnerId: owner.id,
                 isWorkspace: true,
                 nametag: "review",
                 firstName: "Review",

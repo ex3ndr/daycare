@@ -35,7 +35,7 @@ export const usersTable = pgTable(
         isWorkspace: boolean("is_workspace").notNull().default(false),
         createdAt: bigint("created_at", { mode: "number" }).notNull(),
         updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
-        parentUserId: text("parent_user_id"),
+        workspaceOwnerId: text("workspace_owner_id"),
         firstName: text("first_name"),
         lastName: text("last_name"),
         bio: text("bio"),
@@ -55,7 +55,7 @@ export const usersTable = pgTable(
         primaryKey({ columns: [table.id, table.version] }),
         check("users_nametag_required", sql`trim(${table.nametag}) <> ''`),
         uniqueIndex("idx_users_nametag").on(table.nametag).where(sql`${table.validTo} IS NULL`),
-        index("idx_users_parent").on(table.parentUserId).where(sql`${table.parentUserId} IS NOT NULL`),
+        index("idx_users_workspace_owner").on(table.workspaceOwnerId).where(sql`${table.workspaceOwnerId} IS NOT NULL`),
         index("idx_users_id_valid_to").on(table.id, table.validTo)
     ]
 );

@@ -24,7 +24,7 @@ describe("workspacesInviteCreate", () => {
                         firstName: "Product",
                         lastName: "Ops",
                         isWorkspace: true,
-                        parentUserId: "owner-1"
+                        workspaceOwnerId: "owner-1"
                     }) as never
             } as never,
             workspaceMembers: {
@@ -58,7 +58,7 @@ describe("workspacesInviteCreate", () => {
                             id: "workspace-1",
                             nametag: "workspace-a",
                             isWorkspace: true,
-                            parentUserId: "owner-1"
+                            workspaceOwnerId: "owner-1"
                         }) as never
                 } as never,
                 workspaceMembers: {

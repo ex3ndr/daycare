@@ -60,12 +60,12 @@ describe("workspacesSecretsUpdate", () => {
 
 function usersBuild(): {
     findById: (id: string) => Promise<{ id: string } | null>;
-    findByNametag: (nametag: string) => Promise<{ id: string; isWorkspace: boolean; parentUserId: string } | null>;
+    findByNametag: (nametag: string) => Promise<{ id: string; isWorkspace: boolean; workspaceOwnerId: string } | null>;
 } {
     return {
         findById: async (id) => ({ id }),
         findByNametag: async (nametag) =>
-            nametag === "reviewer" ? { id: "workspace-1", isWorkspace: true, parentUserId: "owner-1" } : null
+            nametag === "reviewer" ? { id: "workspace-1", isWorkspace: true, workspaceOwnerId: "owner-1" } : null
     };
 }
 

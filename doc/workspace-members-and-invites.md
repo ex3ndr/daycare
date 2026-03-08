@@ -17,7 +17,7 @@ flowchart TD
   A[Request /w/:workspaceId/*] --> B{caller == workspaceId}
   B -->|yes| C[Allow self workspace scope]
   B -->|no| D[Load target user]
-  D --> E{target is workspace and parentUserId == caller}
+  D --> E{target is workspace and workspaceOwnerId == caller}
   E -->|yes| F[Allow owner access]
   E -->|no| G{active workspace_members row exists}
   G -->|yes| H[Allow member access]

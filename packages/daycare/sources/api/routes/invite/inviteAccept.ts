@@ -43,7 +43,7 @@ export async function inviteAccept(input: InviteAcceptInput): Promise<InviteAcce
         return { ok: false, error: "Workspace not found." };
     }
 
-    if (workspace.parentUserId === input.ctx.userId || workspace.id === input.ctx.userId) {
+    if (workspace.workspaceOwnerId === input.ctx.userId || workspace.id === input.ctx.userId) {
         return { ok: true, workspaceId: workspace.id };
     }
 

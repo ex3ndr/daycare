@@ -4,7 +4,7 @@ Swarms are user-scoped agents owned by another user.
 
 ## What a swarm is
 
-- A swarm is a `users` row with `is_swarm = 1` and `parent_user_id = <ownerUserId>`.
+- A swarm is a `users` row with `is_swarm = 1` and `workspace_owner_id = <ownerUserId>`.
 - Owners create swarms with `swarm_create`.
 - Agents talk to swarms through `send_user_message({ nametag, text, wait? })`.
 - Each swarm resolves to a persistent swarm-side agent id per contact.
@@ -17,7 +17,7 @@ erDiagram
 
     users {
         text id PK
-        text parent_user_id
+        text workspace_owner_id
         text nametag
         integer is_owner
         integer is_swarm

@@ -7,12 +7,12 @@ type TopologyStorageMock = {
     users: {
         findById: (id: string) => Promise<{
             id: string;
-            parentUserId: string | null;
+            workspaceOwnerId: string | null;
             nametag: string | null;
             firstName: string | null;
             lastName: string | null;
         } | null>;
-        findByParentUserId: (parentUserId: string) => Promise<Array<{ id: string }>>;
+        findByWorkspaceOwnerId: (workspaceOwnerId: string) => Promise<Array<{ id: string }>>;
     };
     agents: {
         findMany: () => Promise<
@@ -52,7 +52,7 @@ function createToolContext(options: {
     caller: { userId: string; agentId: string };
     users: Array<{
         id: string;
-        parentUserId: string | null;
+        workspaceOwnerId: string | null;
         nametag?: string | null;
         firstName?: string | null;
         lastName?: string | null;
@@ -94,15 +94,15 @@ function createToolContext(options: {
                 }
                 return {
                     id: user.id,
-                    parentUserId: user.parentUserId,
+                    workspaceOwnerId: user.workspaceOwnerId,
                     nametag: user.nametag ?? null,
                     firstName: user.firstName ?? null,
                     lastName: user.lastName ?? null
                 };
             },
-            findByParentUserId: async (parentUserId) =>
+            findByWorkspaceOwnerId: async (workspaceOwnerId) =>
                 options.users
-                    .filter((user) => user.parentUserId === parentUserId)
+                    .filter((user) => user.workspaceOwnerId === workspaceOwnerId)
                     .map((user) => ({
                         id: user.id
                     }))
@@ -184,7 +184,7 @@ describe("topologyTool", () => {
     it("returns cron triggers nested under tasks and reports counts", async () => {
         const built = createToolContext({
             caller: { userId: "owner", agentId: "agent-owner" },
-            users: [{ id: "owner", parentUserId: null }],
+            users: [{ id: "owner", workspaceOwnerId: null }],
             agents: [
                 {
                     id: "agent-owner",
@@ -236,9 +236,9 @@ describe("topologyTool", () => {
         const built = createToolContext({
             caller: { userId: "sub-1", agentId: "agent-sub-1" },
             users: [
-                { id: "owner", parentUserId: null },
-                { id: "sub-1", parentUserId: "owner" },
-                { id: "sub-2", parentUserId: "owner" }
+                { id: "owner", workspaceOwnerId: null },
+                { id: "sub-1", workspaceOwnerId: "owner" },
+                { id: "sub-2", workspaceOwnerId: "owner" }
             ],
             agents: [
                 { id: "agent-sub-1", userId: "sub-1", path: "/sub-1/subuser/main", kind: "subuser", updatedAt: 10 },

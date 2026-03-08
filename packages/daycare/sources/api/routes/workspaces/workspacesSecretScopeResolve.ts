@@ -5,7 +5,7 @@ export type WorkspacesUsersRuntime = {
     findById: (id: string) => Promise<{ id: string } | null>;
     findByNametag: (
         nametag: string
-    ) => Promise<{ id: string; isWorkspace: boolean; parentUserId: string | null } | null>;
+    ) => Promise<{ id: string; isWorkspace: boolean; workspaceOwnerId: string | null } | null>;
 };
 
 export type WorkspacesSecretScopeResolveInput = {
@@ -27,7 +27,7 @@ export type WorkspacesSecretScopeResolveResult =
 
 /**
  * Resolves a workspace scope by nametag for workspace-owner secret management routes.
- * Expects: caller owns the target workspace via parentUserId.
+ * Expects: caller owns the target workspace via workspaceOwnerId.
  */
 export async function workspacesSecretScopeResolve(
     input: WorkspacesSecretScopeResolveInput
@@ -46,7 +46,7 @@ export async function workspacesSecretScopeResolve(
     if (!workspace || !workspace.isWorkspace) {
         return { ok: false, error: "Workspace not found." };
     }
-    if (workspace.parentUserId !== caller.id) {
+    if (workspace.workspaceOwnerId !== caller.id) {
         return { ok: false, error: "Only workspace owners can manage workspace secrets." };
     }
 
