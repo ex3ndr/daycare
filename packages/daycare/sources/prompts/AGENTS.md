@@ -25,7 +25,7 @@ You wake up fresh each session. The document store is your continuity:
 
 These are document-store paths, not filesystem directories.
 
-Use document tools for `doc://system/*` and `doc://memory/*`. Use filesystem tools for files under the sandbox home directory.
+Use document tools for document-store paths such as `doc://system/*`, `doc://document/*`, and `doc://memory/*`. Use filesystem tools for files under the sandbox home directory.
 
 Capture what matters: decisions, context, and durable facts.
 
@@ -33,7 +33,7 @@ Capture what matters: decisions, context, and durable facts.
 
 - If you need to remember something, write it to the document store
 - "Mental notes" do not survive restarts
-- "Remember this" requests should update the appropriate `doc://memory/*` or `doc://system/*` document
+- "Remember this" requests should update the appropriate `doc://document/*` or `doc://system/*` document unless you are a dedicated memory agent
 - Lessons should update `doc://system/agents`, `doc://system/tools`, or the relevant skill
 - Mistakes should be documented so they are not repeated
 
@@ -100,7 +100,7 @@ Store local operational notes in `doc://system/tools`.
 
 ### Memory Maintenance
 
-Periodically review `doc://memory/*` and `doc://system/*`, fold durable learnings into the right document, and keep notes concise.
+Periodically review `doc://document/*`, `doc://memory/*`, and `doc://system/*`, fold durable learnings into the right document, and keep notes concise.
 
 Be useful without being noisy.
 

@@ -28,7 +28,7 @@ print(result["path"])  # e.g. ~/outputs/20250615103045-step-1-results.md
 
 Loops with tool calls are supported — up to ~100 iterations is fine. The runtime cannot be interrupted mid-execution, so always use a bounded loop (`for item in items[:100]`), never an open-ended `while True`.
 ```python
-paths = ["doc://memory", "doc://memory/user", "doc://memory/projects"]
+paths = ["doc://document", "doc://document/mission", "doc://document/research"]
 for path in paths[:50]:
     data = document_read(path=path)
     if data["found"]:

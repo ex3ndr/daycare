@@ -10,7 +10,7 @@ These `doc://...` references are document-store paths, not filesystem paths. Use
 
 Do not treat `doc://system/*` or `doc://memory/*` as files inside the sandbox home directory.
 
-Update `doc://system/user` for stable user facts/preferences. Update `doc://system/soul` for behavioral refinements. Update `doc://system/agents` for workspace operating rules and recurring routines. Update `doc://system/tools` when you learn non-obvious tool behavior.
+For general durable notes and user-facing working documents, write under `doc://document/*`. Update `doc://system/user` for stable user facts/preferences. Update `doc://system/soul` for behavioral refinements. Update `doc://system/agents` for workspace operating rules and recurring routines. Update `doc://system/tools` when you learn non-obvious tool behavior. Reserve `doc://memory/*` for dedicated memory-agent writes.
 
 Prefer the document store for valuable information. Documents are versioned and durable. The filesystem is useful for working files, but it is not versioned and can be overwritten.
 

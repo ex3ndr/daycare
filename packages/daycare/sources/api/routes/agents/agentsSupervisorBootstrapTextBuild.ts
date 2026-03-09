@@ -13,7 +13,7 @@ export function agentsSupervisorBootstrapTextBuild(text: string): string {
         '- Create an "owner" document (slug: "owner") with what you learn about the owner/user.',
         '- Create a "company" document (slug: "company") if the mission involves a business or organization.',
         "- Create additional documents for research findings, competitive landscape, target audience, etc.",
-        "- Use document_write with clear titles and descriptions. Keep documents focused and well-structured.",
+        '- Use document_write with parentPath under "doc://document" plus clear titles and descriptions. Keep documents focused and well-structured.',
         "",
         "Use todos to track progress:",
         "- Break the mission into concrete, actionable todos using todo_create.",
