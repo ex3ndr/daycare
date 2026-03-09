@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { access, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
@@ -61,6 +61,7 @@ describe("AgentSystem", () => {
             expect(poison).toBeTruthy();
             expect(poison?.repeatKey).toBe(POISON_PILL_REPEAT_KEY);
             expect(poison?.deliverAt).toBe(Date.now() + POISON_PILL_DELAY_MS);
+            await expect(access(path.join(dir, "signals"))).rejects.toThrow();
         } finally {
             delayedSignals?.stop();
             vi.useRealTimers();

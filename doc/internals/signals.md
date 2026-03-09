@@ -105,6 +105,7 @@ for wall-time scheduling.
 Storage:
 - SQLite table `signals_delayed`
 - persistent queue of delayed signal entries with mandatory `user_id`
+- no runtime `signals/` directory is required; delayed and immediate signal state both live in SQLite
 
 Delivery model:
 - `deliverAt` is a wall-time unix timestamp (milliseconds)
@@ -133,6 +134,13 @@ flowchart TD
   Due -->|yes| Generate[Signals.generate]
   Generate -->|success| Remove[delete from signals_delayed]
   Generate -->|error| Retry[keep in queue and retry]
+```
+
+```mermaid
+flowchart LR
+  Config["engine.dataDir"] --> Processes["processes/<id>/... runtime files"]
+  Config --> Database["daycare.db / configured DB"]
+  Database --> Signals["signals_events + signals_subscriptions + signals_delayed"]
 ```
 
 ```mermaid

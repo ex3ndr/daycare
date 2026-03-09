@@ -955,8 +955,6 @@ export class AgentSystem {
             return;
         }
         try {
-            // load() runs before DelayedSignals.start(); ensure persistence directory exists.
-            await fs.mkdir(`${this.config.current.configDir}/signals`, { recursive: true });
             await this.delayedSignals.schedule({
                 type: `agent:${agentId}:poison-pill`,
                 deliverAt: options?.deliverAt ?? Date.now() + AGENT_POISON_PILL_DELAY_MS,
