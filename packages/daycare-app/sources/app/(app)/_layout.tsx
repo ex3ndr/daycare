@@ -98,7 +98,7 @@ export default function AuthenticatedLayout() {
         <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(main)" />
             <Stack.Screen name="[workspace]/fragment/[id]" options={modalScreenOptions} />
-            <Stack.Screen name="[workspace]/routine/[id]" options={modalScreenOptions} />
+            <Stack.Screen name="[workspace]/automation/[id]" options={modalScreenOptions} />
             <Stack.Screen name="[workspace]/file-preview/[path]" options={modalScreenOptions} />
             <Stack.Screen name="share" />
             <Stack.Screen name="workspace-not-found" />

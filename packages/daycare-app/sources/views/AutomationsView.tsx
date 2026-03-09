@@ -14,21 +14,21 @@ import { tasksSubtitle } from "@/modules/tasks/tasksSubtitle";
 import type { CronTriggerSummary, TaskStatus, WebhookTriggerSummary } from "@/modules/tasks/tasksTypes";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
-function RoutineStatus({ status, label }: { status: TaskStatus; label: string }) {
+function AutomationStatus({ status, label }: { status: TaskStatus; label: string }) {
     const { theme } = useUnistyles();
     const colors: Record<TaskStatus, string> = {
         ok: "#2e7d32",
         warning: "#ed6c02"
     };
     return (
-        <View style={routineStyles.container}>
-            <Text style={[routineStyles.label, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
-            <View style={[routineStyles.dot, { backgroundColor: colors[status] }]} />
+        <View style={automationStyles.container}>
+            <Text style={[automationStyles.label, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
+            <View style={[automationStyles.dot, { backgroundColor: colors[status] }]} />
         </View>
     );
 }
 
-const routineStyles = StyleSheet.create({
+const automationStyles = StyleSheet.create({
     container: {
         flexDirection: "row",
         alignItems: "center",
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     }
 });
 
-export function RoutinesView() {
+export function AutomationsView() {
     const { theme } = useUnistyles();
     const router = useRouter();
 
@@ -109,7 +109,7 @@ export function RoutinesView() {
 
     const handleTaskPress = useCallback(
         (taskId: string) => {
-            router.push(`/${workspaceId}/routine/${taskId}`);
+            router.push(`/${workspaceId}/automation/${taskId}`);
         },
         [router, workspaceId]
     );
@@ -121,7 +121,7 @@ export function RoutinesView() {
     if (loading && tasks.length === 0) {
         return (
             <View style={{ flex: 1 }}>
-                <PageHeader title="Routines" icon="clock" />
+                <PageHeader title="Automations" icon="clock" />
                 <View style={[styles.centered, { flex: 1 }]}>
                     <ActivityIndicator color={theme.colors.primary} />
                 </View>
@@ -132,7 +132,7 @@ export function RoutinesView() {
     if (error && tasks.length === 0) {
         return (
             <View style={{ flex: 1 }}>
-                <PageHeader title="Routines" icon="clock" />
+                <PageHeader title="Automations" icon="clock" />
                 <View style={[styles.centered, { flex: 1 }]}>
                     <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
                 </View>
@@ -143,9 +143,9 @@ export function RoutinesView() {
     if (tasks.length === 0) {
         return (
             <View style={{ flex: 1 }}>
-                <PageHeader title="Routines" icon="clock" />
+                <PageHeader title="Automations" icon="clock" />
                 <View style={[styles.centered, { flex: 1 }]}>
-                    <Text style={[styles.errorText, { color: theme.colors.onSurfaceVariant }]}>No routines</Text>
+                    <Text style={[styles.errorText, { color: theme.colors.onSurfaceVariant }]}>No automations</Text>
                 </View>
             </View>
         );
@@ -153,9 +153,9 @@ export function RoutinesView() {
 
     return (
         <View style={{ flex: 1 }}>
-            <PageHeader title="Routines" icon="clock" />
+            <PageHeader title="Automations" icon="clock" />
             <ItemListStatic>
-                <ItemGroup title="Routines">
+                <ItemGroup title="Automations">
                     {tasks.map((task) => (
                         <Item
                             key={task.id}
@@ -163,7 +163,7 @@ export function RoutinesView() {
                             subtitle={tasksSubtitle(taskCron(task.id), taskWebhook(task.id))}
                             onPress={() => handleTaskPress(task.id)}
                             rightElement={
-                                <RoutineStatus
+                                <AutomationStatus
                                     status={tasksStatus(task)}
                                     label={tasksFormatLastRun(task.lastExecutedAt, now)}
                                 />

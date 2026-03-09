@@ -1,7 +1,7 @@
 import { appModes } from "@/modules/navigation/appModes";
 import type { WorkspaceListItem } from "./workspacesFetch";
 
-const workspaceScopedRouteIds = new Set<string>([...appModes, "file-preview", "fragment", "routine"]);
+const workspaceScopedRouteIds = new Set<string>([...appModes, "file-preview", "fragment", "automation"]);
 
 /**
  * Resolves a workspace id from the current pathname.

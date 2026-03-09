@@ -72,7 +72,7 @@ export function CoachingView() {
             <ItemGroup title="Tips from Your Agents">
                 <Item
                     title="You often re-run Scout with the same query"
-                    subtitle="Try saving frequent searches as routines to save time"
+                    subtitle="Try saving frequent searches as automations to save time"
                     detail="Scout"
                     showChevron={false}
                 />

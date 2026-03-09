@@ -25,12 +25,12 @@ describe("workspaceRouteIdResolve", () => {
         expect(workspaceRouteIdResolve("/team/documents")).toBe("team");
         expect(workspaceRouteIdResolve("/self/agents/agent-1")).toBe("self");
         expect(workspaceRouteIdResolve("/team/fragment/frag-1")).toBe("team");
-        expect(workspaceRouteIdResolve("/team/routine/task-1")).toBe("team");
+        expect(workspaceRouteIdResolve("/team/automation/task-1")).toBe("team");
         expect(workspaceRouteIdResolve("/team/file-preview/path")).toBe("team");
     });
 
     it("does not treat modal routes as workspace ids", () => {
-        expect(workspaceRouteIdResolve("/routine/task-1")).toBeNull();
+        expect(workspaceRouteIdResolve("/automation/task-1")).toBeNull();
         expect(workspaceRouteIdResolve("/file-preview/path")).toBeNull();
     });
 });

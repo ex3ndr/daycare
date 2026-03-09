@@ -4,9 +4,9 @@ import { ActivityIndicator, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useTasksStore } from "@/modules/tasks/tasksContext";
-import { RoutineDetailPanel } from "@/views/routines/RoutineDetailPanel";
+import { AutomationDetailPanel } from "@/views/automations/AutomationDetailPanel";
 
-export default function RoutineModalScreen() {
+export default function AutomationModalScreen() {
     const { theme } = useUnistyles();
     const { workspace, id } = useLocalSearchParams<{ workspace: string; id: string }>();
 
@@ -31,7 +31,7 @@ export default function RoutineModalScreen() {
                     <ActivityIndicator color={theme.colors.primary} />
                 </View>
             ) : (
-                <RoutineDetailPanel />
+                <AutomationDetailPanel />
             )}
         </View>
     );

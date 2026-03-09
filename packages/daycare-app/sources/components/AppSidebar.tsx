@@ -25,7 +25,7 @@ const segmentGroups: Segment[][] = [
     [
         { mode: "agents", icon: "device-desktop", label: "Agents" },
         { mode: "fragments", icon: "note", label: "Fragments" },
-        { mode: "routines", icon: "clock", label: "Routines" },
+        { mode: "automations", icon: "clock", label: "Automations" },
         { mode: "files", icon: "file-directory", label: "Files" },
         { mode: "skills", icon: "zap", label: "Skills" },
         { mode: "tools", icon: "tools", label: "Tools" },
@@ -46,7 +46,7 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     agents: [],
     fragments: [],
     todos: [],
-    routines: [],
+    automations: [],
     costs: [],
     documents: [],
     files: [],

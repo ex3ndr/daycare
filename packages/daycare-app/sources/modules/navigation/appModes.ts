@@ -3,7 +3,7 @@ export type AppMode =
     | "agents"
     | "fragments"
     | "todos"
-    | "routines"
+    | "automations"
     | "costs"
     | "documents"
     | "files"
@@ -18,7 +18,7 @@ export const appModes: AppMode[] = [
     "agents",
     "fragments",
     "todos",
-    "routines",
+    "automations",
     "costs",
     "documents",
     "files",

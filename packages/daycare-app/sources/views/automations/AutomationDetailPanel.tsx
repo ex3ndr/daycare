@@ -5,11 +5,11 @@ import { useTasksStore } from "@/modules/tasks/tasksContext";
 import { tasksFormatLastRun } from "@/modules/tasks/tasksFormatLastRun";
 
 /**
- * Routine detail content.
+ * Automation detail content.
  * Shows task code, description, parameters, triggers, and timestamps.
  * Expects the task to be selected via the tasks store before rendering.
  */
-export const RoutineDetailPanel = React.memo(() => {
+export const AutomationDetailPanel = React.memo(() => {
     const { theme } = useUnistyles();
 
     const detail = useTasksStore((s) => s.selectedDetail);
