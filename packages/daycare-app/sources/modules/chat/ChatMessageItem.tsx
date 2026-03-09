@@ -2,6 +2,7 @@ import { Octicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ChatMarkdownView } from "./ChatMarkdownView";
 import type {
     AgentHistoryAssistantMessage,
     AgentHistoryNote,
@@ -65,12 +66,11 @@ function UserMessageItem({ record }: { record: AgentHistoryUserMessage }) {
 }
 
 function AssistantMessageItem({ record }: { record: AgentHistoryAssistantMessage }) {
-    const { theme } = useUnistyles();
     const text = extractText(record.content);
     if (!text) return null;
     return (
         <View style={styles.row}>
-            <Text style={[styles.text, { color: theme.colors.onSurface }]}>{text}</Text>
+            <ChatMarkdownView markdown={text} />
         </View>
     );
 }

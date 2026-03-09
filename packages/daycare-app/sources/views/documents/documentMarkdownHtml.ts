@@ -1,5 +1,5 @@
-import { renderMermaidAscii } from "beautiful-mermaid";
 import { Marked } from "marked";
+import { markdownMermaidRender } from "@/markdown/markdownMermaidRender";
 
 type ThemeColors = {
     onSurface: string;
@@ -22,12 +22,10 @@ export function documentMarkdownHtml(markdown: string, colors: ThemeColors): str
     const renderer = {
         code({ text, lang }: { text: string; lang?: string | null }) {
             if (lang === "mermaid") {
-                try {
-                    const ascii = renderMermaidAscii(text);
+                const ascii = markdownMermaidRender(text);
+                if (ascii) {
                     const escaped = ascii.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
                     return `<div class="mermaid-container"><pre><code>${escaped}</code></pre></div>`;
-                } catch {
-                    // Fall back to raw source on parse error
                 }
             }
             const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
