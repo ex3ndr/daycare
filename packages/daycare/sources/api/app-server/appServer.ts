@@ -608,7 +608,8 @@ export class AppServer {
                             {
                                 type: "url",
                                 text: "Open Daycare",
-                                url: link.url
+                                url: link.url,
+                                openMode: "browser"
                             }
                         ]
                     });

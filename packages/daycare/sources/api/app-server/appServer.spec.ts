@@ -291,7 +291,13 @@ describe("AppServer auth endpoints", () => {
                 _message: {
                     text: string | null;
                     replyToMessageId?: string;
-                    buttons?: Array<{ type: "url" | "callback"; text: string; url?: string; callback?: string }>;
+                    buttons?: Array<{
+                        type: "url" | "callback";
+                        text: string;
+                        url?: string;
+                        callback?: string;
+                        openMode?: "auto" | "browser";
+                    }>;
                 }
             ) => undefined
         );
@@ -314,7 +320,7 @@ describe("AppServer auth endpoints", () => {
         expect(sent.text).not.toContain("http");
         expect(sent.replyToMessageId).toBe("42");
         expect(sent.buttons).toHaveLength(1);
-        expect(sent.buttons?.[0]).toMatchObject({ type: "url", text: "Open Daycare" });
+        expect(sent.buttons?.[0]).toMatchObject({ type: "url", text: "Open Daycare", openMode: "browser" });
         expect(sent.buttons?.[0]?.type === "url" ? sent.buttons[0].url : "").toContain("/verify#");
     });
 

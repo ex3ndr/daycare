@@ -1300,6 +1300,49 @@ describe("TelegramConnector file uploads", () => {
         });
     });
 
+    it("keeps browser-mode app links as normal URL buttons in private chats", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            webAppUrl: "https://app.example.com/?backend=https%3A%2F%2Fapi.example.com",
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await connector.sendMessage("123", {
+            text: "Open configured app in browser",
+            buttons: [
+                {
+                    type: "url",
+                    text: "Open",
+                    url: "https://app.example.com/verify#token",
+                    openMode: "browser"
+                }
+            ]
+        });
+
+        const bot = telegramInstances[0];
+        expect(bot).toBeTruthy();
+        const sendCall = bot!.sendMessage.mock.calls[0];
+        expect(sendCall?.[2]).toMatchObject({
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        {
+                            text: "Open",
+                            url: "https://app.example.com/verify#token"
+                        }
+                    ]
+                ]
+            }
+        });
+    });
+
     it("does not send reply_to_message_id for private targets by default", async () => {
         const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
         const connector = new TelegramConnector({

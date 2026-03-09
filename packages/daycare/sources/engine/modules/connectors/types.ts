@@ -44,6 +44,7 @@ export type ConnectorMessageButton =
           type: "url";
           text: string;
           url: string;
+          openMode?: "auto" | "browser";
       }
     | {
           type: "callback";

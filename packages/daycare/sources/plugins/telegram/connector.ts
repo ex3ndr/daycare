@@ -1217,7 +1217,11 @@ function messageButtonBuild(
         };
     }
 
-    if (!targetIdIsGroupChat(targetId) && telegramWebAppUrlMatch(button.url, webAppUrl)) {
+    if (
+        button.openMode !== "browser" &&
+        !targetIdIsGroupChat(targetId) &&
+        telegramWebAppUrlMatch(button.url, webAppUrl)
+    ) {
         return {
             text: button.text,
             web_app: {
