@@ -2,8 +2,10 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type { Tool } from "@mariozechner/pi-ai";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { configResolve } from "../../../config/configResolve.js";
+import * as dockerContainersStaleRemoveModule from "../../../sandbox/docker/dockerContainersStaleRemove.js";
+import * as dockerImageIdResolveModule from "../../../sandbox/docker/dockerImageIdResolve.js";
 import { bundledExamplesDirResolve } from "../../agents/ops/bundledExamplesDirResolve.js";
 import { Engine } from "../../engine.js";
 import { EngineEventBus } from "../../ipc/events.js";
@@ -61,6 +63,8 @@ describe("rlmNoToolsPromptBuild", () => {
 
     it("generates python stubs for all registered runtime tools", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-rlm-no-tools-prompt-"));
+        const staleRemoveSpy = vi.spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove").mockResolvedValue(undefined);
+        const imageIdSpy = vi.spyOn(dockerImageIdResolveModule, "dockerImageIdResolve").mockResolvedValue("sha256:test");
         let engine: Engine | null = null;
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
@@ -83,6 +87,8 @@ describe("rlmNoToolsPromptBuild", () => {
             if (engine) {
                 await engine.shutdown();
             }
+            imageIdSpy.mockRestore();
+            staleRemoveSpy.mockRestore();
             await rm(dir, { recursive: true, force: true });
         }
     });
