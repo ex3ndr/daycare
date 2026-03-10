@@ -84,9 +84,11 @@ describe("system prompt skills rendering", () => {
             skillsPrompt: skillPromptFormat(skills)
         });
 
-        expect(prompt).toContain("Install `tsx` itself and any");
+        expect(prompt).toContain("Install `tsx` globally");
+        expect(prompt).toContain("tsx script.ts");
         expect(prompt).not.toContain("npx won't work");
         expect(prompt).not.toContain("Never install packages globally");
+        expect(prompt).not.toContain("./node_modules/.bin/tsx");
     });
 });
 
