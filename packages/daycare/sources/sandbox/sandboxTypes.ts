@@ -1,3 +1,5 @@
+import type { Readable } from "node:stream";
+
 import type { SessionPermissions } from "@/types";
 
 export type SandboxReadArgs = {
@@ -62,6 +64,8 @@ export type SandboxExecArgs = {
     signal?: AbortSignal;
 };
 
+export type SandboxExecSignal = "SIGTERM" | "SIGINT" | "SIGHUP" | "SIGKILL";
+
 export type SandboxExecResult = {
     stdout: string;
     stderr: string;
@@ -69,6 +73,13 @@ export type SandboxExecResult = {
     signal: string | null;
     failed: boolean;
     cwd: string;
+};
+
+export type SandboxExecHandle = {
+    stdout: Readable;
+    stderr: Readable;
+    wait: () => Promise<SandboxExecResult>;
+    kill: (signal?: SandboxExecSignal) => Promise<void>;
 };
 
 export type SandboxMount = {

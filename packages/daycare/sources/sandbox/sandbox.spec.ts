@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -15,10 +16,12 @@ describe("Sandbox", () => {
     let workingDir: string;
     let writeDir: string;
     let outsideDir: string;
+    let userId: string;
     let permissions: SessionPermissions;
     let sandbox: Sandbox;
 
     beforeEach(async () => {
+        userId = `sandbox-test-${randomUUID()}`;
         rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-sandbox-"));
         homeDir = path.join(rootDir, "home");
         workingDir = path.join(homeDir, "desktop");
@@ -38,7 +41,7 @@ describe("Sandbox", () => {
             permissions,
             backend: {
                 type: "docker",
-                docker: dockerConfigBuild("user-1")
+                docker: dockerConfigBuild(userId)
             }
         });
     });
@@ -62,7 +65,7 @@ describe("Sandbox", () => {
             },
             backend: {
                 type: "docker",
-                docker: dockerConfigBuild("user-1")
+                docker: dockerConfigBuild(userId)
             }
         });
         expect(fromPermissions.workingDir).toBe(await fs.realpath(writeDir));
@@ -249,13 +252,85 @@ describe("Sandbox", () => {
     });
 
     itIfDockerSandbox("allows outbound network by default", async () => {
-        const result = await sandbox.exec({
+        const result = await sandbox.execBuffered({
             command: `curl -s -I --max-time 10 "https://microsoft.com"`
         });
         expect(result.failed).toBe(false);
         expect(result.stdout).toContain("HTTP/");
     });
+
+    itIfDockerSandbox("streams stdout and kill removes child processes", async () => {
+        const execution = await sandbox.exec({
+            command: [
+                "node -e ",
+                "\"const fs = require('node:fs');",
+                "const { spawn } = require('node:child_process');",
+                "const child = spawn('bash', ['-lc', 'sleep 300']);",
+                "fs.writeFileSync('/home/child.pid', String(child.pid));",
+                "console.log('ready');",
+                'setInterval(() => {}, 1000);"'
+            ].join("")
+        });
+        const stdout = await streamTextReadUntil(execution.stdout, "ready\n");
+
+        await execution.kill("SIGTERM");
+        const result = await execution.wait();
+        const check = await sandboxExecWaitForOutput(
+            sandbox,
+            [
+                'pid="$(cat /home/child.pid 2>/dev/null || true)";',
+                'if [ -z "$pid" ]; then echo gone;',
+                'elif ! ps -p "$pid" >/dev/null 2>&1; then echo gone;',
+                "elif ps -o stat= -p \"$pid\" 2>/dev/null | grep -q '^[Zz]'; then echo gone;",
+                "else echo alive;",
+                "fi"
+            ].join(" "),
+            "gone"
+        );
+
+        expect(stdout).toContain("ready");
+        expect(result.signal).toBe("SIGTERM");
+        expect(check).toBe("gone");
+    });
 });
+
+async function streamTextReadUntil(stream: NodeJS.ReadableStream, needle: string): Promise<string> {
+    let output = "";
+    stream.setEncoding("utf8");
+    await new Promise<void>((resolve, reject) => {
+        const onData = (chunk: string) => {
+            output += chunk;
+            if (!output.includes(needle)) {
+                return;
+            }
+            stream.removeListener("data", onData);
+            stream.removeListener("error", onError);
+            resolve();
+        };
+        const onError = (error: Error) => {
+            stream.removeListener("data", onData);
+            stream.removeListener("error", onError);
+            reject(error);
+        };
+        stream.on("data", onData);
+        stream.on("error", onError);
+    });
+    return output;
+}
+
+async function sandboxExecWaitForOutput(sandbox: Sandbox, command: string, expected: string): Promise<string> {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+        const check = await sandbox.execBuffered({ command });
+        const output = check.stdout.trim();
+        if (output === expected) {
+            return output;
+        }
+        await sleep(100);
+    }
+
+    const check = await sandbox.execBuffered({ command });
+    return check.stdout.trim();
+}
 
 function dockerConfigBuild(userId: string) {
     return {
@@ -265,6 +340,12 @@ function dockerConfigBuild(userId: string) {
         capDrop: [],
         userId
     };
+}
+
+async function sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
 }
 
 function dockerSandboxAvailable(): boolean {

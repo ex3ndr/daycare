@@ -8,6 +8,7 @@ import type {
     DockerContainer,
     DockerContainerConfig,
     DockerContainerExecArgs,
+    DockerContainerExecHandle,
     DockerContainerExecResult,
     DockerContainerResolvedConfig
 } from "./dockerTypes.js";
@@ -23,6 +24,11 @@ export class DockerContainers {
     private readonly networksReady = new Set<string>();
 
     async exec(config: DockerContainerConfig, args: DockerContainerExecArgs): Promise<DockerContainerExecResult> {
+        const execution = await this.execStream(config, args);
+        return execution.wait();
+    }
+
+    async execStream(config: DockerContainerConfig, args: DockerContainerExecArgs): Promise<DockerContainerExecHandle> {
         const socketKey = config.socketPath ?? "default";
         const docker = this.dockerClientResolve(config.socketPath);
         await this.networksEnsure(docker, socketKey);

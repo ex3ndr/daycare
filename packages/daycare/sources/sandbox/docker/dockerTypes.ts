@@ -1,5 +1,8 @@
+import type { Readable } from "node:stream";
+
 import type Docker from "dockerode";
 import type { PathMountPoint } from "../../utils/pathMountTypes.js";
+import type { SandboxExecSignal } from "../sandboxTypes.js";
 
 export type DockerContainerConfig = {
     socketPath?: string;
@@ -27,6 +30,9 @@ export type DockerContainerExecArgs = {
     env?: NodeJS.ProcessEnv;
     timeoutMs?: number;
     maxBufferBytes?: number;
+    closeStdinToKill?: boolean;
+    processTreeControlFile?: string;
+    processTreePidFile?: string;
     signal?: AbortSignal;
 };
 
@@ -34,6 +40,14 @@ export type DockerContainerExecResult = {
     stdout: string;
     stderr: string;
     exitCode: number | null;
+    signal: string | null;
+};
+
+export type DockerContainerExecHandle = {
+    stdout: Readable;
+    stderr: Readable;
+    wait: () => Promise<DockerContainerExecResult>;
+    kill: (signal?: SandboxExecSignal) => Promise<void>;
 };
 
 export type DockerContainer = Docker.Container;

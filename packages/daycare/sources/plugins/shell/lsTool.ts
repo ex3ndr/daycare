@@ -51,7 +51,7 @@ export function buildLsTool(): ToolDefinition {
             const targetPath = lsPathNormalize(payload.path?.trim() || ".", toolContext);
             const command = lsCommandBuild(targetPath);
 
-            const execResult = await toolContext.sandbox.exec({
+            const execResult = await toolContext.sandbox.execBuffered({
                 command,
                 signal: toolContext.abortSignal
             });

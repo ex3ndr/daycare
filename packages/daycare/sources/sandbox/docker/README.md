@@ -2,6 +2,9 @@
 
 The Docker backend is the default execution path for `Sandbox.exec()`.
 
+`Sandbox.exec()` streams directly from `docker exec`. `Sandbox.execBuffered()` layers buffered
+collection on top for existing tool callers.
+
 ## What Runs Where
 
 - `Sandbox.read()` and `Sandbox.write()` run on the host filesystem.
@@ -53,12 +56,22 @@ flowchart TD
     A[Sandbox.exec] --> B[DockerExecBackend]
     B --> C[dockerContainerEnsure]
     C --> D[dockerNetworksEnsure]
-    D --> E[docker exec bash -lc command]
-    E --> F[stdout and stderr returned to Sandbox.exec]
+    D --> E[docker exec daycare-exec-supervisor -- bash -lc command]
+    E --> F[stdout and stderr stream back to Sandbox.exec]
+    E --> G[kill writes signal into FIFO control path]
 ```
 
 `DockerExecBackend` rewrites mount-backed host paths into container paths before execution and normalizes
 `TMPDIR`, `TMP`, and `TEMP` to `/tmp`.
+
+## Process Control
+
+- Each exec allocates a temporary FIFO control path under `/tmp/daycare-exec-*.ctl`.
+- The runtime image ships `/usr/local/bin/daycare-exec-supervisor`, a shell helper that launches the
+  command, streams stdio, and listens on that FIFO for kill signals.
+- `kill()` writes `SIGTERM`, `SIGINT`, `SIGHUP`, or `SIGKILL` into the FIFO.
+- The supervisor recursively kills descendants with `pgrep -P` before signaling the root process,
+  which avoids leaving orphaned child processes behind when the command spawns subprocesses.
 
 ## Docker Network Isolation
 

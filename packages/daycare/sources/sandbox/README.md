@@ -11,6 +11,9 @@ The `Sandbox` class is the unified I/O layer for agent-scoped filesystem and com
 
 This keeps tool modules focused on UX/schema formatting while enforcing one consistent security boundary.
 
+`Sandbox.exec()` now returns a streaming handle with `stdout`, `stderr`, `wait()`, and `kill()`.
+Call `Sandbox.execBuffered()` when a tool needs the older buffered result shape.
+
 ## Construction
 
 ```ts
@@ -78,7 +81,16 @@ Behavior:
 ### `exec(args)`
 
 ```ts
-await sandbox.exec({ command, cwd, timeoutMs, env, dotenv, secrets });
+const execution = await sandbox.exec({ command, cwd, timeoutMs, env, dotenv, secrets });
+execution.stdout.on("data", (chunk) => process.stdout.write(chunk));
+await execution.kill("SIGTERM");
+const result = await execution.wait();
+```
+
+### `execBuffered(args)`
+
+```ts
+const result = await sandbox.execBuffered({ command, cwd, timeoutMs, env, dotenv, secrets });
 ```
 
 Behavior:
@@ -87,8 +99,11 @@ Behavior:
 - merges env in order: `process.env` -> dotenv -> explicit `env` -> resolved `secrets`
 - always runs with `HOME = homeDir`
 - dispatches through the configured exec backend
+- exposes live stdout/stderr streams from the backend
+- supports `kill(signal)` for the running command tree
 - preserves the same mounted paths regardless of backend
 - leaves outbound networking enabled; there is no per-command domain allowlist
+- `execBuffered()` preserves the legacy buffered `SandboxExecResult` shape for existing callers
 
 ## Execution Flow
 
@@ -98,7 +113,9 @@ flowchart TD
     B --> C[Redefine HOME and XDG dirs on host]
     C --> D[Select configured exec backend]
     D --> E[Rewrite mount-backed paths into sandbox paths]
-    E --> F[Run bash -lc command in Docker or OpenSandbox]
+    E --> F[Run command in Docker or OpenSandbox]
+    F --> G[Stream stdout and stderr]
+    G --> H[wait resolves buffered result]
 ```
 
 ## Backend Settings
@@ -153,5 +170,5 @@ Path mapping uses the generic mount list. Home is always `/home`, extra mounts u
 ```ts
 const text = await context.sandbox.read({ path: "notes.txt" });
 await context.sandbox.write({ path: "/tmp/out.txt", content: "ok" });
-const result = await context.sandbox.exec({ command: "ls -la" });
+const result = await context.sandbox.execBuffered({ command: "ls -la" });
 ```

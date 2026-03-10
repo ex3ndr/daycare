@@ -4,7 +4,6 @@ FROM oven/bun:1 AS sandbox-builder
 WORKDIR /build
 
 COPY sandbox.ts /build/sandbox.ts
-
 RUN bun init -y \
     && bun add @anthropic-ai/sandbox-runtime@0.0.34
 
@@ -114,7 +113,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         ripgrep=14.1.* \
         rsync=3.2.* \
         shellcheck=0.9.* \
-        socat \
         software-properties-common=0.99.* \
         sqlite3=3.45.* \
         strace \
@@ -142,9 +140,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 COPY --from=sandbox-builder /build/sandbox /usr/local/lib/sandbox/sandbox
 COPY --from=sandbox-builder /build/node_modules/@anthropic-ai/sandbox-runtime/vendor /usr/local/lib/sandbox/vendor
+COPY daycareExecSupervisor.sh /usr/local/lib/sandbox/daycare-exec-supervisor
 RUN chmod +x /usr/local/lib/sandbox/sandbox \
+    && chmod +x /usr/local/lib/sandbox/daycare-exec-supervisor \
     && ln -s /usr/local/lib/sandbox/sandbox /usr/local/bin/sandbox \
-    && ln -s /usr/local/lib/sandbox/sandbox /usr/local/bin/srt
+    && ln -s /usr/local/lib/sandbox/sandbox /usr/local/bin/srt \
+    && ln -s /usr/local/lib/sandbox/daycare-exec-supervisor /usr/local/bin/daycare-exec-supervisor
 
 ### NODE ###
 

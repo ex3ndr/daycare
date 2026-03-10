@@ -186,7 +186,7 @@ describe("exec tool", () => {
             signal: null,
             cwd: workingDir
         }));
-        context.sandbox.exec = exec;
+        context.sandbox.execBuffered = exec;
 
         const result = await tool.execute({ command: "echo ok" }, context, execToolCall);
         expect(result.toolMessage.isError).toBe(false);
@@ -211,7 +211,7 @@ describe("exec tool", () => {
                 cwd: workingDir
             })
         );
-        context.sandbox.exec = exec;
+        context.sandbox.execBuffered = exec;
 
         const result = await tool.execute(
             {
@@ -246,7 +246,7 @@ describe("exec tool", () => {
             signal: null,
             cwd: workingDir
         }));
-        context.sandbox.exec = exec;
+        context.sandbox.execBuffered = exec;
 
         const result = await tool.execute(
             {
@@ -296,7 +296,7 @@ describe("exec tool", () => {
             signal: null,
             cwd: workingDir
         }));
-        context.sandbox.exec = exec;
+        context.sandbox.execBuffered = exec;
 
         const result = await tool.execute({ command: "echo ok" }, context, execToolCall);
         expect(result.toolMessage.isError).toBe(false);
@@ -426,6 +426,7 @@ function createContext(
     secrets?: ToolExecutionContext["secrets"]
 ): ToolExecutionContext {
     const agentId = createId();
+    const userId = `tool-test-${createId()}`;
     const messageContext = {};
     const now = Date.now();
     const state: AgentState = {
@@ -435,10 +436,10 @@ function createContext(
         updatedAt: now,
         state: "active"
     };
-    const ctx = contextForAgent({ userId: "user-1", agentId });
+    const ctx = contextForAgent({ userId, agentId });
     const agent = Agent.restore(
         ctx,
-        `/user-1/sub/${agentId}`,
+        `/${userId}/sub/${agentId}`,
         {
             foreground: false,
             name: "system",
@@ -472,7 +473,7 @@ function createContext(
             },
             extraMountsForUserId: () => []
         } as unknown as Parameters<typeof Agent.restore>[5],
-        new UserHome(path.join(workingDir, "users"), "user-1")
+        new UserHome(path.join(workingDir, "users"), userId)
     );
     const sandbox = new Sandbox({
         homeDir,
@@ -484,7 +485,7 @@ function createContext(
                 unconfinedSecurity: false,
                 capAdd: [],
                 capDrop: [],
-                userId: "user-1"
+                userId
             }
         }
     });

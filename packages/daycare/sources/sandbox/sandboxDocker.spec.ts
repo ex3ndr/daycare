@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -29,7 +30,7 @@ describe("Sandbox docker integration", () => {
             writeDirs: [homeDir]
         };
 
-        vi.spyOn(dockerContainersShared, "exec").mockReset();
+        vi.spyOn(dockerContainersShared, "execStream").mockReset();
     });
 
     afterEach(async () => {
@@ -37,14 +38,23 @@ describe("Sandbox docker integration", () => {
     });
 
     it("uses docker runtime for exec", async () => {
-        const execSpy = vi.spyOn(dockerContainersShared, "exec").mockResolvedValue({
-            stdout: "docker",
-            stderr: "",
-            exitCode: 0
+        const stdout = new PassThrough();
+        const stderr = new PassThrough();
+        const execSpy = vi.spyOn(dockerContainersShared, "execStream").mockResolvedValue({
+            stdout,
+            stderr,
+            wait: async () => ({
+                stdout: "docker",
+                stderr: "",
+                exitCode: 0,
+                signal: null
+            }),
+            kill: async () => undefined
         });
 
         const sandbox = sandboxBuild();
-        const result = await sandbox.exec({ command: "echo docker" });
+        const execution = await sandbox.exec({ command: "echo docker" });
+        const result = await execution.wait();
 
         expect(result.failed).toBe(false);
         expect(result.stdout).toBe("docker");
@@ -61,7 +71,15 @@ describe("Sandbox docker integration", () => {
                 userId: "u123"
             }),
             expect.objectContaining({
-                command: ["bash", "-lc", "echo docker"]
+                command: [
+                    "daycare-exec-supervisor",
+                    "--control",
+                    expect.stringMatching(/^\/tmp\/daycare-exec-.*\.ctl$/),
+                    "--",
+                    "bash",
+                    "-lc",
+                    "echo docker"
+                ]
             })
         );
     });
@@ -69,11 +87,11 @@ describe("Sandbox docker integration", () => {
     it("rethrows AbortError from docker execution", async () => {
         const abortError = new Error("Operation aborted.");
         abortError.name = "AbortError";
-        vi.spyOn(dockerContainersShared, "exec").mockRejectedValueOnce(abortError);
+        vi.spyOn(dockerContainersShared, "execStream").mockRejectedValueOnce(abortError);
 
         const sandbox = sandboxBuild();
         await expect(
-            sandbox.exec({
+            sandbox.execBuffered({
                 command: "echo docker",
                 signal: new AbortController().signal
             })

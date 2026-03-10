@@ -350,7 +350,7 @@ export function buildExecTool(): ToolDefinition {
             const secretNames = secretNamesNormalize(payload.secrets ?? []);
             const resolvedSecrets =
                 secretNames.length > 0 ? await secretEnvResolve(toolContext, secretNames) : undefined;
-            const result = await toolContext.sandbox.exec({
+            const result = await toolContext.sandbox.execBuffered({
                 command: payload.command,
                 cwd: payload.cwd,
                 timeoutMs: payload.timeoutMs,

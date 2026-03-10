@@ -53,7 +53,7 @@ export function buildFindTool(): ToolDefinition {
             const searchPath = findPathNormalize(payload.path?.trim() || ".", toolContext);
             const command = findCommandBuild(payload.pattern, searchPath, limit);
 
-            const execResult = await toolContext.sandbox.exec({
+            const execResult = await toolContext.sandbox.execBuffered({
                 command,
                 signal: toolContext.abortSignal
             });

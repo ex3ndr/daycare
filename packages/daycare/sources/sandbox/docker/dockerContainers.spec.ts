@@ -31,9 +31,15 @@ describe("DockerContainers", () => {
         vi.mocked(dockerNetworkNameResolveForUser).mockReturnValue("daycare-isolated");
         vi.mocked(dockerContainerEnsure).mockResolvedValue({ id: "container" } as never);
         vi.mocked(dockerContainerExec).mockResolvedValue({
-            stdout: "ok",
-            stderr: "",
-            exitCode: 0
+            stdout: { on: vi.fn() } as never,
+            stderr: { on: vi.fn() } as never,
+            wait: async () => ({
+                stdout: "ok",
+                stderr: "",
+                exitCode: 0,
+                signal: null
+            }),
+            kill: async () => undefined
         });
 
         const config = {
@@ -78,9 +84,15 @@ describe("DockerContainers", () => {
         vi.mocked(dockerNetworkNameResolveForUser).mockReturnValue("daycare-isolated");
         vi.mocked(dockerContainerEnsure).mockResolvedValue({ id: "container" } as never);
         vi.mocked(dockerContainerExec).mockResolvedValue({
-            stdout: "ok",
-            stderr: "",
-            exitCode: 0
+            stdout: { on: vi.fn() } as never,
+            stderr: { on: vi.fn() } as never,
+            wait: async () => ({
+                stdout: "ok",
+                stderr: "",
+                exitCode: 0,
+                signal: null
+            }),
+            kill: async () => undefined
         });
 
         await facade.exec(

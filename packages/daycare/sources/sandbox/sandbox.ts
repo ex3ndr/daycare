@@ -14,12 +14,13 @@ import { isWithinSecure, openSecure } from "./pathResolveSecure.js";
 import { sandboxCanRead } from "./sandboxCanRead.js";
 import { sandboxCanWrite } from "./sandboxCanWrite.js";
 import { sandboxExecBackendBuild } from "./sandboxExecBackendBuild.js";
-import type { SandboxExecBackend } from "./sandboxExecBackendTypes.js";
+import type { SandboxExecBackend, SandboxExecBackendHandle } from "./sandboxExecBackendTypes.js";
 import { sandboxHomeRedefine } from "./sandboxHomeRedefine.js";
 import { sandboxReadPathNormalize } from "./sandboxReadPathNormalize.js";
 import type {
     SandboxConfig,
     SandboxExecArgs,
+    SandboxExecHandle,
     SandboxExecResult,
     SandboxReadArgs,
     SandboxReadResult,
@@ -202,10 +203,10 @@ export class Sandbox {
     }
 
     /**
-     * Execute a shell command inside the configured sandbox backend.
+     * Starts a shell command inside the configured sandbox backend.
      * Expects: args.command is non-empty.
      */
-    async exec(args: SandboxExecArgs): Promise<SandboxExecResult> {
+    async exec(args: SandboxExecArgs): Promise<SandboxExecHandle> {
         const cwd = sandboxExecCwdResolve(this.workingDir, args.cwd);
         const dotenvEnv = await sandboxExecDotenvLoad(cwd, args.dotenv);
         const envOverrides = envNormalize(args.env);
@@ -218,48 +219,37 @@ export class Sandbox {
         };
         const sandboxEnv = (await sandboxHomeRedefine({ env, home: this.homeDir })).env;
         logger.debug(`exec: command=${JSON.stringify(args.command)} cwd=${cwd} backend=${this.execBackendType}`);
+        const backendHandle = await this.execBackend.exec({
+            command: args.command,
+            cwd,
+            env: sandboxEnv,
+            timeoutMs: args.timeoutMs ?? DEFAULT_EXEC_TIMEOUT,
+            maxBufferBytes: MAX_EXEC_BUFFER,
+            signal: args.signal
+        });
 
+        return {
+            stdout: backendHandle.stdout,
+            stderr: backendHandle.stderr,
+            kill: backendHandle.kill,
+            wait: async () => sandboxExecResultResolve(cwd, backendHandle, args.signal)
+        };
+    }
+
+    /**
+     * Executes a shell command and buffers stdout/stderr for existing tool callers.
+     * Expects: args.command is non-empty.
+     */
+    async execBuffered(args: SandboxExecArgs): Promise<SandboxExecResult> {
+        const cwd = sandboxExecCwdResolve(this.workingDir, args.cwd);
         try {
-            const result = await this.execBackend.exec({
-                command: args.command,
-                cwd,
-                env: sandboxEnv,
-                timeoutMs: args.timeoutMs ?? DEFAULT_EXEC_TIMEOUT,
-                maxBufferBytes: MAX_EXEC_BUFFER,
-                signal: args.signal
-            });
-            return {
-                stdout: sandboxText(result.stdout),
-                stderr: sandboxText(result.stderr),
-                exitCode: result.exitCode,
-                signal: null,
-                failed: result.exitCode !== 0,
-                cwd
-            };
+            const execution = await this.exec(args);
+            return await execution.wait();
         } catch (error) {
             if (abortErrorIs(error, args.signal)) {
                 throw error;
             }
-            const execError = error as ExecException & {
-                stdout?: string | Buffer;
-                stderr?: string | Buffer;
-                code?: number | string | null;
-                signal?: NodeJS.Signals | null;
-            };
-            const exitCode = typeof execError.code === "number" ? execError.code : null;
-            const stderr = sandboxText(execError.stderr);
-            logger.warn(
-                `exec: failed exitCode=${exitCode} signal=${execError.signal ?? "none"} error=${execError.message}` +
-                    (stderr ? ` stderr=${stderr.slice(0, 500)}` : "")
-            );
-            return {
-                stdout: sandboxText(execError.stdout),
-                stderr,
-                exitCode,
-                signal: typeof execError.signal === "string" ? execError.signal : null,
-                failed: true,
-                cwd
-            };
+            return sandboxExecErrorResultBuild(cwd, error);
         }
     }
 
@@ -353,6 +343,52 @@ export class Sandbox {
         }
         return targetPath;
     }
+}
+
+async function sandboxExecResultResolve(
+    cwd: string,
+    backendHandle: SandboxExecBackendHandle,
+    signal?: AbortSignal
+): Promise<SandboxExecResult> {
+    try {
+        const result = await backendHandle.wait();
+        return {
+            stdout: sandboxText(result.stdout),
+            stderr: sandboxText(result.stderr),
+            exitCode: result.exitCode,
+            signal: result.signal,
+            failed: result.exitCode !== 0 || result.signal !== null,
+            cwd
+        };
+    } catch (error) {
+        if (abortErrorIs(error, signal)) {
+            throw error;
+        }
+        return sandboxExecErrorResultBuild(cwd, error);
+    }
+}
+
+function sandboxExecErrorResultBuild(cwd: string, error: unknown): SandboxExecResult {
+    const execError = error as ExecException & {
+        stdout?: string | Buffer;
+        stderr?: string | Buffer;
+        code?: number | string | null;
+        signal?: NodeJS.Signals | null;
+    };
+    const exitCode = typeof execError.code === "number" ? execError.code : null;
+    const stderr = sandboxText(execError.stderr);
+    logger.warn(
+        `exec: failed exitCode=${exitCode} signal=${execError.signal ?? "none"} error=${execError.message}` +
+            (stderr ? ` stderr=${stderr.slice(0, 500)}` : "")
+    );
+    return {
+        stdout: sandboxText(execError.stdout),
+        stderr,
+        exitCode,
+        signal: typeof execError.signal === "string" ? execError.signal : null,
+        failed: true,
+        cwd
+    };
 }
 
 function sandboxReadPathMacOSVariant(target: string): string {

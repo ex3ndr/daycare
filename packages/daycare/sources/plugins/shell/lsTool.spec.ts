@@ -104,7 +104,7 @@ function createContext(
             execWorkingDir: "/workspace",
             homeDir: options.homeDir ?? "/home/test",
             docker: options.dockerEnabled ? {} : undefined,
-            exec
+            execBuffered: exec
         }
     } as unknown as ToolExecutionContext;
     return { context, exec };

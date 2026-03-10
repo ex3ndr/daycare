@@ -149,7 +149,9 @@ export { Sandbox } from "./sandbox/sandbox.js";
 export type {
     SandboxConfig,
     SandboxExecArgs,
+    SandboxExecHandle,
     SandboxExecResult,
+    SandboxExecSignal,
     SandboxReadArgs,
     SandboxReadResult,
     SandboxWriteArgs,

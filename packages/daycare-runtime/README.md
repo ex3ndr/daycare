@@ -12,6 +12,8 @@ The full image now tracks the minimal image baseline and adds:
 - naming switched from `codex` to `daycare`
 - runtime selector variables use `DAYCARE_ENV_*`
 - sandbox runtime is a bun-compiled `sandbox` wrapper binary at `/usr/local/bin/sandbox` (aliased as `srt`) with vendored seccomp assets under `/usr/local/lib/sandbox/vendor`
+- sandbox exec supervision is handled by `/usr/local/bin/daycare-exec-supervisor`, a shell helper that
+  manages a FIFO control file and kills descendant process trees on demand
 - container entrypoint is `sleep infinity`
 
 ## Build
@@ -41,6 +43,12 @@ If you want to apply env-based runtime switching manually inside the container:
 
 ```sh
 /opt/daycare/setup_daycare.sh
+```
+
+To inspect the exec supervisor manually inside a running container:
+
+```sh
+daycare-exec-supervisor --control /tmp/daycare-test.ctl -- bash -lc "echo ok"
 ```
 
 ## Runtime Selectors
