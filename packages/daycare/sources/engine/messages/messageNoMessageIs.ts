@@ -1,6 +1,8 @@
 /**
  * Checks whether assistant text is the NO_MESSAGE sentinel used to suppress user output.
- * Expects: input is the raw assistant text payload; returns true only when the sentinel is alone.
+ * Returns true when:
+ * 1. The entire text (after unwrapping) is NO_MESSAGE
+ * 2. The text ends with NO_MESSAGE (for cases where LLM outputs reasoning before the sentinel)
  */
 export function messageNoMessageIs(text: string | null): boolean {
     if (!text) {
@@ -20,7 +22,18 @@ export function messageNoMessageIs(text: string | null): boolean {
         candidate = unwrapped.trim();
     }
 
-    return /^NO_MESSAGE[.!?]?$/.test(candidate);
+    // Check if entire text is NO_MESSAGE
+    if (/^NO_MESSAGE[.!?]?$/.test(candidate)) {
+        return true;
+    }
+
+    // Check if text ends with NO_MESSAGE (preceded by newline)
+    // This handles cases like "Some reasoning text\n\nNO_MESSAGE"
+    if (/\nNO_MESSAGE[.!?]?$/.test(candidate)) {
+        return true;
+    }
+
+    return false;
 }
 
 function unwrapOnce(value: string): string {
