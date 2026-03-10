@@ -31,7 +31,7 @@ ENV GOROOT=/usr/local/go
 ENV GOPATH=/home/developer/go
 ENV GOMODCACHE=$GOPATH/pkg/mod
 ENV GOCACHE=$XDG_CACHE_HOME/go-build
-ENV PATH=$GOROOT/bin:$GOPATH/bin:$CARGO_HOME/bin:/usr/local/cargo/bin:$PATH
+ENV PATH=$GOROOT/bin:$GOPATH/bin:$CARGO_HOME/bin:/usr/local/cargo/bin:/home/.npm-global/bin:$PATH
 
 ### BASE ###
 
