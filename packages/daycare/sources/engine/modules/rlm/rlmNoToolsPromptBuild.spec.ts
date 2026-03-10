@@ -63,8 +63,12 @@ describe("rlmNoToolsPromptBuild", () => {
 
     it("generates python stubs for all registered runtime tools", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-rlm-no-tools-prompt-"));
-        const staleRemoveSpy = vi.spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove").mockResolvedValue(undefined);
-        const imageIdSpy = vi.spyOn(dockerImageIdResolveModule, "dockerImageIdResolve").mockResolvedValue("sha256:test");
+        const staleRemoveSpy = vi
+            .spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove")
+            .mockResolvedValue(undefined);
+        const imageIdSpy = vi
+            .spyOn(dockerImageIdResolveModule, "dockerImageIdResolve")
+            .mockResolvedValue("sha256:test");
         let engine: Engine | null = null;
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));

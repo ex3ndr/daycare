@@ -152,8 +152,12 @@ describe("Engine reset command", () => {
 describe("Engine context tool list", () => {
     it("exposes no classical tools in model context", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
-        const staleRemoveSpy = vi.spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove").mockResolvedValue(undefined);
-        const imageIdSpy = vi.spyOn(dockerImageIdResolveModule, "dockerImageIdResolve").mockResolvedValue("sha256:test");
+        const staleRemoveSpy = vi
+            .spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove")
+            .mockResolvedValue(undefined);
+        const imageIdSpy = vi
+            .spyOn(dockerImageIdResolveModule, "dockerImageIdResolve")
+            .mockResolvedValue("sha256:test");
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
@@ -282,8 +286,12 @@ describe("Engine timezone mismatch handling", () => {
 describe("Engine startup plugin hooks", () => {
     it("runs preStart hooks before systems and postStart hooks after systems", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
-        const staleRemoveSpy = vi.spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove").mockResolvedValue(undefined);
-        const imageIdSpy = vi.spyOn(dockerImageIdResolveModule, "dockerImageIdResolve").mockResolvedValue("sha256:test");
+        const staleRemoveSpy = vi
+            .spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove")
+            .mockResolvedValue(undefined);
+        const imageIdSpy = vi
+            .spyOn(dockerImageIdResolveModule, "dockerImageIdResolve")
+            .mockResolvedValue("sha256:test");
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
@@ -324,8 +332,12 @@ describe("Engine startup plugin hooks", () => {
 
     it("discovers workspaces before loading agents so restored sandboxes include workspace mounts", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
-        const staleRemoveSpy = vi.spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove").mockResolvedValue(undefined);
-        const imageIdSpy = vi.spyOn(dockerImageIdResolveModule, "dockerImageIdResolve").mockResolvedValue("sha256:test");
+        const staleRemoveSpy = vi
+            .spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove")
+            .mockResolvedValue(undefined);
+        const imageIdSpy = vi
+            .spyOn(dockerImageIdResolveModule, "dockerImageIdResolve")
+            .mockResolvedValue("sha256:test");
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
@@ -409,8 +421,12 @@ describe("Engine Docker stale container cleanup", () => {
 describe("Engine tool registration", () => {
     it("registers the skill tool in normal mode", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
-        const staleRemoveSpy = vi.spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove").mockResolvedValue(undefined);
-        const imageIdSpy = vi.spyOn(dockerImageIdResolveModule, "dockerImageIdResolve").mockResolvedValue("sha256:test");
+        const staleRemoveSpy = vi
+            .spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove")
+            .mockResolvedValue(undefined);
+        const imageIdSpy = vi
+            .spyOn(dockerImageIdResolveModule, "dockerImageIdResolve")
+            .mockResolvedValue("sha256:test");
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
@@ -434,8 +450,12 @@ describe("Engine tool registration", () => {
 describe("Engine workspace registration", () => {
     it("bootstraps the ownerless system workspace on startup", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
-        const staleRemoveSpy = vi.spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove").mockResolvedValue(undefined);
-        const imageIdSpy = vi.spyOn(dockerImageIdResolveModule, "dockerImageIdResolve").mockResolvedValue("sha256:test");
+        const staleRemoveSpy = vi
+            .spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove")
+            .mockResolvedValue(undefined);
+        const imageIdSpy = vi
+            .spyOn(dockerImageIdResolveModule, "dockerImageIdResolve")
+            .mockResolvedValue("sha256:test");
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
@@ -476,8 +496,12 @@ describe("Engine workspace registration", () => {
 
     it("discovers workspaces on startup and exposes workspace_create", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
-        const staleRemoveSpy = vi.spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove").mockResolvedValue(undefined);
-        const imageIdSpy = vi.spyOn(dockerImageIdResolveModule, "dockerImageIdResolve").mockResolvedValue("sha256:test");
+        const staleRemoveSpy = vi
+            .spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove")
+            .mockResolvedValue(undefined);
+        const imageIdSpy = vi
+            .spyOn(dockerImageIdResolveModule, "dockerImageIdResolve")
+            .mockResolvedValue("sha256:test");
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const seedStorage = await storageOpen(config.db.path, {
@@ -535,8 +559,12 @@ describe("Engine workspace registration", () => {
 
     it("bootstraps documents for all users even when migration is already marked complete", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
-        const staleRemoveSpy = vi.spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove").mockResolvedValue(undefined);
-        const imageIdSpy = vi.spyOn(dockerImageIdResolveModule, "dockerImageIdResolve").mockResolvedValue("sha256:test");
+        const staleRemoveSpy = vi
+            .spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove")
+            .mockResolvedValue(undefined);
+        const imageIdSpy = vi
+            .spyOn(dockerImageIdResolveModule, "dockerImageIdResolve")
+            .mockResolvedValue("sha256:test");
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const seedStorage = await storageOpen(config.db.path, {
