@@ -79,6 +79,20 @@ function createToolContext(options: {
         deleteAfterRun: boolean;
         lastRunAt: number | null;
     }>;
+    acpSessions?: Array<{
+        id: string;
+        remoteSessionId: string;
+        userId: string;
+        ownerAgentId: string;
+        ownerAgentName: string | null;
+        description: string;
+        command: string;
+        args: string[];
+        cwd: string;
+        permissionMode: "allow" | "deny";
+        createdAt: number;
+        updatedAt: number;
+    }>;
 }): {
     tool: ReturnType<typeof topologyTool>;
     context: ToolExecutionContext;
@@ -148,8 +162,17 @@ function createToolContext(options: {
     const secrets = {
         list: async () => []
     };
+    const acpSessions = {
+        list: () => options.acpSessions ?? []
+    };
 
-    const tool = topologyTool(crons as never, signals as never, channels as never, secrets as never);
+    const tool = topologyTool(
+        crons as never,
+        signals as never,
+        channels as never,
+        secrets as never,
+        acpSessions as never
+    );
     const context: ToolExecutionContext = {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: null as unknown as ToolExecutionContext["sandbox"],
@@ -225,6 +248,7 @@ describe("topologyTool", () => {
         expect(result.typedResult.agentCount).toBe(1);
         expect(result.typedResult.taskCount).toBe(1);
         expect(result.typedResult.cronCount).toBe(1);
+        expect(result.typedResult.acpSessionCount).toBe(0);
         expect(result.typedResult.tasks[0]?.triggers.cron[0]).toMatchObject({
             id: "cron-report",
             taskId: "task-report",
@@ -281,5 +305,49 @@ describe("topologyTool", () => {
         expect(taskIds).toEqual(["sub-task"]);
         expect(result.typedResult.cronCount).toBe(1);
         expect(result.typedResult.agents.map((agent) => agent.id)).toEqual(["agent-sub-1"]);
+    });
+
+    it("includes active ACP sessions with owner names", async () => {
+        const built = createToolContext({
+            caller: { userId: "owner", agentId: "agent-owner" },
+            users: [{ id: "owner", workspaceOwnerId: null }],
+            agents: [
+                {
+                    id: "agent-owner",
+                    userId: "owner",
+                    path: "/owner/agent/owner",
+                    kind: "agent",
+                    name: "owner-worker",
+                    updatedAt: 5
+                }
+            ],
+            tasksByUser: { owner: [] },
+            acpSessions: [
+                {
+                    id: "acp-1",
+                    remoteSessionId: "remote-1",
+                    userId: "owner",
+                    ownerAgentId: "agent-owner",
+                    ownerAgentName: null,
+                    description: "Codex reviewer",
+                    command: "codex-acp",
+                    args: [],
+                    cwd: "/workspace",
+                    permissionMode: "allow",
+                    createdAt: 10,
+                    updatedAt: 20
+                }
+            ]
+        });
+
+        const result = await built.tool.execute({}, built.context, { id: "call-3", name: "topology" });
+
+        expect(result.typedResult.acpSessionCount).toBe(1);
+        expect(result.typedResult.acpSessions[0]).toMatchObject({
+            id: "acp-1",
+            ownerAgentId: "agent-owner",
+            ownerName: "owner-worker",
+            description: "Codex reviewer"
+        });
     });
 });

@@ -23,6 +23,7 @@ import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
 import { stringSlugify } from "../utils/stringSlugify.js";
 import { InvalidateSync } from "../utils/sync.js";
 import { valueDeepEqual } from "../utils/valueDeepEqual.js";
+import { AcpSessions } from "./acp/acpSessions.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForAgent, contextForUser } from "./agents/context.js";
 import { agentHistoryLoad } from "./agents/ops/agentHistoryLoad.js";
@@ -49,6 +50,8 @@ import { InferenceRouter } from "./modules/inference/router.js";
 import { ModuleRegistry } from "./modules/moduleRegistry.js";
 import { taskParameterInputsNormalize } from "./modules/tasks/taskParameterInputsNormalize.js";
 import { taskParameterValidate } from "./modules/tasks/taskParameterValidate.js";
+import { acpSessionMessageToolBuild } from "./modules/tools/acpSessionMessageToolBuild.js";
+import { acpSessionStartToolBuild } from "./modules/tools/acpSessionStartToolBuild.js";
 import { agentAskTool } from "./modules/tools/agentAskTool.js";
 import { agentCompactToolBuild } from "./modules/tools/agentCompactTool.js";
 import { agentModelSetToolBuild } from "./modules/tools/agentModelSetToolBuild.js";
@@ -158,6 +161,7 @@ export class Engine {
     readonly delayedSignals: DelayedSignals;
     readonly taskExecutions: TaskExecutions;
     readonly channels: Channels;
+    readonly acpSessions: AcpSessions;
     readonly processes: Processes;
     readonly inferenceRouter: InferenceRouter;
     readonly modelRoles: ModelRoles;
@@ -209,6 +213,7 @@ export class Engine {
             await this.reloadApplyLatest();
         });
         this.authStore = new AuthStore(this.config.current);
+        this.acpSessions = new AcpSessions(getLogger("engine.acp"));
         this.processes = new Processes(this.config.current.dataDir, getLogger("engine.processes"), {
             repository: this.storage.processes,
             docker: this.config.current.docker
@@ -766,6 +771,8 @@ export class Engine {
         this.modules.tools.register("core", todoBatchStatusToolBuild());
         this.modules.tools.register("core", buildStartBackgroundAgentTool());
         this.modules.tools.register("core", buildSendAgentMessageTool());
+        this.modules.tools.register("core", acpSessionStartToolBuild(this.acpSessions));
+        this.modules.tools.register("core", acpSessionMessageToolBuild(this.acpSessions));
         this.modules.tools.register("core", agentAskTool());
         this.modules.tools.register("core", documentSearchToolBuild());
         this.modules.tools.register("core", inferenceSummaryToolBuild(this.inferenceRouter, this.config));
@@ -782,7 +789,10 @@ export class Engine {
         this.modules.tools.register("core", secretRemoveToolBuild());
         this.modules.tools.register("core", secretCopyToolBuild());
         this.modules.tools.register("core", userProfileUpdateTool());
-        this.modules.tools.register("core", topologyTool(this.crons, this.signals, this.channels, this.secrets));
+        this.modules.tools.register(
+            "core",
+            topologyTool(this.crons, this.signals, this.channels, this.secrets, this.acpSessions)
+        );
         this.modules.tools.register("core", sessionHistoryToolBuild());
         this.modules.tools.register("core", permanentAgentToolBuild());
         this.modules.tools.register("core", workspaceCreateToolBuild(this.workspaces));
@@ -852,6 +862,7 @@ export class Engine {
         this.crons.stop();
         this.webhooks.stop();
         this.delayedSignals.stop();
+        await this.acpSessions.shutdown();
         this.processes.unload();
         await this.pluginManager.unloadAll();
         await databaseClose(this.storage.connection);

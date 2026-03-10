@@ -2,6 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import type { AcpSessions } from "../../acp/acpSessions.js";
 import { contextForUser } from "../../agents/context.js";
 import type { Channels } from "../../channels/channels.js";
 import type { Crons } from "../../cron/crons.js";
@@ -126,6 +127,22 @@ const topologyFriendSchema = Type.Object(
     { additionalProperties: false }
 );
 
+const topologyAcpSessionSchema = Type.Object(
+    {
+        id: Type.String(),
+        remoteSessionId: Type.String(),
+        ownerAgentId: Type.String(),
+        ownerName: Type.Union([Type.String(), Type.Null()]),
+        description: Type.String(),
+        command: Type.String(),
+        cwd: Type.String(),
+        permissionMode: Type.String(),
+        createdAt: Type.Number(),
+        updatedAt: Type.Number()
+    },
+    { additionalProperties: false }
+);
+
 const topologyResultSchema = Type.Object(
     {
         agents: Type.Array(topologyAgentSchema),
@@ -135,13 +152,15 @@ const topologyResultSchema = Type.Object(
         secrets: Type.Array(topologySecretSchema),
         subusers: Type.Array(topologySubuserSchema),
         friends: Type.Array(topologyFriendSchema),
+        acpSessions: Type.Array(topologyAcpSessionSchema),
         agentCount: Type.Number(),
         taskCount: Type.Number(),
         cronCount: Type.Number(),
         signalSubscriptionCount: Type.Number(),
         channelCount: Type.Number(),
         secretCount: Type.Number(),
-        friendCount: Type.Number()
+        friendCount: Type.Number(),
+        acpSessionCount: Type.Number()
     },
     { additionalProperties: false }
 );
@@ -224,6 +243,19 @@ type TopologyFriend = {
     sharedIn: TopologyFriendShare[];
 };
 
+type TopologyAcpSession = {
+    id: string;
+    remoteSessionId: string;
+    ownerAgentId: string;
+    ownerName: string | null;
+    description: string;
+    command: string;
+    cwd: string;
+    permissionMode: string;
+    createdAt: number;
+    updatedAt: number;
+};
+
 type TopologyResult = {
     agents: TopologyAgent[];
     tasks: TopologyTask[];
@@ -232,6 +264,7 @@ type TopologyResult = {
     secrets: TopologySecret[];
     subusers: TopologySubuser[];
     friends: TopologyFriend[];
+    acpSessions: TopologyAcpSession[];
     agentCount: number;
     taskCount: number;
     cronCount: number;
@@ -239,6 +272,7 @@ type TopologyResult = {
     channelCount: number;
     secretCount: number;
     friendCount: number;
+    acpSessionCount: number;
 };
 
 const topologyReturns: ToolResultContract<TopologyResult> = {
@@ -254,7 +288,8 @@ export function topologyTool(
     crons: Crons,
     signals: Signals,
     channels: Pick<Channels, "listForUserIds">,
-    secrets: Pick<Secrets, "list"> = { list: async () => [] }
+    secrets: Pick<Secrets, "list"> = { list: async () => [] },
+    acpSessions: Pick<AcpSessions, "list"> = { list: () => [] }
 ): ToolDefinition<typeof schema, TopologyResult> {
     return {
         tool: {
@@ -326,6 +361,7 @@ export function topologyTool(
                 visibleUserIds.map((userId) => storage.tasks.findMany(contextForUser({ userId })))
             );
             const visibleTasks = visibleTaskChunks.flat();
+            const agentNameById = new Map(allAgentRecords.map((record) => [record.id, record.name?.trim() || null]));
 
             const taskByKey = new Map<string, TopologyTask>();
             for (const task of visibleTasks) {
@@ -434,6 +470,22 @@ export function topologyTool(
                   }));
 
             const friends = isSubuser ? [] : await friendsListBuild(callerUserId, storage);
+            const acpSessionSummary: TopologyAcpSession[] = acpSessions
+                .list()
+                .filter((session) => visibleUserIdSet.has(session.userId))
+                .map((session) => ({
+                    id: session.id,
+                    remoteSessionId: session.remoteSessionId,
+                    ownerAgentId: session.ownerAgentId,
+                    ownerName: agentNameById.get(session.ownerAgentId) ?? session.ownerAgentName,
+                    description: session.description,
+                    command: session.command,
+                    cwd: session.cwd,
+                    permissionMode: session.permissionMode,
+                    createdAt: session.createdAt,
+                    updatedAt: session.updatedAt
+                }))
+                .sort((left, right) => right.updatedAt - left.updatedAt);
 
             const typedResult: TopologyResult = {
                 agents,
@@ -443,13 +495,15 @@ export function topologyTool(
                 secrets: secretSummary,
                 subusers,
                 friends,
+                acpSessions: acpSessionSummary,
                 agentCount: agents.length,
                 taskCount: tasks.length,
                 cronCount: cronTriggers.length,
                 signalSubscriptionCount: signalSubscriptionsSummary.length,
                 channelCount: channelsSummary.length,
                 secretCount: secretSummary.length,
-                friendCount: friends.length
+                friendCount: friends.length,
+                acpSessionCount: acpSessionSummary.length
             };
 
             const text = JSON.stringify(typedResult);
