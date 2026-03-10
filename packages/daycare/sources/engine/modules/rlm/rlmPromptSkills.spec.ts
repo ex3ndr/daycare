@@ -77,6 +77,16 @@ describe("system prompt skills rendering", () => {
         expect(prompt).not.toContain("prefer it for user-visible replies");
         expect(prompt).not.toContain("respond to the user with plain text");
     });
+
+    it("does not claim npx is unavailable in scripting guidance", async () => {
+        const prompt = await renderSystemPrompt({
+            toolsText: "Tool notes",
+            skillsPrompt: skillPromptFormat(skills)
+        });
+
+        expect(prompt).not.toContain("npx won't work");
+        expect(prompt).not.toContain("Never install packages globally");
+    });
 });
 
 async function renderSystemPrompt(options: RenderSystemPromptOptions): Promise<string> {

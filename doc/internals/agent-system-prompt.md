@@ -39,6 +39,7 @@ Template naming:
 - `skillPromptFormat()` now renders only the dynamic `<available_skills>...</available_skills>` list, which is appended after rendering `SYSTEM_SKILLS.md`.
 - `SYSTEM_MODELS.md` renders current model/provider plus active non-deprecated model catalogs from configured inference providers.
 - `agentSystemPromptSectionModels()` reads active providers from `config.current.settings` and formats provider-grouped model rows.
+- `SYSTEM_AGENCY.md` keeps scripting guidance focused on local reproducibility and no longer embeds environment-specific claims about `npx` or global installs.
 
 ```mermaid
 flowchart LR
