@@ -11,7 +11,8 @@ The Docker backend now wraps each `docker exec` with a small runtime helper:
 - `daycare-exec-supervisor` starts the command
 - the helper creates a FIFO control file under `/tmp/daycare-exec-*.ctl`
 - `kill()` writes a signal name into that FIFO
-- the helper walks descendants with `pgrep -P` and signals the full tree
+- the helper is a single-file Go binary built in the runtime Docker image
+- the helper walks descendants through `/proc/<pid>/task/<pid>/children` and signals the full tree
 
 ## Flow
 

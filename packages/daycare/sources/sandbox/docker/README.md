@@ -67,8 +67,8 @@ flowchart TD
 ## Process Control
 
 - Each exec allocates a temporary FIFO control path under `/tmp/daycare-exec-*.ctl`.
-- The runtime image ships `/usr/local/bin/daycare-exec-supervisor`, a shell helper that launches the
-  command, streams stdio, and listens on that FIFO for kill signals.
+- The runtime image ships `/usr/local/bin/daycare-exec-supervisor`, a single-file Go helper that launches
+  the command, streams stdio, and listens on that FIFO for kill signals.
 - `kill()` writes `SIGTERM`, `SIGINT`, `SIGHUP`, or `SIGKILL` into the FIFO.
 - The supervisor recursively kills descendants with `pgrep -P` before signaling the root process,
   which avoids leaving orphaned child processes behind when the command spawns subprocesses.

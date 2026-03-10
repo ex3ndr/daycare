@@ -9,6 +9,19 @@ RUN bun init -y \
 
 RUN bun build --compile sandbox.ts --outfile sandbox
 
+FROM golang:1.25 AS exec-supervisor-builder
+
+ARG TARGETOS
+ARG TARGETARCH
+
+WORKDIR /build
+
+COPY daycareExecSupervisor.go /build/daycareExecSupervisor.go
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} CGO_ENABLED=0 \
+    go build -trimpath -ldflags="-s -w" -o /build/daycare-exec-supervisor /build/daycareExecSupervisor.go
+
 FROM ubuntu:24.04
 
 ARG TARGETOS
@@ -139,8 +152,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 ### SANDBOX ###
 
 COPY --from=sandbox-builder /build/sandbox /usr/local/lib/sandbox/sandbox
+COPY --from=exec-supervisor-builder /build/daycare-exec-supervisor /usr/local/lib/sandbox/daycare-exec-supervisor
 COPY --from=sandbox-builder /build/node_modules/@anthropic-ai/sandbox-runtime/vendor /usr/local/lib/sandbox/vendor
-COPY daycareExecSupervisor.sh /usr/local/lib/sandbox/daycare-exec-supervisor
 RUN chmod +x /usr/local/lib/sandbox/sandbox \
     && chmod +x /usr/local/lib/sandbox/daycare-exec-supervisor \
     && ln -s /usr/local/lib/sandbox/sandbox /usr/local/bin/sandbox \

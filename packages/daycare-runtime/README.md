@@ -12,8 +12,8 @@ The full image now tracks the minimal image baseline and adds:
 - naming switched from `codex` to `daycare`
 - runtime selector variables use `DAYCARE_ENV_*`
 - sandbox runtime is a bun-compiled `sandbox` wrapper binary at `/usr/local/bin/sandbox` (aliased as `srt`) with vendored seccomp assets under `/usr/local/lib/sandbox/vendor`
-- sandbox exec supervision is handled by `/usr/local/bin/daycare-exec-supervisor`, a shell helper that
-  manages a FIFO control file and kills descendant process trees on demand
+- sandbox exec supervision is handled by `/usr/local/bin/daycare-exec-supervisor`, a single-file Go binary
+  that manages a FIFO control file and kills descendant process trees on demand
 - container entrypoint is `sleep infinity`
 
 ## Build
