@@ -73,4 +73,13 @@ export class DockerExecBackend implements SandboxExecBackend {
             kill: result.kill
         };
     }
+
+    async destroy(): Promise<void> {
+        const dockerConfig: DockerContainerConfig = {
+            ...this.docker,
+            hostHomeDir: this.homeDir,
+            mounts: this.mounts
+        };
+        await dockerContainersShared.remove(dockerConfig);
+    }
 }

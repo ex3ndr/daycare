@@ -31,4 +31,5 @@ export type SandboxExecBackendHandle = {
 
 export interface SandboxExecBackend {
     exec(args: SandboxExecBackendArgs): Promise<SandboxExecBackendHandle>;
+    destroy?(): Promise<void>;
 }

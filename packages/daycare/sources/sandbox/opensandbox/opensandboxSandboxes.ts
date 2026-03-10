@@ -89,7 +89,7 @@ export class OpenSandboxSandboxes {
                 name: `daycare-mount-${index}`,
                 host: { path: mount.hostPath },
                 mountPath: mount.mappedPath,
-                readOnly: mount.mappedPath !== "/home"
+                readOnly: mount.readOnly ?? mount.mappedPath !== "/home"
             }))
         });
         const info = await sandbox.getInfo();
@@ -129,7 +129,7 @@ function opensandboxFingerprintBuild(config: SandboxOpenSandboxConfig, mounts: P
         mounts: mounts.map((mount) => ({
             hostPath: mount.hostPath,
             mappedPath: mount.mappedPath,
-            readOnly: mount.mappedPath !== "/home"
+            readOnly: mount.readOnly ?? mount.mappedPath !== "/home"
         }))
     });
 }

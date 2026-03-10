@@ -85,6 +85,7 @@ export type SandboxExecHandle = {
 export type SandboxMount = {
     hostPath: string;
     mappedPath: string;
+    readOnly?: boolean;
 };
 
 export type SandboxDockerConfig = {

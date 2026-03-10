@@ -253,6 +253,17 @@ export class Sandbox {
         }
     }
 
+    /**
+     * Destroys backend runtime state when a sandbox owns dedicated external resources.
+     * Expects: callers only use this for short-lived dedicated sandboxes such as durable process runtimes.
+     */
+    async destroy(): Promise<void> {
+        if (!this.execBackend.destroy) {
+            return;
+        }
+        await this.execBackend.destroy();
+    }
+
     private permissionsEffectiveResolve(): SessionPermissions {
         // Extra mounts (non-home) are readable
         const extraReadDirs = this.mounts.filter((m) => m.mappedPath !== "/home").map((m) => m.hostPath);
@@ -496,14 +507,15 @@ function realpathSyncSafe(target: string): string {
  */
 function sandboxMountsBuild(
     homeDir: string,
-    extraMounts?: Array<{ hostPath: string; mappedPath: string }>
+    extraMounts?: Array<{ hostPath: string; mappedPath: string; readOnly?: boolean }>
 ): PathMountPoint[] {
-    const mounts: PathMountPoint[] = [{ hostPath: homeDir, mappedPath: "/home" }];
+    const mounts: PathMountPoint[] = [{ hostPath: homeDir, mappedPath: "/home", readOnly: false }];
     if (extraMounts) {
         for (const mount of extraMounts) {
             mounts.push({
                 hostPath: realpathSyncSafe(mount.hostPath),
-                mappedPath: mount.mappedPath
+                mappedPath: mount.mappedPath,
+                readOnly: mount.readOnly ?? true
             });
         }
     }

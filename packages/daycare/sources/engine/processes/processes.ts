@@ -1,21 +1,17 @@
-import { promises as fs } from "node:fs";
+import { promises as fs, realpathSync } from "node:fs";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
-import Docker from "dockerode";
 import type { Logger } from "pino";
 
 import type { Context, SessionPermissions } from "@/types";
-import { dockerDnsProfileResolve } from "../../sandbox/docker/dockerDnsProfileResolve.js";
-import { dockerNetworkNameResolveForUser } from "../../sandbox/docker/dockerNetworkNameResolveForUser.js";
-import { dockerNetworksEnsure } from "../../sandbox/docker/dockerNetworksEnsure.js";
+import { Sandbox } from "../../sandbox/sandbox.js";
 import { sandboxCanWrite } from "../../sandbox/sandboxCanWrite.js";
-import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
+import type { SandboxDockerConfig } from "../../sandbox/sandboxTypes.js";
 import type { ResolvedDockerSettings } from "../../settings.js";
 import type { ProcessDbRecord } from "../../storage/databaseTypes.js";
 import type { ProcessesRepository, ProcessesRuntimeUpdate } from "../../storage/processesRepository.js";
 import { envNormalize } from "../../utils/envNormalize.js";
 import { AsyncLock } from "../../utils/lock.js";
-import { pathMountMapHostToMapped } from "../../utils/pathMountMapHostToMapped.js";
 import type { PathMountPoint } from "../../utils/pathMountTypes.js";
 import { shellQuote } from "../../utils/shellQuote.js";
 import { resolveWorkspacePath } from "../permissions.js";
@@ -26,11 +22,9 @@ const PROCESS_STOP_POLL_MS = 200;
 const RESTART_BACKOFF_BASE_MS = 2_000;
 const RESTART_BACKOFF_MAX_MS = 60_000;
 const RESTART_STABLE_UPTIME_MS = 30_000;
-const PROCESS_CONTAINER_PREFIX = "daycare-process";
-const DAYCARE_RUNTIME_IMAGE_REF = "daycare-runtime:latest";
-const DOCKER_SHM_SIZE_BYTES = 1024 * 1024 * 1024;
 const DOCKER_STOP_TIMEOUT_MS = 8_000;
-const DOCKER_SECURITY_OPT_UNCONFINED = ["seccomp=unconfined", "apparmor=unconfined"] as const;
+const PROCESS_CONTROL_PATH = "/process/control.fifo";
+const PROCESS_LOG_PATH = "/process/process.log";
 
 const SIGNALS = ["SIGTERM", "SIGINT", "SIGHUP", "SIGKILL"] as const;
 
@@ -105,6 +99,17 @@ type ProcessRuntime = {
     remove(record: ProcessRecord): Promise<void>;
 };
 
+type ProcessSandboxSettings = {
+    backend: "sandbox";
+    processUserId: string;
+    controlPath: string;
+    mounts: Array<{
+        hostPath: string;
+        mappedPath: string;
+        readOnly: boolean;
+    }>;
+};
+
 /**
  * Manages durable background processes persisted in SQLite.
  * Expects: all state writes happen through this facade to keep pid/status in sync.
@@ -138,7 +143,7 @@ export class Processes {
             runtime?: ProcessRuntime;
         }
     ) {
-        this.baseDir = path.resolve(baseDir);
+        this.baseDir = realpathSyncSafe(path.resolve(baseDir));
         this.recordsDir = path.join(this.baseDir, "processes");
         this.logger = logger;
         this.bootTimeProvider = options.bootTimeProvider ?? processBootTimeRead;
@@ -176,7 +181,8 @@ export class Processes {
     async create(input: ProcessCreateInput, permissions: SessionPermissions): Promise<ProcessInfo> {
         return this.lock.inLock(async () => {
             const now = Date.now();
-            const workingDir = permissions.workingDir;
+            const normalizedPermissions = permissionsPathNormalize(permissions);
+            const workingDir = normalizedPermissions.workingDir;
             if (!workingDir) {
                 throw new Error("Workspace is not configured.");
             }
@@ -193,11 +199,18 @@ export class Processes {
                 throw new Error("Path must be absolute.");
             }
 
-            const cwd = input.cwd ? resolveWorkspacePath(workingDir, input.cwd) : workingDir;
+            const cwdCandidate = input.cwd
+                ? path.isAbsolute(input.cwd)
+                    ? realpathSyncSafe(input.cwd)
+                    : path.resolve(workingDir, input.cwd)
+                : workingDir;
+            const cwd = realpathSyncSafe(resolveWorkspacePath(workingDir, cwdCandidate));
             const envInput = envNormalize(input.env) ?? {};
             const id = createId();
             const recordDir = this.processDir(id);
-            const home = input.home ? await sandboxCanWrite(permissions, input.home) : path.join(recordDir, "home");
+            const home = input.home
+                ? await sandboxCanWrite(normalizedPermissions, realpathSyncSafe(input.home))
+                : path.join(recordDir, "home");
             const settingsPath = path.join(recordDir, "sandbox.json");
             const logPath = path.join(recordDir, "process.log");
             const bootTimeMs = await this.resolveCurrentBootTimeMsLocked();
@@ -213,7 +226,7 @@ export class Processes {
                 home,
                 env: envInput,
                 allowLocalBinding: input.allowLocalBinding === true,
-                permissions: clonePermissions(permissions),
+                permissions: clonePermissions(normalizedPermissions),
                 owner: input.owner ? ownerNormalize(input.owner) : null,
                 keepAlive: input.keepAlive ?? false,
                 desiredState: "running",
@@ -636,16 +649,17 @@ function recordForContextGet(records: Map<string, ProcessRecord>, ctx: Context, 
 }
 
 function processRecordFromDb(record: ProcessDbRecord): ProcessRecord {
+    const permissions = permissionsPathNormalize(record.permissions);
     return {
         id: record.id,
         userId: record.userId,
         name: record.name,
         command: record.command,
-        cwd: record.cwd,
-        home: record.home,
+        cwd: realpathSyncSafe(record.cwd),
+        home: record.home ? realpathSyncSafe(record.home) : null,
         env: { ...record.env },
         allowLocalBinding: record.allowLocalBinding,
-        permissions: clonePermissions(record.permissions),
+        permissions: clonePermissions(permissions),
         owner: record.owner ? ownerNormalize(record.owner) : null,
         keepAlive: record.keepAlive,
         desiredState: record.desiredState,
@@ -659,8 +673,8 @@ function processRecordFromDb(record: ProcessDbRecord): ProcessRecord {
         updatedAt: record.updatedAt,
         lastStartedAt: record.lastStartedAt,
         lastExitedAt: record.lastExitedAt,
-        settingsPath: record.settingsPath,
-        logPath: record.logPath
+        settingsPath: path.resolve(record.settingsPath),
+        logPath: path.resolve(record.logPath)
     };
 }
 
@@ -717,6 +731,22 @@ function sleep(ms: number): Promise<void> {
     });
 }
 
+function permissionsPathNormalize(permissions: SessionPermissions): SessionPermissions {
+    return {
+        workingDir: realpathSyncSafe(permissions.workingDir),
+        writeDirs: permissions.writeDirs.map((entry) => realpathSyncSafe(entry)),
+        readDirs: (permissions.readDirs ?? []).map((entry) => realpathSyncSafe(entry))
+    };
+}
+
+function realpathSyncSafe(target: string): string {
+    try {
+        return realpathSync(target);
+    } catch {
+        return path.resolve(target);
+    }
+}
+
 function scheduleRestart(record: ProcessRecord, now: number): void {
     const uptimeMs = resolveUptimeMs(record, now);
     if (uptimeMs >= RESTART_STABLE_UPTIME_MS) {
@@ -746,49 +776,6 @@ function restartBackoffMs(restartFailureCount: number): number {
     return Math.min(delay, RESTART_BACKOFF_MAX_MS);
 }
 
-function processRuntimeBuild(dockerSettings: ResolvedDockerSettings): ProcessRuntime {
-    const docker = dockerSettings.socketPath ? new Docker({ socketPath: dockerSettings.socketPath }) : new Docker();
-    let networksReady = false;
-
-    return {
-        start: async (record) => {
-            await dockerNetworksEnsureIfNeeded();
-            const container = await processContainerCreate(docker, dockerSettings, record);
-            await container.start();
-            const details = await processContainerInspect(container);
-            return details.State?.Pid ?? null;
-        },
-        isRunning: async (record) => {
-            const container = docker.getContainer(processContainerName(record.id));
-            try {
-                const details = await processContainerInspect(container);
-                return details.State?.Running === true;
-            } catch (error) {
-                if (dockerErrorCodeResolve(error) === 404) {
-                    return false;
-                }
-                throw error;
-            }
-        },
-        stop: async (record, signal) => {
-            const container = docker.getContainer(processContainerName(record.id));
-            await processContainerStopAndRemove(container, signal);
-        },
-        remove: async (record) => {
-            const container = docker.getContainer(processContainerName(record.id));
-            await processContainerForceRemove(container);
-        }
-    };
-
-    async function dockerNetworksEnsureIfNeeded(): Promise<void> {
-        if (networksReady) {
-            return;
-        }
-        await dockerNetworksEnsure(docker);
-        networksReady = true;
-    }
-}
-
 function processRuntimeUnavailableBuild(): ProcessRuntime {
     const errorBuild = () => new Error("Docker settings are required for process runtime.");
     return {
@@ -807,140 +794,40 @@ function processRuntimeUnavailableBuild(): ProcessRuntime {
     };
 }
 
-type DockerError = {
-    statusCode?: number;
-};
-
-type ProcessContainerInspect = {
-    State?: {
-        Running?: boolean;
-        Pid?: number;
-    };
-};
-
-async function processContainerCreate(
-    docker: Docker,
-    dockerSettings: ResolvedDockerSettings,
-    record: ProcessRecord
-): Promise<Docker.Container> {
-    const processDir = path.dirname(record.logPath);
-    const mounts = processMountsResolve(record, processDir);
-    const homeHostPath = record.home ?? path.join(processDir, "home");
-    pathMapRequired(mounts, homeHostPath);
-    const cwdContainerPath = pathMapRequired(mounts, record.cwd);
-    const logContainerPath = pathMapRequired(mounts, record.logPath);
-    const baseEnv = { ...process.env, ...record.env };
-    const envResult = await sandboxHomeRedefine({ env: baseEnv, home: homeHostPath });
-    const env = envPathRewrite(envResult.env, mounts);
-    const containerName = processContainerName(record.id);
-    const networkName = dockerNetworkNameResolveForUser(
-        record.userId,
-        dockerSettings.allowLocalNetworkingForUsers ?? []
-    );
-    const dnsProfile = dockerDnsProfileResolve({
-        networkName,
-        isolatedDnsServers: dockerSettings.isolatedDnsServers,
-        localDnsServers: dockerSettings.localDnsServers
-    });
-    const shellCommand = `(${record.command}) >> ${shellQuote(logContainerPath)} 2>&1`;
-
-    await processContainerForceRemove(docker.getContainer(containerName));
-
-    return docker.createContainer({
-        name: containerName,
-        Image: DAYCARE_RUNTIME_IMAGE_REF,
-        WorkingDir: cwdContainerPath,
-        Cmd: ["bash", "-lc", shellCommand],
-        Env: dockerEnvBuild(env),
-        Labels: {
-            "daycare.process.id": record.id,
-            "daycare.process.user": record.userId
-        },
-        HostConfig: {
-            Binds: processBindsResolve(mounts),
-            NetworkMode: networkName,
-            ShmSize: DOCKER_SHM_SIZE_BYTES,
-            Tmpfs: {
-                "/tmp": "rw",
-                "/run": "rw",
-                "/var/tmp": "rw",
-                "/var/run": "rw"
-            },
-            ...(dnsProfile.dnsServers ? { Dns: dnsProfile.dnsServers } : {}),
-            ...(dockerSettings.runtime ? { Runtime: dockerSettings.runtime } : {}),
-            ...(dockerSettings.readOnly ? { ReadonlyRootfs: true } : {}),
-            ...(dockerSettings.capAdd.length > 0 ? { CapAdd: dockerSettings.capAdd } : {}),
-            ...(dockerSettings.capDrop.length > 0 ? { CapDrop: dockerSettings.capDrop } : {}),
-            ...(dockerSettings.unconfinedSecurity ? { SecurityOpt: [...DOCKER_SECURITY_OPT_UNCONFINED] } : {})
-        }
-    });
-}
-
-async function processContainerInspect(container: Docker.Container): Promise<ProcessContainerInspect> {
-    return (await container.inspect()) as ProcessContainerInspect;
-}
-
-async function processContainerStopAndRemove(container: Docker.Container, signal: ProcessSignal): Promise<void> {
-    try {
-        const details = await processContainerInspect(container);
-        if (details.State?.Running) {
-            await container.kill({ signal });
-            await processContainerWaitForStop(container, DOCKER_STOP_TIMEOUT_MS);
-        }
-    } catch (error) {
-        if (dockerErrorCodeResolve(error) !== 404) {
-            throw error;
-        }
-    }
-
-    await processContainerForceRemove(container);
-}
-
-async function processContainerForceRemove(container: Docker.Container): Promise<void> {
-    try {
-        await container.remove({ force: true });
-    } catch (error) {
-        if (dockerErrorCodeResolve(error) !== 404) {
-            throw error;
-        }
-    }
-}
-
-async function processContainerWaitForStop(container: Docker.Container, timeoutMs: number): Promise<void> {
-    const startedAt = Date.now();
-    while (Date.now() - startedAt < timeoutMs) {
-        try {
-            const details = await processContainerInspect(container);
-            if (!details.State?.Running) {
-                return;
-            }
-        } catch (error) {
-            if (dockerErrorCodeResolve(error) === 404) {
-                return;
-            }
-            throw error;
-        }
-        await sleep(PROCESS_STOP_POLL_MS);
-    }
-
-    try {
-        await container.kill({ signal: "SIGKILL" });
-    } catch (error) {
-        if (dockerErrorCodeResolve(error) !== 404 && dockerErrorCodeResolve(error) !== 409) {
-            throw error;
-        }
-    }
-}
-
 function processMountsResolve(record: ProcessRecord, processDir: string): PathMountPoint[] {
+    const resolvedProcessDir = path.resolve(processDir);
+    const homeHostPath = path.resolve(record.home ?? path.join(processDir, "home"));
     const mounts: PathMountPoint[] = [
-        { hostPath: processDir, mappedPath: "/process" },
-        { hostPath: record.home ?? path.join(processDir, "home"), mappedPath: "/home" }
+        { hostPath: resolvedProcessDir, mappedPath: "/process", readOnly: false },
+        { hostPath: homeHostPath, mappedPath: "/home", readOnly: false }
     ];
 
-    const workspaceDir = record.permissions.workingDir;
-    if (workspaceDir) {
-        mounts.push({ hostPath: workspaceDir, mappedPath: "/workspace" });
+    if (record.permissions.workingDir) {
+        mounts.push({
+            hostPath: path.resolve(record.permissions.workingDir),
+            mappedPath: "/workspace",
+            readOnly: processPathReadOnly(record.permissions, record.permissions.workingDir)
+        });
+    }
+
+    let writeIndex = 0;
+    for (const writeDir of record.permissions.writeDirs) {
+        mounts.push({
+            hostPath: path.resolve(writeDir),
+            mappedPath: `/writes/${writeIndex}`,
+            readOnly: false
+        });
+        writeIndex += 1;
+    }
+
+    let readIndex = 0;
+    for (const readDir of record.permissions.readDirs ?? []) {
+        mounts.push({
+            hostPath: path.resolve(readDir),
+            mappedPath: `/reads/${readIndex}`,
+            readOnly: true
+        });
+        readIndex += 1;
     }
 
     return mountPointsDeduplicate(mounts);
@@ -957,52 +844,185 @@ function mountPointsDeduplicate(mounts: PathMountPoint[]): PathMountPoint[] {
         seen.add(key);
         result.push({
             hostPath: path.resolve(mount.hostPath),
-            mappedPath: mount.mappedPath
+            mappedPath: mount.mappedPath,
+            readOnly: mount.readOnly
         });
     }
     return result;
 }
 
-function processBindsResolve(mounts: PathMountPoint[]): string[] {
-    return mounts.map((mount) => {
-        const writable = mount.mappedPath === "/process" || mount.mappedPath === "/home";
-        return writable ? `${mount.hostPath}:${mount.mappedPath}` : `${mount.hostPath}:${mount.mappedPath}:ro`;
+function processPathReadOnly(permissions: SessionPermissions, targetPath: string): boolean {
+    const target = path.resolve(targetPath);
+    for (const writeDir of permissions.writeDirs) {
+        const root = path.resolve(writeDir);
+        const relative = path.relative(root, target);
+        if (!relative.startsWith("..") && !path.isAbsolute(relative)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function processRuntimeBuild(dockerSettings: ResolvedDockerSettings): ProcessRuntime {
+    return {
+        start: async (record) => {
+            const sandbox = processSandboxBuild(record, dockerSettings);
+            const settings = processSandboxSettingsBuild(record);
+            await processSandboxSettingsWrite(record, settings);
+
+            const result = await sandbox.execBuffered({
+                command: processStartCommandBuild(record.command),
+                cwd: record.cwd,
+                env: record.env
+            });
+            if (result.failed) {
+                throw new Error(result.stderr || result.stdout || "Failed to start managed process.");
+            }
+
+            const pid = Number(result.stdout.trim());
+            if (!Number.isInteger(pid) || pid <= 0) {
+                throw new Error(`Failed to capture managed process pid from output: ${JSON.stringify(result.stdout)}`);
+            }
+            return pid;
+        },
+        isRunning: async (record) => {
+            if (record.pid === null) {
+                return false;
+            }
+
+            const sandbox = processSandboxBuild(record, dockerSettings);
+            const result = await sandbox.execBuffered({
+                command: processStatusCommandBuild(record.pid),
+                cwd: record.cwd
+            });
+            return result.stdout.trim() === "running";
+        },
+        stop: async (record, signal) => {
+            if (record.pid === null) {
+                return;
+            }
+
+            const sandbox = processSandboxBuild(record, dockerSettings);
+            await sandbox.execBuffered({
+                command: processStopCommandBuild(signal),
+                cwd: record.cwd
+            });
+            await processSandboxWaitForStop(sandbox, record.pid, DOCKER_STOP_TIMEOUT_MS);
+        },
+        remove: async (record) => {
+            const sandbox = processSandboxBuild(record, dockerSettings);
+            await sandbox.destroy();
+        }
+    };
+}
+
+function processSandboxBuild(record: ProcessRecord, dockerSettings: ResolvedDockerSettings): Sandbox {
+    const processDir = path.dirname(record.logPath);
+    const homeDir = record.home ?? path.join(processDir, "home");
+    const processUserId = processSandboxUserIdBuild(record.id);
+    const allowLocalNetworkingForUsers = record.allowLocalBinding
+        ? Array.from(new Set([...(dockerSettings.allowLocalNetworkingForUsers ?? []), processUserId]))
+        : [...(dockerSettings.allowLocalNetworkingForUsers ?? [])];
+    const dockerConfig: SandboxDockerConfig = {
+        socketPath: dockerSettings.socketPath,
+        runtime: dockerSettings.runtime,
+        readOnly: dockerSettings.readOnly,
+        unconfinedSecurity: dockerSettings.unconfinedSecurity,
+        capAdd: [...dockerSettings.capAdd],
+        capDrop: [...dockerSettings.capDrop],
+        allowLocalNetworkingForUsers,
+        isolatedDnsServers: dockerSettings.isolatedDnsServers,
+        localDnsServers: dockerSettings.localDnsServers,
+        userId: processUserId
+    };
+
+    return new Sandbox({
+        homeDir,
+        permissions: clonePermissions(record.permissions),
+        mounts: processMountsResolve(record, processDir).filter((mount) => mount.mappedPath !== "/home"),
+        backend: {
+            type: "docker",
+            docker: dockerConfig
+        }
     });
 }
 
-function pathMapRequired(mounts: PathMountPoint[], hostPath: string): string {
-    const mapped = pathMountMapHostToMapped({ mountPoints: mounts, hostPath });
-    if (!mapped) {
-        throw new Error(`Path is not mounted into process container: ${hostPath}`);
-    }
-    return mapped;
+function processSandboxUserIdBuild(processId: string): string {
+    return `process-${processId}`;
 }
 
-function envPathRewrite(env: NodeJS.ProcessEnv, mounts: PathMountPoint[]): NodeJS.ProcessEnv {
-    const rewritten: NodeJS.ProcessEnv = {};
-    for (const [key, value] of Object.entries(env)) {
-        if (typeof value !== "string") {
-            continue;
+function processSandboxSettingsBuild(record: ProcessRecord): ProcessSandboxSettings {
+    const processDir = path.dirname(record.logPath);
+    return {
+        backend: "sandbox",
+        processUserId: processSandboxUserIdBuild(record.id),
+        controlPath: PROCESS_CONTROL_PATH,
+        mounts: processMountsResolve(record, processDir).map((mount) => ({
+            hostPath: mount.hostPath,
+            mappedPath: mount.mappedPath,
+            readOnly: mount.readOnly ?? false
+        }))
+    };
+}
+
+async function processSandboxSettingsWrite(record: ProcessRecord, settings: ProcessSandboxSettings): Promise<void> {
+    await fs.mkdir(path.dirname(record.settingsPath), { recursive: true });
+    await fs.writeFile(record.settingsPath, `${JSON.stringify(settings, null, 4)}\n`, "utf8");
+}
+
+function processStartCommandBuild(command: string): string {
+    const supervisorCommand = [
+        "nohup",
+        "daycare-exec-supervisor",
+        "--control",
+        shellQuote(PROCESS_CONTROL_PATH),
+        "--",
+        "bash",
+        "-lc",
+        shellQuote(command),
+        ">>",
+        shellQuote(PROCESS_LOG_PATH),
+        "2>&1",
+        "<",
+        "/dev/null",
+        "&",
+        "echo",
+        "$!"
+    ];
+    return supervisorCommand.join(" ");
+}
+
+function processStatusCommandBuild(pid: number): string {
+    return [
+        `pid="${pid}";`,
+        'if ! ps -p "$pid" >/dev/null 2>&1; then echo stopped;',
+        'elif ps -o stat= -p "$pid" 2>/dev/null | grep -q "^[Zz]"; then echo stopped;',
+        "else echo running;",
+        "fi"
+    ].join(" ");
+}
+
+function processStopCommandBuild(signal: ProcessSignal): string {
+    return [
+        `if [ -p ${shellQuote(PROCESS_CONTROL_PATH)} ]; then`,
+        `timeout 1 bash -lc ${shellQuote(`printf '%s\\n' '${signal}' > ${shellQuote(PROCESS_CONTROL_PATH)}`)} >/dev/null 2>&1 || true;`,
+        "fi"
+    ].join(" ");
+}
+
+async function processSandboxWaitForStop(sandbox: Sandbox, pid: number, timeoutMs: number): Promise<void> {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+        const result = await sandbox.execBuffered({
+            command: processStatusCommandBuild(pid)
+        });
+        if (result.stdout.trim() !== "running") {
+            return;
         }
-        if (!path.isAbsolute(value)) {
-            rewritten[key] = value;
-            continue;
-        }
-        rewritten[key] = pathMountMapHostToMapped({ mountPoints: mounts, hostPath: value }) ?? value;
+        await sleep(PROCESS_STOP_POLL_MS);
     }
-    return rewritten;
-}
 
-function dockerEnvBuild(env: NodeJS.ProcessEnv): string[] {
-    return Object.entries(env)
-        .filter(([, value]) => value !== undefined)
-        .map(([key, value]) => `${key}=${value}`);
-}
-
-function processContainerName(processId: string): string {
-    return `${PROCESS_CONTAINER_PREFIX}-${processId}`;
-}
-
-function dockerErrorCodeResolve(error: unknown): number | null {
-    return typeof (error as DockerError).statusCode === "number" ? ((error as DockerError).statusCode ?? null) : null;
+    await sandbox.execBuffered({
+        command: [`kill -KILL -- -${pid} 2>/dev/null || true;`, `kill -KILL ${pid} 2>/dev/null || true;`].join(" ")
+    });
 }

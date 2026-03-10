@@ -2,6 +2,7 @@ import Docker from "dockerode";
 
 import { dockerContainerEnsure } from "./dockerContainerEnsure.js";
 import { dockerContainerExec } from "./dockerContainerExec.js";
+import { dockerContainerNameBuild } from "./dockerContainerNameBuild.js";
 import { dockerNetworkNameResolveForUser } from "./dockerNetworkNameResolveForUser.js";
 import { dockerNetworksEnsure } from "./dockerNetworksEnsure.js";
 import type {
@@ -38,6 +39,19 @@ export class DockerContainers {
         };
         const container = await this.containerEnsure(docker, resolvedConfig);
         return dockerContainerExec(docker, container, args);
+    }
+
+    async remove(config: DockerContainerConfig): Promise<void> {
+        const docker = this.dockerClientResolve(config.socketPath);
+        const container = docker.getContainer(dockerContainerNameBuild(config.userId));
+        try {
+            await container.remove({ force: true });
+        } catch (error) {
+            const statusCode = (error as { statusCode?: number }).statusCode;
+            if (statusCode !== 404) {
+                throw error;
+            }
+        }
     }
 
     private dockerClientResolve(socketPath?: string): Docker {

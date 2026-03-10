@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -12,6 +12,7 @@ import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { Processes } from "./processes.js";
 
 const TEST_TIMEOUT_MS = 30_000;
+const itIfDockerSandbox = dockerSandboxAvailable() ? it : it.skip;
 
 describe("Processes", () => {
     let baseDir: string;
@@ -22,6 +23,7 @@ describe("Processes", () => {
 
     beforeEach(async () => {
         baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-processes-"));
+        baseDir = await fs.realpath(baseDir);
         workspaceDir = path.join(baseDir, "workspace");
         await fs.mkdir(workspaceDir, { recursive: true });
         permissions = {
@@ -62,6 +64,36 @@ describe("Processes", () => {
             await sleep(1_000);
             const content = await fs.readFile(created.logPath, "utf8");
             expect(content).toContain("started-directly");
+        },
+        TEST_TIMEOUT_MS
+    );
+
+    itIfDockerSandbox(
+        "starts a managed process through sandbox runtime",
+        async () => {
+            const manager = await createDockerManager(baseDir);
+            const created = await manager.create(
+                {
+                    command: `node -e "console.log('started-from-sandbox-runtime'); setInterval(() => {}, 1000)"`,
+                    keepAlive: false,
+                    cwd: workspaceDir,
+                    userId: "user-1"
+                },
+                permissions
+            );
+
+            await sleep(1_500);
+            const content = await fs.readFile(created.logPath, "utf8");
+            const settingsRaw = await fs.readFile(path.join(baseDir, "processes", created.id, "sandbox.json"), "utf8");
+
+            expect(content).toContain("started-from-sandbox-runtime");
+            expect(JSON.parse(settingsRaw)).toMatchObject({
+                backend: "sandbox",
+                processUserId: expect.stringContaining(`process-${created.id}`)
+            });
+
+            const stopped = await manager.stop(created.id);
+            expect(stopped.status).toBe("stopped");
         },
         TEST_TIMEOUT_MS
     );
@@ -365,6 +397,24 @@ describe("Processes", () => {
         await manager.load();
         return manager;
     }
+
+    async function createDockerManager(dir: string): Promise<Processes> {
+        const manager = new Processes(dir, getLogger("test.processes.docker"), {
+            repository: storage.processes,
+            docker: {
+                readOnly: false,
+                unconfinedSecurity: false,
+                capAdd: [],
+                capDrop: [],
+                allowLocalNetworkingForUsers: [],
+                isolatedDnsServers: ["1.1.1.1", "8.8.8.8"],
+                localDnsServers: []
+            }
+        });
+        managers.push(manager);
+        await manager.load();
+        return manager;
+    }
 });
 
 function sleep(ms: number): Promise<void> {
@@ -431,6 +481,21 @@ function processRuntimeHostBuild() {
 function processIsRunning(pid: number): boolean {
     try {
         process.kill(pid, 0);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function dockerSandboxAvailable(): boolean {
+    if (process.env.CI) {
+        return false;
+    }
+    try {
+        execSync("docker image inspect daycare-runtime:latest", {
+            stdio: ["ignore", "ignore", "ignore"],
+            timeout: 5000
+        });
         return true;
     } catch {
         return false;

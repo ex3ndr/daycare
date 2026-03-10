@@ -125,7 +125,13 @@ export async function dockerContainerEnsure(
     const capabilitiesLabel = dockerCapabilitiesLabelBuild(config.capAdd, config.capDrop);
     const readOnlyLabel = config.readOnly ? "1" : "0";
     const dnsResolvBind = await dockerDnsResolvBindResolve(hostHomeDir, dnsProfile.dnsServers);
-    const binds = [`${hostHomeDir}:/home`, ...extraMounts.map((m) => `${path.resolve(m.hostPath)}:${m.mappedPath}:ro`)];
+    const binds = [
+        `${hostHomeDir}:/home`,
+        ...extraMounts.map((mount) => {
+            const base = `${path.resolve(mount.hostPath)}:${mount.mappedPath}`;
+            return mount.readOnly === false ? base : `${base}:ro`;
+        })
+    ];
     if (dnsResolvBind) {
         binds.push(dnsResolvBind);
     }
@@ -228,7 +234,7 @@ function containerStaleReasonResolve(
     expectedDnsServersLabel: string,
     expectedDnsResolverLabel: string,
     expectedHostHomeDir: string,
-    expectedExtraMounts: Array<{ hostPath: string; mappedPath: string }>
+    expectedExtraMounts: Array<{ hostPath: string; mappedPath: string; readOnly?: boolean }>
 ): string | null {
     const labels = details.Config?.Labels;
     const version = labels?.[DOCKER_IMAGE_VERSION_LABEL];
@@ -300,7 +306,7 @@ function containerStaleReasonResolve(
             label: m.mappedPath.replace(/^\//, "").replace(/\//g, "-"),
             source: path.resolve(m.hostPath),
             destination: m.mappedPath,
-            writable: false
+            writable: m.readOnly === false
         }))
     ];
     const mountReason = dockerMountsStaleReasonResolve(details.Mounts, expectedMounts);

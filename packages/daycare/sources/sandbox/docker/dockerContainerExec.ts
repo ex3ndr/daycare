@@ -287,7 +287,11 @@ async function dockerProcessTreeSignal(
     controlFile: string
 ): Promise<void> {
     const exec = await container.exec({
-        Cmd: ["bash", "-lc", `printf '%s\\n' '${signal}' > ${shellEscape(controlFile)} 2>/dev/null || true`],
+        Cmd: [
+            "bash",
+            "-lc",
+            `timeout 1 bash -lc ${shellEscape(`printf '%s\\n' '${signal}' > ${shellEscape(controlFile)}`)} >/dev/null 2>&1 || true`
+        ],
         AttachStdout: true,
         AttachStderr: true
     });
