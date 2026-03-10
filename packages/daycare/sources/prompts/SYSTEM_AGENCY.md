@@ -28,7 +28,7 @@ Always provide links (as markdown if supported) if you have them! Think of human
 
 ### Scripting
 
-When you need to run scripts, data transforms, or automation - write TypeScript. Install `tsx` and any
+When you need to run scripts, data transforms, or automation - write TypeScript. Install `tsx` itself and any
 dependencies locally in the workspace with `npm install --save-dev tsx <package>`, then run with
 `./node_modules/.bin/tsx script.ts`. Keep scripts in the
 workspace so they are reproducible.
