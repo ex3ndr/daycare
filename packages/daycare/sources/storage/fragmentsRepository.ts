@@ -191,6 +191,64 @@ export class FragmentsRepository {
         });
     }
 
+    async unarchive(ctx: Context, id: string): Promise<FragmentDbRecord> {
+        const userId = ctx.userId.trim();
+        if (!userId) {
+            throw new Error("Fragment userId is required.");
+        }
+        const normalizedId = id.trim();
+        if (!normalizedId) {
+            throw new Error("Fragment id is required.");
+        }
+        const key = fragmentKey(userId, normalizedId);
+        const lock = this.fragmentLockForId(key);
+        return lock.inLock(async () => {
+            const current = await this.fragmentLoadAnyById(userId, normalizedId);
+            if (!current) {
+                throw new Error(`Fragment not found: ${normalizedId}`);
+            }
+            if (!current.archived) {
+                throw new Error(`Fragment is not archived: ${normalizedId}`);
+            }
+
+            const now = Date.now();
+            const advanced = await this.db.transaction(async (tx) =>
+                versionAdvance<FragmentDbRecord>({
+                    now,
+                    changes: {
+                        archived: false,
+                        createdAt: current.createdAt,
+                        updatedAt: now
+                    },
+                    findCurrent: async () => current,
+                    closeCurrent: async (row, closedAt) => {
+                        const closedRows = await tx
+                            .update(fragmentsTable)
+                            .set({ validTo: closedAt })
+                            .where(
+                                and(
+                                    eq(fragmentsTable.userId, row.userId),
+                                    eq(fragmentsTable.id, row.id),
+                                    eq(fragmentsTable.version, row.version ?? 1),
+                                    isNull(fragmentsTable.validTo)
+                                )
+                            )
+                            .returning({ version: fragmentsTable.version });
+                        return closedRows.length;
+                    },
+                    insertNext: async (row) => {
+                        await tx.insert(fragmentsTable).values(fragmentRowInsert(row));
+                    }
+                })
+            );
+
+            await this.cacheLock.inLock(() => {
+                this.fragmentCacheSet(advanced);
+            });
+            return fragmentClone(advanced);
+        });
+    }
+
     async findById(ctx: Context, id: string): Promise<FragmentDbRecord | null> {
         const userId = ctx.userId.trim();
         if (!userId) {

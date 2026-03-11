@@ -72,6 +72,7 @@ import { documentReadToolBuild } from "./modules/tools/documentReadToolBuild.js"
 import { documentSearchToolBuild } from "./modules/tools/documentSearchToolBuild.js";
 import { documentWriteToolBuild } from "./modules/tools/documentWriteToolBuild.js";
 import { fragmentArchiveToolBuild } from "./modules/tools/fragmentArchiveToolBuild.js";
+import { fragmentRestoreToolBuild } from "./modules/tools/fragmentRestoreToolBuild.js";
 import { fragmentCreateToolBuild } from "./modules/tools/fragmentCreateToolBuild.js";
 import { fragmentListToolBuild } from "./modules/tools/fragmentListToolBuild.js";
 import { fragmentReadToolBuild } from "./modules/tools/fragmentReadToolBuild.js";
@@ -855,11 +856,12 @@ export class Engine {
         this.modules.tools.register("core", fragmentListToolBuild());
         this.modules.tools.register("core", fragmentUpdateToolBuild());
         this.modules.tools.register("core", fragmentArchiveToolBuild());
+        this.modules.tools.register("core", fragmentRestoreToolBuild());
         for (const tool of psqlToolsBuild(this.psqlService)) {
             this.modules.tools.register("core", tool);
         }
         logger.debug(
-            "register: Core tools registered: tasks, todos, topology, user_profile_update, background, agent_ask, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, workspaces, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, document_read, document_append, document_patch, document_write, fragment_create, fragment_read, fragment_list, fragment_update, fragment_archive"
+            "register: Core tools registered: tasks, todos, topology, user_profile_update, background, agent_ask, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, workspaces, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, document_read, document_append, document_patch, document_write, fragment_create, fragment_read, fragment_list, fragment_update, fragment_archive, fragment_restore"
         );
 
         await this.pluginManager.preStartAll();

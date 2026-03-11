@@ -176,4 +176,41 @@ describe("FragmentsRepository", () => {
             storage.connection.close();
         }
     });
+
+    it("unarchives fragments and makes them discoverable by findById again", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new FragmentsRepository(storage.db);
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+            await repo.create(ctx, {
+                id: "fragment-1",
+                kitVersion: "1",
+                title: "Profile Card",
+                description: "Shows profile summary",
+                spec: { type: "Column", children: [] },
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            vi.spyOn(Date, "now").mockReturnValue(3);
+            await repo.archive(ctx, "fragment-1");
+            const archived = await repo.findById(ctx, "fragment-1");
+            expect(archived).toBeNull();
+
+            vi.spyOn(Date, "now").mockReturnValue(5);
+            const restored = await repo.unarchive(ctx, "fragment-1");
+            expect(restored.archived).toBe(false);
+            expect(restored.version).toBe(3);
+            expect(restored.validFrom).toBe(5);
+
+            const active = await repo.findById(ctx, "fragment-1");
+            expect(active?.id).toBe("fragment-1");
+            expect(active?.archived).toBe(false);
+
+            await expect(repo.unarchive(ctx, "missing")).rejects.toThrow("Fragment not found");
+            await expect(repo.unarchive(ctx, "fragment-1")).rejects.toThrow("Fragment is not archived");
+        } finally {
+            storage.connection.close();
+        }
+    });
 });
