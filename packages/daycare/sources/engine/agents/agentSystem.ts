@@ -8,6 +8,7 @@ import type {
     Context,
     DelayedSignalCancelRepeatKeyInput,
     DelayedSignalScheduleInput,
+    MessageContext,
     SessionPermissions,
     Signal,
     SignalSubscription
@@ -319,6 +320,54 @@ export class AgentSystem {
         await this.enqueueEntry(entry, item, completion.completion);
         this.startEntryIfRunning(entry);
         return completion.promise;
+    }
+
+    /**
+     * Executes stored task code directly against a resolved agent context without entering inbox processing.
+     * Expects: agentId belongs to the caller user scope; task parameters are already validated.
+     */
+    async taskExecuteAndAwait(
+        ctx: Context,
+        agentId: string,
+        input: {
+            taskId: string;
+            taskVersion?: number | null;
+            source: string;
+            messageContext?: MessageContext;
+            inputValues?: Record<string, unknown> | null;
+            inputSchema?: Parameters<Agent["taskExecute"]>[0]["inputSchema"];
+        }
+    ): Promise<Awaited<ReturnType<Agent["taskExecute"]>>> {
+        const entry = await this.resolveEntry(
+            ctx,
+            { agentId },
+            {
+                type: "message",
+                message: { text: null },
+                context: {}
+            }
+        );
+        let woke = false;
+        await entry.lock.inLock(async () => {
+            woke = await this.wakeEntryIfSleeping(entry);
+        });
+        if (woke) {
+            await this.signalLifecycle(entry.ctx.agentId, "wake");
+        }
+        try {
+            return await entry.agent.taskExecute({
+                taskId: input.taskId,
+                taskVersion: input.taskVersion,
+                source: input.source,
+                messageContext: input.messageContext ?? {},
+                inputValues: input.inputValues,
+                inputSchema: input.inputSchema
+            });
+        } finally {
+            if (woke || entry.config.kind === "task") {
+                await this.sleepIfIdle(entry.ctx.agentId, "system_message");
+            }
+        }
     }
 
     /**

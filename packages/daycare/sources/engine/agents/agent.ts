@@ -681,6 +681,44 @@ export class Agent {
         return result.responseText ?? null;
     }
 
+    /**
+     * Executes stored task code directly under this agent context without posting inbox work.
+     * Expects: taskId belongs to this agent user scope; parameters are already validated.
+     */
+    async taskExecute(input: {
+        taskId: string;
+        taskVersion?: number | null;
+        source: string;
+        messageContext: MessageContext;
+        inputValues?: Record<string, unknown> | null;
+        inputSchema?: TaskParameter[] | null;
+    }): Promise<{ output: string; errorMessage: string | null; skipTurn: boolean }> {
+        const resolved = await this.taskExecutableResolve({
+            taskId: input.taskId,
+            taskVersion: input.taskVersion,
+            inputSchema: input.inputSchema,
+            origin: input.source
+        });
+        if (resolved.errorText) {
+            return {
+                output: `<exec_error>${resolved.errorText}</exec_error>`,
+                errorMessage: resolved.errorText,
+                skipTurn: false
+            };
+        }
+        const code = resolved.code;
+        if (!code) {
+            throw new Error("Task code resolution returned no code.");
+        }
+        return this.executableBlocksRun({
+            code,
+            source: input.source,
+            messageContext: input.messageContext,
+            inputValues: input.inputValues,
+            inputSchema: resolved.inputSchema
+        });
+    }
+
     private async executableBlocksRun(input: {
         code: string;
         source: string;
@@ -766,6 +804,63 @@ export class Agent {
         return { output, errorMessage: null, skipTurn: false };
     }
 
+    private async taskExecutableResolve(input: {
+        taskId: string;
+        taskVersion?: number | null;
+        inputSchema?: TaskParameter[] | null;
+        origin?: string;
+    }): Promise<
+        | {
+              code: string;
+              inputSchema?: TaskParameter[] | null;
+              errorText?: undefined;
+          }
+        | {
+              code?: undefined;
+              inputSchema?: undefined;
+              errorText: string;
+          }
+    > {
+        const taskId = input.taskId.trim();
+        if (!taskId) {
+            const errorText = "Executable system_message task.id is required.";
+            logger.warn(
+                { agentId: this.id, origin: input.origin ?? "system", errorText },
+                "error: Invalid task reference payload"
+            );
+            return { errorText };
+        }
+        const requestedVersion = input.taskVersion;
+        const taskRecord =
+            typeof requestedVersion === "number" && Number.isFinite(requestedVersion)
+                ? await this.agentSystem.storage.tasks.findByVersion(this.ctx, taskId, requestedVersion)
+                : await this.agentSystem.storage.tasks.findById(this.ctx, taskId);
+        if (!taskRecord) {
+            const errorText =
+                typeof requestedVersion === "number" && Number.isFinite(requestedVersion)
+                    ? `Task not found: ${taskId}@${Math.trunc(requestedVersion)}`
+                    : `Task not found: ${taskId}`;
+            logger.warn(
+                {
+                    agentId: this.id,
+                    origin: input.origin ?? "system",
+                    taskId,
+                    taskVersion: requestedVersion,
+                    errorText
+                },
+                "error: Task reference lookup failed"
+            );
+            return { errorText };
+        }
+        return {
+            code: taskRecord.code,
+            inputSchema:
+                (!input.inputSchema || input.inputSchema.length === 0) && taskRecord.parameters?.length
+                    ? taskRecord.parameters
+                    : input.inputSchema
+        };
+    }
+
     private async handleSystemMessage(
         item: AgentInboxSystemMessage
     ): Promise<{ responseText: string | null; responseError?: boolean; executionErrorText?: string }> {
@@ -805,49 +900,21 @@ export class Agent {
         if (typeof rawCode === "string") {
             executableCode = rawCode;
         } else if (taskReference) {
-            const taskId = taskReference.id.trim();
-            if (!taskId) {
-                const errorText = "Executable system_message task.id is required.";
-                logger.warn(
-                    { agentId: this.id, origin: item.origin ?? "system", errorText },
-                    "error: Invalid task reference payload"
-                );
+            const resolved = await this.taskExecutableResolve({
+                taskId: taskReference.id,
+                taskVersion: taskReference.version,
+                inputSchema,
+                origin: item.origin
+            });
+            if (resolved.errorText) {
                 return {
-                    responseText: item.sync ? `<exec_error>${errorText}</exec_error>` : null,
+                    responseText: item.sync ? `<exec_error>${resolved.errorText}</exec_error>` : null,
                     responseError: true,
-                    executionErrorText: errorText
+                    executionErrorText: resolved.errorText
                 };
             }
-            const requestedVersion = taskReference.version;
-            const taskRecord =
-                typeof requestedVersion === "number" && Number.isFinite(requestedVersion)
-                    ? await this.agentSystem.storage.tasks.findByVersion(this.ctx, taskId, requestedVersion)
-                    : await this.agentSystem.storage.tasks.findById(this.ctx, taskId);
-            if (!taskRecord) {
-                const errorText =
-                    typeof requestedVersion === "number" && Number.isFinite(requestedVersion)
-                        ? `Task not found: ${taskId}@${Math.trunc(requestedVersion)}`
-                        : `Task not found: ${taskId}`;
-                logger.warn(
-                    {
-                        agentId: this.id,
-                        origin: item.origin ?? "system",
-                        taskId,
-                        taskVersion: requestedVersion,
-                        errorText
-                    },
-                    "error: Task reference lookup failed"
-                );
-                return {
-                    responseText: item.sync ? `<exec_error>${errorText}</exec_error>` : null,
-                    responseError: true,
-                    executionErrorText: errorText
-                };
-            }
-            executableCode = taskRecord.code;
-            if ((!inputSchema || inputSchema.length === 0) && taskRecord.parameters?.length) {
-                inputSchema = taskRecord.parameters;
-            }
+            executableCode = resolved.code ?? null;
+            inputSchema = resolved.inputSchema;
         }
 
         if (typeof executableCode === "string") {

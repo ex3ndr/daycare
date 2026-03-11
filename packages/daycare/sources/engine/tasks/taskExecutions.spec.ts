@@ -1,21 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
-import { agentPathTask } from "../agents/ops/agentPathBuild.js";
 import { TaskExecutions } from "./taskExecutions.js";
 
 describe("TaskExecutions", () => {
     it("records success for fire-and-forget dispatch", async () => {
         let resolveCall: ((value: unknown) => void) | null = null;
-        const agentIdForTarget = vi.fn(async () => "task-agent-1");
-        const postAndAwait = vi.fn(
+        const runAndAwait = vi.fn(
             () =>
                 new Promise<unknown>((resolve) => {
                     resolveCall = resolve;
                 })
         );
         const facade = new TaskExecutions({
-            agentSystem: {
-                agentIdForTarget,
-                postAndAwait
+            runner: {
+                runAndAwait
             } as never
         });
 
@@ -24,7 +21,7 @@ describe("TaskExecutions", () => {
             source: "cron",
             taskId: "task-1",
             taskVersion: 3,
-            target: { path: agentPathTask("user-1", "task-1") },
+            target: { agentId: "task-agent-1" },
             text: "[cron]"
         });
         await tick();
@@ -39,26 +36,16 @@ describe("TaskExecutions", () => {
         if (!resolvePending) {
             throw new Error("Expected pending task execution callback");
         }
-        resolvePending({ type: "system_message", responseText: "ok" });
+        resolvePending({ output: "ok", errorMessage: null, skipTurn: false, promptSent: true, promptText: "ok" });
         await tick();
 
-        expect(agentIdForTarget).toHaveBeenCalledWith(
-            expect.objectContaining({ userId: "user-1" }),
-            { path: agentPathTask("user-1", "task-1") },
-            undefined
-        );
-        expect(postAndAwait).toHaveBeenCalledWith(
-            expect.objectContaining({ userId: "user-1" }),
-            { agentId: "task-agent-1" },
+        expect(runAndAwait).toHaveBeenCalledWith(
             expect.objectContaining({
-                type: "system_message",
+                userId: "user-1",
                 taskId: "task-1",
-                task: { id: "task-1", version: 3 },
-                origin: "cron",
-                sync: false,
-                text: "[cron]"
-            }),
-            undefined
+                taskVersion: 3,
+                source: "cron"
+            })
         );
 
         const after = facade.listStats();
@@ -67,15 +54,19 @@ describe("TaskExecutions", () => {
     });
 
     it("records failures for responseError and thrown dispatch errors", async () => {
-        const agentIdForTarget = vi.fn(async () => "task-agent-1");
-        const postAndAwait = vi
+        const runAndAwait = vi
             .fn()
-            .mockResolvedValueOnce({ type: "system_message", responseText: "boom", responseError: true })
+            .mockResolvedValueOnce({
+                output: "<exec_error>boom</exec_error>",
+                errorMessage: "boom",
+                skipTurn: false,
+                promptSent: true,
+                promptText: "<exec_error>boom</exec_error>"
+            })
             .mockRejectedValueOnce(new Error("network"));
         const facade = new TaskExecutions({
-            agentSystem: {
-                agentIdForTarget,
-                postAndAwait
+            runner: {
+                runAndAwait
             } as never
         });
 
@@ -83,14 +74,14 @@ describe("TaskExecutions", () => {
             userId: "user-1",
             source: "webhook",
             taskId: "task-1",
-            target: { path: agentPathTask("user-1", "task-1") },
+            target: { agentId: "task-agent-1" },
             text: "[webhook]"
         });
         facade.dispatch({
             userId: "user-1",
             source: "webhook",
             taskId: "task-1",
-            target: { path: agentPathTask("user-1", "task-1") },
+            target: { agentId: "task-agent-1" },
             text: "[webhook]"
         });
         await tick();
@@ -102,12 +93,16 @@ describe("TaskExecutions", () => {
     });
 
     it("waits for completion in dispatchAndAwait and returns system_message result", async () => {
-        const agentIdForTarget = vi.fn(async () => "task-agent-1");
-        const postAndAwait = vi.fn(async () => ({ type: "system_message" as const, responseText: "done" }));
+        const runAndAwait = vi.fn(async () => ({
+            output: "done",
+            errorMessage: null,
+            skipTurn: false,
+            promptSent: false,
+            promptText: null
+        }));
         const facade = new TaskExecutions({
-            agentSystem: {
-                agentIdForTarget,
-                postAndAwait
+            runner: {
+                runAndAwait
             } as never
         });
 
@@ -117,7 +112,7 @@ describe("TaskExecutions", () => {
             taskId: "task-1",
             taskVersion: 9,
             origin: "task",
-            target: { path: agentPathTask("user-1", "task-1") },
+            target: { agentId: "task-agent-1" },
             text: "[task]",
             sync: true
         });

@@ -461,6 +461,84 @@ describe("Agent", () => {
         }
     });
 
+    it("executes tasks directly without invoking inference", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-task-direct-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
+            const complete = vi.fn(async () => {
+                throw new Error("Inference should not run for direct task execution.");
+            });
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                storage: await storageOpen(config.db.path),
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                mediaRegistry: new MediaAnalysisRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: pluginManagerStubBuild(),
+                inferenceRouter: { complete } as unknown as InferenceRouter,
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({ listTasks: async () => [] } as unknown as Crons);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const ownerCtx = await agentSystem.ownerCtxEnsure();
+            const taskId = createId();
+            const now = Date.now();
+            await agentSystem.storage.tasks.create({
+                id: taskId,
+                userId: ownerCtx.userId,
+                title: "Direct task",
+                description: null,
+                code: "print('ran directly')",
+                parameters: null,
+                createdAt: now,
+                updatedAt: now,
+                version: 1,
+                validFrom: now,
+                validTo: null
+            });
+
+            const agentId = await agentIdForTarget(agentSystem, ownerCtx, {
+                descriptor: { type: "task", id: taskId }
+            });
+            const result = await agentSystem.taskExecuteAndAwait(ownerCtx, agentId, {
+                taskId,
+                taskVersion: 1,
+                source: "cron"
+            });
+
+            expect(result).toEqual({
+                output: "ran directly",
+                errorMessage: null,
+                skipTurn: false
+            });
+            expect(complete).not.toHaveBeenCalled();
+
+            const history = await agentHistoryLoadAll(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
+            expect(history.some((record) => record.type === "user_message")).toBe(false);
+            expect(history.some((record) => record.type === "assistant_message")).toBe(false);
+            expect(history.some((record) => record.type === "rlm_start")).toBe(true);
+            expect(history.some((record) => record.type === "rlm_complete")).toBe(true);
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("writes rlm history for executable skip() without adding context history", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-execute-"));
         try {

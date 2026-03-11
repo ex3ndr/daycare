@@ -1,13 +1,7 @@
-import type { AgentCreationConfig, MessageContext } from "@/types";
 import { getLogger } from "../../log.js";
-import type { AgentSystem } from "../agents/agentSystem.js";
-import { contextForUser } from "../agents/context.js";
-import type { AgentPostTarget } from "../agents/ops/agentTypes.js";
+import type { TaskExecutionDispatchInput, TaskExecutionRunner, TaskExecutionSource } from "./taskExecutionRunner.js";
 
 const logger = getLogger("task.executions");
-const TASK_EXECUTION_SOURCES = ["cron", "webhook", "manual"] as const;
-
-export type TaskExecutionSource = (typeof TASK_EXECUTION_SOURCES)[number];
 
 export type TaskExecutionCounters = {
     queued: number;
@@ -25,22 +19,8 @@ export type TaskExecutionStats = {
     sources: Record<TaskExecutionSource, TaskExecutionCounters>;
 };
 
-export type TaskExecutionDispatchInput = {
-    userId: string;
-    taskId: string;
-    target: AgentPostTarget;
-    text: string;
-    source: TaskExecutionSource;
-    taskVersion?: number | null;
-    origin?: string;
-    parameters?: Record<string, unknown>;
-    context?: MessageContext;
-    sync?: boolean;
-    creationConfig?: AgentCreationConfig;
-};
-
 export type TaskExecutionsOptions = {
-    agentSystem: AgentSystem;
+    runner: TaskExecutionRunner;
 };
 
 type MutableTaskExecutionStats = {
@@ -51,38 +31,27 @@ type MutableTaskExecutionStats = {
 };
 
 /**
- * Central facade for task execution dispatch and aggregated execution counters.
- * Expects: fire-and-forget dispatches may complete later and update success/failure stats asynchronously.
+ * Central facade for task dispatch bookkeeping.
+ * Expects: execution side effects happen inside TaskExecutionRunner.
  */
 export class TaskExecutions {
-    private readonly agentSystem: AgentSystem;
+    private readonly runner: TaskExecutionRunner;
     private readonly stats = new Map<string, MutableTaskExecutionStats>();
 
     constructor(options: TaskExecutionsOptions) {
-        this.agentSystem = options.agentSystem;
+        this.runner = options.runner;
     }
 
     /**
-     * Dispatches task code asynchronously via the common system_message path.
-     * Returns immediately; completion is tracked in the internal stats map.
+     * Dispatches task code asynchronously and records counters after completion.
      */
     dispatch(input: TaskExecutionDispatchInput): void {
-        const prepared = taskExecutionPrepare(input);
+        const prepared = taskExecutionStatsPrepare(input);
         const stats = this.statsQueueRecord(prepared.userId, prepared.taskId, prepared.source);
-        const item = taskExecutionItemBuild(prepared);
-        const ctx = contextForUser({ userId: prepared.userId });
-        void this.targetForDispatchResolve(prepared, ctx)
-            .then((target) => this.agentSystem.postAndAwait(ctx, target, item, prepared.creationConfig))
+        void this.runner
+            .runAndAwait(input)
             .then((result) => {
-                if (result.type !== "system_message") {
-                    this.statsFailureRecord(stats, prepared.source);
-                    logger.warn(
-                        { userId: prepared.userId, taskId: prepared.taskId, resultType: result.type },
-                        "error: Unexpected task execution result type"
-                    );
-                    return;
-                }
-                if (result.responseError) {
+                if (result.errorMessage) {
                     this.statsFailureRecord(stats, prepared.source);
                     return;
                 }
@@ -107,23 +76,20 @@ export class TaskExecutions {
         responseError?: boolean;
         executionErrorText?: string;
     }> {
-        const prepared = taskExecutionPrepare(input);
+        const prepared = taskExecutionStatsPrepare(input);
         const stats = this.statsQueueRecord(prepared.userId, prepared.taskId, prepared.source);
         try {
-            const item = taskExecutionItemBuild(prepared);
-            const ctx = contextForUser({ userId: prepared.userId });
-            const target = await this.targetForDispatchResolve(prepared, ctx);
-            const result = await this.agentSystem.postAndAwait(ctx, target, item, prepared.creationConfig);
-            if (result.type !== "system_message") {
-                this.statsFailureRecord(stats, prepared.source);
-                throw new Error(`Unexpected task execution result type: ${result.type}`);
-            }
-            if (result.responseError) {
+            const result = await this.runner.runAndAwait(input);
+            if (result.errorMessage) {
                 this.statsFailureRecord(stats, prepared.source);
             } else {
                 this.statsSuccessRecord(stats, prepared.source);
             }
-            return result;
+            return {
+                type: "system_message",
+                responseText: result.output,
+                ...(result.errorMessage ? { responseError: true, executionErrorText: result.errorMessage } : {})
+            };
         } catch (error) {
             this.statsFailureRecord(stats, prepared.source);
             throw error;
@@ -214,32 +180,12 @@ export class TaskExecutions {
         this.stats.set(key, created);
         return created;
     }
-
-    /** Resolves dispatch target to agentId when callers provide a path target. */
-    private async targetForDispatchResolve(
-        input: ReturnType<typeof taskExecutionPrepare>,
-        ctx: ReturnType<typeof contextForUser>
-    ): Promise<AgentPostTarget> {
-        if ("agentId" in input.target) {
-            return input.target;
-        }
-        const agentId = await this.agentSystem.agentIdForTarget(ctx, input.target, input.creationConfig);
-        return { agentId };
-    }
 }
 
-function taskExecutionPrepare(input: TaskExecutionDispatchInput): {
+function taskExecutionStatsPrepare(input: TaskExecutionDispatchInput): {
     userId: string;
-    target: AgentPostTarget;
-    text: string;
-    source: TaskExecutionSource;
-    origin: string;
     taskId: string;
-    taskVersion: number | null;
-    parameters?: Record<string, unknown>;
-    context?: MessageContext;
-    sync: boolean;
-    creationConfig?: AgentCreationConfig;
+    source: TaskExecutionSource;
 } {
     const userId = input.userId.trim();
     if (!userId) {
@@ -249,38 +195,10 @@ function taskExecutionPrepare(input: TaskExecutionDispatchInput): {
     if (!taskId) {
         throw new Error("Task execution taskId is required.");
     }
-    const taskVersion =
-        typeof input.taskVersion === "number" && Number.isFinite(input.taskVersion) && input.taskVersion > 0
-            ? Math.trunc(input.taskVersion)
-            : null;
     return {
         userId,
-        target: input.target,
-        text: input.text,
-        source: input.source,
-        origin: input.origin?.trim() || input.source,
         taskId,
-        taskVersion,
-        parameters: input.parameters,
-        context: input.context,
-        sync: input.sync === true,
-        creationConfig: input.creationConfig
-    };
-}
-
-function taskExecutionItemBuild(input: ReturnType<typeof taskExecutionPrepare>) {
-    return {
-        type: "system_message" as const,
-        text: input.text,
-        task: {
-            id: input.taskId,
-            ...(input.taskVersion !== null ? { version: input.taskVersion } : {})
-        },
-        origin: input.origin,
-        sync: input.sync,
-        taskId: input.taskId,
-        ...(input.parameters ? { inputs: input.parameters } : {}),
-        ...(input.context ? { context: input.context } : {})
+        source: input.source
     };
 }
 

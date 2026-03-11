@@ -126,6 +126,7 @@ import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Signals } from "./signals/signals.js";
 import { Skills } from "./skills/skills.js";
 import { taskDeleteSuccessResolve } from "./tasks/taskDeleteSuccessResolve.js";
+import { TaskExecutionRunner } from "./tasks/taskExecutionRunner.js";
 import { TaskExecutions } from "./tasks/taskExecutions.js";
 import { taskListActive } from "./tasks/taskListActive.js";
 import { taskListAll } from "./tasks/taskListAll.js";
@@ -391,8 +392,11 @@ export class Engine {
         this.memoryWorker.setPostFn((ctx, target, item, creationConfig) =>
             this.agentSystem.post(ctx, target, item, creationConfig)
         );
-        this.taskExecutions = new TaskExecutions({
+        const taskExecutionRunner = new TaskExecutionRunner({
             agentSystem: this.agentSystem
+        });
+        this.taskExecutions = new TaskExecutions({
+            runner: taskExecutionRunner
         });
         this.agentSystem.setTaskExecutions(this.taskExecutions);
 

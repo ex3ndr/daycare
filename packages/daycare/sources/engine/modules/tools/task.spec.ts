@@ -13,6 +13,7 @@ import { contextForAgent } from "../../agents/context.js";
 import { agentPathTask } from "../../agents/ops/agentPathBuild.js";
 import { ConfigModule } from "../../config/configModule.js";
 import { Crons } from "../../cron/crons.js";
+import { TaskExecutionRunner } from "../../tasks/taskExecutionRunner.js";
 import { TaskExecutions } from "../../tasks/taskExecutions.js";
 import { Webhooks } from "../../webhook/webhooks.js";
 import {
@@ -531,8 +532,11 @@ async function runtimeBuild(options: { appServer?: AppServerSettings } = {}): Pr
         storage,
         postAndAwait
     } as unknown as ToolExecutionContext["agentSystem"] & { crons: Crons };
+    const taskExecutionRunner = new TaskExecutionRunner({
+        agentSystem: agentSystem as unknown as ConstructorParameters<typeof TaskExecutionRunner>[0]["agentSystem"]
+    });
     const taskExecutions = new TaskExecutions({
-        agentSystem: agentSystem as unknown as ConstructorParameters<typeof TaskExecutions>[0]["agentSystem"]
+        runner: taskExecutionRunner
     });
 
     const toolResolver = {
