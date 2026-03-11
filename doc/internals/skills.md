@@ -33,7 +33,6 @@ Core examples in this repo include:
 - `software-development/skill-creator`
 - `autonomous-ai-agents/permanent-agent-creator`
 - `autonomous-ai-agents/scheduling`
-- `software-development/app-creator`
 
 The skills section prompt (`SYSTEM_SKILLS.md`) contains mandatory invocation guidance.
 `skillPromptFormat()` contributes only the dynamic XML list (`<available_skills>...</available_skills>`), appended after section render. Each skill entry may include a derived category from its relative path.
