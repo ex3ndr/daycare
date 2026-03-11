@@ -682,6 +682,183 @@ describe("Agent", () => {
         }
     });
 
+    it("allows context_reset() during direct task execution", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-task-context-reset-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                storage: await storageOpen(config.db.path),
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                mediaRegistry: new MediaAnalysisRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: pluginManagerStubBuild(),
+                inferenceRouter: inferenceRouterStubBuild(),
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({ listTasks: async () => [] } as unknown as Crons);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const ownerCtx = await agentSystem.ownerCtxEnsure();
+            const taskId = createId();
+            const now = Date.now();
+            await agentSystem.storage.tasks.create({
+                id: taskId,
+                userId: ownerCtx.userId,
+                title: "Reset task",
+                description: null,
+                code: "context_reset('fresh start')",
+                parameters: null,
+                createdAt: now,
+                updatedAt: now,
+                version: 1,
+                validFrom: now,
+                validTo: null
+            });
+
+            const agentId = await agentIdForTarget(agentSystem, ownerCtx, {
+                descriptor: { type: "task", id: taskId }
+            });
+            await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "seed session" });
+            const before = await agentStateRead(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
+
+            const result = await agentSystem.taskExecuteAndAwait(ownerCtx, agentId, {
+                taskId,
+                taskVersion: 1,
+                source: "task"
+            });
+
+            expect(result.errorMessage).toBeNull();
+            const after = await agentStateRead(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
+            expect(after?.activeSessionId).toBeTruthy();
+            expect(after?.activeSessionId).not.toBe(before?.activeSessionId);
+            const session = after?.activeSessionId
+                ? await agentSystem.storage.sessions.findById(after.activeSessionId)
+                : null;
+            expect(session?.resetMessage).toBe("fresh start");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("allows context_compact() during direct task execution", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-task-context-compact-"));
+        try {
+            const config = configResolve(
+                {
+                    engine: { dataDir: dir },
+                    providers: [{ id: "openai", model: "gpt-4.1" }]
+                },
+                path.join(dir, "settings.json")
+            );
+            const complete = vi.fn(async () => ({
+                providerId: "openai",
+                modelId: "gpt-4.1",
+                message: {
+                    role: "assistant" as const,
+                    content: [{ type: "text" as const, text: "Compacted summary" }],
+                    api: "openai-responses",
+                    provider: "openai",
+                    model: "gpt-4.1",
+                    usage: {
+                        input: 10,
+                        output: 5,
+                        cacheRead: 0,
+                        cacheWrite: 0,
+                        totalTokens: 15,
+                        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+                    },
+                    stopReason: "stop",
+                    timestamp: Date.now()
+                }
+            }));
+            const agentSystem = new AgentSystem({
+                config: new ConfigModule(config),
+                eventBus: new EngineEventBus(),
+                storage: await storageOpen(config.db.path),
+                connectorRegistry: new ConnectorRegistry({
+                    onMessage: async () => undefined
+                }),
+                imageRegistry: new ImageGenerationRegistry(),
+                mediaRegistry: new MediaAnalysisRegistry(),
+                toolResolver: new ToolResolver(),
+                pluginManager: pluginManagerStubBuild(),
+                inferenceRouter: { complete } as unknown as InferenceRouter,
+                authStore: new AuthStore(config)
+            });
+            agentSystem.setCrons({ listTasks: async () => [] } as unknown as Crons);
+            agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
+            await agentSystem.load();
+            await agentSystem.start();
+
+            const ownerCtx = await agentSystem.ownerCtxEnsure();
+            const taskId = createId();
+            const now = Date.now();
+            await agentSystem.storage.tasks.create({
+                id: taskId,
+                userId: ownerCtx.userId,
+                title: "Compact task",
+                description: null,
+                code: "context_compact()",
+                parameters: null,
+                createdAt: now,
+                updatedAt: now,
+                version: 1,
+                validFrom: now,
+                validTo: null
+            });
+
+            const agentId = await agentIdForTarget(agentSystem, ownerCtx, {
+                descriptor: { type: "task", id: taskId }
+            });
+            await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "seed context" });
+            const before = await agentStateRead(
+                agentSystem.storage,
+                await contextForAgentIdRequire(agentSystem, agentId)
+            );
+
+            const result = await agentSystem.taskExecuteAndAwait(ownerCtx, agentId, {
+                taskId,
+                taskVersion: 1,
+                source: "task"
+            });
+
+            expect(result.errorMessage).toBeNull();
+            expect(complete).toHaveBeenCalledTimes(1);
+            const ctx = await contextForAgentIdRequire(agentSystem, agentId);
+            const after = await agentStateRead(agentSystem.storage, ctx);
+            expect(after?.activeSessionId).toBeTruthy();
+            expect(after?.activeSessionId).not.toBe(before?.activeSessionId);
+            const history = await agentHistoryLoad(agentSystem.storage, ctx);
+            const firstHistoryRecord = history[0];
+            expect(firstHistoryRecord?.type).toBe("user_message");
+            if (!firstHistoryRecord || firstHistoryRecord.type !== "user_message") {
+                throw new Error("Expected user_message in compacted task session.");
+            }
+            expect(firstHistoryRecord.text).toContain("Compacted summary");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("writes rlm history for executable skip() without adding context history", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-execute-"));
         try {

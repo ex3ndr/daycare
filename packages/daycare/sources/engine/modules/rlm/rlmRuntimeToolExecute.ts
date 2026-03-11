@@ -1,5 +1,11 @@
 import type { ToolExecutionContext } from "@/types";
-import { JSON_PARSE_TOOL_NAME, JSON_STRINGIFY_TOOL_NAME, STEP_TOOL_NAME } from "./rlmConstants.js";
+import {
+    CONTEXT_COMPACT_TOOL_NAME,
+    CONTEXT_RESET_TOOL_NAME,
+    JSON_PARSE_TOOL_NAME,
+    JSON_STRINGIFY_TOOL_NAME,
+    STEP_TOOL_NAME
+} from "./rlmConstants.js";
 
 type RuntimeExecuteHandled = {
     handled: true;
@@ -53,9 +59,7 @@ export async function rlmRuntimeToolExecute(
         if (prompt.length === 0) {
             throw new Error("prompt must be a non-empty string.");
         }
-        if (!context.taskExecution) {
-            throw new Error("step() is allowed only in tasks.");
-        }
+        taskExecutionAssert(context, "step");
         const result = await context.agentSystem.postAndAwait(
             context.ctx,
             { agentId: context.ctx.agentId },
@@ -78,7 +82,59 @@ export async function rlmRuntimeToolExecute(
         };
     }
 
+    if (toolName === CONTEXT_RESET_TOOL_NAME) {
+        const payload = argsRecordResolve(args);
+        const message = argsOptionalStringResolve(payload, "message")?.trim();
+        if (payload.message !== undefined && !message) {
+            throw new Error("message must be a non-empty string when provided.");
+        }
+        taskExecutionAssert(context, CONTEXT_RESET_TOOL_NAME);
+        const result = await context.agentSystem.postAndAwait(
+            context.ctx,
+            { agentId: context.ctx.agentId },
+            message ? { type: "reset", message } : { type: "reset" }
+        );
+        if (result.type !== "reset") {
+            throw new Error(`context_reset() expected reset result, got ${result.type}.`);
+        }
+        if (!result.ok) {
+            throw new Error("context_reset() target agent reset failed.");
+        }
+        return {
+            handled: true,
+            value: null
+        };
+    }
+
+    if (toolName === CONTEXT_COMPACT_TOOL_NAME) {
+        argsRecordResolve(args);
+        taskExecutionAssert(context, CONTEXT_COMPACT_TOOL_NAME);
+        const result = await context.agentSystem.postAndAwait(
+            context.ctx,
+            { agentId: context.ctx.agentId },
+            {
+                type: "compact"
+            }
+        );
+        if (result.type !== "compact") {
+            throw new Error(`context_compact() expected compact result, got ${result.type}.`);
+        }
+        if (!result.ok) {
+            throw new Error("context_compact() target agent compaction failed.");
+        }
+        return {
+            handled: true,
+            value: null
+        };
+    }
+
     return { handled: false };
+}
+
+function taskExecutionAssert(context: ToolExecutionContext, toolName: string): void {
+    if (!context.taskExecution) {
+        throw new Error(`${toolName}() is allowed only in tasks.`);
+    }
 }
 
 function argsRecordResolve(args: unknown): Record<string, unknown> {
@@ -103,6 +159,17 @@ function argsBooleanResolve(args: Record<string, unknown>, key: string): boolean
     }
     if (typeof value !== "boolean") {
         throw new Error(`${key} must be a boolean when provided.`);
+    }
+    return value;
+}
+
+function argsOptionalStringResolve(args: Record<string, unknown>, key: string): string | undefined {
+    const value = args[key];
+    if (typeof value === "undefined") {
+        return undefined;
+    }
+    if (typeof value !== "string") {
+        throw new Error(`${key} must be a string when provided.`);
     }
     return value;
 }

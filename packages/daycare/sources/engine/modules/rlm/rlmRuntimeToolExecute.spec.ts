@@ -24,10 +24,52 @@ describe("rlmRuntimeToolExecute", () => {
         );
     });
 
+    it("posts reset to the current agent for context_reset()", async () => {
+        const postAndAwait = vi.fn(async () => ({ type: "reset" as const, ok: true }));
+
+        const result = await rlmRuntimeToolExecute(
+            "context_reset",
+            { message: "fresh start" },
+            contextBuild({ postAndAwait }, true)
+        );
+
+        expect(result).toEqual({ handled: true, value: null });
+        expect(postAndAwait).toHaveBeenCalledWith(
+            expect.objectContaining({ agentId: "agent-1", userId: "user-1" }),
+            { agentId: "agent-1" },
+            { type: "reset", message: "fresh start" }
+        );
+    });
+
+    it("posts compact to the current agent for context_compact()", async () => {
+        const postAndAwait = vi.fn(async () => ({ type: "compact" as const, ok: true }));
+
+        const result = await rlmRuntimeToolExecute("context_compact", {}, contextBuild({ postAndAwait }, true));
+
+        expect(result).toEqual({ handled: true, value: null });
+        expect(postAndAwait).toHaveBeenCalledWith(
+            expect.objectContaining({ agentId: "agent-1", userId: "user-1" }),
+            { agentId: "agent-1" },
+            { type: "compact" }
+        );
+    });
+
     it("throws a task-only error for step() outside task execution", async () => {
         await expect(
             rlmRuntimeToolExecute("step", { prompt: "continue" }, contextBuild({ postAndAwait: vi.fn() }, false))
         ).rejects.toThrow("step() is allowed only in tasks.");
+    });
+
+    it("throws a task-only error for context_reset() outside task execution", async () => {
+        await expect(
+            rlmRuntimeToolExecute("context_reset", {}, contextBuild({ postAndAwait: vi.fn() }, false))
+        ).rejects.toThrow("context_reset() is allowed only in tasks.");
+    });
+
+    it("throws a task-only error for context_compact() outside task execution", async () => {
+        await expect(
+            rlmRuntimeToolExecute("context_compact", {}, contextBuild({ postAndAwait: vi.fn() }, false))
+        ).rejects.toThrow("context_compact() is allowed only in tasks.");
     });
 });
 

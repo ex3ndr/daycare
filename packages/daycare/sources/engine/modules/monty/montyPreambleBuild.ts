@@ -1,7 +1,12 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import type { TSchema } from "@sinclair/typebox";
 
-import { RLM_TOOL_NAME, STEP_TOOL_NAME } from "../rlm/rlmConstants.js";
+import {
+    CONTEXT_COMPACT_TOOL_NAME,
+    CONTEXT_RESET_TOOL_NAME,
+    RLM_TOOL_NAME,
+    STEP_TOOL_NAME
+} from "../rlm/rlmConstants.js";
 import { rlmRuntimeTools } from "../rlm/rlmRuntimeTools.js";
 import { rlmSkipTool } from "../rlm/rlmSkipTool.js";
 import { montyPythonDocstringEscape } from "./montyPythonDocstringEscape.js";
@@ -48,7 +53,7 @@ export function montyPreambleBuild(tools: Tool[]): string {
         if (!responseTypeName) {
             continue;
         }
-        if (tool.name === STEP_TOOL_NAME) {
+        if (runtimeVoidToolIs(tool.name)) {
             continue;
         }
         const responseSchema = responseSchemaResolve(tool);
@@ -66,7 +71,7 @@ export function montyPreambleBuild(tools: Tool[]): string {
         }
         const signature = montyPythonSignatureBuild(tool);
         const description = montyPythonDocstringEscape(tool.description?.trim() || "No description.");
-        const returnType = tool.name === STEP_TOOL_NAME ? "None" : responseTypeName;
+        const returnType = runtimeVoidToolIs(tool.name) ? "None" : responseTypeName;
 
         lines.push(`def ${tool.name}(${signature}) -> ${returnType}:`);
         lines.push(`    """${description}"""`);
@@ -75,6 +80,10 @@ export function montyPreambleBuild(tools: Tool[]): string {
     }
 
     return lines.join("\n").trimEnd();
+}
+
+function runtimeVoidToolIs(name: string): boolean {
+    return name === STEP_TOOL_NAME || name === CONTEXT_RESET_TOOL_NAME || name === CONTEXT_COMPACT_TOOL_NAME;
 }
 
 function responseTypeNameByToolBuild(tools: Tool[]): Map<string, string> {

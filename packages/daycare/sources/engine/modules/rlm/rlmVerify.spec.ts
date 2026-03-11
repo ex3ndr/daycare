@@ -19,6 +19,8 @@ describe("rlmVerify", () => {
         expect(result.externalFunctions).toContain("echo");
         expect(result.externalFunctions).toContain("skip");
         expect(result.externalFunctions).toContain("step");
+        expect(result.externalFunctions).toContain("context_reset");
+        expect(result.externalFunctions).toContain("context_compact");
     });
 
     it("fails when code calls an undefined function", () => {
