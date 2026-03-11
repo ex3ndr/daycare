@@ -35,6 +35,7 @@ program
     .option("-s, --settings <path>", "Path to settings file", DEFAULT_SETTINGS_PATH)
     .option("-f, --force", "Stop any running engine server before starting")
     .option("-v, --verbose", "Show tool calls and responses in channel")
+    .option("-r, --role <role>", "Engine role to activate (all, api, worker, scheduler, connector)")
     .action(startCommand);
 
 program.command("status").description("Show bot status").action(statusCommand);

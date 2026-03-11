@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output (built fresh in container)
+dist/
+
+# Development files
+*.log
+.env
+.env.*
+!.env.example
+
+# Test files
+*.test.ts
+__tests__/
+coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation (not needed in image)
+*.md
+!README.md
+docs/

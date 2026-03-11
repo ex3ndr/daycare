@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { configLoad } from "../config/configLoad.js";
 import { Engine } from "../engine/engine.js";
+import { type EngineRole, parseEngineRole, resolveEngineRoles, ENGINE_ROLES } from "../engine/roles.js";
 import { requestSocket } from "../engine/ipc/client.js";
 import { EngineEventBus } from "../engine/ipc/events.js";
 import { startEngineServer } from "../engine/ipc/server.js";
@@ -16,6 +17,7 @@ export type StartOptions = {
     settings?: string;
     force?: boolean;
     verbose?: boolean;
+    role?: string;
 };
 
 export async function startCommand(options: StartOptions): Promise<void> {
@@ -67,9 +69,26 @@ export async function startCommand(options: StartOptions): Promise<void> {
         await removeStaleFile(pidPath);
     }
 
+    // Parse role from CLI or settings
+    const cliRole = options.role ? parseEngineRole(options.role) : undefined;
+    if (options.role && !cliRole) {
+        logger.error({ role: options.role, valid: ENGINE_ROLES }, "error: Invalid role specified");
+        process.exit(1);
+    }
+
+    // Resolve final roles (CLI takes precedence over settings)
+    const settingsRoles = config.settings.role
+        ? Array.isArray(config.settings.role)
+            ? config.settings.role
+            : [config.settings.role]
+        : undefined;
+    const roles = resolveEngineRoles(cliRole ? [cliRole] : settingsRoles);
+    logger.info({ roles }, "start: Engine roles resolved");
+
     const runtime = new Engine({
         config,
-        eventBus
+        eventBus,
+        roles
     });
 
     await runtime.start();

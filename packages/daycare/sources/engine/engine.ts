@@ -134,6 +134,7 @@ import { userHomeEnsure } from "./users/userHomeEnsure.js";
 import { Webhooks } from "./webhook/webhooks.js";
 import { workspaceCreateToolBuild } from "./workspaces/workspaceCreateToolBuild.js";
 import { Workspaces } from "./workspaces/workspaces.js";
+import { type EngineRole, resolveEngineRoles, isRoleActive } from "./roles.js";
 
 const logger = getLogger("engine.runtime");
 const DAYCARE_RUNTIME_IMAGE_REF = "daycare-runtime:latest";
@@ -142,6 +143,10 @@ const INCOMING_MESSAGES_DEBOUNCE_MS = 100;
 export type EngineOptions = {
     config: Config;
     eventBus: EngineEventBus;
+    /**
+     * Engine roles to activate. If omitted or includes "all", all subsystems start.
+     */
+    roles?: EngineRole[];
 };
 
 export class Engine {
@@ -169,6 +174,10 @@ export class Engine {
     readonly workspaces: Workspaces;
     readonly secrets: Secrets;
     readonly friends: Friends;
+    /**
+     * Active engine roles. Use isRoleActive() to check if a subsystem should run.
+     */
+    readonly roles: EngineRole[];
     private readonly memoryWorker: MemoryWorker;
     private readonly reloadSync: InvalidateSync;
     private readonly incomingMessages: IncomingMessages;
@@ -176,6 +185,8 @@ export class Engine {
 
     constructor(options: EngineOptions) {
         logger.debug(`init: Engine constructor starting, dataDir=${options.config.dataDir}`);
+        this.roles = resolveEngineRoles(options.roles);
+        logger.debug({ roles: this.roles }, "init: Engine roles initialized");
         this.config = new ConfigModule(options.config);
         const dbTarget = this.config.current.db.url
             ? { kind: "postgres" as const, url: this.config.current.db.url }
@@ -751,7 +762,14 @@ export class Engine {
         logger.debug("reload: Reloading plugins with current config");
         await this.pluginManager.reload();
         logger.debug("reload: Plugin reload complete");
-        await this.appServer.start();
+
+        // API role: Start HTTP server
+        if (isRoleActive(this.roles, "api")) {
+            await this.appServer.start();
+            logger.debug("start: App server started (api role)");
+        } else {
+            logger.debug("skip: App server skipped (api role not active)");
+        }
 
         await this.channels.load();
 
@@ -834,20 +852,50 @@ export class Engine {
             "register: Core tools registered: tasks, todos, topology, user_profile_update, background, agent_ask, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, workspaces, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, document_read, document_append, document_patch, document_write, fragment_create, fragment_read, fragment_list, fragment_update, fragment_archive"
         );
 
-        await this.pluginManager.preStartAll();
+        // Connector role: Initialize connectors/plugins
+        if (isRoleActive(this.roles, "connector")) {
+            await this.pluginManager.preStartAll();
+            logger.debug("start: Plugin preStart complete (connector role)");
+        } else {
+            logger.debug("skip: Plugin preStart skipped (connector role not active)");
+        }
 
-        logger.debug("start: Starting agent system");
-        await this.agentSystem.start();
-        logger.debug("start: Agent system started");
+        // Worker role: Start agent system
+        if (isRoleActive(this.roles, "worker")) {
+            logger.debug("start: Starting agent system");
+            await this.agentSystem.start();
+            logger.debug("start: Agent system started (worker role)");
+        } else {
+            logger.debug("skip: Agent system skipped (worker role not active)");
+        }
 
-        logger.debug("start: Starting cron scheduler");
-        await this.crons.start();
-        logger.debug("start: Starting delayed signal scheduler");
-        await this.delayedSignals.start();
-        logger.debug("start: Starting memory worker");
-        this.memoryWorker.start();
-        await this.pluginManager.postStartAll();
-        logger.debug("start: Engine.start() complete");
+        // Scheduler role: Start cron and delayed signals
+        if (isRoleActive(this.roles, "scheduler")) {
+            logger.debug("start: Starting cron scheduler");
+            await this.crons.start();
+            logger.debug("start: Starting delayed signal scheduler");
+            await this.delayedSignals.start();
+            logger.debug("start: Scheduler started (scheduler role)");
+        } else {
+            logger.debug("skip: Scheduler skipped (scheduler role not active)");
+        }
+
+        // Worker role: Start memory worker (depends on agent system)
+        if (isRoleActive(this.roles, "worker")) {
+            logger.debug("start: Starting memory worker");
+            this.memoryWorker.start();
+            logger.debug("start: Memory worker started (worker role)");
+        } else {
+            logger.debug("skip: Memory worker skipped (worker role not active)");
+        }
+
+        // Connector role: Complete plugin startup
+        if (isRoleActive(this.roles, "connector")) {
+            await this.pluginManager.postStartAll();
+            logger.debug("start: Plugin postStart complete (connector role)");
+        }
+
+        logger.info({ roles: this.roles }, "ready: Engine.start() complete");
     }
 
     async shutdown(): Promise<void> {

@@ -1,0 +1,133 @@
+# Docker Compose configuration for role-based Daycare deployment
+#
+# This demonstrates running Daycare with separated roles for better scalability
+# and resource isolation.
+#
+# Usage:
+#   docker-compose -f docker-compose.roles.yml up
+#
+# Or with specific profiles:
+#   docker-compose -f docker-compose.roles.yml --profile minimal up
+#   docker-compose -f docker-compose.roles.yml --profile full up
+
+version: "3.8"
+
+x-daycare-common: &daycare-common
+  image: daycare:latest
+  build:
+    context: .
+    dockerfile: packages/daycare/Dockerfile
+  restart: unless-stopped
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - daycare-data:/data/daycare
+  networks:
+    - daycare
+
+services:
+  # Full engine (all roles) - for simple deployments
+  daycare:
+    <<: *daycare-common
+    container_name: daycare
+    environment:
+      - DAYCARE_ROLE=all
+    ports:
+      - "3000:3000"
+    profiles:
+      - default
+      - full
+
+  # API role - HTTP server, webhooks, routes
+  # Handles external traffic and API requests
+  daycare-api:
+    <<: *daycare-common
+    container_name: daycare-api
+    environment:
+      - DAYCARE_ROLE=api
+    ports:
+      - "3000:3000"
+    profiles:
+      - distributed
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+  # Worker role - Agent execution, inference, tools
+  # CPU/GPU intensive, handles LLM inference
+  daycare-worker:
+    <<: *daycare-common
+    container_name: daycare-worker
+    environment:
+      - DAYCARE_ROLE=worker
+    profiles:
+      - distributed
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
+
+  # Scheduler role - Crons, delayed signals
+  # Lightweight, manages timed tasks
+  daycare-scheduler:
+    <<: *daycare-common
+    container_name: daycare-scheduler
+    environment:
+      - DAYCARE_ROLE=scheduler
+    profiles:
+      - distributed
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  # Connector role - Plugins (Telegram, WhatsApp, etc)
+  # Manages external service connections
+  daycare-connector:
+    <<: *daycare-common
+    container_name: daycare-connector
+    environment:
+      - DAYCARE_ROLE=connector
+    profiles:
+      - distributed
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+  # PostgreSQL database (optional, for production)
+  postgres:
+    image: postgres:16-alpine
+    container_name: daycare-postgres
+    environment:
+      - POSTGRES_DB=daycare
+      - POSTGRES_USER=daycare
+      - POSTGRES_PASSWORD=daycare
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - daycare
+    profiles:
+      - full
+      - distributed
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U daycare"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  daycare-data:
+  postgres-data:
+
+networks:
+  daycare:
+    driver: bridge

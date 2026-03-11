@@ -3,6 +3,7 @@ import path from "node:path";
 import type { ThinkingLevel } from "@mariozechner/pi-ai";
 
 import type { CronTaskDefinition as CronTaskConfig } from "./engine/cron/cronTypes.js";
+import type { EngineRole } from "./engine/roles.js";
 import { resolveDaycarePath } from "./paths.js";
 
 export type PluginInstanceSettings = {
@@ -196,6 +197,11 @@ export type SettingsConfig = {
         enabled?: boolean;
         maxEntries?: number;
     };
+    /**
+     * Engine role(s) to activate. Controls which subsystems are initialized.
+     * When omitted or set to "all", all subsystems run (default behavior).
+     */
+    role?: EngineRole | EngineRole[];
 };
 
 export type AssistantSettings = {
