@@ -64,6 +64,9 @@ describe("MiniApps", () => {
             expect(metadataDir).toBeTruthy();
             expect(metadataDir).toContain(path.join("crm", "1"));
             await expect(fs.readFile(path.join(metadataDir!, "index.html"), "utf8")).resolves.toContain("v1");
+
+            const normalizedDir = await miniApps.versionDirectoryForUser(ctx.userId, "CRM");
+            expect(normalizedDir).toBe(versionDir);
         } finally {
             await storage.connection.close();
         }
