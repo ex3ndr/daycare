@@ -31,7 +31,8 @@ const resultSchema = Type.Object(
         appId: Type.String(),
         title: Type.String(),
         icon: Type.String(),
-        version: Type.Number()
+        version: Type.Number(),
+        codeVersion: Type.Number()
     },
     { additionalProperties: false }
 );
@@ -59,7 +60,7 @@ export function miniAppCreateToolBuild(miniApps: MiniApps): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as MiniAppCreateToolArgs;
             const created = await miniApps.create(toolContext.ctx, payload);
-            const summary = `Mini app created: ${created.title} (${created.id}) v${created.version}.`;
+            const summary = `Mini app created: ${created.title} (${created.id}) v${created.version} code ${created.codeVersion}.`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -67,7 +68,8 @@ export function miniAppCreateToolBuild(miniApps: MiniApps): ToolDefinition {
                 content: [{ type: "text", text: summary }],
                 details: {
                     miniAppId: created.id,
-                    miniAppVersion: created.version
+                    miniAppVersion: created.version,
+                    miniAppCodeVersion: created.codeVersion
                 },
                 isError: false,
                 timestamp: Date.now()
@@ -79,7 +81,8 @@ export function miniAppCreateToolBuild(miniApps: MiniApps): ToolDefinition {
                     appId: created.id,
                     title: created.title,
                     icon: created.icon,
-                    version: created.version
+                    version: created.version,
+                    codeVersion: created.codeVersion
                 }
             };
         }

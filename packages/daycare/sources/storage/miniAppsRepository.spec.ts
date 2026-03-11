@@ -13,6 +13,7 @@ describe("MiniAppsRepository", () => {
                 id: "crm",
                 title: "CRM",
                 icon: "browser",
+                codeVersion: 1,
                 createdAt: 1,
                 updatedAt: 1
             });
@@ -20,18 +21,21 @@ describe("MiniAppsRepository", () => {
                 id: "other",
                 title: "Other",
                 icon: "home",
+                codeVersion: 1,
                 createdAt: 2,
                 updatedAt: 2
             });
 
             const updated = await storage.miniApps.update(ctxA, "crm", {
                 title: "CRM Board",
+                codeVersion: 1,
                 updatedAt: 3
             });
             expect(updated).toEqual({
                 userId: "user-a",
                 id: "crm",
                 version: 2,
+                codeVersion: 1,
                 validFrom: 3,
                 validTo: null,
                 title: "CRM Board",
@@ -46,6 +50,7 @@ describe("MiniAppsRepository", () => {
                     userId: "user-b",
                     id: "other",
                     version: 1,
+                    codeVersion: 1,
                     validFrom: 2,
                     validTo: null,
                     title: "Other",
@@ -56,6 +61,18 @@ describe("MiniAppsRepository", () => {
             ]);
 
             await expect(storage.miniApps.findAnyById(ctxA, "crm")).resolves.toEqual(updated);
+            await expect(storage.miniApps.findByVersion(ctxA, "crm", 1)).resolves.toEqual({
+                userId: "user-a",
+                id: "crm",
+                version: 1,
+                codeVersion: 1,
+                validFrom: 1,
+                validTo: 3,
+                title: "CRM",
+                icon: "browser",
+                createdAt: 1,
+                updatedAt: 1
+            });
             await expect(storage.miniApps.findById(ctxA, "other")).resolves.toBeNull();
 
             await expect(storage.miniApps.delete(ctxA, "crm")).resolves.toEqual(updated);

@@ -294,6 +294,9 @@ describe("AppServer auth endpoints", () => {
             html: '<!doctype html><html><head></head><body><script src="assets/app.js"></script><div id="app"></div></body></html>',
             files: [{ path: "assets/app.js", content: "window.__miniAppLoaded = true;" }]
         });
+        await built.miniApps.update(ctx, "crm", {
+            title: "CRM Board"
+        });
         const token = await jwtSign({ userId: "user-1" }, secret, 3600);
 
         const launchResponse = await fetch(`http://127.0.0.1:${built.port}/mini-apps/crm/launch`, {

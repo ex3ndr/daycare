@@ -11,8 +11,8 @@ type MiniAppVersionWriteInput = {
 };
 
 /**
- * Applies one version's file set inside a prepared directory.
- * Expects: directory exists and belongs to exactly one app version.
+ * Applies one mini-app code revision's file set inside a prepared directory.
+ * Expects: directory exists and belongs to exactly one app codeVersion.
  */
 export async function miniAppVersionWrite(input: MiniAppVersionWriteInput): Promise<void> {
     for (const rawPath of input.deletePaths ?? []) {

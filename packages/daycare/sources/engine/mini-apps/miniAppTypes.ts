@@ -24,6 +24,7 @@ export type MiniAppRecord = {
     id: string;
     userId: string;
     version: number;
+    codeVersion: number;
     title: string;
     icon: string;
     createdAt: number;

@@ -1,4 +1,3 @@
-import { promises as fs } from "node:fs";
 import http from "node:http";
 import type {
     AgentPath,
@@ -16,7 +15,6 @@ import { contextForUser } from "../../engine/agents/context.js";
 import type { ConfigModule } from "../../engine/config/configModule.js";
 import type { EngineEvent, EngineEventBus } from "../../engine/ipc/events.js";
 import type { MiniApps } from "../../engine/mini-apps/MiniApps.js";
-import { miniAppDirectoryResolve } from "../../engine/mini-apps/miniAppDirectoryResolve.js";
 import type { CommandRegistry } from "../../engine/modules/commandRegistry.js";
 import type { ConnectorRegistry } from "../../engine/modules/connectorRegistry.js";
 import type { ToolResolver } from "../../engine/modules/toolResolver.js";
@@ -294,15 +292,8 @@ export class AppServer {
                 requestPathname: pathname,
                 response,
                 secret: await this.secretResolve(),
-                rootDirectoryResolve: async (userId, appId, version) => {
-                    const absolutePath = miniAppDirectoryResolve(this.config.current.usersDir, userId, appId, version);
-                    try {
-                        const stat = await fs.stat(absolutePath);
-                        return stat.isDirectory() ? absolutePath : null;
-                    } catch {
-                        return null;
-                    }
-                }
+                rootDirectoryResolve: async (userId, appId, version) =>
+                    this.miniApps?.versionDirectoryForUserVersion(userId, appId, version) ?? null
             }))
         ) {
             return;

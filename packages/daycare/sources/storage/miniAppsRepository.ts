@@ -10,6 +10,7 @@ export type MiniAppCreateInput = {
     id: string;
     title: string;
     icon: string;
+    codeVersion: number;
     createdAt: number;
     updatedAt: number;
 };
@@ -17,6 +18,7 @@ export type MiniAppCreateInput = {
 export type MiniAppUpdateInput = {
     title?: string;
     icon?: string;
+    codeVersion?: number;
     updatedAt?: number;
 };
 
@@ -50,6 +52,9 @@ export class MiniAppsRepository {
         if (!icon) {
             throw new Error("Mini app icon is required.");
         }
+        if (!Number.isInteger(input.codeVersion) || input.codeVersion <= 0) {
+            throw new Error("Mini app codeVersion must be a positive integer.");
+        }
 
         const key = miniAppKey(userId, id);
         return this.lockFor(key).inLock(async () => {
@@ -62,6 +67,7 @@ export class MiniAppsRepository {
                 userId,
                 id,
                 version: 1,
+                codeVersion: input.codeVersion,
                 validFrom: input.createdAt,
                 validTo: null,
                 title,
@@ -84,6 +90,9 @@ export class MiniAppsRepository {
         if (!normalizedId) {
             throw new Error("Mini app id is required.");
         }
+        if (input.codeVersion !== undefined && (!Number.isInteger(input.codeVersion) || input.codeVersion <= 0)) {
+            throw new Error("Mini app codeVersion must be a positive integer.");
+        }
 
         const key = miniAppKey(userId, normalizedId);
         return this.lockFor(key).inLock(async () => {
@@ -100,6 +109,7 @@ export class MiniAppsRepository {
                     changes: {
                         title: title && title.length > 0 ? title : current.title,
                         icon: icon && icon.length > 0 ? icon : current.icon,
+                        codeVersion: input.codeVersion ?? current.codeVersion,
                         createdAt: current.createdAt,
                         updatedAt: now
                     },
@@ -190,6 +200,34 @@ export class MiniAppsRepository {
         return miniAppClone(parsed);
     }
 
+    async findByVersion(ctx: Context, id: string, version: number): Promise<MiniAppDbRecord | null> {
+        const userId = ctx.userId.trim();
+        const normalizedId = id.trim();
+        const normalizedVersion = Math.trunc(version);
+        if (!userId || !normalizedId || normalizedVersion <= 0) {
+            return null;
+        }
+
+        const cached = this.cache.get(miniAppKey(userId, normalizedId));
+        if (cached && (cached.version ?? 1) === normalizedVersion) {
+            return miniAppClone(cached);
+        }
+
+        const rows = await this.db
+            .select()
+            .from(miniAppsTable)
+            .where(
+                and(
+                    eq(miniAppsTable.userId, userId),
+                    eq(miniAppsTable.id, normalizedId),
+                    eq(miniAppsTable.version, normalizedVersion)
+                )
+            )
+            .limit(1);
+        const row = rows[0];
+        return row ? miniAppParse(row) : null;
+    }
+
     async findAnyById(ctx: Context, id: string): Promise<MiniAppDbRecord | null> {
         const userId = ctx.userId.trim();
         const normalizedId = id.trim();
@@ -245,6 +283,7 @@ function miniAppParse(row: typeof miniAppsTable.$inferSelect): MiniAppDbRecord {
         userId: row.userId,
         id: row.id,
         version: row.version,
+        codeVersion: row.codeVersion,
         validFrom: row.validFrom,
         validTo: row.validTo,
         title: row.title,
@@ -265,6 +304,7 @@ function miniAppRowInsert(record: MiniAppDbRecord): typeof miniAppsTable.$inferI
         userId: record.userId,
         id: record.id,
         version: record.version ?? 1,
+        codeVersion: record.codeVersion,
         validFrom: record.validFrom ?? record.createdAt,
         validTo: record.validTo ?? null,
         title: record.title,

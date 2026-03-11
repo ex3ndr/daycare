@@ -32,7 +32,8 @@ const resultSchema = Type.Object(
         appId: Type.String(),
         title: Type.String(),
         icon: Type.String(),
-        version: Type.Number()
+        version: Type.Number(),
+        codeVersion: Type.Number()
     },
     { additionalProperties: false }
 );
@@ -60,7 +61,7 @@ export function miniAppUpdateToolBuild(miniApps: MiniApps): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as MiniAppUpdateToolArgs;
             const updated = await miniApps.update(toolContext.ctx, payload.appId, payload);
-            const summary = `Mini app updated: ${updated.title} (${updated.id}) v${updated.version}.`;
+            const summary = `Mini app updated: ${updated.title} (${updated.id}) v${updated.version} code ${updated.codeVersion}.`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -68,7 +69,8 @@ export function miniAppUpdateToolBuild(miniApps: MiniApps): ToolDefinition {
                 content: [{ type: "text", text: summary }],
                 details: {
                     miniAppId: updated.id,
-                    miniAppVersion: updated.version
+                    miniAppVersion: updated.version,
+                    miniAppCodeVersion: updated.codeVersion
                 },
                 isError: false,
                 timestamp: Date.now()
@@ -80,7 +82,8 @@ export function miniAppUpdateToolBuild(miniApps: MiniApps): ToolDefinition {
                     appId: updated.id,
                     title: updated.title,
                     icon: updated.icon,
-                    version: updated.version
+                    version: updated.version,
+                    codeVersion: updated.codeVersion
                 }
             };
         }

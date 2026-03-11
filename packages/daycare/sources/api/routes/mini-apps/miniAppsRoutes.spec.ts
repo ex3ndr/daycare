@@ -34,6 +34,7 @@ describe("miniAppsRouteHandle", () => {
                         id: "crm",
                         userId: "user-1",
                         version: 1,
+                        codeVersion: 1,
                         title: "CRM",
                         icon: "browser",
                         createdAt: expect.any(Number),

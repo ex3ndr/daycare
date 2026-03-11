@@ -10,6 +10,7 @@ export function miniAppRecordFromDb(record: MiniAppDbRecord): MiniAppRecord {
         id: record.id,
         userId: record.userId,
         version: record.version ?? 1,
+        codeVersion: record.codeVersion,
         title: record.title,
         icon: record.icon,
         createdAt: record.createdAt,

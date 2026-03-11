@@ -69,12 +69,13 @@ export class MiniApps {
                     id,
                     title,
                     icon,
+                    codeVersion: 1,
                     createdAt,
                     updatedAt: createdAt
                 });
                 return miniAppRecordFromDb(record);
             } catch (error) {
-                await fs.rm(path.join(versionDir, "..", ".."), { recursive: true, force: true });
+                await fs.rm(path.dirname(versionDir), { recursive: true, force: true });
                 throw error;
             }
         });
@@ -88,28 +89,33 @@ export class MiniApps {
             if (!current) {
                 throw new Error(`Mini app not found: ${normalizedId}`);
             }
-            const currentVersion = current.version ?? 1;
-            const nextVersion = currentVersion + 1;
-            const currentDir = miniAppDirectoryResolve(this.usersDir, ctx.userId, normalizedId, currentVersion);
-            const nextDir = miniAppDirectoryResolve(this.usersDir, ctx.userId, normalizedId, nextVersion);
-            await fs.rm(nextDir, { recursive: true, force: true });
-            await fs.mkdir(path.dirname(nextDir), { recursive: true });
-            await fs.cp(currentDir, nextDir, { recursive: true });
+            const codeChanged = miniAppCodeChanged(input);
+            const currentDir = miniAppDirectoryResolve(this.usersDir, ctx.userId, normalizedId, current.codeVersion);
+            const nextCodeVersion = codeChanged ? current.codeVersion + 1 : current.codeVersion;
+            const nextDir = miniAppDirectoryResolve(this.usersDir, ctx.userId, normalizedId, nextCodeVersion);
             try {
-                await miniAppVersionWrite({
-                    directory: nextDir,
-                    html: input.html ?? (await fs.readFile(path.join(currentDir, "index.html"), "utf8")),
-                    files: input.files,
-                    deletePaths: input.deletePaths
-                });
+                if (codeChanged) {
+                    await fs.rm(nextDir, { recursive: true, force: true });
+                    await fs.mkdir(path.dirname(nextDir), { recursive: true });
+                    await fs.cp(currentDir, nextDir, { recursive: true });
+                    await miniAppVersionWrite({
+                        directory: nextDir,
+                        html: input.html ?? (await fs.readFile(path.join(currentDir, "index.html"), "utf8")),
+                        files: input.files,
+                        deletePaths: input.deletePaths
+                    });
+                }
                 const record = await this.repository.update(ctx, normalizedId, {
                     title: input.title,
                     icon: input.icon,
+                    codeVersion: nextCodeVersion,
                     updatedAt: Date.now()
                 });
                 return miniAppRecordFromDb(record);
             } catch (error) {
-                await fs.rm(nextDir, { recursive: true, force: true });
+                if (codeChanged) {
+                    await fs.rm(nextDir, { recursive: true, force: true });
+                }
                 throw error;
             }
         });
@@ -128,7 +134,7 @@ export class MiniApps {
         if (!record) {
             return null;
         }
-        return miniAppDirectoryResolve(this.usersDir, ctx.userId, record.id, record.version ?? 1);
+        return miniAppDirectoryResolve(this.usersDir, ctx.userId, record.id, record.codeVersion);
     }
 
     async versionDirectoryForUser(userId: string, id: string): Promise<string | null> {
@@ -136,7 +142,15 @@ export class MiniApps {
         if (!record) {
             return null;
         }
-        return miniAppDirectoryResolve(this.usersDir, userId, id, record.version ?? 1);
+        return miniAppDirectoryResolve(this.usersDir, userId, record.id, record.codeVersion);
+    }
+
+    async versionDirectoryForUserVersion(userId: string, id: string, version: number): Promise<string | null> {
+        const record = await this.repository.findByVersion(contextForUser({ userId }), miniAppIdNormalize(id), version);
+        if (!record) {
+            return null;
+        }
+        return miniAppDirectoryResolve(this.usersDir, userId, record.id, record.codeVersion);
     }
 
     private lockFor(userId: string, id: string): AsyncLock {
@@ -149,4 +163,8 @@ export class MiniApps {
         this.locks.set(key, created);
         return created;
     }
+}
+
+function miniAppCodeChanged(input: MiniAppUpdateInput): boolean {
+    return typeof input.html === "string" || (input.files?.length ?? 0) > 0 || (input.deletePaths?.length ?? 0) > 0;
 }

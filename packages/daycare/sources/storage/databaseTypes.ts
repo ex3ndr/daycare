@@ -660,6 +660,7 @@ export type DatabaseMiniAppRow = {
     user_id: string;
     id: string;
     version: number;
+    code_version: number;
     valid_from: number;
     valid_to: number | null;
     title: string;
@@ -672,6 +673,7 @@ export type MiniAppDbRecord = {
     userId: string;
     id: string;
     version?: number;
+    codeVersion: number;
     validFrom?: number;
     validTo?: number | null;
     title: string;

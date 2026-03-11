@@ -11,7 +11,7 @@ export type MiniAppTokenPayload = {
 };
 
 /**
- * Signs a short-lived mini-app launch token pinned to one user/app/version tuple.
+ * Signs a short-lived mini-app launch token pinned to one user/app metadata version tuple.
  * Expects: userId and appId are non-empty and version is a positive integer.
  */
 export async function miniAppTokenSign(
@@ -20,7 +20,7 @@ export async function miniAppTokenSign(
     expiresInSeconds: number
 ): Promise<string> {
     if (!Number.isInteger(payload.version) || payload.version <= 0) {
-        throw new Error("Mini app version must be a positive integer.");
+        throw new Error("Mini app metadata version must be a positive integer.");
     }
     const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
     return jwtSign({ userId: encoded }, secret, expiresInSeconds, {
@@ -29,7 +29,7 @@ export async function miniAppTokenSign(
 }
 
 /**
- * Verifies one mini-app launch token and restores its scoped payload.
+ * Verifies one mini-app launch token and restores its scoped metadata-version payload.
  * Expects: token was issued by miniAppTokenSign with the same secret.
  */
 export async function miniAppTokenVerify(token: string, secret: string): Promise<MiniAppTokenPayload> {

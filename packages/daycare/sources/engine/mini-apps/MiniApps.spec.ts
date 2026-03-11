@@ -17,7 +17,7 @@ afterEach(async () => {
 });
 
 describe("MiniApps", () => {
-    it("creates and updates versioned static files", async () => {
+    it("separates app versions from code versions", async () => {
         const storage = await storageOpenTest();
         const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-mini-apps-"));
         tempDirs.push(usersDir);
@@ -37,19 +37,33 @@ describe("MiniApps", () => {
                 files: [{ path: "assets/app.js", content: "console.log('v1');" }]
             });
             expect(created.version).toBe(1);
+            expect(created.codeVersion).toBe(1);
+
+            const metadataOnly = await miniApps.update(ctx, "crm", {
+                title: "CRM Board"
+            });
+            expect(metadataOnly.version).toBe(2);
+            expect(metadataOnly.codeVersion).toBe(1);
+            expect(metadataOnly.title).toBe("CRM Board");
 
             const updated = await miniApps.update(ctx, "crm", {
-                title: "CRM Board",
                 html: "<!doctype html><h1>v2</h1>",
                 files: [{ path: "assets/app.js", content: "console.log('v2');" }]
             });
-            expect(updated.version).toBe(2);
+            expect(updated.version).toBe(3);
+            expect(updated.codeVersion).toBe(2);
             expect(updated.title).toBe("CRM Board");
 
             const versionDir = await miniApps.versionDirectory(ctx, "crm");
             expect(versionDir).toBeTruthy();
+            expect(versionDir).toContain(path.join("crm", "2"));
             await expect(fs.readFile(path.join(versionDir!, "index.html"), "utf8")).resolves.toContain("v2");
             await expect(fs.readFile(path.join(versionDir!, "assets/app.js"), "utf8")).resolves.toContain("v2");
+
+            const metadataDir = await miniApps.versionDirectoryForUserVersion(ctx.userId, "crm", 2);
+            expect(metadataDir).toBeTruthy();
+            expect(metadataDir).toContain(path.join("crm", "1"));
+            await expect(fs.readFile(path.join(metadataDir!, "index.html"), "utf8")).resolves.toContain("v1");
         } finally {
             await storage.connection.close();
         }

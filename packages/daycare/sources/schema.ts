@@ -598,6 +598,7 @@ export const miniAppsTable = pgTable(
         userId: text("user_id").notNull(),
         id: text("id").notNull(),
         version: integer("version").notNull().default(1),
+        codeVersion: integer("code_version").notNull().default(1),
         validFrom: bigint("valid_from", { mode: "number" }).notNull(),
         validTo: bigint("valid_to", { mode: "number" }),
         title: text("title").notNull(),
