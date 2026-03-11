@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { miniAppLaunchFetch } from "@/modules/mini-apps/miniAppLaunchFetch";
 import { useMiniAppsStore } from "@/modules/mini-apps/miniAppsContext";
+import { MINI_APPS_EMPTY } from "@/modules/mini-apps/miniAppsStoreCreate";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 type MiniAppViewProps = {
@@ -22,7 +23,9 @@ export function MiniAppView({ appId }: MiniAppViewProps) {
     const baseUrl = useAuthStore((state) => state.baseUrl);
     const token = useAuthStore((state) => state.token);
     const { workspaceId } = useWorkspace();
-    const app = useMiniAppsStore((state) => state.appsFor(workspaceId).find((entry) => entry.id === appId) ?? null);
+    const app = useMiniAppsStore(
+        (state) => (state.appsByWorkspace[workspaceId] ?? MINI_APPS_EMPTY).find((entry) => entry.id === appId) ?? null
+    );
     const [launchUrl, setLaunchUrl] = React.useState<string | null>(null);
     const [error, setError] = React.useState<string | null>(null);
 

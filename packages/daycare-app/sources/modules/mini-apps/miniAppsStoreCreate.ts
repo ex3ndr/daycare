@@ -2,12 +2,13 @@ import { create } from "zustand";
 import { miniAppsFetch } from "./miniAppsFetch";
 import type { MiniAppListItem } from "./miniAppsTypes";
 
+export const MINI_APPS_EMPTY: MiniAppListItem[] = [];
+
 export type MiniAppsStore = {
     appsByWorkspace: Record<string, MiniAppListItem[]>;
     loading: boolean;
     loaded: boolean;
     fetchAll: (baseUrl: string, token: string, workspaceIds: string[]) => Promise<void>;
-    appsFor: (workspaceId: string) => MiniAppListItem[];
 };
 
 /**
@@ -15,7 +16,7 @@ export type MiniAppsStore = {
  * Expects: workspaceIds are the currently accessible workspaces for the authenticated user.
  */
 export function miniAppsStoreCreate() {
-    return create<MiniAppsStore>((set, get) => ({
+    return create<MiniAppsStore>((set) => ({
         appsByWorkspace: {},
         loading: false,
         loaded: false,
@@ -39,7 +40,6 @@ export function miniAppsStoreCreate() {
                 loading: false,
                 loaded: true
             });
-        },
-        appsFor: (workspaceId) => get().appsByWorkspace[workspaceId] ?? []
+        }
     }));
 }

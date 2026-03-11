@@ -6,6 +6,7 @@ import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withTimin
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useConfigStore } from "@/modules/config/configContext";
 import { useMiniAppsStore } from "@/modules/mini-apps/miniAppsContext";
+import { MINI_APPS_EMPTY } from "@/modules/mini-apps/miniAppsStoreCreate";
 import { type AppMode, appModes } from "@/modules/navigation/appModes";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
@@ -321,7 +322,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         const activeMode = extractModeFromPath(pathname);
         const selectedItem = extractItemFromPath(pathname);
         const { workspaceId, workspace: activeWorkspace } = useWorkspace();
-        const miniApps = useMiniAppsStore((state) => state.appsFor(workspaceId));
+        const miniApps = useMiniAppsStore((state) => state.appsByWorkspace[workspaceId] ?? MINI_APPS_EMPTY);
         const visibleSegmentGroups = React.useMemo(() => {
             const staticGroups = segmentGroups.map((group) =>
                 group.filter((segment) => !(segment.mode === "members" && activeWorkspace?.isSelf === true))
