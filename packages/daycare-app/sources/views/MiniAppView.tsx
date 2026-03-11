@@ -2,9 +2,7 @@ import * as React from "react";
 import { ActivityIndicator, Platform, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import WebView from "react-native-webview";
-import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
-import { miniAppIconResolve } from "@/modules/mini-apps/miniAppIconResolve";
 import { miniAppLaunchFetch } from "@/modules/mini-apps/miniAppLaunchFetch";
 import { useMiniAppsStore } from "@/modules/mini-apps/miniAppsContext";
 import { MINI_APPS_EMPTY } from "@/modules/mini-apps/miniAppsStoreCreate";
@@ -55,39 +53,34 @@ export function MiniAppView({ appId }: MiniAppViewProps) {
     }, [appId, baseUrl, token, workspaceId]);
 
     return (
-        <View style={styles.root}>
-            <PageHeader title={app?.title ?? appId} icon={miniAppIconResolve(app?.icon)} />
-            <View style={[styles.content, { backgroundColor: theme.colors.surfaceContainerLow }]}>
-                {!app ? (
-                    <View style={styles.center}>
-                        <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
-                            Mini app not found.
-                        </Text>
-                    </View>
-                ) : error ? (
-                    <View style={styles.center}>
-                        <Text style={[styles.message, { color: theme.colors.error }]}>{error}</Text>
-                    </View>
-                ) : !launchUrl ? (
-                    <View style={styles.center}>
-                        <ActivityIndicator color={theme.colors.primary} />
-                    </View>
-                ) : Platform.OS === "web" ? (
-                    <iframe
-                        title={app.title}
-                        src={launchUrl}
-                        sandbox="allow-scripts allow-same-origin"
-                        style={{ width: "100%", height: "100%", border: "none" }}
-                    />
-                ) : (
-                    <WebView
-                        source={{ uri: launchUrl }}
-                        originWhitelist={["*"]}
-                        style={styles.webview}
-                        onShouldStartLoadWithRequest={(request) => request.url.startsWith(launchUrl)}
-                    />
-                )}
-            </View>
+        <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
+            {!app ? (
+                <View style={styles.center}>
+                    <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>Mini app not found.</Text>
+                </View>
+            ) : error ? (
+                <View style={styles.center}>
+                    <Text style={[styles.message, { color: theme.colors.error }]}>{error}</Text>
+                </View>
+            ) : !launchUrl ? (
+                <View style={styles.center}>
+                    <ActivityIndicator color={theme.colors.primary} />
+                </View>
+            ) : Platform.OS === "web" ? (
+                <iframe
+                    title={app.title}
+                    src={launchUrl}
+                    sandbox="allow-scripts allow-same-origin"
+                    style={{ width: "100%", height: "100%", border: "none" }}
+                />
+            ) : (
+                <WebView
+                    source={{ uri: launchUrl }}
+                    originWhitelist={["*"]}
+                    style={styles.webview}
+                    onShouldStartLoadWithRequest={(request) => request.url.startsWith(launchUrl)}
+                />
+            )}
         </View>
     );
 }
@@ -95,12 +88,6 @@ export function MiniAppView({ appId }: MiniAppViewProps) {
 const styles = StyleSheet.create({
     root: {
         flex: 1
-    },
-    content: {
-        flex: 1,
-        margin: 12,
-        borderRadius: 20,
-        overflow: "hidden"
     },
     center: {
         flex: 1,
