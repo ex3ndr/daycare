@@ -2,7 +2,8 @@ import type http from "node:http";
 import type { Context } from "@/types";
 import type { MiniApps } from "../../../engine/mini-apps/MiniApps.js";
 import { MiniAppIconError } from "../../../engine/mini-apps/miniAppIconError.js";
-import { MINI_APP_ICON_FALLBACK, MINI_APP_OCTICON_NAMES } from "../../../engine/mini-apps/miniAppOcticons.js";
+import { MINI_APP_OCTICON_NAMES, MINI_APP_ICON_FALLBACK } from "../../../engine/mini-apps/miniAppOcticons.js";
+import type { MiniAppExecResult } from "../../../engine/mini-apps/miniAppExec.js";
 
 export type MiniAppsRouteContext = {
     ctx: Context;
@@ -10,10 +11,11 @@ export type MiniAppsRouteContext = {
     readJsonBody: (request: http.IncomingMessage) => Promise<Record<string, unknown>>;
     miniApps: MiniApps | null;
     launch: ((ctx: Context, id: string) => Promise<{ launchPath: string; expiresAt: number }>) | null;
+    exec?: ((ctx: Context, appId: string, code: string) => Promise<MiniAppExecResult>) | null;
 };
 
 /**
- * Routes authenticated /mini-apps endpoints for listing, versioning, and launch-token minting.
+ * Routes authenticated /mini-apps endpoints for listing, versioning, launch-token minting, and Python execution.
  * Returns true when a /mini-apps endpoint is matched.
  */
 export async function miniAppsRouteHandle(
@@ -82,6 +84,44 @@ export async function miniAppsRouteHandle(
             }
             const launch = await context.launch(context.ctx, decodeURIComponent(launchMatch[1]));
             context.sendJson(response, 200, { ok: true, ...launch });
+            return true;
+        }
+
+        const execMatch = pathname.match(/^\/mini-apps\/([^/]+)\/exec$/);
+        if (execMatch?.[1] && request.method === "POST") {
+            if (!context.exec) {
+                context.sendJson(response, 503, { ok: false, error: "Mini-app exec unavailable." });
+                return true;
+            }
+            const appId = decodeURIComponent(execMatch[1]);
+            const app = await context.miniApps.find(context.ctx, appId);
+            if (!app) {
+                context.sendJson(response, 404, { ok: false, error: "Mini app not found." });
+                return true;
+            }
+            const body = await context.readJsonBody(request);
+            const code = stringValue(body.code);
+            if (!code.trim()) {
+                context.sendJson(response, 400, { ok: false, error: "Code is required." });
+                return true;
+            }
+            const result = await context.exec(context.ctx, appId, code);
+            if (result.error) {
+                context.sendJson(response, 200, {
+                    ok: false,
+                    error: result.error,
+                    output: result.output,
+                    printOutput: result.printOutput,
+                    toolCallCount: result.toolCallCount
+                });
+                return true;
+            }
+            context.sendJson(response, 200, {
+                ok: true,
+                output: result.output,
+                printOutput: result.printOutput,
+                toolCallCount: result.toolCallCount
+            });
             return true;
         }
 

@@ -34,6 +34,7 @@ import { tasksRouteHandle } from "./tasks/tasksRoutes.js";
 import { todosRouteHandle } from "./todos/todosRoutes.js";
 import { toolsRouteHandle } from "./tools/toolsRoutes.js";
 import { workspacesRouteHandle } from "./workspaces/workspacesRoutes.js";
+import type { MiniAppExecResult } from "../../engine/mini-apps/miniAppExec.js";
 
 export type ApiRouteContext = {
     ctx: Context;
@@ -69,6 +70,7 @@ export type ApiRouteContext = {
     } | null;
     emailConnectRequest: ((userId: string, email: string) => Promise<void>) | null;
     miniAppLaunch: ((ctx: Context, id: string) => Promise<{ launchPath: string; expiresAt: number }>) | null;
+    miniAppExec?: ((ctx: Context, appId: string, code: string) => Promise<MiniAppExecResult>) | null;
 };
 
 /**
@@ -210,7 +212,8 @@ export async function apiRouteHandle(
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody,
             miniApps: context.miniApps,
-            launch: context.miniAppLaunch
+            launch: context.miniAppLaunch,
+            exec: context.miniAppExec
         });
     }
     if (pathname.startsWith("/files")) {
