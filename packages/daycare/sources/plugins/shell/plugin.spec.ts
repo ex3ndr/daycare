@@ -3,12 +3,18 @@ import { describe, expect, it, vi } from "vitest";
 import { plugin } from "./plugin.js";
 
 function pluginApiBuild() {
+    let listener: ((event: { type: string; payload: unknown }) => void) | null = null;
     const registrar = {
         registerTool: vi.fn(),
         unregisterTool: vi.fn(),
         registerCommand: vi.fn(),
         unregisterCommand: vi.fn(),
         sendMessage: vi.fn(async () => undefined)
+    };
+    const processes = {
+        killAgentExecs: vi.fn(async () => 0),
+        killAllSessionExecs: vi.fn(async () => 0),
+        killSessionExecs: vi.fn(async () => 0)
     };
     const api = {
         instance: { instanceId: "shell", pluginId: "shell", enabled: true },
@@ -20,10 +26,23 @@ function pluginApiBuild() {
         registrar,
         fileStore: {},
         inference: { complete: async () => undefined },
-        processes: { killAllSessionExecs: vi.fn(async () => 0) },
+        processes,
+        engineEvents: {
+            onEvent: vi.fn((next) => {
+                listener = next;
+                return () => {
+                    listener = null;
+                };
+            })
+        },
         mode: "runtime" as const
     };
-    return { api, registrar };
+    return {
+        api,
+        registrar,
+        processes,
+        emit: (event: { type: string; payload: unknown }) => listener?.(event)
+    };
 }
 
 describe("shell plugin", () => {
@@ -74,5 +93,20 @@ describe("shell plugin", () => {
         expect(unregistered).not.toContain("grep");
         expect(unregistered).not.toContain("find");
         expect(unregistered).not.toContain("ls");
+    });
+
+    it("cleans up session execs from engine lifecycle events", async () => {
+        const { api, emit, processes } = pluginApiBuild();
+        const instance = await plugin.create(api as never);
+
+        await instance.load?.();
+
+        emit({ type: "agent.session.ended", payload: { sessionId: "session-1" } });
+        emit({ type: "agent.dead", payload: { sessionId: "session-2" } });
+        emit({ type: "agent.dead", payload: { agentId: "agent-1" } });
+
+        expect(processes.killSessionExecs).toHaveBeenCalledWith("session-1");
+        expect(processes.killSessionExecs).toHaveBeenCalledWith("session-2");
+        expect(processes.killAgentExecs).toHaveBeenCalledWith("agent-1");
     });
 });

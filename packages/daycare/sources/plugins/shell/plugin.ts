@@ -1,6 +1,8 @@
 import { z } from "zod";
 
+import type { EngineEvent } from "../../engine/ipc/events.js";
 import { definePlugin } from "../../engine/plugins/types.js";
+import type { Processes } from "../../engine/processes/processes.js";
 import {
     buildProcessGetTool,
     buildProcessListTool,
@@ -29,26 +31,9 @@ export const plugin = definePlugin({
         return {
             load: async () => {
                 if (api.engineEvents) {
-                    unsubscribeEngineEvents = api.engineEvents.onEvent((event) => {
-                        if (event.type === "agent.session.ended") {
-                            const payload = event.payload as { sessionId?: string | null };
-                            if (payload.sessionId) {
-                                void processes.killSessionExecs(payload.sessionId);
-                            }
-                            return;
-                        }
-                        if (event.type !== "agent.dead") {
-                            return;
-                        }
-                        const payload = event.payload as { sessionId?: string | null; agentId?: string };
-                        if (payload.sessionId) {
-                            void processes.killSessionExecs(payload.sessionId);
-                            return;
-                        }
-                        if (payload.agentId) {
-                            void processes.killAgentExecs(payload.agentId);
-                        }
-                    });
+                    unsubscribeEngineEvents = api.engineEvents.onEvent((event) =>
+                        shellEngineEventHandle(processes, event)
+                    );
                 }
                 api.registrar.registerTool(buildWorkspaceReadTool());
                 api.registrar.registerTool(buildWorkspaceReadJsonTool());
@@ -85,3 +70,46 @@ export const plugin = definePlugin({
         };
     }
 });
+
+function shellEngineEventHandle(processes: Processes, event: EngineEvent): void {
+    switch (event.type) {
+        case "agent.session.ended": {
+            const sessionId = eventSessionIdGet(event.payload);
+            if (sessionId) {
+                void processes.killSessionExecs(sessionId);
+            }
+            return;
+        }
+        case "agent.dead": {
+            const sessionId = eventSessionIdGet(event.payload);
+            if (sessionId) {
+                void processes.killSessionExecs(sessionId);
+                return;
+            }
+            const agentId = eventAgentIdGet(event.payload);
+            if (agentId) {
+                void processes.killAgentExecs(agentId);
+            }
+            return;
+        }
+        default:
+            return;
+    }
+}
+
+function eventSessionIdGet(payload: unknown): string | null {
+    const value = eventPayloadGet(payload).sessionId;
+    return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function eventAgentIdGet(payload: unknown): string | null {
+    const value = eventPayloadGet(payload).agentId;
+    return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function eventPayloadGet(payload: unknown): Record<string, unknown> {
+    if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+        return {};
+    }
+    return payload as Record<string, unknown>;
+}
