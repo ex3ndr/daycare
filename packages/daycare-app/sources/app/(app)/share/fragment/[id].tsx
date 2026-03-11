@@ -15,7 +15,7 @@ export default function ShareFragmentScreen() {
     const { workspaceId } = useWorkspace();
 
     const fragment = useFragmentsStore((s) => s.fragments.find((f) => f.id === id) ?? null);
-    const fragmentPython = useFragmentPython((fragment?.spec as Spec | null) ?? null, workspaceId);
+    const fragmentPython = useFragmentPython((fragment?.spec as Spec | null) ?? null, workspaceId, id);
 
     if (!fragment) return null;
 
