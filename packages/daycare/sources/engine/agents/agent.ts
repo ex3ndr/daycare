@@ -1080,6 +1080,11 @@ export class Agent {
                     await this.agentSystem.storage.sessions.invalidate(oldSessionId, maxHistoryId);
                 }
             }
+            this.agentSystem.eventBus.emit("agent.session.ended", {
+                agentId: this.id,
+                sessionId: oldSessionId,
+                reason: "reset"
+            });
         }
         const resetMessage = item.message?.trim() ?? "";
         if (resetMessage.length > 0) {
@@ -1547,6 +1552,11 @@ export class Agent {
                     await this.agentSystem.storage.sessions.invalidate(oldSessionId, maxHistoryId);
                 }
             }
+            this.agentSystem.eventBus.emit("agent.session.ended", {
+                agentId: this.id,
+                sessionId: oldSessionId,
+                reason: "compact"
+            });
         }
         this.state.context = {
             messages: [

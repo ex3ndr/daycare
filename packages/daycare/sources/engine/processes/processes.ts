@@ -16,6 +16,7 @@ import type { PathMountPoint } from "../../utils/pathMountTypes.js";
 import { shellQuote } from "../../utils/shellQuote.js";
 import { resolveWorkspacePath } from "../permissions.js";
 import { processBootTimeRead } from "./processBootTimeRead.js";
+import { type SessionExecResult, type SessionExecStartInput, SessionExecs } from "./sessionExecs.js";
 
 const MONITOR_INTERVAL_MS = 2_000;
 const PROCESS_STOP_POLL_MS = 200;
@@ -125,6 +126,7 @@ export class Processes {
         ProcessesRepository,
         "create" | "findAll" | "findById" | "update" | "updateRuntime" | "delete" | "deleteByOwner"
     >;
+    private readonly sessionExecs = new SessionExecs();
     private readonly records = new Map<string, ProcessRecord>();
     private currentBootTimeMs: number | null = null;
     private currentBootTimeKnown = false;
@@ -375,6 +377,43 @@ export class Processes {
             }
             return results;
         });
+    }
+
+    async execStartForContext(input: SessionExecStartInput): Promise<SessionExecResult> {
+        return this.sessionExecs.start(input);
+    }
+
+    async execPollForContext(
+        ctx: Context,
+        sessionId: string,
+        processId: string,
+        timeoutMs: number,
+        abortSignal?: AbortSignal
+    ): Promise<SessionExecResult> {
+        return this.sessionExecs.poll(ctx, sessionId, processId, timeoutMs, abortSignal);
+    }
+
+    async execKillForContext(
+        ctx: Context,
+        sessionId: string,
+        processId: string,
+        signal: ProcessSignal = "SIGTERM",
+        timeoutMs?: number,
+        abortSignal?: AbortSignal
+    ): Promise<SessionExecResult> {
+        return this.sessionExecs.kill(ctx, sessionId, processId, signal, timeoutMs, abortSignal);
+    }
+
+    async killSessionExecs(sessionId: string): Promise<number> {
+        return this.sessionExecs.killBySessionId(sessionId);
+    }
+
+    async killAgentExecs(agentId: string): Promise<number> {
+        return this.sessionExecs.killByAgentId(agentId);
+    }
+
+    async killAllSessionExecs(): Promise<number> {
+        return this.sessionExecs.killAll();
     }
 
     private startMonitor(): void {

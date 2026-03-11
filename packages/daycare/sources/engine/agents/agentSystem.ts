@@ -545,7 +545,11 @@ export class AgentSystem {
             await agentStateWrite(this.storage, targetContext, state);
         }
         await this.storage.inbox.deleteByAgentId(normalizedAgentId);
-        this.eventBus.emit("agent.dead", { agentId: normalizedAgentId, reason: "manual" });
+        this.eventBus.emit("agent.dead", {
+            agentId: normalizedAgentId,
+            sessionId: state.activeSessionId ?? null,
+            reason: "manual"
+        });
         agentEventEmit(this.eventBus, targetContext.userId, "agent.sync.updated", {
             agentId: normalizedAgentId,
             lifecycle: "dead",
@@ -1115,7 +1119,11 @@ export class AgentSystem {
         }
         await agentStateWrite(this.storage, context, state);
         await this.storage.inbox.deleteByAgentId(agentId);
-        this.eventBus.emit("agent.dead", { agentId, reason: "poison-pill" });
+        this.eventBus.emit("agent.dead", {
+            agentId,
+            sessionId: state.activeSessionId ?? null,
+            reason: "poison-pill"
+        });
         agentEventEmit(this.eventBus, context.userId, "agent.sync.updated", {
             agentId,
             lifecycle: "dead",
@@ -1151,7 +1159,11 @@ export class AgentSystem {
         for (const queued of pending) {
             queued.completion?.reject(deadError);
         }
-        this.eventBus.emit("agent.dead", { agentId: entry.ctx.agentId, reason });
+        this.eventBus.emit("agent.dead", {
+            agentId: entry.ctx.agentId,
+            sessionId: entry.agent.state.activeSessionId ?? null,
+            reason
+        });
         agentEventEmit(this.eventBus, entry.ctx.userId, "agent.sync.updated", {
             agentId: entry.ctx.agentId,
             lifecycle: "dead",

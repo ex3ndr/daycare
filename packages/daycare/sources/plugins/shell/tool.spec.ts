@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -11,13 +10,19 @@ import { contextForAgent } from "../../engine/agents/context.js";
 import { AgentInbox } from "../../engine/agents/ops/agentInbox.js";
 import { UserHome } from "../../engine/users/userHome.js";
 import { Sandbox } from "../../sandbox/sandbox.js";
-import { buildExecTool, buildWorkspaceReadJsonTool, buildWorkspaceReadTool, formatExecOutput } from "./tool.js";
+import {
+    buildExecKillTool,
+    buildExecPollTool,
+    buildExecTool,
+    buildWorkspaceReadJsonTool,
+    buildWorkspaceReadTool,
+    formatExecOutput
+} from "./tool.js";
 
 const execToolCall = { id: "tool-call-1", name: "exec" };
 const readToolCall = { id: "tool-call-2", name: "read" };
 const readJsonToolCall = { id: "tool-call-3", name: "read_json" };
 const READ_LIMIT_TEST_BYTES = 51 * 1024;
-const itIfDockerSandbox = dockerSandboxAvailable() ? it : it.skip;
 
 describe("read tool allowed paths", () => {
     let workingDir: string;
@@ -175,45 +180,56 @@ describe("exec tool", () => {
         await fs.rm(workingDir, { recursive: true, force: true });
     });
 
-    it("forwards command execution to sandbox", async () => {
-        const tool = buildExecTool();
-        const context = createContext(workingDir);
-        const exec = vi.fn(async (_args: { command: string }) => ({
-            stdout: "ok",
+    it("starts session-scoped execs through Processes", async () => {
+        const execStartForContext = vi.fn(async (_input: unknown) => ({
+            processId: null,
+            command: "echo ok",
+            cwd: workingDir,
+            stdout: "ok\n",
             stderr: "",
-            failed: false,
+            timedOut: false,
+            running: false,
             exitCode: 0,
             signal: null,
-            cwd: workingDir
+            failed: false
         }));
-        context.sandbox.execBuffered = exec;
-
+        const tool = buildExecTool({ execStartForContext } as never);
+        const context = createContext(workingDir);
         const result = await tool.execute({ command: "echo ok" }, context, execToolCall);
+
         expect(result.toolMessage.isError).toBe(false);
         expect(result.typedResult.cwd).toBe(workingDir);
-        expect(exec).toHaveBeenCalledOnce();
-    });
-
-    it("forwards env and dotenv inputs to sandbox exec", async () => {
-        const tool = buildExecTool();
-        const context = createContext(workingDir);
-        const exec = vi.fn(
-            async (_args: {
-                command: string;
-                env?: Record<string, string | number | boolean>;
-                dotenv?: boolean | string;
-            }) => ({
-                stdout: "ok",
-                stderr: "",
-                failed: false,
-                exitCode: 0,
-                signal: null,
-                cwd: workingDir
+        expect(execStartForContext).toHaveBeenCalledWith(
+            expect.objectContaining({
+                ctx: context.ctx,
+                agentId: context.agent.id,
+                sessionId: context.activeSessionId,
+                sandbox: context.sandbox,
+                command: "echo ok",
+                timeoutMs: 30_000,
+                detachOnTimeout: true,
+                abortSignal: undefined
             })
         );
-        context.sandbox.execBuffered = exec;
+    });
 
-        const result = await tool.execute(
+    it("forwards env and dotenv inputs to Processes exec start", async () => {
+        const context = createContext(workingDir);
+        const execStartForContext = vi.fn(async (_input: unknown) => ({
+            processId: null,
+            command: "echo ok",
+            cwd: workingDir,
+            stdout: "ok\n",
+            stderr: "",
+            timedOut: false,
+            running: false,
+            exitCode: 0,
+            signal: null,
+            failed: false
+        }));
+        const tool = buildExecTool({ execStartForContext } as never);
+
+        await tool.execute(
             {
                 command: "echo ok",
                 env: { NODE_ENV: "test", PORT: 3000, DEBUG: true },
@@ -222,15 +238,16 @@ describe("exec tool", () => {
             context,
             execToolCall
         );
-        expect(result.toolMessage.isError).toBe(false);
-        expect(exec).toHaveBeenCalledOnce();
-        const firstCall = exec.mock.calls[0]?.[0];
-        expect(firstCall?.env).toEqual({ NODE_ENV: "test", PORT: 3000, DEBUG: true });
-        expect(firstCall?.dotenv).toBe(".env.local");
+
+        expect(execStartForContext).toHaveBeenCalledWith(
+            expect.objectContaining({
+                env: { NODE_ENV: "test", PORT: 3000, DEBUG: true },
+                dotenv: ".env.local"
+            })
+        );
     });
 
-    it("resolves secret names and forwards resolved secret env to sandbox exec", async () => {
-        const tool = buildExecTool();
+    it("resolves secret names and forwards resolved secret env to Processes exec start", async () => {
         const context = createContext(workingDir);
         const resolve = vi.fn(async (_ctx: ToolExecutionContext["ctx"], _names: string[]) => ({
             OPENAI_API_KEY: "sk-secret"
@@ -238,17 +255,21 @@ describe("exec tool", () => {
         context.secrets = {
             resolve
         } as unknown as ToolExecutionContext["secrets"];
-        const exec = vi.fn(async (_args: { command: string; secrets?: Record<string, string> }) => ({
-            stdout: "ok",
+        const execStartForContext = vi.fn(async () => ({
+            processId: null,
+            command: "echo ok",
+            cwd: workingDir,
+            stdout: "ok\n",
             stderr: "",
-            failed: false,
+            timedOut: false,
+            running: false,
             exitCode: 0,
             signal: null,
-            cwd: workingDir
+            failed: false
         }));
-        context.sandbox.execBuffered = exec;
+        const tool = buildExecTool({ execStartForContext } as never);
 
-        const result = await tool.execute(
+        await tool.execute(
             {
                 command: "echo ok",
                 secrets: ["openai-key"]
@@ -256,14 +277,16 @@ describe("exec tool", () => {
             context,
             execToolCall
         );
-        expect(result.toolMessage.isError).toBe(false);
+
         expect(resolve).toHaveBeenCalledWith(context.ctx, ["openai-key"]);
-        const firstCall = exec.mock.calls[0]?.[0];
-        expect(firstCall?.secrets).toEqual({ OPENAI_API_KEY: "sk-secret" });
+        expect(execStartForContext).toHaveBeenCalledWith(
+            expect.objectContaining({
+                secrets: { OPENAI_API_KEY: "sk-secret" }
+            })
+        );
     });
 
     it("surfaces unknown secret name errors", async () => {
-        const tool = buildExecTool();
         const context = createContext(workingDir);
         const resolve = vi.fn(async () => {
             throw new Error('Unknown secret: "missing".');
@@ -271,6 +294,7 @@ describe("exec tool", () => {
         context.secrets = {
             resolve
         } as unknown as ToolExecutionContext["secrets"];
+        const tool = buildExecTool({ execStartForContext: vi.fn() } as never);
 
         await expect(
             tool.execute(
@@ -284,50 +308,114 @@ describe("exec tool", () => {
         ).rejects.toThrow('Unknown secret: "missing".');
     });
 
-    it("forwards abort signal to sandbox exec", async () => {
-        const tool = buildExecTool();
+    it("forwards abort signal to Processes exec start", async () => {
         const abortController = new AbortController();
         const context = createContext(workingDir, [], false, abortController.signal);
-        const exec = vi.fn(async (_args: { command: string; signal?: AbortSignal }) => ({
-            stdout: "ok",
+        const execStartForContext = vi.fn(async () => ({
+            processId: null,
+            command: "echo ok",
+            cwd: workingDir,
+            stdout: "ok\n",
             stderr: "",
-            failed: false,
+            timedOut: false,
+            running: false,
             exitCode: 0,
             signal: null,
-            cwd: workingDir
+            failed: false
         }));
-        context.sandbox.execBuffered = exec;
+        const tool = buildExecTool({ execStartForContext } as never);
 
-        const result = await tool.execute({ command: "echo ok" }, context, execToolCall);
-        expect(result.toolMessage.isError).toBe(false);
-        expect(exec).toHaveBeenCalledOnce();
-        const firstCall = exec.mock.calls[0]?.[0];
-        expect(firstCall?.signal).toBe(abortController.signal);
+        await tool.execute({ command: "echo ok" }, context, execToolCall);
+        expect(execStartForContext).toHaveBeenCalledWith(
+            expect.objectContaining({
+                abortSignal: abortController.signal
+            })
+        );
     });
 
-    itIfDockerSandbox("executes command in the sandbox", async () => {
-        const tool = buildExecTool();
+    it("reports running session ids when exec times out", async () => {
         const context = createContext(workingDir);
+        const tool = buildExecTool({
+            execStartForContext: vi.fn(async () => ({
+                processId: "process-1",
+                command: "sleep 5",
+                cwd: workingDir,
+                stdout: "",
+                stderr: "",
+                timedOut: true,
+                running: true,
+                exitCode: null,
+                signal: null,
+                failed: false
+            }))
+        } as never);
 
-        const result = await tool.execute({ command: "echo ok" }, context, execToolCall);
+        const result = await tool.execute({ command: "sleep 5" }, context, execToolCall);
         const text = toolMessageText(result.toolMessage.content);
+
         expect(result.toolMessage.isError).toBe(false);
-        expect(text).toContain('"stdout": "ok"');
-        expect(result.typedResult.output).toContain('"stdout": "ok"');
-        expect("summary" in result.typedResult).toBe(false);
+        expect(result.typedResult.processId).toBe("process-1");
+        expect(result.typedResult.timedOut).toBe(true);
+        expect(result.typedResult.running).toBe(true);
+        expect(text).toContain('"processId": "process-1"');
+        expect(text).toContain("exec_poll");
     });
 
-    itIfDockerSandbox("does not mutate tool context permissions", async () => {
-        const tool = buildExecTool();
-        const context = createContext(workingDir, [workingDir]);
-        const original = {
-            workingDir: context.sandbox.permissions.workingDir,
-            writeDirs: [...context.sandbox.permissions.writeDirs]
-        };
+    it("supports exec_poll and exec_kill through Processes", async () => {
+        const context = createContext(workingDir);
+        const execPollForContext = vi.fn(async () => ({
+            processId: "process-1",
+            command: "sleep 5",
+            cwd: workingDir,
+            stdout: "later\n",
+            stderr: "",
+            timedOut: false,
+            running: true,
+            exitCode: null,
+            signal: null,
+            failed: false
+        }));
+        const execKillForContext = vi.fn(async () => ({
+            processId: null,
+            command: "sleep 5",
+            cwd: workingDir,
+            stdout: "",
+            stderr: "",
+            timedOut: false,
+            running: false,
+            exitCode: null,
+            signal: "SIGTERM",
+            failed: true
+        }));
+        const pollTool = buildExecPollTool({ execPollForContext } as never);
+        const killTool = buildExecKillTool({ execKillForContext } as never);
 
-        const result = await tool.execute({ command: "echo ok" }, context, execToolCall);
-        expect(result.toolMessage.isError).toBe(false);
-        expect(context.sandbox.permissions).toEqual(original);
+        const pollResult = await pollTool.execute({ processId: "process-1", timeoutMs: 500 }, context, {
+            id: "tool-call-4",
+            name: "exec_poll"
+        });
+        const killResult = await killTool.execute({ processId: "process-1", signal: "SIGTERM" }, context, {
+            id: "tool-call-5",
+            name: "exec_kill"
+        });
+
+        expect(execPollForContext).toHaveBeenCalledWith(
+            context.ctx,
+            context.activeSessionId,
+            "process-1",
+            500,
+            undefined
+        );
+        expect(execKillForContext).toHaveBeenCalledWith(
+            context.ctx,
+            context.activeSessionId,
+            "process-1",
+            "SIGTERM",
+            1_000,
+            undefined
+        );
+        expect(pollResult.typedResult.stdout).toContain("later");
+        expect(killResult.typedResult.signal).toBe("SIGTERM");
     });
 });
 
@@ -429,8 +517,10 @@ function createContext(
     const userId = `tool-test-${createId()}`;
     const messageContext = {};
     const now = Date.now();
+    const activeSessionId = createId();
     const state: AgentState = {
         context: { messages: [] },
+        activeSessionId,
         permissions: permissionsBuild(workingDir, writeDirs),
         createdAt: now,
         updatedAt: now,
@@ -501,6 +591,7 @@ function createContext(
         messageContext,
         pythonExecution,
         abortSignal,
+        activeSessionId,
         secrets,
         agentSystem: null as unknown as ToolExecutionContext["agentSystem"]
     };
@@ -518,19 +609,4 @@ function toolMessageText(content: Array<{ type: string; text?: string }>): strin
         .filter((item) => item.type === "text")
         .map((item) => item.text ?? "")
         .join("\n");
-}
-
-function dockerSandboxAvailable(): boolean {
-    if (process.env.CI) {
-        return false;
-    }
-    try {
-        execSync("docker image inspect daycare-runtime:latest", {
-            stdio: ["ignore", "ignore", "ignore"],
-            timeout: 5000
-        });
-        return true;
-    } catch {
-        return false;
-    }
 }

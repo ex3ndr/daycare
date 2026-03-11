@@ -47,6 +47,7 @@ export type ToolExecutionContext<_State = Record<string, unknown>> = {
     };
     allowedToolNames?: ReadonlySet<string>;
     abortSignal?: AbortSignal;
+    activeSessionId?: string | null;
 };
 
 export type ToolResultPrimitive = string | number | boolean | null;

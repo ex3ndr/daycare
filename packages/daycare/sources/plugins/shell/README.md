@@ -1,7 +1,7 @@
 # Shell Plugin
 
-The shell plugin provides workspace file tools (`read`, `read_json`, `write`, `edit`, `write_output`), one-shot command
-execution (`exec`), and durable process management tools.
+The shell plugin provides workspace file tools (`read`, `read_json`, `write`, `edit`, `write_output`), session-scoped
+command execution (`exec`, `exec_poll`, `exec_kill`), and durable process management tools.
 
 ## Filesystem Helper Tools
 
@@ -27,6 +27,13 @@ variables override both dotenv and inline `env` values.
 - Truncation notices include stream and dropped char count, for example:
   - `... (12,345 chars truncated from stdout)`
 - Tool-level truncation applies an additional `8000`-char tail-biased safety limit per text block before inference context storage.
+- `exec` waits up to `timeoutMs` for the process to exit. If the process is still running, it stays attached to the
+  current agent session and returns a `processId`.
+- Use `exec_poll` with that `processId` to wait for more output. Each poll only returns logs that changed since the last
+  `exec` or `exec_poll` call for that process.
+- Use `exec_kill` to stop a running exec process. Session-scoped execs are also killed automatically when the owning
+  agent session ends or the agent dies.
+- Set `detachOnTimeout: false` on `exec` to restore the legacy behavior of stopping the command at `timeoutMs`.
 
 ## Durable Process Tools
 

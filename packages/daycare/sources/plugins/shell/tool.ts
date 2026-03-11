@@ -6,6 +6,7 @@ import {
     toolExecutionResultOutcomeWithTyped,
     toolMessageTextExtract
 } from "../../engine/modules/tools/toolReturnOutcome.js";
+import type { Processes } from "../../engine/processes/processes.js";
 import { stringTruncateTail } from "../../utils/stringTruncateTail.js";
 
 const READ_MAX_LINES = 2000;
@@ -59,6 +60,13 @@ type WriteArgs = Static<typeof writeSchema>;
 type EditArgs = Static<typeof editSchema>;
 type EditSpec = Static<typeof editItemSchema>;
 
+const signalSchema = Type.Union([
+    Type.Literal("SIGTERM"),
+    Type.Literal("SIGINT"),
+    Type.Literal("SIGHUP"),
+    Type.Literal("SIGKILL")
+]);
+
 const execSchema = Type.Object(
     {
         command: Type.String({
@@ -95,12 +103,47 @@ const execSchema = Type.Object(
                 description:
                     "Loads environment variables from dotenv. Use true to load .env from cwd, or pass an explicit dotenv file path."
             })
+        ),
+        detachOnTimeout: Type.Optional(
+            Type.Boolean({
+                description:
+                    "Defaults to true. When true, long-running commands keep running after timeoutMs and return a processId for exec_poll/exec_kill. Set false to stop the command at timeout instead."
+            })
+        )
+    },
+    { additionalProperties: false }
+);
+const execPollSchema = Type.Object(
+    {
+        processId: Type.String({ minLength: 1 }),
+        timeoutMs: Type.Optional(
+            Type.Number({
+                minimum: 100,
+                maximum: 300_000,
+                description: "How long to wait for new output or exit before returning."
+            })
+        )
+    },
+    { additionalProperties: false }
+);
+const execKillSchema = Type.Object(
+    {
+        processId: Type.String({ minLength: 1 }),
+        signal: Type.Optional(signalSchema),
+        timeoutMs: Type.Optional(
+            Type.Number({
+                minimum: 100,
+                maximum: 30_000,
+                description: "How long to wait for final output after sending the signal."
+            })
         )
     },
     { additionalProperties: false }
 );
 
 type ExecArgs = Static<typeof execSchema>;
+type ExecPollArgs = Static<typeof execPollSchema>;
+type ExecKillArgs = Static<typeof execKillSchema>;
 
 const shellResultSchema = Type.Object(
     {
@@ -128,6 +171,9 @@ const execResultSchema = Type.Object(
         cwd: Type.Optional(Type.String()),
         exitCode: Type.Optional(Type.Number()),
         signal: Type.Optional(Type.String()),
+        processId: Type.Optional(Type.String()),
+        running: Type.Optional(Type.Boolean()),
+        timedOut: Type.Optional(Type.Boolean()),
         stdout: Type.Optional(Type.String()),
         stderr: Type.Optional(Type.String())
     },
@@ -336,12 +382,12 @@ export function buildWorkspaceEditTool(): ToolDefinition {
     };
 }
 
-export function buildExecTool(): ToolDefinition {
+export function buildExecTool(processes: Processes): ToolDefinition {
     return {
         tool: {
             name: "exec",
             description:
-                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Optional secrets inject saved secret env vars and override explicit env values. timeoutMs has a maximum of 300000ms (5 minutes). Exec uses the caller's granted write directories and global read access with a protected deny-list. Outbound networking is unrestricted. Returns stdout/stderr and failure details.",
+                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Optional secrets inject saved secret env vars and override explicit env values. timeoutMs has a maximum of 300000ms (5 minutes). By default, commands that are still running at timeoutMs stay attached to the current agent session and return a processId for exec_poll/exec_kill; set detachOnTimeout=false to stop the command at timeout instead. Exec uses the caller's granted write directories and global read access with a protected deny-list. Outbound networking is unrestricted. Returns stdout/stderr and lifecycle details.",
             parameters: execSchema
         },
         returns: execReturns,
@@ -350,20 +396,102 @@ export function buildExecTool(): ToolDefinition {
             const secretNames = secretNamesNormalize(payload.secrets ?? []);
             const resolvedSecrets =
                 secretNames.length > 0 ? await secretEnvResolve(toolContext, secretNames) : undefined;
-            const result = await toolContext.sandbox.execBuffered({
+            const sessionId = execSessionIdResolve(toolContext);
+            const result = await processes.execStartForContext({
+                ctx: toolContext.ctx,
+                agentId: toolContext.agent.id,
+                sessionId,
+                sandbox: toolContext.sandbox,
                 command: payload.command,
                 cwd: payload.cwd,
-                timeoutMs: payload.timeoutMs,
+                timeoutMs: payload.timeoutMs ?? 30_000,
                 env: payload.env,
                 secrets: resolvedSecrets,
                 dotenv: payload.dotenv,
-                signal: toolContext.abortSignal
+                detachOnTimeout: payload.detachOnTimeout ?? true,
+                abortSignal: toolContext.abortSignal
             });
-            const formattedOutput = formatExecStreams(result.stdout, result.stderr, result.failed);
-            const toolMessage = buildToolMessage(toolCall, formattedOutput.output, result.failed, {
+            const formattedOutput = formatExecResultOutput(result);
+            const toolMessage = buildToolMessage(toolCall, formattedOutput.output, result.failed && !result.running, {
+                action: "exec",
                 cwd: result.cwd,
                 exitCode: result.exitCode,
                 signal: result.signal,
+                processId: result.processId,
+                running: result.running,
+                timedOut: result.timedOut,
+                ...(formattedOutput.stdout !== undefined ? { stdout: formattedOutput.stdout } : {}),
+                ...(formattedOutput.stderr !== undefined ? { stderr: formattedOutput.stderr } : {})
+            });
+            return toolExecutionResultOutcomeWithTyped(toolMessage, execResultBuild(toolMessage));
+        }
+    };
+}
+
+export function buildExecPollTool(processes: Processes): ToolDefinition {
+    return {
+        tool: {
+            name: "exec_poll",
+            description:
+                "Wait for additional output or process exit from a prior exec processId. Returns only logs that changed since the last exec/exec_poll/exec_kill call for that process.",
+            parameters: execPollSchema
+        },
+        returns: execReturns,
+        execute: async (args, toolContext, toolCall) => {
+            const payload = args as ExecPollArgs;
+            const sessionId = execSessionIdResolve(toolContext);
+            const result = await processes.execPollForContext(
+                toolContext.ctx,
+                sessionId,
+                payload.processId,
+                payload.timeoutMs ?? 30_000,
+                toolContext.abortSignal
+            );
+            const formattedOutput = formatExecResultOutput(result);
+            const toolMessage = buildToolMessage(toolCall, formattedOutput.output, result.failed && !result.running, {
+                action: "exec_poll",
+                cwd: result.cwd,
+                exitCode: result.exitCode,
+                signal: result.signal,
+                processId: result.processId,
+                running: result.running,
+                timedOut: result.timedOut,
+                ...(formattedOutput.stdout !== undefined ? { stdout: formattedOutput.stdout } : {}),
+                ...(formattedOutput.stderr !== undefined ? { stderr: formattedOutput.stderr } : {})
+            });
+            return toolExecutionResultOutcomeWithTyped(toolMessage, execResultBuild(toolMessage));
+        }
+    };
+}
+
+export function buildExecKillTool(processes: Processes): ToolDefinition {
+    return {
+        tool: {
+            name: "exec_kill",
+            description: "Send a signal to a running exec processId and return any new output captured while it exits.",
+            parameters: execKillSchema
+        },
+        returns: execReturns,
+        execute: async (args, toolContext, toolCall) => {
+            const payload = args as ExecKillArgs;
+            const sessionId = execSessionIdResolve(toolContext);
+            const result = await processes.execKillForContext(
+                toolContext.ctx,
+                sessionId,
+                payload.processId,
+                payload.signal ?? "SIGTERM",
+                payload.timeoutMs ?? 1_000,
+                toolContext.abortSignal
+            );
+            const formattedOutput = formatExecResultOutput(result);
+            const toolMessage = buildToolMessage(toolCall, formattedOutput.output, false, {
+                action: "exec_kill",
+                cwd: result.cwd,
+                exitCode: result.exitCode,
+                signal: result.signal,
+                processId: result.processId,
+                running: result.running,
+                timedOut: result.timedOut,
                 ...(formattedOutput.stdout !== undefined ? { stdout: formattedOutput.stdout } : {}),
                 ...(formattedOutput.stderr !== undefined ? { stderr: formattedOutput.stderr } : {})
             });
@@ -392,6 +520,14 @@ async function secretEnvResolve(
         throw new Error("Secrets service is not configured.");
     }
     return toolContext.secrets.resolve(toolContext.ctx, secretNames);
+}
+
+function execSessionIdResolve(toolContext: Parameters<ToolDefinition["execute"]>[1]): string {
+    const sessionId = toolContext.activeSessionId ?? toolContext.agent.state.activeSessionId ?? null;
+    if (!sessionId) {
+        throw new Error("Active session id is required for exec.");
+    }
+    return sessionId;
 }
 
 function ensureAbsolutePath(target: string): void {
@@ -462,6 +598,9 @@ function execResultBuild(toolMessage: ToolResultMessage): ExecResult {
     const cwd = detailStringGet(details, "cwd");
     const exitCode = detailNumberGet(details, "exitCode");
     const signal = detailStringGet(details, "signal");
+    const processId = detailStringGet(details, "processId");
+    const running = detailBooleanGet(details, "running");
+    const timedOut = detailBooleanGet(details, "timedOut");
     const stdout = detailStringGet(details, "stdout");
     const stderr = detailStringGet(details, "stderr");
     return {
@@ -471,6 +610,9 @@ function execResultBuild(toolMessage: ToolResultMessage): ExecResult {
         ...(cwd ? { cwd } : {}),
         ...(exitCode !== undefined ? { exitCode } : {}),
         ...(signal ? { signal } : {}),
+        ...(processId ? { processId } : {}),
+        ...(running !== undefined ? { running } : {}),
+        ...(timedOut !== undefined ? { timedOut } : {}),
         ...(stdout !== undefined ? { stdout } : {}),
         ...(stderr !== undefined ? { stderr } : {})
     };
@@ -493,6 +635,11 @@ function detailNumberGet(details: Record<string, unknown>, key: string): number 
     return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+function detailBooleanGet(details: Record<string, unknown>, key: string): boolean | undefined {
+    const value = details[key];
+    return typeof value === "boolean" ? value : undefined;
+}
+
 function jsonValueIs(value: unknown): value is ToolResultValue {
     if (value === null) {
         return true;
@@ -511,6 +658,53 @@ function jsonValueIs(value: unknown): value is ToolResultValue {
 
 export function formatExecOutput(stdout: string, stderr: string, failed: boolean): string {
     return formatExecStreams(stdout, stderr, failed).output;
+}
+
+function formatExecResultOutput(result: {
+    stdout: string;
+    stderr: string;
+    timedOut: boolean;
+    running: boolean;
+    processId: string | null;
+    exitCode: number | null;
+    signal: string | null;
+    failed: boolean;
+}): {
+    output: string;
+    stdout?: string;
+    stderr?: string;
+} {
+    const streams = formatExecStreams(result.stdout, result.stderr, result.failed);
+    const payload: Record<string, unknown> = {};
+    if (streams.stdout !== undefined) {
+        payload.stdout = streams.stdout;
+    }
+    if (streams.stderr !== undefined) {
+        payload.stderr = streams.stderr;
+    }
+    if (result.processId) {
+        payload.processId = result.processId;
+    }
+    payload.running = result.running;
+    payload.timedOut = result.timedOut;
+    if (result.exitCode !== null) {
+        payload.exitCode = result.exitCode;
+    }
+    if (result.signal) {
+        payload.signal = result.signal;
+    }
+    if (result.timedOut && result.running) {
+        payload.message = `Process is still running. Use exec_poll for more output or exec_kill to stop it.`;
+    } else if (!result.running && result.signal) {
+        payload.message = `Process exited after ${result.signal}.`;
+    } else if (streams.stdout === undefined && streams.stderr === undefined) {
+        payload.message = result.failed ? "Command failed with no output." : "Command completed with no output.";
+    }
+    return {
+        output: JSON.stringify(payload, null, 2),
+        ...(streams.stdout !== undefined ? { stdout: streams.stdout } : {}),
+        ...(streams.stderr !== undefined ? { stderr: streams.stderr } : {})
+    };
 }
 
 function formatExecStreams(

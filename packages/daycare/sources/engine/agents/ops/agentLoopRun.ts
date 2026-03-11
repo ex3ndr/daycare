@@ -316,7 +316,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             appendHistoryRecord,
             allowedToolNames,
             ...(options.taskExecution ? { taskExecution: options.taskExecution } : {}),
-            abortSignal
+            abortSignal,
+            activeSessionId: agent.state.activeSessionId ?? null
         };
         const trackingToolResolver: ToolResolverApi = {
             listTools: () => toolResolver.listTools(),

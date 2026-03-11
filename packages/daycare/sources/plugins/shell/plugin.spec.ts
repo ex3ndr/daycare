@@ -20,7 +20,7 @@ function pluginApiBuild() {
         registrar,
         fileStore: {},
         inference: { complete: async () => undefined },
-        processes: {},
+        processes: { killAllSessionExecs: vi.fn(async () => 0) },
         mode: "runtime" as const
     };
     return { api, registrar };
@@ -41,6 +41,8 @@ describe("shell plugin", () => {
             "edit",
             "write_output",
             "exec",
+            "exec_poll",
+            "exec_kill",
             "process_start",
             "process_list",
             "process_get",
@@ -61,6 +63,8 @@ describe("shell plugin", () => {
             "edit",
             "write_output",
             "exec",
+            "exec_poll",
+            "exec_kill",
             "process_start",
             "process_list",
             "process_get",
