@@ -8,6 +8,7 @@ import type { Channels } from "../../channels/channels.js";
 import type { Crons } from "../../cron/crons.js";
 import type { Secrets } from "../../secrets/secrets.js";
 import type { Signals } from "../../signals/signals.js";
+import { taskCoreIdIs } from "../../tasks/core/taskCoreIdIs.js";
 
 const schema = Type.Object({}, { additionalProperties: false });
 
@@ -45,6 +46,7 @@ const topologyTaskSchema = Type.Object(
         title: Type.Union([Type.String(), Type.Null()]),
         description: Type.Union([Type.String(), Type.Null()]),
         updatedAt: Type.Union([Type.Number(), Type.Null()]),
+        isCore: Type.Boolean(),
         triggers: Type.Object(
             {
                 cron: Type.Array(topologyCronTriggerSchema)
@@ -192,6 +194,7 @@ type TopologyTask = {
     title: string | null;
     description: string | null;
     updatedAt: number | null;
+    isCore: boolean;
     triggers: {
         cron: TopologyCronTrigger[];
     };
@@ -371,6 +374,7 @@ export function topologyTool(
                     title: task.title,
                     description: task.description,
                     updatedAt: task.updatedAt,
+                    isCore: taskCoreIdIs(task.id),
                     triggers: {
                         cron: []
                     }
