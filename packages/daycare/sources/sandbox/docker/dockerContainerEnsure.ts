@@ -59,6 +59,8 @@ const DOCKER_TMPFS_VAR_TMP_ENABLED = "1";
 const DOCKER_TMPFS_VAR_RUN_ENABLED = "1";
 const DOCKER_TMPFS_DEV_SHM_ENABLED = "1";
 const DOCKER_SHM_SIZE_BYTES = 1024 * 1024 * 1024;
+const DOCKER_INIT_LABEL = "daycare.init";
+const DOCKER_INIT_ENABLED = "1";
 const DAYCARE_RUNTIME_IMAGE_REF = "daycare-runtime:latest";
 
 /**
@@ -155,12 +157,14 @@ export async function dockerContainerEnsure(
                 [DOCKER_TMPFS_RUN_LABEL]: DOCKER_TMPFS_RUN_ENABLED,
                 [DOCKER_TMPFS_VAR_TMP_LABEL]: DOCKER_TMPFS_VAR_TMP_ENABLED,
                 [DOCKER_TMPFS_VAR_RUN_LABEL]: DOCKER_TMPFS_VAR_RUN_ENABLED,
-                [DOCKER_TMPFS_DEV_SHM_LABEL]: DOCKER_TMPFS_DEV_SHM_ENABLED
+                [DOCKER_TMPFS_DEV_SHM_LABEL]: DOCKER_TMPFS_DEV_SHM_ENABLED,
+                [DOCKER_INIT_LABEL]: DOCKER_INIT_ENABLED
             },
             HostConfig: {
                 Binds: binds,
                 NetworkMode: config.networkName,
                 ShmSize: DOCKER_SHM_SIZE_BYTES,
+                Init: true,
                 Tmpfs: {
                     "/tmp": "rw",
                     "/run": "rw",
@@ -251,6 +255,7 @@ function containerStaleReasonResolve(
     const tmpfsVarTmpLabel = labels?.[DOCKER_TMPFS_VAR_TMP_LABEL];
     const tmpfsVarRunLabel = labels?.[DOCKER_TMPFS_VAR_RUN_LABEL];
     const tmpfsDevShmLabel = labels?.[DOCKER_TMPFS_DEV_SHM_LABEL];
+    const initLabel = labels?.[DOCKER_INIT_LABEL];
     if (!version) {
         return "missing-version-label";
     }
@@ -353,6 +358,9 @@ function containerStaleReasonResolve(
     }
     if (tmpfsDevShmLabel !== DOCKER_TMPFS_DEV_SHM_ENABLED) {
         return `tmpfs-dev-shm-mismatch:${tmpfsDevShmLabel}->${DOCKER_TMPFS_DEV_SHM_ENABLED}`;
+    }
+    if (initLabel !== DOCKER_INIT_ENABLED) {
+        return "missing-init-label";
     }
     return null;
 }

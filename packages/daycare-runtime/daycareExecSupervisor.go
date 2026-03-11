@@ -73,6 +73,13 @@ func main() {
     go supervisor.signalLoop()
 
     waitError := cmd.Wait()
+
+    // Kill any remaining processes in the child's process group
+    cleanupProcessGroup(cmd.Process.Pid)
+
+    // Reap any zombie children
+    reapZombies()
+
     supervisor.close()
 
     os.Exit(exitStatus(waitError))
@@ -204,6 +211,26 @@ func killIgnoreMissing(pid int, signalValue syscall.Signal) {
 
     if errors.Is(err, syscall.ESRCH) || errors.Is(err, syscall.EPERM) {
         return
+    }
+}
+
+func cleanupProcessGroup(pid int) {
+    if pid <= 0 {
+        return
+    }
+    // Send SIGKILL to the entire process group
+    // Negative PID targets the process group
+    _ = syscall.Kill(-pid, syscall.SIGKILL)
+}
+
+func reapZombies() {
+    // Reap all zombie children with a bounded loop
+    for i := 0; i < 1000; i++ {
+        var ws syscall.WaitStatus
+        pid, err := syscall.Wait4(-1, &ws, syscall.WNOHANG, nil)
+        if pid <= 0 || err != nil {
+            break
+        }
     }
 }
 
