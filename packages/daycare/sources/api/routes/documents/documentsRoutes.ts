@@ -5,6 +5,7 @@ import { documentsCreate } from "./documentsCreate.js";
 import { documentsDelete } from "./documentsDelete.js";
 import { documentsFindById } from "./documentsFindById.js";
 import { documentsTree } from "./documentsTree.js";
+import { documentsRestore } from "./documentsRestore.js";
 import { documentsUpdate } from "./documentsUpdate.js";
 
 export type DocumentsRouteContext = {
@@ -50,6 +51,19 @@ export async function documentsRouteHandle(
 
     if (pathname === "/documents" && request.method === "POST") {
         await documentsCreate(request, response, context);
+        return true;
+    }
+
+    const restoreMatch = pathname.match(/^\/documents\/([^/]+)\/restore$/);
+    if (restoreMatch?.[1] && request.method === "POST") {
+        const id = decodeURIComponent(restoreMatch[1]);
+        const result = await documentsRestore({
+            ctx: context.ctx,
+            id,
+            documents: context.documents
+        });
+        const statusCode = result.ok ? 200 : result.error.includes("not found") ? 404 : 400;
+        context.sendJson(response, statusCode, result);
         return true;
     }
 

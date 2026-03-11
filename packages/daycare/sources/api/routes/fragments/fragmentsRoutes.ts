@@ -2,6 +2,7 @@ import type http from "node:http";
 import type { Context } from "@/types";
 import type { FragmentsRepository } from "../../../storage/fragmentsRepository.js";
 import { fragmentsArchive } from "./fragmentsArchive.js";
+import { fragmentsRestore } from "./fragmentsRestore.js";
 import { fragmentsCreate } from "./fragmentsCreate.js";
 import { fragmentsFindById } from "./fragmentsFindById.js";
 import { fragmentsList } from "./fragmentsList.js";
@@ -82,6 +83,17 @@ export async function fragmentsRouteHandle(
         const result = await fragmentsArchive({
             ctx: context.ctx,
             id: decodeURIComponent(archiveMatch[1]),
+            fragments: context.fragments
+        });
+        context.sendJson(response, result.ok ? 200 : result.error.includes("not found") ? 404 : 400, result);
+        return true;
+    }
+
+    const restoreMatch = pathname.match(/^\/fragments\/([^/]+)\/restore$/);
+    if (restoreMatch?.[1] && request.method === "POST") {
+        const result = await fragmentsRestore({
+            ctx: context.ctx,
+            id: decodeURIComponent(restoreMatch[1]),
             fragments: context.fragments
         });
         context.sendJson(response, result.ok ? 200 : result.error.includes("not found") ? 404 : 400, result);

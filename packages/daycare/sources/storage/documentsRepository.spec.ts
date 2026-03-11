@@ -379,4 +379,41 @@ describe("DocumentsRepository", () => {
             storage.connection.close();
         }
     });
+
+    it("restores deleted documents", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new DocumentsRepository(storage.db);
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+
+            await repo.create(ctx, {
+                id: "restorable",
+                slug: "restorable",
+                title: "Restorable Doc",
+                description: "Can be restored",
+                body: "",
+                createdAt: 1,
+                updatedAt: 1
+            });
+
+            expect(await repo.delete(ctx, "restorable")).toBe(true);
+            await expect(repo.findById(ctx, "restorable")).resolves.toBeNull();
+
+            const deleted = await repo.findAnyById(ctx, "restorable");
+            expect(typeof deleted?.validTo).toBe("number");
+
+            const restored = await repo.restore(ctx, "restorable");
+            expect(restored.validTo).toBeNull();
+            expect(restored.title).toBe("Restorable Doc");
+
+            const found = await repo.findById(ctx, "restorable");
+            expect(found).not.toBeNull();
+            expect(found?.id).toBe("restorable");
+
+            await expect(repo.restore(ctx, "restorable")).rejects.toThrow("not deleted");
+            await expect(repo.restore(ctx, "nonexistent")).rejects.toThrow("not found");
+        } finally {
+            storage.connection.close();
+        }
+    });
 });
