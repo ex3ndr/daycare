@@ -104,10 +104,10 @@ const execSchema = Type.Object(
                     "Loads environment variables from dotenv. Use true to load .env from cwd, or pass an explicit dotenv file path."
             })
         ),
-        detachOnTimeout: Type.Optional(
+        background: Type.Optional(
             Type.Boolean({
                 description:
-                    "Defaults to true. When true, long-running commands keep running after timeoutMs and return a processId for exec_poll/exec_kill. Set false to stop the command at timeout instead."
+                    "When true, start the command in the background immediately and return a processId for exec_poll/exec_kill without waiting for output or exit."
             })
         )
     },
@@ -387,7 +387,7 @@ export function buildExecTool(processes: Processes): ToolDefinition {
         tool: {
             name: "exec",
             description:
-                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Optional secrets inject saved secret env vars and override explicit env values. timeoutMs has a maximum of 300000ms (5 minutes). By default, commands that are still running at timeoutMs stay attached to the current agent session and return a processId for exec_poll/exec_kill; set detachOnTimeout=false to stop the command at timeout instead. Exec uses the caller's granted write directories and global read access with a protected deny-list. Outbound networking is unrestricted. Returns stdout/stderr and lifecycle details.",
+                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Optional secrets inject saved secret env vars and override explicit env values. timeoutMs has a maximum of 300000ms (5 minutes). By default, exec waits for the command to finish and stops it if it is still running at timeoutMs. Set background=true to start the command in the background immediately and get a processId for exec_poll/exec_kill. Exec uses the caller's granted write directories and global read access with a protected deny-list. Outbound networking is unrestricted. Returns stdout/stderr and lifecycle details.",
             parameters: execSchema
         },
         returns: execReturns,
@@ -408,7 +408,7 @@ export function buildExecTool(processes: Processes): ToolDefinition {
                 env: payload.env,
                 secrets: resolvedSecrets,
                 dotenv: payload.dotenv,
-                detachOnTimeout: payload.detachOnTimeout ?? true,
+                background: payload.background === true,
                 abortSignal: toolContext.abortSignal
             });
             const formattedOutput = formatExecResultOutput(result);
@@ -693,8 +693,10 @@ function formatExecResultOutput(result: {
     if (result.signal) {
         payload.signal = result.signal;
     }
-    if (result.timedOut && result.running) {
-        payload.message = `Process is still running. Use exec_poll for more output or exec_kill to stop it.`;
+    if (result.processId && result.running) {
+        payload.message = result.timedOut
+            ? "Process hit timeout and is still running. Use exec_poll for more output or exec_kill to stop it."
+            : "Process started in background. Use exec_poll for output or exec_kill to stop it.";
     } else if (!result.running && result.signal) {
         payload.message = `Process exited after ${result.signal}.`;
     } else if (streams.stdout === undefined && streams.stderr === undefined) {

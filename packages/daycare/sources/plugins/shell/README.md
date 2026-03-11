@@ -27,13 +27,13 @@ variables override both dotenv and inline `env` values.
 - Truncation notices include stream and dropped char count, for example:
   - `... (12,345 chars truncated from stdout)`
 - Tool-level truncation applies an additional `8000`-char tail-biased safety limit per text block before inference context storage.
-- `exec` waits up to `timeoutMs` for the process to exit. If the process is still running, it stays attached to the
-  current agent session and returns a `processId`.
+- `exec` waits up to `timeoutMs` for the process to exit. If the process is still running at timeout, the command is
+  stopped and the result is returned with `timedOut: true`.
+- Set `background: true` on `exec` to start the command in the background immediately and return a `processId`.
 - Use `exec_poll` with that `processId` to wait for more output. Each poll only returns logs that changed since the last
   `exec` or `exec_poll` call for that process.
 - Use `exec_kill` to stop a running exec process. Session-scoped execs are also killed automatically when the owning
   agent session ends or the agent dies.
-- Set `detachOnTimeout: false` on `exec` to restore the legacy behavior of stopping the command at `timeoutMs`.
 
 ## Durable Process Tools
 

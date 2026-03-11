@@ -9,7 +9,7 @@ describe("SessionExecs", () => {
         vi.restoreAllMocks();
     });
 
-    it("returns a process id on timeout and only new output on poll", async () => {
+    it("returns a process id immediately in background mode and only new output on poll", async () => {
         const execs = new SessionExecs();
         const runtime = handleBuild();
         const ctx = contextBuild();
@@ -25,11 +25,11 @@ describe("SessionExecs", () => {
             sandbox,
             command: "sleep 5",
             timeoutMs: 20,
-            detachOnTimeout: true
+            background: true
         });
 
         expect(start.processId).toBeTruthy();
-        expect(start.timedOut).toBe(true);
+        expect(start.timedOut).toBe(false);
         expect(start.running).toBe(true);
 
         runtime.stdout.write("first\n");
@@ -73,7 +73,7 @@ describe("SessionExecs", () => {
             sandbox,
             command: "sleep 5",
             timeoutMs: 20,
-            detachOnTimeout: true
+            background: true
         });
 
         expect(start.processId).toBeTruthy();
@@ -99,12 +99,95 @@ describe("SessionExecs", () => {
             sandbox,
             command: "sleep 5",
             timeoutMs: 20,
-            detachOnTimeout: true
+            background: true
         });
 
         await expect(execs.poll(ctx, "session-4", start.processId!, 20)).rejects.toThrow(
             `Unknown process id: ${start.processId}`
         );
+    });
+
+    it("waits for foreground execs to exit even when output arrives before timeout", async () => {
+        const execs = new SessionExecs();
+        const runtime = handleBuild();
+        const ctx = contextBuild();
+        const sandbox = {
+            workingDir: "/workspace",
+            exec: vi.fn(async () => runtime.handle)
+        } as never;
+
+        const startPromise = execs.start({
+            ctx,
+            agentId: ctx.agentId,
+            sessionId: "session-4",
+            sandbox,
+            command: "echo ok && sleep 1",
+            timeoutMs: 100,
+            background: false
+        });
+
+        setTimeout(() => {
+            runtime.stdout.write("first\n");
+        }, 10);
+        setTimeout(() => {
+            runtime.stdout.end();
+            runtime.stderr.end();
+            runtime.resolveWait({
+                stdout: "",
+                stderr: "",
+                exitCode: 0,
+                signal: null,
+                failed: false,
+                cwd: "/workspace"
+            });
+        }, 20);
+
+        const result = await startPromise;
+        expect(result.processId).toBeNull();
+        expect(result.running).toBe(false);
+        expect(result.stdout).toBe("first\n");
+        expect(result.exitCode).toBe(0);
+    });
+
+    it("kills foreground execs when they hit timeout", async () => {
+        const execs = new SessionExecs();
+        const runtime = handleBuild();
+        runtime.kill.mockImplementation(async (...args: unknown[]) => {
+            const signal = typeof args[0] === "string" ? args[0] : "SIGTERM";
+            runtime.stdout.write("partial\n");
+            runtime.stdout.end();
+            runtime.stderr.end();
+            runtime.resolveWait({
+                stdout: "",
+                stderr: "",
+                exitCode: null,
+                signal,
+                failed: true,
+                cwd: "/workspace"
+            });
+        });
+        const ctx = contextBuild();
+        const sandbox = {
+            workingDir: "/workspace",
+            exec: vi.fn(async () => runtime.handle)
+        } as never;
+
+        const result = await execs.start({
+            ctx,
+            agentId: ctx.agentId,
+            sessionId: "session-5",
+            sandbox,
+            command: "sleep 5",
+            timeoutMs: 20,
+            background: false
+        });
+
+        expect(runtime.kill).toHaveBeenCalledWith("SIGTERM");
+        expect(result.processId).toBeNull();
+        expect(result.running).toBe(false);
+        expect(result.timedOut).toBe(true);
+        expect(result.signal).toBe("SIGTERM");
+        expect(result.stdout).toBe("partial\n");
     });
 });
 

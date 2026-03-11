@@ -17,7 +17,7 @@ export type SessionExecStartInput = {
     secrets?: Record<string, string>;
     dotenv?: boolean | string;
     timeoutMs: number;
-    detachOnTimeout: boolean;
+    background: boolean;
     abortSignal?: AbortSignal;
 };
 
@@ -57,7 +57,7 @@ type SessionExecEntry = {
 };
 
 /**
- * Manages foreground exec sessions that outlive one tool call but remain scoped to an agent session.
+ * Manages session-scoped execs that can either complete inline or continue across poll/kill calls.
  * Expects: callers kill entries on session/agent shutdown through the provided helpers.
  */
 export class SessionExecs {
@@ -76,21 +76,42 @@ export class SessionExecs {
         this.entries.set(entry.id, entry);
 
         try {
-            const initial = await this.collectUntil(entry, input.timeoutMs, input.abortSignal);
-            if (!initial.running && !initial.timedOut) {
+            if (input.background) {
+                return {
+                    processId: entry.id,
+                    command: entry.command,
+                    cwd: entry.cwd,
+                    stdout: "",
+                    stderr: "",
+                    timedOut: false,
+                    running: entry.running,
+                    exitCode: entry.exitCode,
+                    signal: entry.signal,
+                    failed: entry.failed
+                };
+            }
+
+            const waitOutcome = await this.waitForExitOrTimeout(entry, input.timeoutMs, input.abortSignal);
+            if (waitOutcome === "completed") {
+                const result = this.entryConsume(entry, false);
                 this.entryRemoveIfComplete(entry);
-                return initial;
+                return result;
             }
 
-            if (!input.detachOnTimeout && initial.running) {
-                const stopped = await this.killInternal(entry, "SIGTERM", EXEC_KILL_WAIT_TIMEOUT_MS, input.abortSignal);
-                if (!stopped.running) {
-                    return stopped;
-                }
-                return this.killInternal(entry, "SIGKILL", EXEC_KILL_WAIT_TIMEOUT_MS, input.abortSignal);
+            const stopped = await this.killInternal(entry, "SIGTERM", EXEC_KILL_WAIT_TIMEOUT_MS, input.abortSignal);
+            if (!stopped.running) {
+                return {
+                    ...stopped,
+                    timedOut: true
+                };
             }
-
-            return initial;
+            const killed = await this.killInternal(entry, "SIGKILL", EXEC_KILL_WAIT_TIMEOUT_MS, input.abortSignal);
+            return {
+                ...killed,
+                stdout: `${stopped.stdout}${killed.stdout}`,
+                stderr: `${stopped.stderr}${killed.stderr}`,
+                timedOut: true
+            };
         } catch (error) {
             this.entries.delete(entry.id);
             void handle.kill("SIGTERM").catch(() => undefined);
@@ -287,6 +308,28 @@ export class SessionExecs {
             throw abortErrorBuild();
         }
         return this.entryConsume(entry, outcome === "timeout" && entry.running);
+    }
+
+    private async waitForExitOrTimeout(
+        entry: SessionExecEntry,
+        timeoutMs: number,
+        abortSignal?: AbortSignal
+    ): Promise<"completed" | "timeout"> {
+        const deadline = Date.now() + timeoutMs;
+        while (entry.running) {
+            const remainingMs = deadline - Date.now();
+            if (remainingMs <= 0) {
+                return "timeout";
+            }
+            const outcome = await entryWait(entry, entry.changeVersion, remainingMs, abortSignal);
+            if (outcome === "aborted") {
+                throw abortErrorBuild();
+            }
+            if (outcome === "timeout") {
+                return entry.running ? "timeout" : "completed";
+            }
+        }
+        return "completed";
     }
 
     private async killInternal(

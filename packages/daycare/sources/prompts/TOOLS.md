@@ -6,7 +6,7 @@ Learned tool knowledge — tips, pitfalls, and patterns discovered through use. 
 
 | Tool | Insight |
 |------|---------|
-| `exec` | When `exec` times out it can keep the process alive and return a `processId`; use `exec_poll` for additional output and `exec_kill` to stop it. Set `detachOnTimeout=false` only when you explicitly want timeout to stop the command. |
+| `exec` | `exec` waits for completion by default and stops the command at `timeoutMs`. Set `background=true` to start it immediately in the background and use `exec_poll` / `exec_kill` with the returned `processId`. |
 
 ## Patterns
 

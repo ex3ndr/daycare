@@ -207,7 +207,7 @@ describe("exec tool", () => {
                 sandbox: context.sandbox,
                 command: "echo ok",
                 timeoutMs: 30_000,
-                detachOnTimeout: true,
+                background: false,
                 abortSignal: undefined
             })
         );
@@ -242,7 +242,8 @@ describe("exec tool", () => {
         expect(execStartForContext).toHaveBeenCalledWith(
             expect.objectContaining({
                 env: { NODE_ENV: "test", PORT: 3000, DEBUG: true },
-                dotenv: ".env.local"
+                dotenv: ".env.local",
+                background: false
             })
         );
     });
@@ -281,7 +282,8 @@ describe("exec tool", () => {
         expect(resolve).toHaveBeenCalledWith(context.ctx, ["openai-key"]);
         expect(execStartForContext).toHaveBeenCalledWith(
             expect.objectContaining({
-                secrets: { OPENAI_API_KEY: "sk-secret" }
+                secrets: { OPENAI_API_KEY: "sk-secret" },
+                background: false
             })
         );
     });
@@ -328,12 +330,44 @@ describe("exec tool", () => {
         await tool.execute({ command: "echo ok" }, context, execToolCall);
         expect(execStartForContext).toHaveBeenCalledWith(
             expect.objectContaining({
+                background: false,
                 abortSignal: abortController.signal
             })
         );
     });
 
-    it("reports running session ids when exec times out", async () => {
+    it("forwards explicit background exec start", async () => {
+        const context = createContext(workingDir);
+        const execStartForContext = vi.fn(async () => ({
+            processId: "process-1",
+            command: "sleep 5",
+            cwd: workingDir,
+            stdout: "",
+            stderr: "",
+            timedOut: false,
+            running: true,
+            exitCode: null,
+            signal: null,
+            failed: false
+        }));
+        const tool = buildExecTool({ execStartForContext } as never);
+
+        const result = await tool.execute({ command: "sleep 5", background: true }, context, execToolCall);
+        const text = toolMessageText(result.toolMessage.content);
+
+        expect(execStartForContext).toHaveBeenCalledWith(
+            expect.objectContaining({
+                background: true
+            })
+        );
+        expect(result.toolMessage.isError).toBe(false);
+        expect(result.typedResult.processId).toBe("process-1");
+        expect(result.typedResult.running).toBe(true);
+        expect(text).toContain('"processId": "process-1"');
+        expect(text).toContain("exec_poll");
+    });
+
+    it("reports process ids when background exec is running", async () => {
         const context = createContext(workingDir);
         const tool = buildExecTool({
             execStartForContext: vi.fn(async () => ({
@@ -342,7 +376,7 @@ describe("exec tool", () => {
                 cwd: workingDir,
                 stdout: "",
                 stderr: "",
-                timedOut: true,
+                timedOut: false,
                 running: true,
                 exitCode: null,
                 signal: null,
@@ -350,12 +384,12 @@ describe("exec tool", () => {
             }))
         } as never);
 
-        const result = await tool.execute({ command: "sleep 5" }, context, execToolCall);
+        const result = await tool.execute({ command: "sleep 5", background: true }, context, execToolCall);
         const text = toolMessageText(result.toolMessage.content);
 
         expect(result.toolMessage.isError).toBe(false);
         expect(result.typedResult.processId).toBe("process-1");
-        expect(result.typedResult.timedOut).toBe(true);
+        expect(result.typedResult.timedOut).toBe(false);
         expect(result.typedResult.running).toBe(true);
         expect(text).toContain('"processId": "process-1"');
         expect(text).toContain("exec_poll");
