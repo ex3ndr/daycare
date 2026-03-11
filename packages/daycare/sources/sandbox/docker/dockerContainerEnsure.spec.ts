@@ -513,7 +513,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.tmpfs.run": "1",
                 "daycare.tmpfs.var_tmp": "1",
                 "daycare.tmpfs.var_run": "1",
-                "daycare.tmpfs.dev_shm": "1"
+                "daycare.tmpfs.dev_shm": "1",
+                "daycare.init": "1"
             },
             HostConfig: {
                 Binds: [
@@ -524,6 +525,7 @@ describe("dockerContainerEnsure", () => {
                 ],
                 NetworkMode: "daycare-isolated",
                 ShmSize: 1024 * 1024 * 1024,
+                Init: true,
                 Tmpfs: {
                     "/tmp": "rw",
                     "/run": "rw",
@@ -586,7 +588,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.tmpfs.run": "1",
                 "daycare.tmpfs.var_tmp": "1",
                 "daycare.tmpfs.var_run": "1",
-                "daycare.tmpfs.dev_shm": "1"
+                "daycare.tmpfs.dev_shm": "1",
+                "daycare.init": "1"
             },
             HostConfig: {
                 Binds: [
@@ -596,6 +599,7 @@ describe("dockerContainerEnsure", () => {
                 ],
                 NetworkMode: "daycare-local",
                 ShmSize: 1024 * 1024 * 1024,
+                Init: true,
                 Tmpfs: {
                     "/tmp": "rw",
                     "/run": "rw",
@@ -657,7 +661,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.tmpfs.run": "1",
                 "daycare.tmpfs.var_tmp": "1",
                 "daycare.tmpfs.var_run": "1",
-                "daycare.tmpfs.dev_shm": "1"
+                "daycare.tmpfs.dev_shm": "1",
+                "daycare.init": "1"
             },
             HostConfig: {
                 Binds: [
@@ -668,6 +673,7 @@ describe("dockerContainerEnsure", () => {
                 ],
                 NetworkMode: "daycare-local",
                 ShmSize: 1024 * 1024 * 1024,
+                Init: true,
                 Tmpfs: {
                     "/tmp": "rw",
                     "/run": "rw",
@@ -803,7 +809,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.tmpfs.run": "1",
                 "daycare.tmpfs.var_tmp": "1",
                 "daycare.tmpfs.var_run": "1",
-                "daycare.tmpfs.dev_shm": "1"
+                "daycare.tmpfs.dev_shm": "1",
+                "daycare.init": "1"
             },
             HostConfig: {
                 Binds: [
@@ -814,6 +821,7 @@ describe("dockerContainerEnsure", () => {
                 ],
                 NetworkMode: "daycare-isolated",
                 ShmSize: 1024 * 1024 * 1024,
+                Init: true,
                 Tmpfs: {
                     "/tmp": "rw",
                     "/run": "rw",
@@ -916,7 +924,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.tmpfs.run": "1",
                 "daycare.tmpfs.var_tmp": "1",
                 "daycare.tmpfs.var_run": "1",
-                "daycare.tmpfs.dev_shm": "1"
+                "daycare.tmpfs.dev_shm": "1",
+                "daycare.init": "1"
             },
             HostConfig: {
                 Binds: [
@@ -927,6 +936,7 @@ describe("dockerContainerEnsure", () => {
                 ],
                 NetworkMode: "daycare-isolated",
                 ShmSize: 1024 * 1024 * 1024,
+                Init: true,
                 Tmpfs: {
                     "/tmp": "rw",
                     "/run": "rw",
@@ -990,7 +1000,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.tmpfs.run": "1",
                 "daycare.tmpfs.var_tmp": "1",
                 "daycare.tmpfs.var_run": "1",
-                "daycare.tmpfs.dev_shm": "1"
+                "daycare.tmpfs.dev_shm": "1",
+                "daycare.init": "1"
             },
             HostConfig: {
                 Binds: [
@@ -1001,6 +1012,7 @@ describe("dockerContainerEnsure", () => {
                 ],
                 NetworkMode: "daycare-isolated",
                 ShmSize: 1024 * 1024 * 1024,
+                Init: true,
                 Tmpfs: {
                     "/tmp": "rw",
                     "/run": "rw",
@@ -1203,8 +1215,10 @@ describe("dockerContainerEnsure", () => {
 
         await dockerContainerEnsure(docker, baseConfig);
 
-        expect(docker.createContainer).toHaveBeenCalledTimes(1);
-        const createCall = (docker.createContainer as ReturnType<typeof vi.fn>).mock.calls[0][0];
-        expect(createCall.HostConfig.Init).toBe(true);
+        const createContainerMock = docker.createContainer as ReturnType<typeof vi.fn>;
+
+        expect(createContainerMock).toHaveBeenCalledTimes(1);
+        const createCall = createContainerMock.mock.calls.at(0)?.at(0);
+        expect(createCall?.HostConfig?.Init).toBe(true);
     });
 });
