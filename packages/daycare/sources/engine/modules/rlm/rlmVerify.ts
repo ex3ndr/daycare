@@ -2,6 +2,7 @@ import { Monty } from "@pydantic/monty";
 import type { ToolExecutionContext } from "@/types";
 import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
 import { RLM_TOOL_NAME, SKIP_TOOL_NAME } from "./rlmConstants.js";
+import { rlmRuntimeTools } from "./rlmRuntimeTools.js";
 import { rlmToolsForContextResolve } from "./rlmToolsForContextResolve.js";
 
 const runtimePrelude = "ToolError = RuntimeError";
@@ -24,6 +25,12 @@ export function rlmVerify(
     const visibleTools = rlmToolsForContextResolve(toolResolver, context).filter((tool) => tool.name !== RLM_TOOL_NAME);
     const preamble = montyPreambleBuild(visibleTools);
     const externalFunctions = visibleTools.map((tool) => tool.name);
+    for (const runtimeTool of rlmRuntimeTools()) {
+        if (externalFunctions.includes(runtimeTool.name)) {
+            continue;
+        }
+        externalFunctions.push(runtimeTool.name);
+    }
     if (!externalFunctions.includes(SKIP_TOOL_NAME)) {
         externalFunctions.push(SKIP_TOOL_NAME);
     }

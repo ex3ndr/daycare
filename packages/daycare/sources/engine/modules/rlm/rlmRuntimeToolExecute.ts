@@ -1,4 +1,5 @@
-import { JSON_PARSE_TOOL_NAME, JSON_STRINGIFY_TOOL_NAME } from "./rlmConstants.js";
+import type { ToolExecutionContext } from "@/types";
+import { JSON_PARSE_TOOL_NAME, JSON_STRINGIFY_TOOL_NAME, STEP_TOOL_NAME } from "./rlmConstants.js";
 
 type RuntimeExecuteHandled = {
     handled: true;
@@ -15,7 +16,11 @@ export type RlmRuntimeToolExecuteResult = RuntimeExecuteHandled | RuntimeExecute
  * Executes built-in RLM runtime helpers that do not go through ToolResolver.
  * Expects: args already passed through rlmArgsConvert using matching runtime tool schemas.
  */
-export function rlmRuntimeToolExecute(toolName: string, args: unknown): RlmRuntimeToolExecuteResult {
+export async function rlmRuntimeToolExecute(
+    toolName: string,
+    args: unknown,
+    context: ToolExecutionContext
+): Promise<RlmRuntimeToolExecuteResult> {
     if (toolName === JSON_PARSE_TOOL_NAME) {
         const payload = argsRecordResolve(args);
         const text = argsStringResolve(payload, "text");
@@ -39,6 +44,37 @@ export function rlmRuntimeToolExecute(toolName: string, args: unknown): RlmRunti
             value: {
                 value: serialized
             }
+        };
+    }
+
+    if (toolName === STEP_TOOL_NAME) {
+        const payload = argsRecordResolve(args);
+        const prompt = argsStringResolve(payload, "prompt").trim();
+        if (prompt.length === 0) {
+            throw new Error("prompt must be a non-empty string.");
+        }
+        if (!context.taskExecution) {
+            throw new Error("step() is allowed only in tasks.");
+        }
+        const result = await context.agentSystem.postAndAwait(
+            context.ctx,
+            { agentId: context.ctx.agentId },
+            {
+                type: "system_message",
+                text: prompt,
+                origin: context.source,
+                context: context.messageContext
+            }
+        );
+        if (result.type !== "system_message") {
+            throw new Error(`step() expected system_message result, got ${result.type}.`);
+        }
+        if (result.responseError) {
+            throw new Error(result.executionErrorText ?? "step() target agent execution failed.");
+        }
+        return {
+            handled: true,
+            value: null
         };
     }
 

@@ -18,6 +18,7 @@ describe("rlmVerify", () => {
         expect(result.preamble).toContain("def echo");
         expect(result.externalFunctions).toContain("echo");
         expect(result.externalFunctions).toContain("skip");
+        expect(result.externalFunctions).toContain("step");
     });
 
     it("fails when code calls an undefined function", () => {

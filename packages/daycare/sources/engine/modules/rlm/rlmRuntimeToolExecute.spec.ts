@@ -1,40 +1,51 @@
-import { describe, expect, it } from "vitest";
-
+import { describe, expect, it, vi } from "vitest";
+import type { ToolExecutionContext } from "@/types";
 import { rlmRuntimeToolExecute } from "./rlmRuntimeToolExecute.js";
 
 describe("rlmRuntimeToolExecute", () => {
-    it("returns not handled for non-runtime tools", () => {
-        const result = rlmRuntimeToolExecute("echo", { text: "hello" });
-        expect(result).toEqual({ handled: false });
+    it("awaits agent execution for step() during tasks", async () => {
+        const postAndAwait = vi.fn(async () => ({ type: "system_message" as const, responseText: "ok" }));
+
+        const result = await rlmRuntimeToolExecute(
+            "step",
+            { prompt: "continue" },
+            contextBuild({ postAndAwait }, true)
+        );
+
+        expect(result).toEqual({ handled: true, value: null });
+        expect(postAndAwait).toHaveBeenCalledWith(
+            expect.objectContaining({ agentId: "agent-1", userId: "user-1" }),
+            { agentId: "agent-1" },
+            expect.objectContaining({
+                type: "system_message",
+                text: "continue",
+                origin: "task"
+            })
+        );
     });
 
-    it("parses json_parse text input into structured value", () => {
-        const result = rlmRuntimeToolExecute("json_parse", { text: '{"ok":true,"rows":[1,2]}' });
-        expect(result).toEqual({
-            handled: true,
-            value: {
-                value: {
-                    ok: true,
-                    rows: [1, 2]
-                }
-            }
-        });
-    });
-
-    it("serializes json_stringify with optional pretty output", () => {
-        const result = rlmRuntimeToolExecute("json_stringify", {
-            value: { ok: true },
-            pretty: true
-        });
-        expect(result).toEqual({
-            handled: true,
-            value: {
-                value: '{\n  "ok": true\n}'
-            }
-        });
-    });
-
-    it("throws on invalid json_parse input", () => {
-        expect(() => rlmRuntimeToolExecute("json_parse", { text: "{invalid" })).toThrow();
+    it("throws a task-only error for step() outside task execution", async () => {
+        await expect(
+            rlmRuntimeToolExecute("step", { prompt: "continue" }, contextBuild({ postAndAwait: vi.fn() }, false))
+        ).rejects.toThrow("step() is allowed only in tasks.");
     });
 });
+
+function contextBuild(
+    agentSystem: Partial<ToolExecutionContext["agentSystem"]>,
+    taskExecution: boolean
+): ToolExecutionContext {
+    return {
+        connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
+        sandbox: null as unknown as ToolExecutionContext["sandbox"],
+        auth: null as unknown as ToolExecutionContext["auth"],
+        logger: console as unknown as ToolExecutionContext["logger"],
+        assistant: null,
+        agent: null as unknown as ToolExecutionContext["agent"],
+        ctx: { userId: "user-1", agentId: "agent-1" } as ToolExecutionContext["ctx"],
+        source: "task",
+        messageContext: {},
+        agentSystem: agentSystem as ToolExecutionContext["agentSystem"],
+        ...(taskExecution ? { taskExecution: { taskId: "task-1", taskVersion: 1 } } : {})
+    };
+}

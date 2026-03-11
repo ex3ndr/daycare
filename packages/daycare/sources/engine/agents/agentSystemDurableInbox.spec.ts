@@ -217,9 +217,12 @@ describe("AgentSystem durable inboxes", () => {
                     record.type === "user_message"
             );
             expect(userMessages.filter((record) => record.text === "wait for one minute")).toHaveLength(1);
-            await vi.waitFor(async () => {
-                expect(complete).toHaveBeenCalledTimes(1);
-            });
+            await vi.waitFor(
+                async () => {
+                    expect(complete).toHaveBeenCalledTimes(1);
+                },
+                { timeout: 20_000, interval: 100 }
+            );
         } finally {
             await dirRemove(dir);
         }

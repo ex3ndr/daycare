@@ -82,7 +82,7 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
         if (argsError) {
             throw argsError;
         }
-        const runtimeResult = rlmRuntimeToolExecute(tool.name, parsedArgs);
+        const runtimeResult = await rlmRuntimeToolExecute(tool.name, parsedArgs, options.context);
         if (runtimeResult.handled) {
             toolResultText = rlmValueFormat(runtimeResult.value);
             resumeOptions = {

@@ -41,6 +41,10 @@ export type ToolExecutionContext<_State = Record<string, unknown>> = {
     appendHistoryRecord?: (record: AgentHistoryRecord) => Promise<void>;
     pythonExecution?: boolean;
     print?: (stream: "stdout" | "stderr", text: string) => void;
+    taskExecution?: {
+        taskId: string;
+        taskVersion?: number | null;
+    };
     allowedToolNames?: ReadonlySet<string>;
     abortSignal?: AbortSignal;
 };

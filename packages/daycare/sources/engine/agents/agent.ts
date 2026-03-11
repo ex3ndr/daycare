@@ -715,7 +715,11 @@ export class Agent {
             source: input.source,
             messageContext: input.messageContext,
             inputValues: input.inputValues,
-            inputSchema: resolved.inputSchema
+            inputSchema: resolved.inputSchema,
+            taskExecution: {
+                taskId: input.taskId,
+                taskVersion: input.taskVersion
+            }
         });
     }
 
@@ -725,6 +729,10 @@ export class Agent {
         messageContext: MessageContext;
         inputValues?: Record<string, unknown> | null;
         inputSchema?: TaskParameter[] | null;
+        taskExecution?: {
+            taskId: string;
+            taskVersion?: number | null;
+        };
     }): Promise<{ output: string; errorMessage: string | null; skipTurn: boolean }> {
         const now = Date.now();
         const source = input.source.trim().length > 0 ? input.source : "system";
@@ -765,6 +773,7 @@ export class Agent {
             logger,
             appendHistoryRecord: (record) => agentHistoryAppend(this.agentSystem.storage, this.ctx, record),
             notifySubagentFailure: (reason, error) => this.notifySubagentFailure(reason, error),
+            taskExecution: input.taskExecution,
             initialPhase: {
                 type: "vm_start",
                 blocks: [input.code],
@@ -924,7 +933,15 @@ export class Agent {
                 source: item.origin ?? "system",
                 messageContext: item.context ?? {},
                 inputValues: item.inputs,
-                inputSchema
+                inputSchema,
+                ...(taskReference
+                    ? {
+                          taskExecution: {
+                              taskId: taskReference.id,
+                              taskVersion: taskReference.version
+                          }
+                      }
+                    : {})
             });
             if (run.skipTurn) {
                 logger.info(

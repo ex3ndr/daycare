@@ -24,6 +24,7 @@ import {
     rlmPrintCaptureFlushTrailing
 } from "../../modules/rlm/rlmPrintCapture.js";
 import { rlmResultTextBuild } from "../../modules/rlm/rlmResultTextBuild.js";
+import { rlmRuntimeTools } from "../../modules/rlm/rlmRuntimeTools.js";
 import { rlmSnapshotLoad } from "../../modules/rlm/rlmSnapshotLoad.js";
 import { rlmSnapshotSave } from "../../modules/rlm/rlmSnapshotSave.js";
 import { rlmStepResume } from "../../modules/rlm/rlmStepResume.js";
@@ -86,6 +87,10 @@ type AgentLoopRunOptions = {
     initialPhase?: AgentLoopPendingPhase;
     stopAfterPendingPhase?: boolean;
     continueAfterRunPythonError?: boolean;
+    taskExecution?: {
+        taskId: string;
+        taskVersion?: number | null;
+    };
 };
 
 type AgentLoopResult = {
@@ -310,6 +315,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             skillsPersonalRoot: options.skillsPersonalRoot,
             appendHistoryRecord,
             allowedToolNames,
+            ...(options.taskExecution ? { taskExecution: options.taskExecution } : {}),
             abortSignal
         };
         const trackingToolResolver: ToolResolverApi = {
@@ -845,7 +851,14 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             blockState.trackingToolResolver,
                             blockState.executionContext
                         ).filter((tool) => tool.name !== RLM_TOOL_NAME);
-                        const externalFunctions = runtimeTools.map((tool) => tool.name);
+                        const toolByName = new Map(runtimeTools.map((tool) => [tool.name, tool]));
+                        for (const runtimeTool of rlmRuntimeTools()) {
+                            if (toolByName.has(runtimeTool.name)) {
+                                continue;
+                            }
+                            toolByName.set(runtimeTool.name, runtimeTool);
+                        }
+                        const externalFunctions = [...toolByName.keys()];
                         if (!externalFunctions.includes(SKIP_TOOL_NAME)) {
                             externalFunctions.push(SKIP_TOOL_NAME);
                         }
@@ -922,6 +935,12 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                             blockState.executionContext
                         ).filter((tool) => tool.name !== RLM_TOOL_NAME);
                         const toolByName = new Map(runtimeTools.map((tool) => [tool.name, tool]));
+                        for (const runtimeTool of rlmRuntimeTools()) {
+                            if (toolByName.has(runtimeTool.name)) {
+                                continue;
+                            }
+                            toolByName.set(runtimeTool.name, runtimeTool);
+                        }
 
                         if (!toolByName.has(phase.snapshot.functionName)) {
                             const functionName = phase.snapshot.functionName;

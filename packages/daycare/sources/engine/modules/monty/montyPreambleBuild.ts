@@ -1,7 +1,7 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import type { TSchema } from "@sinclair/typebox";
 
-import { RLM_TOOL_NAME } from "../rlm/rlmConstants.js";
+import { RLM_TOOL_NAME, STEP_TOOL_NAME } from "../rlm/rlmConstants.js";
 import { rlmRuntimeTools } from "../rlm/rlmRuntimeTools.js";
 import { rlmSkipTool } from "../rlm/rlmSkipTool.js";
 import { montyPythonDocstringEscape } from "./montyPythonDocstringEscape.js";
@@ -48,6 +48,9 @@ export function montyPreambleBuild(tools: Tool[]): string {
         if (!responseTypeName) {
             continue;
         }
+        if (tool.name === STEP_TOOL_NAME) {
+            continue;
+        }
         const responseSchema = responseSchemaResolve(tool);
         const typedDictLines = montyResponseTypedDictLinesBuild(responseTypeName, responseSchema);
         for (const typedDictLine of typedDictLines) {
@@ -63,8 +66,9 @@ export function montyPreambleBuild(tools: Tool[]): string {
         }
         const signature = montyPythonSignatureBuild(tool);
         const description = montyPythonDocstringEscape(tool.description?.trim() || "No description.");
+        const returnType = tool.name === STEP_TOOL_NAME ? "None" : responseTypeName;
 
-        lines.push(`def ${tool.name}(${signature}) -> ${responseTypeName}:`);
+        lines.push(`def ${tool.name}(${signature}) -> ${returnType}:`);
         lines.push(`    """${description}"""`);
         lines.push(`    raise NotImplementedError("${tool.name} is provided by runtime.")`);
         lines.push("");

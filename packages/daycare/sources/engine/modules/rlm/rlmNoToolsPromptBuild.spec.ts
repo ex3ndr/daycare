@@ -35,6 +35,7 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).toContain('EchoResponse = TypedDict("EchoResponse", {})');
         expect(prompt).toContain("def echo() -> EchoResponse:");
         expect(prompt).toContain("def skip() -> SkipResponse:");
+        expect(prompt).toContain("def step(prompt: str) -> None:");
         expect(prompt).toContain("def json_parse(text: str) -> JsonParseResponse:");
         expect(prompt).toContain(
             "def json_stringify(value: Any, pretty: bool | None = None) -> JsonStringifyResponse:"
@@ -78,6 +79,7 @@ describe("rlmNoToolsPromptBuild", () => {
             const tools = engine.modules.tools.listTools();
             const prompt = await rlmNoToolsPromptBuild(tools);
             expect(prompt).toContain("def skip() -> SkipResponse:");
+            expect(prompt).toContain("def step(prompt: str) -> None:");
 
             for (const tool of tools) {
                 const signaturePrefix = `def ${tool.name}(`;
