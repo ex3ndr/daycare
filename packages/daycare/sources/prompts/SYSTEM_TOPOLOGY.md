@@ -24,6 +24,11 @@ Use `task_trigger_add` / `task_trigger_remove` to attach or manage cron or webho
 Use `task_run` to execute a task immediately.
 Use `start_background_workflow` to launch a fresh subagent and kick it off with inline code or a stored task.
 
+For non-trivial software work, prefer the bundled chain:
+- `core:software-development` for prompt -> plan
+- `core:plan-verify` for plan validation
+- `core:ralph-loop` for delegated implementation
+
 **Task code is Python.** When a trigger fires, `code` runs as a Python script with full tool access. Two patterns:
 
 1. **Produce a prompt** — print or return text. The output becomes context for the agent's next LLM turn, so the agent reasons and acts on it.

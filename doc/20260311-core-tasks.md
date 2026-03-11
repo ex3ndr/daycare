@@ -11,10 +11,10 @@ The bundled orchestration set is now:
 - `core:plan-execute`
 - `core:section-execute-commit`
 - `core:review-results`
+- `core:software-development`
 
-`core:ralph-loop` is the top-level entrypoint. It validates the plan format, delegates execution to
-the plan runner, and uses child Ralph loops plus review tasks to work through the remaining task
-queue.
+`core:software-development` is now the raw-request entrypoint. It creates the plan/validate/delegate
+flow, and `core:ralph-loop` remains the execution coordinator once a plan path exists.
 
 ```mermaid
 flowchart TD
@@ -24,8 +24,9 @@ flowchart TD
     C --> E[Virtual TaskDbRecord v1]
     D --> E
     E --> F[task_read / task_run / cron / webhook]
-    F --> G[core:plan-verify]
-    G --> H[core:plan-execute]
-    H --> I[child core:ralph-loop]
-    I --> J[core:review-results]
+    F --> G[core:software-development]
+    G --> H[core:plan-verify]
+    H --> I[core:plan-execute]
+    I --> J[child core:ralph-loop]
+    J --> K[core:review-results]
 ```

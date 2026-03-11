@@ -7,6 +7,7 @@ queue into delegated subagents.
 
 Bundled core tasks in the loop:
 
+- `core:software-development`
 - `core:ralph-loop`
 - `core:plan-verify`
 - `core:plan-execute`
@@ -15,16 +16,18 @@ Bundled core tasks in the loop:
 
 ```mermaid
 flowchart TD
-    A[core:ralph-loop] --> B[core:plan-verify]
-    B -->|valid| C[core:plan-execute]
-    B -->|invalid| H[Stop and fix plan format]
-    C --> D[Child core:ralph-loop for one task]
-    D --> E[Implement, validate, update plan, commit]
-    E --> F[core:review-results]
-    F -->|pass| G{More tasks?}
-    F -->|fail| D
-    G -->|yes| D
-    G -->|no| I[Summarize commits and follow-ups]
+    A[core:software-development] --> B[Create or update plan file]
+    B --> C[core:plan-verify]
+    C -->|valid| D[core:ralph-loop]
+    C -->|invalid| J[Fix plan format]
+    D --> E[core:plan-execute]
+    E --> F[Child core:ralph-loop for one task]
+    F --> G[Implement, validate, update plan, commit]
+    G --> H[core:review-results]
+    H -->|pass| I{More tasks?}
+    H -->|fail| F
+    I -->|yes| F
+    I -->|no| K[Summarize commits and follow-ups]
 ```
 
 Expected plan shape for the loop:

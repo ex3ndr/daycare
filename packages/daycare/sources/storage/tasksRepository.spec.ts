@@ -9,7 +9,8 @@ const CORE_TASK_IDS = [
     "core:plan-verify",
     "core:ralph-loop",
     "core:review-results",
-    "core:section-execute-commit"
+    "core:section-execute-commit",
+    "core:software-development"
 ];
 
 describe("TasksRepository", () => {
@@ -185,6 +186,7 @@ describe("TasksRepository", () => {
 
             const task = await repo.findById(ctx, "core:ralph-loop");
             const planVerify = await repo.findById(ctx, "core:plan-verify");
+            const softwareDevelopment = await repo.findById(ctx, "core:software-development");
             const version1 = await repo.findByVersion(ctx, "core:ralph-loop", 1);
             const version2 = await repo.findByVersion(ctx, "core:ralph-loop", 2);
 
@@ -203,6 +205,13 @@ describe("TasksRepository", () => {
                 title: "Plan Verify"
             });
             expect(planVerify?.code).toContain("Plan format is valid for the Ralph loop.");
+            expect(softwareDevelopment).toMatchObject({
+                id: "core:software-development",
+                userId: "user-1",
+                version: 1,
+                title: "Software Development"
+            });
+            expect(softwareDevelopment?.code).toContain("Use the built-in software development workflow");
             expect(version1?.id).toBe("core:ralph-loop");
             expect(version2).toBeNull();
         } finally {

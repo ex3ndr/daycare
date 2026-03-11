@@ -8,7 +8,8 @@ const CORE_TASK_IDS = [
     "core:plan-verify",
     "core:ralph-loop",
     "core:review-results",
-    "core:section-execute-commit"
+    "core:section-execute-commit",
+    "core:software-development"
 ];
 
 describe("taskListAll", () => {
@@ -173,6 +174,12 @@ describe("taskListAll", () => {
             ).toEqual(CORE_TASK_IDS);
             const planVerify = result.tasks.find((task) => task.id === "core:plan-verify");
             expect(planVerify?.parameters).toEqual([{ name: "plan_path", type: "string", nullable: false }]);
+            const softwareDevelopment = result.tasks.find((task) => task.id === "core:software-development");
+            expect(softwareDevelopment?.parameters).toEqual([
+                { name: "user_prompt", type: "string", nullable: false },
+                { name: "plan_path", type: "string", nullable: true },
+                { name: "default_branch", type: "string", nullable: true }
+            ]);
         } finally {
             storage.connection.close();
         }
