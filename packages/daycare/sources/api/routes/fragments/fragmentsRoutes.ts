@@ -1,7 +1,11 @@
 import type http from "node:http";
 import type { Context } from "@/types";
+import type { DocumentsRepository } from "../../../storage/documentsRepository.js";
 import type { FragmentsRepository } from "../../../storage/fragmentsRepository.js";
+import type { TodosRepository } from "../../../storage/todosRepository.js";
+import type { PsqlService } from "../../../services/psql/PsqlService.js";
 import { fragmentsArchive } from "./fragmentsArchive.js";
+import { fragmentsCallTool, type FragmentToolServices } from "./fragmentsCallTool.js";
 import { fragmentsCreate } from "./fragmentsCreate.js";
 import { fragmentsFindById } from "./fragmentsFindById.js";
 import { fragmentsList } from "./fragmentsList.js";
@@ -12,6 +16,9 @@ export type FragmentsRouteContext = {
     sendJson: (response: http.ServerResponse, statusCode: number, payload: Record<string, unknown>) => void;
     readJsonBody: (request: http.IncomingMessage) => Promise<Record<string, unknown>>;
     fragments: FragmentsRepository | null;
+    psql?: PsqlService | null;
+    todos?: TodosRepository | null;
+    documents?: DocumentsRepository | null;
 };
 
 /**
@@ -85,6 +92,38 @@ export async function fragmentsRouteHandle(
             fragments: context.fragments
         });
         context.sendJson(response, result.ok ? 200 : result.error.includes("not found") ? 404 : 400, result);
+        return true;
+    }
+
+    // POST /fragments/:id/call - execute a scoped tool on behalf of the fragment
+    const callMatch = pathname.match(/^\/fragments\/([^/]+)\/call$/);
+    if (callMatch?.[1] && request.method === "POST") {
+        const body = await context.readJsonBody(request);
+        const tool = typeof body.tool === "string" ? body.tool : "";
+        const args = typeof body.args === "object" && body.args !== null && !Array.isArray(body.args)
+            ? (body.args as Record<string, unknown>)
+            : {};
+
+        const services: FragmentToolServices = {
+            psql: context.psql ?? null,
+            todos: context.todos ?? null,
+            documents: context.documents ?? null
+        };
+
+        const result = await fragmentsCallTool({
+            ctx: context.ctx,
+            fragmentId: decodeURIComponent(callMatch[1]),
+            tool,
+            args,
+            fragments: context.fragments,
+            services
+        });
+
+        context.sendJson(
+            response,
+            result.ok ? 200 : result.error.includes("not found") ? 404 : 400,
+            result
+        );
         return true;
     }
 

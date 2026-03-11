@@ -193,7 +193,10 @@ export async function apiRouteHandle(
             ctx: context.ctx,
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody,
-            fragments: context.fragments
+            fragments: context.fragments,
+            psql: context.psql,
+            todos: context.todos,
+            documents: context.documents
         });
     }
     if (pathname.startsWith("/kv")) {

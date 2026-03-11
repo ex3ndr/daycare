@@ -13,7 +13,7 @@ export default function FragmentModalScreen() {
     const { workspace, id } = useLocalSearchParams<{ workspace: string; id: string }>();
 
     const fragment = useFragmentsStore((s) => s.fragments.find((f) => f.id === id) ?? null);
-    const fragmentPython = useFragmentPython((fragment?.spec as Spec | null) ?? null, workspace);
+    const fragmentPython = useFragmentPython((fragment?.spec as Spec | null) ?? null, workspace, id);
 
     if (!fragment) return null;
 

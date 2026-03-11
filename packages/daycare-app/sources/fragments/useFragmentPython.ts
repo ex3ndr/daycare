@@ -22,7 +22,11 @@ export type FragmentPythonState =
  * Resolves a fragment's state store and custom action handlers, including optional Python init/action code.
  * Expects: spec is a fragment spec object or null while the fragment record is unavailable.
  */
-export function useFragmentPython(spec: FragmentPythonSpec | null, workspaceId: string): FragmentPythonState {
+export function useFragmentPython(
+    spec: FragmentPythonSpec | null,
+    workspaceId: string,
+    fragmentId?: string | null
+): FragmentPythonState {
     const baseUrl = useAuthStore((state) => state.baseUrl);
     const token = useAuthStore((state) => state.token);
     const fallbackState = React.useMemo(() => fragmentStateNormalize(spec?.state), [spec]);
@@ -50,7 +54,8 @@ export function useFragmentPython(spec: FragmentPythonSpec | null, workspaceId: 
         const externalFunctions = montyFragmentExternalFunctionsBuild({
             baseUrl,
             token,
-            workspaceId
+            workspaceId,
+            fragmentId: fragmentId ?? null
         });
         const setBusyState = () => {
             setRuntimeState((state) =>
@@ -147,7 +152,7 @@ export function useFragmentPython(spec: FragmentPythonSpec | null, workspaceId: 
         return () => {
             active = false;
         };
-    }, [workspaceId, baseUrl, code, fallbackReady, fallbackStore, token]);
+    }, [workspaceId, baseUrl, code, fallbackReady, fallbackStore, token, fragmentId]);
 
     return runtimeState;
 }
