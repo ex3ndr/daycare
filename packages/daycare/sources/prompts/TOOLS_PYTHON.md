@@ -1,4 +1,4 @@
-This is a minimal Python runtime with strict typing. No standard library modules are available (`json`, `os`, `re`, `datetime`, etc. do not exist). The `typing` module is available (`Any`, `TypedDict`). Use builtins, string methods, list/dict comprehensions, type annotations, and the tool functions listed below.
+This is a minimal Python runtime with strict typing. The supported built-in modules are `typing` (`Any`, `TypedDict`), `os`, `pathlib`, `sys`, `math`, and `re`. Many familiar stdlib modules still do not exist (`json`, `datetime`, `collections`, `itertools`, `random`, etc.). `os.environ` is intentionally unavailable in normal execution, so do not rely on process environment variables from Python. Use builtins, string methods, list/dict comprehensions, type annotations, and the tool functions listed below.
 Call tool functions directly (no `await`). Use `try/except ToolError` for tool failures.
 Many tools return typed dicts (see `TypedDict` signatures above). Access fields directly: `result["field"]`. Some tools return plain strings when no schema is defined.
 Use `print()` for debug output. The value of the final expression is returned.

@@ -1,6 +1,7 @@
 import {
     Monty,
     type MontyComplete,
+    MontyNameLookup,
     MontyRuntimeError,
     MontySnapshot,
     MontySyntaxError,
@@ -67,16 +68,17 @@ function startHandle(
     const inputs = request.payload.inputs;
     const monty = new Monty(script, {
         scriptName: "run_python.py",
-        externalFunctions: request.payload.externalFunctions,
         inputs: inputs ? Object.keys(inputs) : undefined,
         typeCheck: true,
         typeCheckPrefixCode: request.payload.preamble.length > 0 ? request.payload.preamble : undefined
     });
-    const progress = monty.start({
-        limits: request.payload.limits,
-        inputs,
-        printCallback
-    });
+    const progress = progressResolve(
+        monty.start({
+            limits: request.payload.limits,
+            inputs,
+            printCallback
+        })
+    );
     rlmPrintCaptureFlushTrailing(printCapture);
     return progressSerialize(progress, printOutput);
 }
@@ -90,9 +92,21 @@ function resumeHandle(
         rlmPrintCaptureAppend(printCapture, values);
     };
     const restored = MontySnapshot.load(Buffer.from(request.payload.snapshot, "base64"), { printCallback });
-    const progress = restored.resume(request.payload.options);
+    const progress = progressResolve(restored.resume(request.payload.options));
     rlmPrintCaptureFlushTrailing(printCapture);
     return progressSerialize(progress, printOutput);
+}
+
+function progressResolve(progress: MontySnapshot | MontyNameLookup | MontyComplete): MontySnapshot | MontyComplete {
+    let current = progress;
+
+    // Monty 0.0.8 pauses unresolved globals as name lookups.
+    // Daycare treats those as normal Python NameError paths by resuming without a value.
+    while (current instanceof MontyNameLookup) {
+        current = current.resume();
+    }
+
+    return current;
 }
 
 function progressSerialize(

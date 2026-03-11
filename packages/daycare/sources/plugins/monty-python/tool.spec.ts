@@ -72,6 +72,45 @@ describe("monty python tool", () => {
         expect(result.toolMessage.isError).toBe(true);
         expect(toolMessageText(result.toolMessage)).toContain("Python type check failed");
     });
+
+    it("supports shipped math and regex modules", async () => {
+        const tool = buildMontyPythonTool();
+        const context = createContext(workingDir);
+
+        const result = await tool.execute(
+            {
+                code: 'import math\nimport re\nstr(math.sqrt(81)) + ":" + re.sub("a", "b", "aardvark")'
+            },
+            context,
+            toolCall
+        );
+
+        expect(result.toolMessage.isError).toBe(false);
+        expect(toolMessageText(result.toolMessage)).toContain("bbrdvbrk");
+        expect(toolMessageText(result.toolMessage)).toContain("9");
+    });
+
+    it("does not expose host environment variables through os.environ", async () => {
+        const tool = buildMontyPythonTool();
+        const context = createContext(workingDir);
+        process.env.DAYCARE_TEST_LEAK = "from-host";
+
+        try {
+            const result = await tool.execute(
+                {
+                    code: 'import os\nos.environ.get("DAYCARE_TEST_LEAK")'
+                },
+                context,
+                toolCall
+            );
+
+            expect(result.toolMessage.isError).toBe(true);
+            expect(toolMessageText(result.toolMessage)).toContain("os.environ");
+            expect(toolMessageText(result.toolMessage)).not.toContain("from-host");
+        } finally {
+            delete process.env.DAYCARE_TEST_LEAK;
+        }
+    });
 });
 
 function createContext(workingDir: string): ToolExecutionContext {

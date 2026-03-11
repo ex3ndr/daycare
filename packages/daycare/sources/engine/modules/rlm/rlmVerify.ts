@@ -40,7 +40,6 @@ export function rlmVerify(
     const script = `${runtimePrelude}\n\n${code}`;
     const monty = new Monty(script, {
         scriptName: "run_python.py",
-        externalFunctions,
         typeCheck: false
     });
     monty.typeCheck(fullPreamble.length > 0 ? fullPreamble : undefined);

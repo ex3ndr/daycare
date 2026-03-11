@@ -30,9 +30,14 @@ describe("rlmVerify", () => {
         expect(() => rlmVerify(code, createContext())).toThrow("unresolved-import");
     });
 
-    it("fails when importing math functions", () => {
+    it("accepts supported math imports", () => {
         const code = "from math import sqrt\nsqrt(4)";
-        expect(() => rlmVerify(code, createContext())).toThrow("unresolved-import");
+        expect(() => rlmVerify(code, createContext())).not.toThrow();
+    });
+
+    it("accepts supported regex imports", () => {
+        const code = 'import re\nre.sub("a", "b", "aardvark")';
+        expect(() => rlmVerify(code, createContext())).not.toThrow();
     });
 });
 

@@ -11,15 +11,17 @@ Python code through `@pydantic/monty`.
 - `limits` (optional): resource limits (`maxDurationSecs`, `maxMemory`, etc.).
 
 ## Runtime loading
-`@pydantic/monty@0.0.3` publishes a broken package root export (`wrapper.js`
-missing). The tool resolves and imports `node_modules/@pydantic/monty/index.js`
-directly so the plugin can run without patching dependencies.
+The plugin imports `@pydantic/monty` through the package entrypoint at runtime.
+With `@pydantic/monty@0.0.8`, the shipped runtime exposes `typing`, `os`,
+`pathlib`, `sys`, `math`, and `re`.
+`os.environ` stays unavailable in standard execution, so Python snippets cannot
+read host process environment variables directly.
 
 ```mermaid
 flowchart TD
   Agent[Agent tool call] --> PythonTool[python tool]
-  PythonTool --> MontyIndex[node_modules/@pydantic/monty/index.js]
-  MontyIndex --> Runtime[Monty interpreter]
+  PythonTool --> MontyPackage[@pydantic/monty package entrypoint]
+  MontyPackage --> Runtime[Monty interpreter]
   Runtime -->|success| Output[toolResult output]
   Runtime -->|parse/type/runtime error| Error[toolResult isError]
 ```

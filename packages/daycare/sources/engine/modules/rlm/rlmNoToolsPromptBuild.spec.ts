@@ -28,6 +28,8 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).toContain("executed sequentially from top to bottom");
         expect(prompt).toContain("all remaining `run_python` calls in that response are skipped");
         expect(prompt).toContain("minimal Python runtime with strict typing");
+        expect(prompt).toContain("`os`, `pathlib`, `sys`, `math`, and `re`");
+        expect(prompt).toContain("`os.environ` is intentionally unavailable");
         expect(prompt).toContain(bundledExamplesDirResolve());
         expect(prompt).toContain("prefer it for user-visible replies");
         expect(prompt).toContain("respond to the user with plain text");

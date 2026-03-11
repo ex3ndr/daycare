@@ -1,6 +1,3 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
@@ -10,7 +7,6 @@ import { stringTruncate } from "../../utils/stringTruncate.js";
 
 const MAX_OUTPUT_CHARS = 50_000;
 const MONTY_PACKAGE = "@pydantic/monty";
-const MONTY_INDEX_RELATIVE = path.join("node_modules", "@pydantic", "monty", "index.js");
 
 const limitsSchema = Type.Object(
     {
@@ -38,10 +34,9 @@ type PythonArgs = Static<typeof pythonSchema>;
 type MontyLimits = Static<typeof limitsSchema>;
 
 type MontyRuntime = {
-    Monty: {
-        create: (...args: unknown[]) => unknown;
-    };
-    MontyException: new (...args: unknown[]) => object;
+    Monty: new (code: string, options?: Record<string, unknown>) => MontyProgram;
+    MontySyntaxError: new (...args: unknown[]) => object;
+    MontyRuntimeError: new (...args: unknown[]) => object;
     MontyTypingError: new (...args: unknown[]) => object;
 };
 
@@ -64,7 +59,7 @@ type MontyExceptionLike = {
 
 type MontyTypingErrorLike = {
     message?: string;
-    display?: (format?: string | null, color?: boolean | null) => string;
+    displayDiagnostics?: (format?: string | null, color?: boolean | null) => string;
 };
 
 let cachedMontyRuntime: Promise<MontyRuntime> | null = null;
@@ -99,31 +94,38 @@ export function buildMontyPythonTool(name = "python"): ToolDefinition {
 
             try {
                 const runtime = await montyRuntimeLoad();
-                const createResult = runtime.Monty.create(payload.code, {
-                    scriptName: payload.scriptName,
-                    inputs: payload.inputs ? Object.keys(payload.inputs) : undefined,
-                    typeCheck: payload.typeCheck ?? false
-                });
+                let program: MontyProgram;
 
-                if (isMontyException(createResult, runtime)) {
-                    return buildResult(toolCall, formatMontyException(createResult, "Python parse failed."), true);
+                try {
+                    program = new runtime.Monty(payload.code, {
+                        scriptName: payload.scriptName,
+                        inputs: payload.inputs ? Object.keys(payload.inputs) : undefined,
+                        typeCheck: payload.typeCheck ?? false
+                    });
+                } catch (error) {
+                    if (isMontyTypingError(error, runtime)) {
+                        return buildResult(toolCall, formatMontyTypingError(error), true);
+                    }
+                    if (isMontyException(error, runtime)) {
+                        return buildResult(toolCall, formatMontyException(error, "Python parse failed."), true);
+                    }
+                    throw error;
                 }
 
-                if (isMontyTypingError(createResult, runtime)) {
-                    return buildResult(toolCall, formatMontyTypingError(createResult), true);
-                }
-
-                if (!isMontyProgram(createResult)) {
-                    return buildResult(toolCall, "Python execution failed: invalid interpreter state.", true);
-                }
-
-                const runResult = createResult.run({
-                    inputs: payload.inputs,
-                    limits: payload.limits
-                });
-
-                if (isMontyException(runResult, runtime)) {
-                    return buildResult(toolCall, formatMontyException(runResult, "Python execution failed."), true);
+                let runResult: unknown;
+                try {
+                    runResult = program.run({
+                        inputs: payload.inputs,
+                        limits: payload.limits
+                    });
+                } catch (error) {
+                    if (isMontyTypingError(error, runtime)) {
+                        return buildResult(toolCall, formatMontyTypingError(error), true);
+                    }
+                    if (isMontyException(error, runtime)) {
+                        return buildResult(toolCall, formatMontyException(error, "Python execution failed."), true);
+                    }
+                    throw error;
                 }
 
                 const output = formatOutput(runResult);
@@ -176,11 +178,11 @@ function formatMontyException(exception: MontyExceptionLike, fallback: string): 
 function formatMontyTypingError(error: MontyTypingErrorLike): string {
     const message = error.message?.trim() || "Python type check failed.";
 
-    if (typeof error.display !== "function") {
+    if (typeof error.displayDiagnostics !== "function") {
         return message;
     }
 
-    const details = error.display("concise", false).trim();
+    const details = error.displayDiagnostics("concise", false).trim();
     if (!details || details === message) {
         return message;
     }
@@ -221,18 +223,8 @@ function formatOutput(value: unknown): string {
     }
 }
 
-function isMontyProgram(value: unknown): value is MontyProgram {
-    if (typeof value !== "object" || value === null) {
-        return false;
-    }
-    if (!("run" in value)) {
-        return false;
-    }
-    return typeof (value as { run?: unknown }).run === "function";
-}
-
 function isMontyException(value: unknown, runtime: MontyRuntime): value is MontyExceptionLike {
-    return value instanceof runtime.MontyException;
+    return value instanceof runtime.MontySyntaxError || value instanceof runtime.MontyRuntimeError;
 }
 
 function isMontyTypingError(value: unknown, runtime: MontyRuntime): value is MontyTypingErrorLike {
@@ -247,13 +239,13 @@ async function montyRuntimeLoad(): Promise<MontyRuntime> {
 }
 
 async function montyRuntimeLoadUncached(): Promise<MontyRuntime> {
-    const montyPath = await montyPathResolve();
-    const imported = await import(pathToFileURL(montyPath).href);
+    const imported = await import(MONTY_PACKAGE);
     const exports = runtimeExportsResolve(imported);
 
     if (
-        !isRuntimeExport(exports.Monty, "create") ||
-        typeof exports.MontyException !== "function" ||
+        typeof exports.Monty !== "function" ||
+        typeof exports.MontySyntaxError !== "function" ||
+        typeof exports.MontyRuntimeError !== "function" ||
         typeof exports.MontyTypingError !== "function"
     ) {
         throw new Error(`Loaded ${MONTY_PACKAGE} but required exports were not found.`);
@@ -261,48 +253,10 @@ async function montyRuntimeLoadUncached(): Promise<MontyRuntime> {
 
     return {
         Monty: exports.Monty as MontyRuntime["Monty"],
-        MontyException: exports.MontyException as MontyRuntime["MontyException"],
+        MontySyntaxError: exports.MontySyntaxError as MontyRuntime["MontySyntaxError"],
+        MontyRuntimeError: exports.MontyRuntimeError as MontyRuntime["MontyRuntimeError"],
         MontyTypingError: exports.MontyTypingError as MontyRuntime["MontyTypingError"]
     };
-}
-
-async function montyPathResolve(): Promise<string> {
-    // @pydantic/monty@0.0.3 exports a missing wrapper.js, so resolve index.js directly.
-    let cursor = path.dirname(fileURLToPath(import.meta.url));
-
-    while (true) {
-        const candidate = path.join(cursor, MONTY_INDEX_RELATIVE);
-        if (await pathExists(candidate)) {
-            return candidate;
-        }
-
-        const parent = path.dirname(cursor);
-        if (parent === cursor) {
-            break;
-        }
-        cursor = parent;
-    }
-
-    throw new Error(`${MONTY_PACKAGE} runtime was not found. Install dependencies with 'yarn install'.`);
-}
-
-async function pathExists(targetPath: string): Promise<boolean> {
-    try {
-        await fs.access(targetPath);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-function isRuntimeExport(
-    value: unknown,
-    method: "create"
-): value is { [key in typeof method]: (...args: unknown[]) => unknown } {
-    if ((typeof value !== "object" && typeof value !== "function") || value === null) {
-        return false;
-    }
-    return method in value && typeof (value as Record<string, unknown>)[method] === "function";
 }
 
 function runtimeExportsResolve(imported: Record<string, unknown>): Record<string, unknown> {
