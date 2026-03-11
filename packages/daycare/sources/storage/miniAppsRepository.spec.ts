@@ -81,4 +81,37 @@ describe("MiniAppsRepository", () => {
             await storage.connection.close();
         }
     });
+
+    it("restores deleted mini apps", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const ctxA = contextForUser({ userId: "user-a" });
+
+            const created = await storage.miniApps.create(ctxA, {
+                id: "restorable",
+                title: "Restorable App",
+                icon: "browser",
+                codeVersion: 1,
+                createdAt: 1,
+                updatedAt: 1
+            });
+            expect(created.version).toBe(1);
+
+            await storage.miniApps.delete(ctxA, "restorable");
+            await expect(storage.miniApps.findById(ctxA, "restorable")).resolves.toBeNull();
+
+            const restored = await storage.miniApps.restore(ctxA, "restorable");
+            expect(restored.validTo).toBeNull();
+            expect(restored.title).toBe("Restorable App");
+
+            const found = await storage.miniApps.findById(ctxA, "restorable");
+            expect(found).not.toBeNull();
+            expect(found?.id).toBe("restorable");
+
+            await expect(storage.miniApps.restore(ctxA, "restorable")).rejects.toThrow("not deleted");
+            await expect(storage.miniApps.restore(ctxA, "nonexistent")).rejects.toThrow("not found");
+        } finally {
+            await storage.connection.close();
+        }
+    });
 });

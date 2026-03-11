@@ -131,6 +131,14 @@ export class MiniApps {
         });
     }
 
+    async restore(ctx: Context, id: string): Promise<MiniAppRecord> {
+        const normalizedId = miniAppIdNormalize(id);
+        return this.lockFor(ctx.userId, normalizedId).inLock(async () => {
+            const restored = await this.repository.restore(ctx, normalizedId);
+            return miniAppRecordFromDb(restored);
+        });
+    }
+
     async versionDirectory(ctx: Context, id: string): Promise<string | null> {
         const record = await this.repository.findById(ctx, miniAppIdNormalize(id));
         if (!record) {

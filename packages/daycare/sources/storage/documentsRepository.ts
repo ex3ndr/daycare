@@ -439,6 +439,63 @@ export class DocumentsRepository {
         });
     }
 
+    async restore(ctx: Context, id: string): Promise<DocumentDbRecord> {
+        const userId = ctx.userId.trim();
+        if (!userId) {
+            throw new Error("Document userId is required.");
+        }
+        const normalizedId = id.trim();
+        if (!normalizedId) {
+            throw new Error("Document id is required.");
+        }
+
+        const key = documentKey(userId, normalizedId);
+        const lock = this.documentLockForId(key);
+
+        return lock.inLock(async () => {
+            const current = await this.documentLoadAnyById(userId, normalizedId);
+            if (!current) {
+                throw new Error(`Document not found: ${normalizedId}`);
+            }
+            if (current.validTo === null) {
+                throw new Error(`Document is not deleted: ${normalizedId}`);
+            }
+
+            const now = Date.now();
+            const refs: DocumentReferenceSnapshot = {
+                parentId: await this.findParentId(ctx, normalizedId),
+                linkTargetIds: [],
+                bodyTargetIds: documentBodyRefs(current.body)
+            };
+
+            const advanced = await this.db.transaction(async (tx) => {
+                const next = await versionAdvance<DocumentDbRecord>({
+                    now,
+                    changes: {
+                        updatedAt: now
+                    },
+                    findCurrent: () => Promise.resolve(current),
+                    closeCurrent: async () => 1,
+                    insertNext: async (next) => {
+                        await tx.insert(documentsTable).values(documentRowInsert(next));
+                    }
+                });
+
+                const refRows = documentReferenceRowsBuild(userId, normalizedId, next.version, refs);
+                if (refRows.length > 0) {
+                    await tx.insert(documentReferencesTable).values(refRows);
+                }
+
+                return next;
+            });
+
+            await this.cacheLock.inLock(() => {
+                this.documentCacheSet(advanced);
+            });
+            return documentClone(advanced);
+        });
+    }
+
     private async documentReferencesResolve(
         ctx: Context,
         input: {

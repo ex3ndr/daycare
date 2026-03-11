@@ -171,6 +171,43 @@ export class MiniAppsRepository {
         });
     }
 
+    async restore(ctx: Context, id: string): Promise<MiniAppDbRecord> {
+        const userId = ctx.userId.trim();
+        const normalizedId = id.trim();
+        if (!userId) {
+            throw new Error("Mini app userId is required.");
+        }
+        if (!normalizedId) {
+            throw new Error("Mini app id is required.");
+        }
+
+        const key = miniAppKey(userId, normalizedId);
+        return this.lockFor(key).inLock(async () => {
+            const current = await this.findAnyById(ctx, normalizedId);
+            if (!current) {
+                throw new Error(`Mini app not found: ${normalizedId}`);
+            }
+            if (current.validTo === null) {
+                throw new Error(`Mini app is not deleted: ${normalizedId}`);
+            }
+
+            const now = Date.now();
+            const advanced = await this.db.transaction(async (tx) =>
+                versionAdvance<MiniAppDbRecord>({
+                    now,
+                    changes: {},
+                    findCurrent: () => Promise.resolve(current),
+                    closeCurrent: async () => 1,
+                    insertNext: async (next) => {
+                        await tx.insert(miniAppsTable).values(miniAppRowInsert(next));
+                    }
+                })
+            );
+            this.cache.set(key, miniAppClone(advanced));
+            return miniAppClone(advanced);
+        });
+    }
+
     async findById(ctx: Context, id: string): Promise<MiniAppDbRecord | null> {
         const userId = ctx.userId.trim();
         const normalizedId = id.trim();

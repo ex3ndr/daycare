@@ -50,6 +50,7 @@ import { MiniApps } from "./mini-apps/MiniApps.js";
 import { miniAppCreateToolBuild } from "./mini-apps/miniAppCreateToolBuild.js";
 import { miniAppDeleteToolBuild } from "./mini-apps/miniAppDeleteToolBuild.js";
 import { miniAppEjectToolBuild } from "./mini-apps/miniAppEjectToolBuild.js";
+import { miniAppRestoreToolBuild } from "./mini-apps/miniAppRestoreToolBuild.js";
 import { miniAppUpdateToolBuild } from "./mini-apps/miniAppUpdateToolBuild.js";
 import { InferenceRouter } from "./modules/inference/router.js";
 import { ModuleRegistry } from "./modules/moduleRegistry.js";
@@ -70,8 +71,10 @@ import { documentAppendToolBuild } from "./modules/tools/documentAppendToolBuild
 import { documentPatchToolBuild } from "./modules/tools/documentPatchToolBuild.js";
 import { documentReadToolBuild } from "./modules/tools/documentReadToolBuild.js";
 import { documentSearchToolBuild } from "./modules/tools/documentSearchToolBuild.js";
+import { documentRestoreToolBuild } from "./modules/tools/documentRestoreToolBuild.js";
 import { documentWriteToolBuild } from "./modules/tools/documentWriteToolBuild.js";
 import { fragmentArchiveToolBuild } from "./modules/tools/fragmentArchiveToolBuild.js";
+import { fragmentRestoreToolBuild } from "./modules/tools/fragmentRestoreToolBuild.js";
 import { fragmentCreateToolBuild } from "./modules/tools/fragmentCreateToolBuild.js";
 import { fragmentListToolBuild } from "./modules/tools/fragmentListToolBuild.js";
 import { fragmentReadToolBuild } from "./modules/tools/fragmentReadToolBuild.js";
@@ -824,6 +827,7 @@ export class Engine {
         this.modules.tools.register("core", miniAppUpdateToolBuild(this.miniApps));
         this.modules.tools.register("core", miniAppDeleteToolBuild(this.miniApps));
         this.modules.tools.register("core", miniAppEjectToolBuild(this.miniApps));
+        this.modules.tools.register("core", miniAppRestoreToolBuild(this.miniApps));
         this.modules.tools.register("core", channelCreateToolBuild(this.channels));
         this.modules.tools.register("core", channelSendToolBuild(this.channels));
         this.modules.tools.register("core", channelHistoryToolBuild(this.channels));
@@ -850,11 +854,13 @@ export class Engine {
         this.modules.tools.register("core", documentAppendToolBuild());
         this.modules.tools.register("core", documentPatchToolBuild());
         this.modules.tools.register("core", documentWriteToolBuild());
+        this.modules.tools.register("core", documentRestoreToolBuild());
         this.modules.tools.register("core", fragmentCreateToolBuild());
         this.modules.tools.register("core", fragmentReadToolBuild());
         this.modules.tools.register("core", fragmentListToolBuild());
         this.modules.tools.register("core", fragmentUpdateToolBuild());
         this.modules.tools.register("core", fragmentArchiveToolBuild());
+        this.modules.tools.register("core", fragmentRestoreToolBuild());
         for (const tool of psqlToolsBuild(this.psqlService)) {
             this.modules.tools.register("core", tool);
         }

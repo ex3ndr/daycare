@@ -105,6 +105,12 @@ export async function miniAppsRouteHandle(
             context.sendJson(response, 200, { ok: true, app });
             return true;
         }
+        const restoreMatch = pathname.match(/^\/mini-apps\/([^/]+)\/restore$/);
+        if (restoreMatch?.[1] && request.method === "POST") {
+            const app = await context.miniApps.restore(context.ctx, decodeURIComponent(restoreMatch[1]));
+            context.sendJson(response, 200, { ok: true, app });
+            return true;
+        }
     } catch (error) {
         if (error instanceof MiniAppIconError) {
             context.sendJson(response, 400, {
