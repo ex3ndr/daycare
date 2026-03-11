@@ -189,6 +189,34 @@ describe("SessionExecs", () => {
         expect(result.signal).toBe("SIGTERM");
         expect(result.stdout).toBe("partial\n");
     });
+
+    it("lists running session execs for the current session", async () => {
+        const execs = new SessionExecs();
+        const runtime = handleBuild();
+        const ctx = contextBuild();
+        const sandbox = {
+            workingDir: "/workspace",
+            exec: vi.fn(async () => runtime.handle)
+        } as never;
+
+        const start = await execs.start({
+            ctx,
+            agentId: ctx.agentId,
+            sessionId: "session-6",
+            sandbox,
+            command: "sleep 5",
+            timeoutMs: 20,
+            background: true
+        });
+
+        expect(execs.list(ctx, "session-6")).toEqual([
+            {
+                processId: start.processId!,
+                command: "sleep 5",
+                cwd: "/workspace"
+            }
+        ]);
+    });
 });
 
 function contextBuild(): Context {

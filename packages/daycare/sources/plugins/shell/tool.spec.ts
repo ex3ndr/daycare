@@ -13,6 +13,7 @@ import { Sandbox } from "../../sandbox/sandbox.js";
 import {
     buildExecBackgroundTool,
     buildExecKillTool,
+    buildExecListTool,
     buildExecPollTool,
     buildExecTool,
     buildWorkspaceReadJsonTool,
@@ -22,6 +23,7 @@ import {
 
 const execToolCall = { id: "tool-call-1", name: "exec" };
 const execBackgroundToolCall = { id: "tool-call-1b", name: "exec_background" };
+const execListToolCall = { id: "tool-call-1c", name: "exec_list" };
 const readToolCall = { id: "tool-call-2", name: "read" };
 const readJsonToolCall = { id: "tool-call-3", name: "read_json" };
 const READ_LIMIT_TEST_BYTES = 51 * 1024;
@@ -395,6 +397,26 @@ describe("exec tool", () => {
         expect(result.typedResult.running).toBe(true);
         expect(text).toContain('"processId": "process-1"');
         expect(text).toContain("exec_poll");
+    });
+
+    it("lists active exec_background processes through Processes", async () => {
+        const context = createContext(workingDir);
+        const execListForContext = vi.fn(() => [
+            {
+                processId: "process-1",
+                command: "sleep 5",
+                cwd: workingDir
+            }
+        ]);
+        const tool = buildExecListTool({ execListForContext } as never);
+
+        const result = await tool.execute({}, context, execListToolCall);
+        const text = toolMessageText(result.toolMessage.content);
+
+        expect(execListForContext).toHaveBeenCalledWith(context.ctx, context.activeSessionId);
+        expect(result.toolMessage.isError).toBe(false);
+        expect(result.typedResult.count).toBe(1);
+        expect(text).toContain('"processId": "process-1"');
     });
 
     it("supports exec_poll and exec_kill through Processes", async () => {

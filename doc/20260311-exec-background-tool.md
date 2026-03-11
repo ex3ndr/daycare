@@ -10,6 +10,7 @@ timeout, while `exec_background` opts into session-scoped background execution.
   live `processId`.
 - Foreground `exec` stops the command when `timeoutMs` is hit and reports `timedOut: true`.
 - `exec_background` returns a `processId` immediately for `exec_poll` / `exec_kill`.
+- `exec_list` reports the currently active background exec processes for the current session.
 
 ## Flow
 
@@ -22,5 +23,5 @@ flowchart TD
     E --> F[Return timedOut=true]
     G[exec_background tool call] --> H[Start session exec]
     H --> I[Return processId immediately]
-    I --> J[exec_poll / exec_kill]
+    I --> J[exec_list / exec_poll / exec_kill]
 ```

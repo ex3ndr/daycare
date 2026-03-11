@@ -13,6 +13,7 @@ import {
 import {
     buildExecBackgroundTool,
     buildExecKillTool,
+    buildExecListTool,
     buildExecPollTool,
     buildExecTool,
     buildWorkspaceEditTool,
@@ -43,6 +44,7 @@ export const plugin = definePlugin({
                 api.registrar.registerTool(buildWriteOutputTool());
                 api.registrar.registerTool(buildExecTool(processes));
                 api.registrar.registerTool(buildExecBackgroundTool(processes));
+                api.registrar.registerTool(buildExecListTool(processes));
                 api.registrar.registerTool(buildExecPollTool(processes));
                 api.registrar.registerTool(buildExecKillTool(processes));
                 api.registrar.registerTool(buildProcessStartTool(processes));
@@ -62,6 +64,7 @@ export const plugin = definePlugin({
                 api.registrar.unregisterTool("write_output");
                 api.registrar.unregisterTool("exec");
                 api.registrar.unregisterTool("exec_background");
+                api.registrar.unregisterTool("exec_list");
                 api.registrar.unregisterTool("exec_poll");
                 api.registrar.unregisterTool("exec_kill");
                 api.registrar.unregisterTool("process_start");

@@ -16,7 +16,12 @@ import type { PathMountPoint } from "../../utils/pathMountTypes.js";
 import { shellQuote } from "../../utils/shellQuote.js";
 import { resolveWorkspacePath } from "../permissions.js";
 import { processBootTimeRead } from "./processBootTimeRead.js";
-import { type SessionExecResult, type SessionExecStartInput, SessionExecs } from "./sessionExecs.js";
+import {
+    type SessionExecListItem,
+    type SessionExecResult,
+    type SessionExecStartInput,
+    SessionExecs
+} from "./sessionExecs.js";
 
 const MONITOR_INTERVAL_MS = 2_000;
 const PROCESS_STOP_POLL_MS = 200;
@@ -402,6 +407,10 @@ export class Processes {
         abortSignal?: AbortSignal
     ): Promise<SessionExecResult> {
         return this.sessionExecs.kill(ctx, sessionId, processId, signal, timeoutMs, abortSignal);
+    }
+
+    execListForContext(ctx: Context, sessionId: string): SessionExecListItem[] {
+        return this.sessionExecs.list(ctx, sessionId);
     }
 
     async killSessionExecs(sessionId: string): Promise<number> {

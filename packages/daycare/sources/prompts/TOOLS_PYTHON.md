@@ -11,6 +11,7 @@ For shell commands via `exec(...)`, home paths should use `~` (or `$HOME`) in th
 working directory, not the home directory. `exec(...)` waits for completion by default. Use
 `exec_background(...)` when you want a `processId` immediately; then use
 `exec_poll(processId=..., timeoutMs=...)` to wait for more output or `exec_kill(processId=...)` to stop it.
+If you lose track of the id, call `exec_list()` to see currently active background exec processes for this session.
 
 Prefer one script with multiple tool calls over separate invocations. Store results in variables and pass them between tools — do not manually construct or parse strings when a variable already holds the value. Independent tool calls can run sequentially in the same script; this is faster than multiple round-trips.
 ```python

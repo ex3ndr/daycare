@@ -120,6 +120,7 @@ const execPollSchema = Type.Object(
     },
     { additionalProperties: false }
 );
+const execListSchema = Type.Object({}, { additionalProperties: false });
 const execKillSchema = Type.Object(
     {
         processId: Type.String({ minLength: 1 }),
@@ -174,6 +175,25 @@ const execResultSchema = Type.Object(
     { additionalProperties: false }
 );
 type ExecResult = Static<typeof execResultSchema>;
+const execListItemSchema = Type.Object(
+    {
+        processId: Type.String(),
+        command: Type.String(),
+        cwd: Type.String()
+    },
+    { additionalProperties: false }
+);
+const execListResultSchema = Type.Object(
+    {
+        summary: Type.String(),
+        action: Type.String(),
+        isError: Type.Boolean(),
+        count: Type.Number(),
+        items: Type.Array(execListItemSchema)
+    },
+    { additionalProperties: false }
+);
+type ExecListResult = Static<typeof execListResultSchema>;
 const readJsonResultSchema = Type.Object(
     {
         summary: Type.String(),
@@ -201,6 +221,10 @@ const shellReturns: ToolResultContract<ShellResult> = {
 const execReturns: ToolResultContract<ExecResult> = {
     schema: execResultSchema,
     toLLMText: (result) => result.output
+};
+const execListReturns: ToolResultContract<ExecListResult> = {
+    schema: execListResultSchema,
+    toLLMText: (result) => result.summary
 };
 const readJsonReturns: ToolResultContract<ReadJsonResult> = {
     schema: readJsonResultSchema,
@@ -438,6 +462,34 @@ export function buildExecPollTool(processes: Processes): ToolDefinition {
                 ...(formattedOutput.stderr !== undefined ? { stderr: formattedOutput.stderr } : {})
             });
             return toolExecutionResultOutcomeWithTyped(toolMessage, execResultBuild(toolMessage));
+        }
+    };
+}
+
+export function buildExecListTool(processes: Processes): ToolDefinition {
+    return {
+        tool: {
+            name: "exec_list",
+            description: "List active session-scoped exec_background processes for the current agent session.",
+            parameters: execListSchema
+        },
+        returns: execListReturns,
+        execute: async (_args, toolContext, toolCall) => {
+            const sessionId = execSessionIdResolve(toolContext);
+            const items = processes.execListForContext(toolContext.ctx, sessionId);
+            const summary =
+                items.length === 0 ? "No active exec_background processes." : JSON.stringify(items, null, 2);
+            const toolMessage = buildToolMessage(toolCall, summary, false, {
+                action: "exec_list",
+                count: items.length
+            });
+            return toolExecutionResultOutcomeWithTyped(toolMessage, {
+                summary,
+                action: "exec_list",
+                isError: false,
+                count: items.length,
+                items
+            });
         }
     };
 }

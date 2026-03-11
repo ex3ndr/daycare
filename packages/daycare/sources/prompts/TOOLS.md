@@ -10,4 +10,5 @@ Learned tool knowledge — tips, pitfalls, and patterns discovered through use. 
 
 ## Patterns
 
-- Prefer `exec_poll` instead of rerunning a long command when `exec` already returned a live `processId`.
+- Prefer `exec_poll` instead of rerunning a long command when `exec_background` already returned a live `processId`.
+- Use `exec_list` if you need to recover the active `processId`s for the current session before polling or killing.

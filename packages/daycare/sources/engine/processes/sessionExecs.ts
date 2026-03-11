@@ -34,6 +34,12 @@ export type SessionExecResult = {
     failed: boolean;
 };
 
+export type SessionExecListItem = {
+    processId: string;
+    command: string;
+    cwd: string;
+};
+
 type SessionExecEntry = {
     id: string;
     ctx: Context;
@@ -154,6 +160,17 @@ export class SessionExecs {
 
     async killAll(): Promise<number> {
         return this.killMany(() => true);
+    }
+
+    list(ctx: Context, sessionId: string): SessionExecListItem[] {
+        return Array.from(this.entries.values())
+            .filter((entry) => entry.ctx.userId === ctx.userId && entry.agentId === ctx.agentId)
+            .filter((entry) => entry.sessionId === sessionId && entry.running)
+            .map((entry) => ({
+                processId: entry.id,
+                command: entry.command,
+                cwd: entry.cwd
+            }));
     }
 
     private entryCreate(input: SessionExecStartInput, handle: SandboxExecHandle): SessionExecEntry {
