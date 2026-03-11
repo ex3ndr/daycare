@@ -24,6 +24,14 @@ flowchart TD
 Foreground-agent policy:
 
 - create or update the plan first
+- run `core:software-development` in the foreground agent itself
+- run `core:plan-verify` in the foreground agent itself
 - never start non-trivial implementation before `core:plan-verify` passes
 - use subagents for implementation
 - keep commits task-scoped instead of batching the whole feature into one commit
+
+Invocation split:
+
+- foreground agent: `task_run(taskId="core:software-development", sync=true, parameters={ user_prompt: ... })`
+- foreground agent: `task_run(taskId="core:plan-verify", sync=true, parameters={ plan_path: ... })`
+- foreground agent after validation: `start_background_workflow(taskId="core:ralph-loop", parameters={ plan_path: ... })`

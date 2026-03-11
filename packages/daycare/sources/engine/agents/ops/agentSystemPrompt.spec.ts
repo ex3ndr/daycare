@@ -195,6 +195,11 @@ describe("agentSystemPrompt", () => {
             expect(rendered).toContain("Connector: telegram, channel: channel-1, user: user-1.");
             expect(rendered).toContain("Soul prompt text");
             expect(rendered).toContain("Tools prompt text");
+            expect(rendered).toContain("`core:software-development` and `core:plan-verify` are bundled built-in tasks");
+            expect(rendered).toContain(
+                'Use `task_run(taskId="core:software-development", sync=true, parameters={...})`'
+            );
+            expect(rendered).toContain("Do not delegate plan creation or plan validation to a subagent.");
             expect(rendered).toContain("## Model Awareness");
             expect(rendered).toContain("**OpenAI**:");
             expect(rendered).toContain("set_agent_model");

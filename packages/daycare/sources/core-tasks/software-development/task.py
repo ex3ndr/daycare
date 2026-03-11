@@ -12,6 +12,7 @@ if default_branch is not None:
 
 lines: list[str] = []
 lines.append("Use the built-in software development workflow for this request.")
+lines.append("This task must be run by the foreground agent itself, not by a subagent.")
 lines.append("")
 lines.append("Phase 1: Create or update the plan.")
 if plan_path_value:
@@ -23,12 +24,13 @@ lines.append("- include `## Overview`, `## Context`, `## Development Approach`, 
 lines.append("- under `## Implementation Steps`, make every `### Task ...` section include `Files:`, `Verify:`, and checkbox items")
 lines.append("")
 lines.append("Phase 2: Validate the plan before coding.")
-lines.append("- run `core:plan-verify` with the plan path")
+lines.append("- the foreground agent must run `core:plan-verify` itself")
+lines.append("- run `core:plan-verify` with the plan path, synchronously")
 lines.append("- if validation fails, fix the plan and rerun validation")
 lines.append("- do not start implementation until the plan passes")
 lines.append("")
 lines.append("Phase 3: Hand implementation to the Ralph loop.")
-lines.append("- start a fresh background workflow using `core:ralph-loop`")
+lines.append("- only after validation passes, start a fresh background workflow using `core:ralph-loop`")
 lines.append("- pass the validated plan path and the default branch if available")
 lines.append("- keep implementation in separate subagents")
 lines.append("- each task must validate, update only its own checklist, and create its own Angular-style commit")
@@ -37,7 +39,7 @@ lines.append("")
 lines.append("Coordinator rules:")
 lines.append("- stay in the foreground as the coordinator")
 lines.append("- the foreground agent owns planning, validation, and final reporting")
-lines.append("- subagents own implementation and per-task commits")
+lines.append("- subagents own implementation and per-task commits only after the foreground agent finishes planning and validation")
 lines.append("- when the Ralph loop finishes, summarize the plan path, commits, and any follow-up items")
 lines.append("")
 if plan_path_value:

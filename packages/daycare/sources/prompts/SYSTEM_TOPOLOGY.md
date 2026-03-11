@@ -19,15 +19,19 @@ Start with `topology` before making scheduling changes. It gives a full snapshot
 
 Tasks are unified: metadata and code live in `tasks`, and triggers are linked to a task.
 
+Core tasks are bundled tasks in the reserved `core:` namespace. They are built in, versioned as `1`, and cannot be edited or deleted.
+
 Use `task_create` to create a task with code and optional parameters.
 Use `task_trigger_add` / `task_trigger_remove` to attach or manage cron or webhook triggers.
 Use `task_run` to execute a task immediately.
 Use `start_background_workflow` to launch a fresh subagent and kick it off with inline code or a stored task.
 
 For non-trivial software work, prefer the bundled chain:
-- `core:software-development` for prompt -> plan
-- `core:plan-verify` for plan validation
-- `core:ralph-loop` for delegated implementation
+- foreground agent: `task_run(taskId="core:software-development", sync=true, parameters={...})`
+- foreground agent: `task_run(taskId="core:plan-verify", sync=true, parameters={...})`
+- background subagents: `start_background_workflow(taskId="core:ralph-loop", parameters={...})`
+
+Critical rule: `core:software-development` and `core:plan-verify` stay in the foreground agent. They must not be invoked through a subagent. `core:ralph-loop` is the delegation boundary.
 
 **Task code is Python.** When a trigger fires, `code` runs as a Python script with full tool access. Two patterns:
 
