@@ -37,7 +37,11 @@ export async function taskCoreResolve(options: {
     }
 
     const root = options.root ?? taskCoreRootResolve();
-    const taskDir = path.join(root, slug);
+    const taskDir = path.resolve(root, slug);
+    // Guard against path traversal via crafted slugs (e.g. "core:..")
+    if (!taskDir.startsWith(path.resolve(root) + path.sep)) {
+        return null;
+    }
     const descriptionPath = path.join(taskDir, "description.md");
     const codePath = path.join(taskDir, "task.py");
 

@@ -3,6 +3,14 @@ import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { contextForUser } from "../agents/context.js";
 import { taskListAll } from "./taskListAll.js";
 
+const CORE_TASK_IDS = [
+    "core:plan-execute",
+    "core:plan-verify",
+    "core:ralph-loop",
+    "core:review-results",
+    "core:section-execute-commit"
+];
+
 describe("taskListAll", () => {
     it("returns all tasks with triggers separated, including tasks without triggers", async () => {
         const storage = await storageOpenTest();
@@ -89,12 +97,17 @@ describe("taskListAll", () => {
             const result = await taskListAll({ storage, ctx });
 
             // Stored tasks are returned alongside bundled core tasks.
-            expect(result.tasks.map((t) => t.id)).toEqual([
+            expect(result.tasks.slice(0, 3).map((task) => task.id)).toEqual([
                 "task-active",
                 "task-webhook",
-                "task-inactive",
-                "core:ralph-loop"
+                "task-inactive"
             ]);
+            expect(
+                result.tasks
+                    .slice(3)
+                    .map((task) => task.id)
+                    .sort()
+            ).toEqual(CORE_TASK_IDS);
 
             // task-active: lastExecutedAt from max of cron(100) and webhook(150) = 150
             expect(result.tasks[0]).toMatchObject({
@@ -149,7 +162,12 @@ describe("taskListAll", () => {
 
             const result = await taskListAll({ storage, ctx });
 
-            expect(result.tasks.some((task) => task.id === "core:ralph-loop")).toBe(true);
+            expect(
+                result.tasks
+                    .filter((task) => task.id.startsWith("core:"))
+                    .map((task) => task.id)
+                    .sort()
+            ).toEqual(CORE_TASK_IDS);
         } finally {
             storage.connection.close();
         }

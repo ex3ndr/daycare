@@ -4,6 +4,14 @@ import type { TaskDbRecord } from "./databaseTypes.js";
 import { storageOpenTest } from "./storageOpenTest.js";
 import { TasksRepository } from "./tasksRepository.js";
 
+const CORE_TASK_IDS = [
+    "core:plan-execute",
+    "core:plan-verify",
+    "core:ralph-loop",
+    "core:review-results",
+    "core:section-execute-commit"
+];
+
 describe("TasksRepository", () => {
     afterEach(() => {
         vi.restoreAllMocks();
@@ -34,7 +42,7 @@ describe("TasksRepository", () => {
             expect(byId).toEqual(record);
 
             const byUser = await repo.findMany(ctx);
-            expect(byUser).toHaveLength(2);
+            expect(byUser).toHaveLength(CORE_TASK_IDS.length + 1);
             expect(byUser.some((task) => task.id === "task-1")).toBe(true);
 
             vi.spyOn(Date, "now").mockReturnValue(20);
@@ -176,6 +184,7 @@ describe("TasksRepository", () => {
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
 
             const task = await repo.findById(ctx, "core:ralph-loop");
+            const planVerify = await repo.findById(ctx, "core:plan-verify");
             const version1 = await repo.findByVersion(ctx, "core:ralph-loop", 1);
             const version2 = await repo.findByVersion(ctx, "core:ralph-loop", 2);
 
@@ -185,8 +194,15 @@ describe("TasksRepository", () => {
                 version: 1,
                 title: "Ralph Loop"
             });
-            expect(task?.description).toContain("ralphex-style");
-            expect(task?.code).toContain("Read the plan file and execute exactly one incomplete section.");
+            expect(task?.description).toContain("built-in orchestration entrypoint");
+            expect(task?.code).toContain("Run the full Ralph loop for this plan until every task is complete.");
+            expect(planVerify).toMatchObject({
+                id: "core:plan-verify",
+                userId: "user-1",
+                version: 1,
+                title: "Plan Verify"
+            });
+            expect(planVerify?.code).toContain("Plan format is valid for the Ralph loop.");
             expect(version1?.id).toBe("core:ralph-loop");
             expect(version2).toBeNull();
         } finally {
@@ -202,7 +218,12 @@ describe("TasksRepository", () => {
 
             const tasks = await repo.findMany(ctx);
 
-            expect(tasks.some((task) => task.id === "core:ralph-loop")).toBe(true);
+            expect(
+                tasks
+                    .filter((task) => task.id.startsWith("core:"))
+                    .map((task) => task.id)
+                    .sort()
+            ).toEqual(CORE_TASK_IDS);
         } finally {
             storage.connection.close();
         }

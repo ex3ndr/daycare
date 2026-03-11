@@ -4,18 +4,28 @@ Core tasks are bundled with the repo and resolved from files instead of the `tas
 They use the reserved `core:<name>` namespace, are always exposed as version `1`, and cannot be
 updated or deleted through task APIs.
 
-The first bundled task is `core:ralph-loop`, a file-backed task modeled on ralphex's task
-execution phase. It reads a markdown plan, picks the first incomplete `Task` or `Iteration`
-section, carries forward validation commands, and hands a one-section-only execution prompt to the
-task agent.
+The bundled orchestration set is now:
+
+- `core:ralph-loop`
+- `core:plan-verify`
+- `core:plan-execute`
+- `core:section-execute-commit`
+- `core:review-results`
+
+`core:ralph-loop` is the top-level entrypoint. It validates the plan format, delegates execution to
+the plan runner, and uses child Ralph loops plus review tasks to work through the remaining task
+queue.
 
 ```mermaid
 flowchart TD
     A[Task lookup: core:ralph-loop] --> B[TasksRepository]
-    B --> C[core-tasks/ralph-loop/description.md]
-    B --> D[core-tasks/ralph-loop/task.py]
+    B --> C[core-tasks/*/description.md]
+    B --> D[core-tasks/*/task.py]
     C --> E[Virtual TaskDbRecord v1]
     D --> E
     E --> F[task_read / task_run / cron / webhook]
-    F --> G[Task agent receives one-section prompt]
+    F --> G[core:plan-verify]
+    G --> H[core:plan-execute]
+    H --> I[child core:ralph-loop]
+    I --> J[core:review-results]
 ```

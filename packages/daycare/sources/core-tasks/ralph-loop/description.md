@@ -7,11 +7,13 @@ parameters:
     - name: default_branch
       type: string
       nullable: true
+    - name: task_number
+      type: string
+      nullable: true
 ---
-Execute one ralphex-style plan iteration from a markdown plan file.
+Run the full Ralph loop for a markdown plan, or focus the loop on one task section.
 
-This core task reads a plan, extracts the first incomplete `### Task ...` or `### Iteration ...`
-section, carries over `## Overview`, optional `## Context`, and `## Validation Commands`, then
-hands a focused prompt to the task agent. The prompt is modeled on the upstream ralphex task
-execution loop: complete exactly one section, validate, mark its checkboxes complete, commit, and
-stop before the next section.
+This core task is the built-in orchestration entrypoint. In plan mode it validates the plan,
+delegates execution to a plan runner subagent, and expects review after every task. In task mode it
+focuses a child loop on exactly one `### Task ...` section, carrying forward the plan context,
+verification commands, and remaining queue so the worker can implement, validate, commit, and stop.
