@@ -25,6 +25,20 @@ export function agentModelOverrideApply(
         return providers;
     }
 
+    if (override.type === "model") {
+        const target = providerId ? providers.find((p) => p.id === providerId) : providers[0];
+        if (!target) {
+            return providers;
+        }
+
+        return providers.map((provider) => {
+            if (provider.id === target.id) {
+                return { ...provider, model: override.value };
+            }
+            return provider;
+        });
+    }
+
     const flavor = override.value.trim();
     const normalizedFlavor = flavor.toLowerCase();
     const configuredModel = modelFlavorResolve(selectorOverrides, flavor, normalizedFlavor);

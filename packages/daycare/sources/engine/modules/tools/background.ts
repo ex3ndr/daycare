@@ -5,13 +5,20 @@ import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
 import { buildWriteOutputTool } from "../../../plugins/shell/writeOutputTool.js";
 import { agentPathChildAllocate } from "../../agents/ops/agentPathChildAllocate.js";
+import { backgroundModelOverrideResolve } from "./backgroundModelOverrideResolve.js";
 
 const AGENT_MESSAGE_INLINE_CHAR_LIMIT = 8_000;
 
 const startSchema = Type.Object(
     {
         prompt: Type.String({ minLength: 1 }),
-        name: Type.Optional(Type.String({ minLength: 1 }))
+        name: Type.Optional(Type.String({ minLength: 1 })),
+        model: Type.Optional(
+            Type.String({
+                minLength: 1,
+                description: "Raw model id for the new background agent. Must match the resolved subagent provider."
+            })
+        )
     },
     { additionalProperties: false }
 );
@@ -83,6 +90,13 @@ export function buildStartBackgroundAgentTool(): ToolDefinition {
                     name: requestedName || null
                 }
             );
+            const modelOverride = backgroundModelOverrideResolve(payload.model, toolContext, agentId);
+            if (modelOverride) {
+                const updated = await toolContext.agentSystem.updateAgentModelOverride(agentId, modelOverride);
+                if (!updated) {
+                    throw new Error(`Failed to apply model override for background agent ${agentId}.`);
+                }
+            }
             await toolContext.agentSystem.post(
                 toolContext.ctx,
                 { agentId },

@@ -44,7 +44,7 @@ export type AgentTokenEntry = {
 
 export type AgentAssistantContent = AssistantMessage["content"];
 
-export type AgentModelOverride = { type: "selector"; value: string };
+export type AgentModelOverride = { type: "selector"; value: string } | { type: "model"; value: string };
 
 export type AgentState = {
     context: Context;

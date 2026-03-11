@@ -104,4 +104,10 @@ describe("agentModelOverrideApply", () => {
         const result = agentModelOverrideApply(baseProviders, override, "anthropic", undefined);
         expect(result).toEqual(baseProviders);
     });
+
+    it("applies direct raw model override to the selected provider", () => {
+        const override: AgentModelOverride = { type: "model", value: "claude-opus-4-6" };
+        const result = agentModelOverrideApply(baseProviders, override, "anthropic", undefined);
+        expect(result[0]!.model).toBe("claude-opus-4-6");
+    });
 });

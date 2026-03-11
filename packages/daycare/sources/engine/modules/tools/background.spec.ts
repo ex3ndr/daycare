@@ -36,6 +36,44 @@ describe("buildStartBackgroundAgentTool", () => {
         );
         expect(contentText(result.toolMessage.content)).toContain("agent-123");
     });
+
+    it("applies a checked raw model override before posting", async () => {
+        const calls: string[] = [];
+        const resolveTarget = vi.fn(async () => {
+            calls.push("resolve");
+            return "agent-123";
+        });
+        const updateAgentModelOverride = vi.fn(async () => {
+            calls.push("override");
+            return true;
+        });
+        const post = vi.fn(async () => {
+            calls.push("post");
+        });
+        const tool = buildStartBackgroundAgentTool();
+        const context = contextBuild({
+            agentIdForTarget: resolveTarget,
+            updateAgentModelOverride,
+            post
+        });
+
+        await tool.execute({ prompt: "Do work", model: "claude-haiku-4-5" }, context, startToolCall);
+
+        expect(calls).toEqual(["resolve", "override", "post"]);
+        expect(updateAgentModelOverride).toHaveBeenCalledWith("agent-123", {
+            type: "model",
+            value: "claude-haiku-4-5"
+        });
+    });
+
+    it("rejects role selectors in the model field", async () => {
+        const tool = buildStartBackgroundAgentTool();
+        const context = contextBuild({});
+
+        await expect(tool.execute({ prompt: "Do work", model: "small" }, context, startToolCall)).rejects.toThrow(
+            'Unknown raw model "small" for provider "anthropic".'
+        );
+    });
 });
 
 describe("buildSendAgentMessageTool", () => {
@@ -251,6 +289,28 @@ describe("startBackgroundWorkflowToolBuild", () => {
         expect(result.typedResult.targetAgentId).toBe("agent-123");
     });
 
+    it("applies a checked raw model override to inline workflows", async () => {
+        const updateAgentModelOverride = vi.fn(async () => true);
+        const tool = startBackgroundWorkflowToolBuild();
+        const context = contextBuild({
+            updateAgentModelOverride
+        });
+
+        await tool.execute(
+            {
+                code: "print('collect status')",
+                model: "claude-sonnet-4-6"
+            },
+            context,
+            workflowToolCall
+        );
+
+        expect(updateAgentModelOverride).toHaveBeenCalledWith("agent-123", {
+            type: "model",
+            value: "claude-sonnet-4-6"
+        });
+    });
+
     it("starts a child workflow from a stored task", async () => {
         const dispatch = vi.fn();
         const tool = startBackgroundWorkflowToolBuild();
@@ -304,6 +364,18 @@ type AgentSystemStub = Partial<{
     agentExists: (agentId: string) => Promise<boolean>;
     steer: (ctx: unknown, agentId: string, item: unknown) => Promise<void>;
     contextForAgentId: (agentId: string) => Promise<unknown>;
+    updateAgentModelOverride: (agentId: string, override: unknown) => Promise<boolean>;
+    modelRoles: {
+        resolve: (context: { role: string | null; kind: string | null; userId: string; agentId: string }) => unknown;
+    } | null;
+    config: {
+        current: {
+            settings: {
+                providers?: Array<{ id: string; enabled?: boolean; model?: string }>;
+                models?: Record<string, { model: string }>;
+            };
+        };
+    };
     taskExecutions: {
         dispatch: (input: unknown) => void;
     };
@@ -421,6 +493,19 @@ function contextBuild(agentSystem: AgentSystemStub, options: ContextBuildOptions
                 ({
                     dispatch: vi.fn()
                 } as AgentSystemStub["taskExecutions"]),
+            updateAgentModelOverride:
+                agentSystem.updateAgentModelOverride ??
+                (vi.fn(async () => true) as AgentSystemStub["updateAgentModelOverride"]),
+            modelRoles: agentSystem.modelRoles ?? null,
+            config:
+                agentSystem.config ??
+                ({
+                    current: {
+                        settings: {
+                            providers: [{ id: "anthropic", enabled: true, model: "claude-sonnet-4-5" }]
+                        }
+                    }
+                } as AgentSystemStub["config"]),
             storage:
                 agentSystem.storage ??
                 ({

@@ -10,6 +10,7 @@ import { taskParameterPreambleStubs } from "../tasks/taskParameterCodegen.js";
 import { taskParameterInputsNormalize } from "../tasks/taskParameterInputsNormalize.js";
 import type { TaskParameter } from "../tasks/taskParameterTypes.js";
 import { taskParameterValidate } from "../tasks/taskParameterValidate.js";
+import { backgroundModelOverrideResolve } from "./backgroundModelOverrideResolve.js";
 
 const taskParameterSchema = Type.Object(
     {
@@ -44,6 +45,12 @@ const schema = Type.Object(
         ),
         taskVersion: Type.Optional(Type.Integer({ minimum: 1 })),
         name: Type.Optional(Type.String({ minLength: 1 })),
+        model: Type.Optional(
+            Type.String({
+                minLength: 1,
+                description: "Raw model id for the new background agent. Must match the resolved subagent provider."
+            })
+        ),
         parameters: Type.Optional(
             Type.Record(Type.String(), Type.Unknown(), {
                 description: "Input values passed into the workflow code or task execution."
@@ -95,13 +102,14 @@ export function startBackgroundWorkflowToolBuild(): ToolDefinition {
             const code = payload.code?.trim() ?? "";
             const taskId = payload.taskId?.trim() ?? "";
             const requestedName = payload.name?.trim() ?? "";
+            const requestedModel = payload.model?.trim() ?? "";
             const mode = workflowModeResolve(code, taskId);
 
             if (mode === "code") {
-                return startInlineWorkflow(payload, code, requestedName, toolContext, toolCall);
+                return startInlineWorkflow(payload, code, requestedName, requestedModel, toolContext, toolCall);
             }
 
-            return startTaskWorkflow(payload, taskId, requestedName, toolContext, toolCall);
+            return startTaskWorkflow(payload, taskId, requestedName, requestedModel, toolContext, toolCall);
         }
     };
 }
@@ -110,6 +118,7 @@ async function startInlineWorkflow(
     payload: StartBackgroundWorkflowArgs,
     code: string,
     requestedName: string,
+    requestedModel: string,
     toolContext: ToolExecutionContext,
     toolCall: { id: string; name: string }
 ): Promise<Awaited<ReturnType<ToolDefinition["execute"]>>> {
@@ -134,6 +143,7 @@ async function startInlineWorkflow(
     rlmVerify(code, verifyContext, parameterPreamble);
 
     const agentId = await workflowAgentCreate(toolContext, requestedName);
+    await workflowModelOverrideApply(requestedModel, toolContext, agentId);
     await toolContext.agentSystem.post(
         toolContext.ctx,
         { agentId },
@@ -158,6 +168,7 @@ async function startTaskWorkflow(
     payload: StartBackgroundWorkflowArgs,
     taskId: string,
     requestedName: string,
+    requestedModel: string,
     toolContext: ToolExecutionContext,
     toolCall: { id: string; name: string }
 ): Promise<Awaited<ReturnType<ToolDefinition["execute"]>>> {
@@ -183,6 +194,7 @@ async function startTaskWorkflow(
     }
 
     const agentId = await workflowAgentCreate(toolContext, requestedName || task.title);
+    await workflowModelOverrideApply(requestedModel, toolContext, agentId);
     toolContext.agentSystem.taskExecutions.dispatch({
         userId: task.userId,
         source: "manual",
@@ -245,6 +257,22 @@ async function workflowAgentCreate(toolContext: ToolExecutionContext, requestedN
             name: requestedName || null
         }
     );
+}
+
+async function workflowModelOverrideApply(
+    requestedModel: string,
+    toolContext: ToolExecutionContext,
+    agentId: string
+): Promise<void> {
+    const modelOverride = backgroundModelOverrideResolve(requestedModel, toolContext, agentId);
+    if (!modelOverride) {
+        return;
+    }
+
+    const updated = await toolContext.agentSystem.updateAgentModelOverride(agentId, modelOverride);
+    if (!updated) {
+        throw new Error(`Failed to apply model override for background workflow ${agentId}.`);
+    }
 }
 
 async function workflowTaskResolve(
