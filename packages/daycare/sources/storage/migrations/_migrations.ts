@@ -68,9 +68,5 @@ export const migrations: Migration[] = [
     {
         name: "20260311130000_mini_apps",
         fileName: "20260311130000_mini_apps.sql"
-    },
-    {
-        name: "20260311170000_mini_apps_code_version",
-        fileName: "20260311170000_mini_apps_code_version.sql"
     }
 ];

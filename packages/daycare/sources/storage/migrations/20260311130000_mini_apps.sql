@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS "mini_apps" (
     "user_id" text NOT NULL,
     "id" text NOT NULL,
     "version" integer NOT NULL DEFAULT 1,
+    "code_version" integer NOT NULL DEFAULT 1,
     "valid_from" bigint NOT NULL,
     "valid_to" bigint,
     "title" text NOT NULL,
