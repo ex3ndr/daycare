@@ -13,6 +13,7 @@ import type { AuthStore } from "../../auth/store.js";
 import { emailSend } from "../../email/emailSend.js";
 import { contextForUser } from "../../engine/agents/context.js";
 import type { ConfigModule } from "../../engine/config/configModule.js";
+import type { AgentSystem } from "../../engine/agents/agentSystem.js";
 import type { EngineEvent, EngineEventBus } from "../../engine/ipc/events.js";
 import type { MiniApps } from "../../engine/mini-apps/MiniApps.js";
 import type { CommandRegistry } from "../../engine/modules/commandRegistry.js";
@@ -50,6 +51,7 @@ import { appServerSettingsResolve } from "./appServerSettingsResolve.js";
 import { appWorkspaceResolve, WorkspaceAccessError } from "./appWorkspaceResolve.js";
 import { miniAppServe } from "./miniAppServe.js";
 import { miniAppTokenSign } from "./miniAppToken.js";
+import { miniAppExec } from "../../engine/mini-apps/miniAppExec.js";
 import { routeAuthEmailConnectVerify } from "./routes/routeAuthEmailConnectVerify.js";
 import { routeAuthEmailRequest } from "./routes/routeAuthEmailRequest.js";
 import { routeAuthEmailVerify } from "./routes/routeAuthEmailVerify.js";
@@ -90,6 +92,7 @@ export type AppServerOptions = {
         add: (ctx: Context, secret: Secret) => Promise<void>;
         remove: (ctx: Context, name: string) => Promise<boolean>;
     } | null;
+    agentSystem?: AgentSystem | null;
     connectorTargetResolve: (path: AgentPath) => Promise<{ connector: string; targetId: string } | null>;
 };
 
@@ -124,6 +127,7 @@ export class AppServer {
     private readonly observationLog: ObservationLogRepository | null;
     private readonly miniApps: MiniApps | null;
     private readonly secrets: AppServerOptions["secrets"];
+    private readonly agentSystem: AgentSystem | null;
     private readonly connectorTargetResolve: AppServerOptions["connectorTargetResolve"];
     private readonly logger = getLogger("api.app-server");
 
@@ -159,6 +163,7 @@ export class AppServer {
         this.observationLog = options.observationLog;
         this.miniApps = options.miniApps ?? null;
         this.secrets = options.secrets;
+        this.agentSystem = options.agentSystem ?? null;
         this.connectorTargetResolve = options.connectorTargetResolve;
     }
 
@@ -419,6 +424,17 @@ export class AppServer {
                           launchPath: `/mini-apps/s/${encodeURIComponent(token)}/`,
                           expiresAt: Date.now() + MINI_APP_TOKEN_TTL_SECONDS * 1000
                       };
+                  }
+                : null,
+            miniAppExec: this.miniApps && this.agentSystem
+                ? async (requestCtx, appId, code) => {
+                      return miniAppExec({
+                          ctx: requestCtx,
+                          appId,
+                          code,
+                          agentSystem: this.agentSystem!,
+                          toolResolver: this.toolResolver
+                      });
                   }
                 : null
         });
