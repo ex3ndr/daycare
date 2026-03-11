@@ -5,7 +5,7 @@ import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { miniAppsRouteHandle } from "./miniAppsRoutes.js";
 
 describe("miniAppsRouteHandle", () => {
-    it("lists apps and returns launch paths", async () => {
+    it("lists apps, icons, and returns launch paths", async () => {
         const storage = await storageOpenTest();
         try {
             const miniApps = new MiniApps({
@@ -43,6 +43,19 @@ describe("miniAppsRouteHandle", () => {
                 ]
             });
 
+            const icons = await routeCall({
+                pathname: "/mini-apps/icons",
+                method: "GET",
+                ctx,
+                miniApps
+            });
+            expect(icons.statusCode).toBe(200);
+            expect(icons.payload).toEqual({
+                ok: true,
+                icons: expect.arrayContaining(["browser", "gear", "home"]),
+                fallbackIcon: "browser"
+            });
+
             const launch = await routeCall({
                 pathname: "/mini-apps/crm/launch",
                 method: "GET",
@@ -71,6 +84,38 @@ describe("miniAppsRouteHandle", () => {
 
         expect(result.statusCode).toBe(503);
         expect(result.payload).toEqual({ ok: false, error: "Mini apps unavailable." });
+    });
+
+    it("returns icon metadata when validation fails", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const miniApps = new MiniApps({
+                usersDir: "/tmp/daycare-mini-app-routes",
+                storage
+            });
+            const result = await routeCall({
+                pathname: "/mini-apps/create",
+                method: "POST",
+                ctx: contextForUser({ userId: "user-1" }),
+                miniApps,
+                body: {
+                    id: "crm",
+                    title: "CRM",
+                    icon: "not-a-real-icon",
+                    html: "<!doctype html><h1>CRM</h1>"
+                }
+            });
+
+            expect(result.statusCode).toBe(400);
+            expect(result.payload).toEqual({
+                ok: false,
+                error: 'Invalid mini app icon "not-a-real-icon".',
+                icons: expect.arrayContaining(["browser", "gear", "home"]),
+                fallbackIcon: "browser"
+            });
+        } finally {
+            await storage.connection.close();
+        }
     });
 });
 

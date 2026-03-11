@@ -1,10 +1,10 @@
-import type { Octicons } from "@expo/vector-icons";
 import * as React from "react";
 import { ActivityIndicator, Platform, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import WebView from "react-native-webview";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
+import { miniAppIconResolve } from "@/modules/mini-apps/miniAppIconResolve";
 import { miniAppLaunchFetch } from "@/modules/mini-apps/miniAppLaunchFetch";
 import { useMiniAppsStore } from "@/modules/mini-apps/miniAppsContext";
 import { MINI_APPS_EMPTY } from "@/modules/mini-apps/miniAppsStoreCreate";
@@ -56,10 +56,7 @@ export function MiniAppView({ appId }: MiniAppViewProps) {
 
     return (
         <View style={styles.root}>
-            <PageHeader
-                title={app?.title ?? appId}
-                icon={(app?.icon as React.ComponentProps<typeof Octicons>["name"]) ?? "browser"}
-            />
+            <PageHeader title={app?.title ?? appId} icon={miniAppIconResolve(app?.icon)} />
             <View style={[styles.content, { backgroundColor: theme.colors.surfaceContainerLow }]}>
                 {!app ? (
                     <View style={styles.center}>

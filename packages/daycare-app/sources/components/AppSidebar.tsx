@@ -5,6 +5,7 @@ import { Pressable, ScrollView, type StyleProp, Text, View, type ViewStyle } fro
 import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useConfigStore } from "@/modules/config/configContext";
+import { miniAppIconResolve } from "@/modules/mini-apps/miniAppIconResolve";
 import { useMiniAppsStore } from "@/modules/mini-apps/miniAppsContext";
 import { MINI_APPS_EMPTY } from "@/modules/mini-apps/miniAppsStoreCreate";
 import { type AppMode, appModes } from "@/modules/navigation/appModes";
@@ -330,7 +331,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(
             const miniAppGroup = miniApps.map((app) => ({
                 key: `mini-app-${app.id}`,
                 mode: "mini-apps" as const,
-                icon: app.icon as React.ComponentProps<typeof Octicons>["name"],
+                icon: miniAppIconResolve(app.icon),
                 label: app.title,
                 itemId: app.id
             }));

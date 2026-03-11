@@ -7,6 +7,7 @@ import { contextForUser } from "../agents/context.js";
 import { UserHome } from "../users/userHome.js";
 import { userHomeEnsure } from "../users/userHomeEnsure.js";
 import { MiniApps } from "./MiniApps.js";
+import { MiniAppIconError } from "./miniAppIconError.js";
 
 const tempDirs: string[] = [];
 
@@ -67,6 +68,31 @@ describe("MiniApps", () => {
 
             const normalizedDir = await miniApps.versionDirectoryForUser(ctx.userId, "CRM");
             expect(normalizedDir).toBe(versionDir);
+        } finally {
+            await storage.connection.close();
+        }
+    });
+
+    it("rejects invalid icons", async () => {
+        const storage = await storageOpenTest();
+        const usersDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-mini-apps-"));
+        tempDirs.push(usersDir);
+        try {
+            const ctx = contextForUser({ userId: "workspace-1" });
+            await userHomeEnsure(new UserHome(usersDir, ctx.userId));
+            const miniApps = new MiniApps({
+                usersDir,
+                storage
+            });
+
+            await expect(
+                miniApps.create(ctx, {
+                    id: "crm",
+                    title: "CRM",
+                    icon: "not-a-real-icon",
+                    html: "<!doctype html><h1>v1</h1>"
+                })
+            ).rejects.toThrowError(MiniAppIconError);
         } finally {
             await storage.connection.close();
         }

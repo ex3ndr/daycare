@@ -6,6 +6,7 @@ import type { Storage } from "../../storage/storage.js";
 import { AsyncLock } from "../../utils/lock.js";
 import { contextForUser } from "../agents/context.js";
 import { miniAppDirectoryResolve } from "./miniAppDirectoryResolve.js";
+import { miniAppIconValidate } from "./miniAppIconValidate.js";
 import { miniAppIdNormalize } from "./miniAppIdNormalize.js";
 import { miniAppRecordFromDb } from "./miniAppRecordFromDb.js";
 import type { MiniAppCreateInput, MiniAppRecord, MiniAppUpdateInput } from "./miniAppTypes.js";
@@ -43,7 +44,7 @@ export class MiniApps {
     async create(ctx: Context, input: MiniAppCreateInput): Promise<MiniAppRecord> {
         const id = miniAppIdNormalize(input.id);
         const title = input.title.trim();
-        const icon = input.icon.trim();
+        const icon = miniAppIconValidate(input.icon);
         const html = input.html.trim();
         if (!title) {
             throw new Error("Mini app title is required.");
@@ -89,6 +90,7 @@ export class MiniApps {
             if (!current) {
                 throw new Error(`Mini app not found: ${normalizedId}`);
             }
+            const icon = input.icon === undefined ? undefined : miniAppIconValidate(input.icon);
             const codeChanged = miniAppCodeChanged(input);
             const currentDir = miniAppDirectoryResolve(this.usersDir, ctx.userId, normalizedId, current.codeVersion);
             const nextCodeVersion = codeChanged ? current.codeVersion + 1 : current.codeVersion;
@@ -107,7 +109,7 @@ export class MiniApps {
                 }
                 const record = await this.repository.update(ctx, normalizedId, {
                     title: input.title,
-                    icon: input.icon,
+                    icon,
                     codeVersion: nextCodeVersion,
                     updatedAt: Date.now()
                 });

@@ -1,6 +1,8 @@
 import type http from "node:http";
 import type { Context } from "@/types";
 import type { MiniApps } from "../../../engine/mini-apps/MiniApps.js";
+import { MiniAppIconError } from "../../../engine/mini-apps/miniAppIconError.js";
+import { MINI_APP_ICON_FALLBACK, MINI_APP_OCTICON_NAMES } from "../../../engine/mini-apps/miniAppOcticons.js";
 
 export type MiniAppsRouteContext = {
     ctx: Context;
@@ -36,6 +38,15 @@ export async function miniAppsRouteHandle(
         if (pathname === "/mini-apps" && request.method === "GET") {
             const apps = await context.miniApps.list(context.ctx);
             context.sendJson(response, 200, { ok: true, apps });
+            return true;
+        }
+
+        if (pathname === "/mini-apps/icons" && request.method === "GET") {
+            context.sendJson(response, 200, {
+                ok: true,
+                icons: MINI_APP_OCTICON_NAMES,
+                fallbackIcon: MINI_APP_ICON_FALLBACK
+            });
             return true;
         }
 
@@ -95,6 +106,15 @@ export async function miniAppsRouteHandle(
             return true;
         }
     } catch (error) {
+        if (error instanceof MiniAppIconError) {
+            context.sendJson(response, 400, {
+                ok: false,
+                error: error.message,
+                icons: error.icons,
+                fallbackIcon: error.fallbackIcon
+            });
+            return true;
+        }
         const message = error instanceof Error ? error.message : "Mini app request failed.";
         const statusCode = message.toLowerCase().includes("not found") ? 404 : 400;
         context.sendJson(response, statusCode, { ok: false, error: message });
