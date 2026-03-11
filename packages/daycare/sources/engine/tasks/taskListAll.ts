@@ -1,10 +1,12 @@
 import type { Context } from "@/types";
 import type { Storage } from "../../storage/storage.js";
+import type { TaskParameter } from "../modules/tasks/taskParameterTypes.js";
 
 export type TaskSummary = {
     id: string;
     title: string;
     description: string | null;
+    parameters: TaskParameter[] | null;
     createdAt: number;
     updatedAt: number;
     lastExecutedAt: number | null;
@@ -73,6 +75,7 @@ export async function taskListAll(options: { storage: Storage; ctx: Context }): 
             id: task.id,
             title: task.title,
             description: task.description,
+            parameters: task.parameters,
             createdAt: task.createdAt,
             updatedAt: task.updatedAt,
             lastExecutedAt: lastRunByTask.get(task.id) ?? null

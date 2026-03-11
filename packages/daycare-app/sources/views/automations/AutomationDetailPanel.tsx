@@ -64,13 +64,8 @@ export const AutomationDetailPanel = React.memo(() => {
                             <Text style={[panelStyles.paramName, { color: theme.colors.onSurface }]}>{param.name}</Text>
                             <Text style={[panelStyles.paramType, { color: theme.colors.onSurfaceVariant }]}>
                                 {param.type}
-                                {param.required ? " (required)" : ""}
+                                {param.nullable ? " (nullable)" : " (required)"}
                             </Text>
-                            {param.description && (
-                                <Text style={[panelStyles.paramDesc, { color: theme.colors.onSurfaceVariant }]}>
-                                    {param.description}
-                                </Text>
-                            )}
                         </View>
                     ))}
                 </View>

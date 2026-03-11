@@ -1,3 +1,9 @@
+export type TaskParameter = {
+    name: string;
+    type: string;
+    nullable: boolean;
+};
+
 export type TaskActiveCronTrigger = {
     id: string;
     schedule: string;
@@ -16,6 +22,7 @@ export type TaskActiveSummary = {
     id: string;
     title: string;
     description: string | null;
+    parameters: TaskParameter[] | null;
     createdAt: number;
     updatedAt: number;
     lastExecutedAt: number | null;
@@ -29,6 +36,7 @@ export type TaskSummary = {
     id: string;
     title: string;
     description: string | null;
+    parameters: TaskParameter[] | null;
     createdAt: number;
     updatedAt: number;
     lastExecutedAt: number | null;
@@ -64,17 +72,9 @@ export type TaskDetail = {
     title: string;
     description: string | null;
     code: string;
-    parameters: TaskDetailParameter[] | null;
+    parameters: TaskParameter[] | null;
     createdAt: number;
     updatedAt: number;
-};
-
-export type TaskDetailParameter = {
-    name: string;
-    type: string;
-    description?: string;
-    required?: boolean;
-    default?: unknown;
 };
 
 export type TaskDetailCronTrigger = {

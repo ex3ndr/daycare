@@ -113,18 +113,21 @@ describe("taskListAll", () => {
             expect(result.tasks[0]).toMatchObject({
                 id: "task-active",
                 title: "Active",
+                parameters: null,
                 lastExecutedAt: 150
             });
 
             // task-webhook: no executions
             expect(result.tasks[1]).toMatchObject({
                 id: "task-webhook",
+                parameters: null,
                 lastExecutedAt: null
             });
 
             // task-inactive: lastExecutedAt from disabled cron = 300
             expect(result.tasks[2]).toMatchObject({
                 id: "task-inactive",
+                parameters: null,
                 lastExecutedAt: 300
             });
 
@@ -168,6 +171,8 @@ describe("taskListAll", () => {
                     .map((task) => task.id)
                     .sort()
             ).toEqual(CORE_TASK_IDS);
+            const planVerify = result.tasks.find((task) => task.id === "core:plan-verify");
+            expect(planVerify?.parameters).toEqual([{ name: "plan_path", type: "string", nullable: false }]);
         } finally {
             storage.connection.close();
         }

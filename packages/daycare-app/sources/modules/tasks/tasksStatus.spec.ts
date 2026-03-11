@@ -7,6 +7,7 @@ function task(overrides: Partial<TaskSummary> = {}): TaskSummary {
         id: "t1",
         title: "Test Task",
         description: null,
+        parameters: null,
         createdAt: 1000,
         updatedAt: 2000,
         lastExecutedAt: null,

@@ -906,6 +906,7 @@ describe("AppServer authenticated routes", () => {
                     id: "daily-report",
                     title: "Daily report",
                     description: null,
+                    parameters: null,
                     createdAt: 10,
                     updatedAt: 20,
                     lastExecutedAt: 100,

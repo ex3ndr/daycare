@@ -129,6 +129,11 @@ describe("taskListActive", () => {
 
             expect(coreTask).toMatchObject({
                 id: "core:ralph-loop",
+                parameters: [
+                    { name: "plan_path", type: "string", nullable: false },
+                    { name: "default_branch", type: "string", nullable: true },
+                    { name: "task_number", type: "string", nullable: true }
+                ],
                 lastExecutedAt: 200,
                 triggers: {
                     webhook: [{ id: "webhook-core", lastExecutedAt: 200 }]

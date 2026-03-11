@@ -11,6 +11,7 @@ const sampleResult: TaskListAllResult = {
             id: "t1",
             title: "Daily Report",
             description: null,
+            parameters: null,
             createdAt: 1000,
             updatedAt: 2000,
             lastExecutedAt: 3000
