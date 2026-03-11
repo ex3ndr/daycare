@@ -98,6 +98,7 @@ import { skillEjectToolBuild } from "./modules/tools/skillEjectToolBuild.js";
 import { skillRemoveToolBuild } from "./modules/tools/skillRemoveToolBuild.js";
 import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
 import { buildSpeechGenerationTool } from "./modules/tools/speech-generation.js";
+import { startBackgroundWorkflowToolBuild } from "./modules/tools/startBackgroundWorkflowTool.js";
 import {
     buildTaskCreateTool,
     buildTaskDeleteTool,
@@ -774,6 +775,7 @@ export class Engine {
         this.modules.tools.register("core", todoArchiveToolBuild());
         this.modules.tools.register("core", todoBatchStatusToolBuild());
         this.modules.tools.register("core", buildStartBackgroundAgentTool());
+        this.modules.tools.register("core", startBackgroundWorkflowToolBuild());
         this.modules.tools.register("core", buildSendAgentMessageTool());
         this.modules.tools.register("core", acpSessionStartToolBuild(this.acpSessions));
         this.modules.tools.register("core", acpSessionMessageToolBuild(this.acpSessions));

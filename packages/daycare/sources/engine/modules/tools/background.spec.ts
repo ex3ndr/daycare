@@ -3,9 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import type { ToolExecutionContext } from "@/types";
 import { contextForAgent } from "../../agents/context.js";
 import { buildSendAgentMessageTool, buildStartBackgroundAgentTool } from "./background.js";
+import { startBackgroundWorkflowToolBuild } from "./startBackgroundWorkflowTool.js";
 
 const startToolCall = { id: "tool-1", name: "start_background_agent" };
 const sendToolCall = { id: "tool-2", name: "send_agent_message" };
+const workflowToolCall = { id: "tool-3", name: "start_background_workflow" };
 
 describe("buildStartBackgroundAgentTool", () => {
     it("creates subagent target and posts the first message", async () => {
@@ -211,6 +213,90 @@ describe("buildSendAgentMessageTool", () => {
     });
 });
 
+describe("startBackgroundWorkflowToolBuild", () => {
+    it("starts a child workflow from inline code", async () => {
+        let postedItem: unknown = null;
+        const post = vi.fn(async (_ctx: unknown, _target: unknown, item: unknown) => {
+            postedItem = item;
+        });
+        const tool = startBackgroundWorkflowToolBuild();
+        const context = contextBuild({
+            post
+        });
+
+        const result = await tool.execute(
+            {
+                code: "print('collect status')",
+                parameters: { limit: 3 },
+                inputSchema: [{ name: "limit", type: "integer", nullable: false }]
+            },
+            context,
+            workflowToolCall
+        );
+
+        expect(post).toHaveBeenCalledWith(
+            context.ctx,
+            { agentId: "agent-123" },
+            expect.objectContaining({
+                type: "system_message",
+                text: "[workflow]\nmode: code",
+                origin: "workflow",
+                code: "print('collect status')",
+                inputs: { limit: 3 },
+                inputSchemas: [{ name: "limit", type: "integer", nullable: false }],
+                context: context.messageContext
+            })
+        );
+        expect(postedItem).toBeTruthy();
+        expect(result.typedResult.targetAgentId).toBe("agent-123");
+    });
+
+    it("starts a child workflow from a stored task", async () => {
+        const dispatch = vi.fn();
+        const tool = startBackgroundWorkflowToolBuild();
+        const context = contextBuild({
+            taskExecutions: { dispatch },
+            storage: {
+                agents: {
+                    findByPath: vi.fn(async () => ({ id: "agent-123" }))
+                },
+                tasks: {
+                    findById: vi.fn(async () => ({
+                        id: "task-42",
+                        userId: "user-1",
+                        version: 7,
+                        title: "Nightly review",
+                        parameters: [{ name: "dryRun", type: "boolean", nullable: false }]
+                    })),
+                    findByVersion: vi.fn(async () => null)
+                }
+            }
+        });
+
+        const result = await tool.execute(
+            {
+                taskId: "task-42",
+                parameters: { dryRun: true }
+            },
+            context,
+            workflowToolCall
+        );
+
+        expect(dispatch).toHaveBeenCalledWith({
+            userId: "user-1",
+            source: "manual",
+            taskId: "task-42",
+            taskVersion: 7,
+            origin: "workflow",
+            target: { agentId: "agent-123" },
+            text: "[workflow]\ntaskId: task-42\ntaskTitle: Nightly review",
+            parameters: { dryRun: true },
+            context: context.messageContext
+        });
+        expect(result.typedResult.taskId).toBe("task-42");
+    });
+});
+
 type AgentSystemStub = Partial<{
     agentIdForTarget: (ctx: unknown, target: unknown) => Promise<string>;
     post: (ctx: unknown, target: unknown, item: unknown) => Promise<void>;
@@ -218,9 +304,43 @@ type AgentSystemStub = Partial<{
     agentExists: (agentId: string) => Promise<boolean>;
     steer: (ctx: unknown, agentId: string, item: unknown) => Promise<void>;
     contextForAgentId: (agentId: string) => Promise<unknown>;
+    taskExecutions: {
+        dispatch: (input: unknown) => void;
+    };
+    toolResolver: {
+        listTools: () => Array<{ name: string }>;
+        listToolsForAgent: () => Array<{ name: string }>;
+        execute: (name: string, args: unknown, context: unknown, toolCallId?: string) => Promise<unknown>;
+        deferredHandlerFor: (toolName: string) => unknown;
+    };
     storage: {
         agents?: {
             findByPath: (path: string) => Promise<{ id: string } | null>;
+            findById?: (id: string) => Promise<{ id: string; path: string; nextSubIndex?: number } | null>;
+            update?: (id: string, patch: { nextSubIndex: number; updatedAt: number }) => Promise<void>;
+        };
+        tasks?: {
+            findById: (
+                ctx: unknown,
+                taskId: string
+            ) => Promise<{
+                id: string;
+                userId: string;
+                version?: number;
+                title: string;
+                parameters: Array<{ name: string; type: string; nullable: boolean }> | null;
+            } | null>;
+            findByVersion: (
+                ctx: unknown,
+                taskId: string,
+                version: number
+            ) => Promise<{
+                id: string;
+                userId: string;
+                version?: number;
+                title: string;
+                parameters: Array<{ name: string; type: string; nullable: boolean }> | null;
+            } | null>;
         };
     };
 }>;
@@ -256,6 +376,15 @@ function contextBuild(agentSystem: AgentSystemStub, options: ContextBuildOptions
         })) as ContextBuildOptions["sandboxWrite"]);
     const agentPath = agentPathFromDescriptorFixture(descriptor, userId, agentId);
     const agentConfig = agentConfigFromDescriptorFixture(descriptor);
+    const defaultToolResolver = {
+        listTools: () => [],
+        listToolsForAgent: () => [],
+        execute: vi.fn(async () => {
+            throw new Error("not used");
+        }),
+        deferredHandlerFor: vi.fn(() => undefined)
+    } as unknown as NonNullable<ToolExecutionContext["toolResolver"]>;
+    const toolResolver = (agentSystem.toolResolver ?? defaultToolResolver) as ToolExecutionContext["toolResolver"];
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: {
@@ -274,6 +403,7 @@ function contextBuild(agentSystem: AgentSystemStub, options: ContextBuildOptions
         ctx: contextForAgent({ userId, agentId }),
         source: "test",
         messageContext: {},
+        toolResolver,
         agentSystem: {
             agentIdForTarget:
                 agentSystem.agentIdForTarget ?? (vi.fn(async () => "agent-123") as AgentSystemStub["agentIdForTarget"]),
@@ -286,17 +416,32 @@ function contextBuild(agentSystem: AgentSystemStub, options: ContextBuildOptions
                 (vi.fn(async (_agentId: string) =>
                     contextForAgent({ userId, agentId })
                 ) as AgentSystemStub["contextForAgentId"]),
+            taskExecutions:
+                agentSystem.taskExecutions ??
+                ({
+                    dispatch: vi.fn()
+                } as AgentSystemStub["taskExecutions"]),
             storage:
                 agentSystem.storage ??
                 ({
                     agents: {
+                        findById: vi.fn(async (id: string) => ({
+                            id,
+                            path: agentPath,
+                            nextSubIndex: 0
+                        })),
                         findByPath: vi.fn(async (pathValue: string) => {
                             const parts = String(pathValue)
                                 .split("/")
                                 .filter((segment) => segment.length > 0);
                             const id = parts.at(-1) ?? null;
                             return id ? { id } : null;
-                        })
+                        }),
+                        update: vi.fn(async () => {})
+                    },
+                    tasks: {
+                        findById: vi.fn(async () => null),
+                        findByVersion: vi.fn(async () => null)
                     }
                 } as AgentSystemStub["storage"])
         } as unknown as ToolExecutionContext["agentSystem"]
