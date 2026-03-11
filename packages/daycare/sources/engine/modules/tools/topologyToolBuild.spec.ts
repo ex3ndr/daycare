@@ -350,4 +350,31 @@ describe("topologyTool", () => {
             description: "Codex reviewer"
         });
     });
+
+    it("marks core tasks with isCore true and user tasks with isCore false", async () => {
+        const built = createToolContext({
+            caller: { userId: "user-1", agentId: "agent-1" },
+            users: [{ id: "user-1", workspaceOwnerId: null }],
+            agents: [{ id: "agent-1", userId: "user-1", path: "connector/telegram", updatedAt: 10 }],
+            tasksByUser: {
+                "user-1": [
+                    { id: "core:ralph-loop", title: "Ralph Loop", description: null, updatedAt: 100 },
+                    { id: "my-custom-task", title: "My Task", description: "A user task", updatedAt: 200 }
+                ]
+            }
+        });
+
+        const result = await built.tool.execute({}, built.context, { id: "call-4", name: "topology" });
+
+        expect(result.typedResult.tasks).toHaveLength(2);
+
+        const coreTask = result.typedResult.tasks.find((task) => task.id === "core:ralph-loop");
+        const userTask = result.typedResult.tasks.find((task) => task.id === "my-custom-task");
+
+        expect(coreTask).toBeDefined();
+        expect(coreTask?.isCore).toBe(true);
+
+        expect(userTask).toBeDefined();
+        expect(userTask?.isCore).toBe(false);
+    });
 });
