@@ -1,7 +1,7 @@
 # Shell Plugin
 
 The shell plugin provides workspace file tools (`read`, `read_json`, `write`, `edit`, `write_output`), session-scoped
-command execution (`exec`, `exec_poll`, `exec_kill`), and durable process management tools.
+command execution (`exec`, `exec_background`, `exec_poll`, `exec_kill`), and durable process management tools.
 
 ## Filesystem Helper Tools
 
@@ -29,9 +29,9 @@ variables override both dotenv and inline `env` values.
 - Tool-level truncation applies an additional `8000`-char tail-biased safety limit per text block before inference context storage.
 - `exec` waits up to `timeoutMs` for the process to exit. If the process is still running at timeout, the command is
   stopped and the result is returned with `timedOut: true`.
-- Set `background: true` on `exec` to start the command in the background immediately and return a `processId`.
+- Use `exec_background` to start a command in the background immediately and return a `processId`.
 - Use `exec_poll` with that `processId` to wait for more output. Each poll only returns logs that changed since the last
-  `exec` or `exec_poll` call for that process.
+  `exec_background` or `exec_poll` call for that process.
 - Use `exec_kill` to stop a running exec process. Session-scoped execs are also killed automatically when the owning
   agent session ends or the agent dies.
 

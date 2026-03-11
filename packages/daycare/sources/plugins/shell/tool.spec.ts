@@ -11,6 +11,7 @@ import { AgentInbox } from "../../engine/agents/ops/agentInbox.js";
 import { UserHome } from "../../engine/users/userHome.js";
 import { Sandbox } from "../../sandbox/sandbox.js";
 import {
+    buildExecBackgroundTool,
     buildExecKillTool,
     buildExecPollTool,
     buildExecTool,
@@ -20,6 +21,7 @@ import {
 } from "./tool.js";
 
 const execToolCall = { id: "tool-call-1", name: "exec" };
+const execBackgroundToolCall = { id: "tool-call-1b", name: "exec_background" };
 const readToolCall = { id: "tool-call-2", name: "read" };
 const readJsonToolCall = { id: "tool-call-3", name: "read_json" };
 const READ_LIMIT_TEST_BYTES = 51 * 1024;
@@ -336,7 +338,7 @@ describe("exec tool", () => {
         );
     });
 
-    it("forwards explicit background exec start", async () => {
+    it("starts exec_background through Processes", async () => {
         const context = createContext(workingDir);
         const execStartForContext = vi.fn(async () => ({
             processId: "process-1",
@@ -350,9 +352,9 @@ describe("exec tool", () => {
             signal: null,
             failed: false
         }));
-        const tool = buildExecTool({ execStartForContext } as never);
+        const tool = buildExecBackgroundTool({ execStartForContext } as never);
 
-        const result = await tool.execute({ command: "sleep 5", background: true }, context, execToolCall);
+        const result = await tool.execute({ command: "sleep 5" }, context, execBackgroundToolCall);
         const text = toolMessageText(result.toolMessage.content);
 
         expect(execStartForContext).toHaveBeenCalledWith(
@@ -367,9 +369,9 @@ describe("exec tool", () => {
         expect(text).toContain("exec_poll");
     });
 
-    it("reports process ids when background exec is running", async () => {
+    it("reports process ids when exec_background is running", async () => {
         const context = createContext(workingDir);
-        const tool = buildExecTool({
+        const tool = buildExecBackgroundTool({
             execStartForContext: vi.fn(async () => ({
                 processId: "process-1",
                 command: "sleep 5",
@@ -384,7 +386,7 @@ describe("exec tool", () => {
             }))
         } as never);
 
-        const result = await tool.execute({ command: "sleep 5", background: true }, context, execToolCall);
+        const result = await tool.execute({ command: "sleep 5" }, context, execBackgroundToolCall);
         const text = toolMessageText(result.toolMessage.content);
 
         expect(result.toolMessage.isError).toBe(false);

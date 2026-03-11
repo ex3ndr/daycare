@@ -32,5 +32,5 @@ flowchart TD
 
 ## Notes
 
-- `detachOnTimeout=false` restores the old behavior where timeout stops the command instead of keeping it alive.
+- This lifecycle was later refined so foreground `exec` always stays inline and background work uses `exec_background`.
 - The in-memory process state is intentionally session-bound and is not persisted across engine restarts.

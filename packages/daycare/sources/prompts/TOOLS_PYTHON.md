@@ -8,9 +8,9 @@ When `read(...)` is called from Python execution, text is unbounded for the sele
 Use `read_json(...)` when you need parsed JSON objects/lists directly instead of raw text.
 Use `json_parse(text=...)["value"]` and `json_stringify(value=..., pretty=True|False)["value"]` for in-memory JSON conversion when needed.
 For shell commands via `exec(...)`, home paths should use `~` (or `$HOME`) in the command itself; `pwd` is the current
-working directory, not the home directory. `exec(...)` waits for completion by default. If you pass
-`background=True`, it returns a `processId` immediately; use `exec_poll(processId=..., timeoutMs=...)` to wait for
-more output or `exec_kill(processId=...)` to stop it.
+working directory, not the home directory. `exec(...)` waits for completion by default. Use
+`exec_background(...)` when you want a `processId` immediately; then use
+`exec_poll(processId=..., timeoutMs=...)` to wait for more output or `exec_kill(processId=...)` to stop it.
 
 Prefer one script with multiple tool calls over separate invocations. Store results in variables and pass them between tools — do not manually construct or parse strings when a variable already holds the value. Independent tool calls can run sequentially in the same script; this is faster than multiple round-trips.
 ```python

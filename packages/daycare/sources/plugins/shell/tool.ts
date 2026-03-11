@@ -103,12 +103,6 @@ const execSchema = Type.Object(
                 description:
                     "Loads environment variables from dotenv. Use true to load .env from cwd, or pass an explicit dotenv file path."
             })
-        ),
-        background: Type.Optional(
-            Type.Boolean({
-                description:
-                    "When true, start the command in the background immediately and return a processId for exec_poll/exec_kill without waiting for output or exit."
-            })
         )
     },
     { additionalProperties: false }
@@ -387,43 +381,27 @@ export function buildExecTool(processes: Processes): ToolDefinition {
         tool: {
             name: "exec",
             description:
-                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Optional secrets inject saved secret env vars and override explicit env values. timeoutMs has a maximum of 300000ms (5 minutes). By default, exec waits for the command to finish and stops it if it is still running at timeoutMs. Set background=true to start the command in the background immediately and get a processId for exec_poll/exec_kill. Exec uses the caller's granted write directories and global read access with a protected deny-list. Outbound networking is unrestricted. Returns stdout/stderr and lifecycle details.",
+                "Execute a shell command inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Optional secrets inject saved secret env vars and override explicit env values. timeoutMs has a maximum of 300000ms (5 minutes). Exec waits for the command to finish and stops it if it is still running at timeoutMs. Use exec_background to start a command in the background and get a processId for exec_poll/exec_kill. Exec uses the caller's granted write directories and global read access with a protected deny-list. Outbound networking is unrestricted. Returns stdout/stderr and lifecycle details.",
             parameters: execSchema
         },
         returns: execReturns,
         execute: async (args, toolContext, toolCall) => {
-            const payload = args as ExecArgs;
-            const secretNames = secretNamesNormalize(payload.secrets ?? []);
-            const resolvedSecrets =
-                secretNames.length > 0 ? await secretEnvResolve(toolContext, secretNames) : undefined;
-            const sessionId = execSessionIdResolve(toolContext);
-            const result = await processes.execStartForContext({
-                ctx: toolContext.ctx,
-                agentId: toolContext.agent.id,
-                sessionId,
-                sandbox: toolContext.sandbox,
-                command: payload.command,
-                cwd: payload.cwd,
-                timeoutMs: payload.timeoutMs ?? 30_000,
-                env: payload.env,
-                secrets: resolvedSecrets,
-                dotenv: payload.dotenv,
-                background: payload.background === true,
-                abortSignal: toolContext.abortSignal
-            });
-            const formattedOutput = formatExecResultOutput(result);
-            const toolMessage = buildToolMessage(toolCall, formattedOutput.output, result.failed && !result.running, {
-                action: "exec",
-                cwd: result.cwd,
-                exitCode: result.exitCode,
-                signal: result.signal,
-                processId: result.processId,
-                running: result.running,
-                timedOut: result.timedOut,
-                ...(formattedOutput.stdout !== undefined ? { stdout: formattedOutput.stdout } : {}),
-                ...(formattedOutput.stderr !== undefined ? { stderr: formattedOutput.stderr } : {})
-            });
-            return toolExecutionResultOutcomeWithTyped(toolMessage, execResultBuild(toolMessage));
+            return execRun(args as ExecArgs, toolContext, toolCall, processes, "exec", false);
+        }
+    };
+}
+
+export function buildExecBackgroundTool(processes: Processes): ToolDefinition {
+    return {
+        tool: {
+            name: "exec_background",
+            description:
+                "Start a shell command in the background inside the agent workspace (or a subdirectory). The cwd, if provided, must resolve inside the workspace. Optional env sets environment variables for this command. Optional dotenv=true loads .env from cwd when present; dotenv can also be a path string (absolute or cwd-relative) to load a specific env file. Explicit env values override dotenv values. Optional secrets inject saved secret env vars and override explicit env values. Returns a processId immediately for exec_poll/exec_kill. Uses the caller's granted write directories and global read access with a protected deny-list. Outbound networking is unrestricted.",
+            parameters: execSchema
+        },
+        returns: execReturns,
+        execute: async (args, toolContext, toolCall) => {
+            return execRun(args as ExecArgs, toolContext, toolCall, processes, "exec_background", true);
         }
     };
 }
@@ -433,7 +411,7 @@ export function buildExecPollTool(processes: Processes): ToolDefinition {
         tool: {
             name: "exec_poll",
             description:
-                "Wait for additional output or process exit from a prior exec processId. Returns only logs that changed since the last exec/exec_poll/exec_kill call for that process.",
+                "Wait for additional output or process exit from a prior exec_background processId. Returns only logs that changed since the last exec_background/exec_poll/exec_kill call for that process.",
             parameters: execPollSchema
         },
         returns: execReturns,
@@ -468,7 +446,8 @@ export function buildExecKillTool(processes: Processes): ToolDefinition {
     return {
         tool: {
             name: "exec_kill",
-            description: "Send a signal to a running exec processId and return any new output captured while it exits.",
+            description:
+                "Send a signal to a running exec_background processId and return any new output captured while it exits.",
             parameters: execKillSchema
         },
         returns: execReturns,
@@ -520,6 +499,46 @@ async function secretEnvResolve(
         throw new Error("Secrets service is not configured.");
     }
     return toolContext.secrets.resolve(toolContext.ctx, secretNames);
+}
+
+async function execRun(
+    payload: ExecArgs,
+    toolContext: Parameters<ToolDefinition["execute"]>[1],
+    toolCall: { id: string; name: string },
+    processes: Processes,
+    action: "exec" | "exec_background",
+    background: boolean
+) {
+    const secretNames = secretNamesNormalize(payload.secrets ?? []);
+    const resolvedSecrets = secretNames.length > 0 ? await secretEnvResolve(toolContext, secretNames) : undefined;
+    const sessionId = execSessionIdResolve(toolContext);
+    const result = await processes.execStartForContext({
+        ctx: toolContext.ctx,
+        agentId: toolContext.agent.id,
+        sessionId,
+        sandbox: toolContext.sandbox,
+        command: payload.command,
+        cwd: payload.cwd,
+        timeoutMs: payload.timeoutMs ?? 30_000,
+        env: payload.env,
+        secrets: resolvedSecrets,
+        dotenv: payload.dotenv,
+        background,
+        abortSignal: toolContext.abortSignal
+    });
+    const formattedOutput = formatExecResultOutput(result);
+    const toolMessage = buildToolMessage(toolCall, formattedOutput.output, result.failed && !result.running, {
+        action,
+        cwd: result.cwd,
+        exitCode: result.exitCode,
+        signal: result.signal,
+        processId: result.processId,
+        running: result.running,
+        timedOut: result.timedOut,
+        ...(formattedOutput.stdout !== undefined ? { stdout: formattedOutput.stdout } : {}),
+        ...(formattedOutput.stderr !== undefined ? { stderr: formattedOutput.stderr } : {})
+    });
+    return toolExecutionResultOutcomeWithTyped(toolMessage, execResultBuild(toolMessage));
 }
 
 function execSessionIdResolve(toolContext: Parameters<ToolDefinition["execute"]>[1]): string {
