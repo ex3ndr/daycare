@@ -173,6 +173,7 @@ export type {
     DocumentDbRecord,
     DocumentReferenceDbRecord,
     DocumentReferenceKind,
+    MiniAppDbRecord,
     ObservationLogDbRecord,
     ObservationLogFindOptions,
     ObservationLogRecentOptions,

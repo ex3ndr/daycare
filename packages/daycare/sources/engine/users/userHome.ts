@@ -9,6 +9,7 @@ export class UserHome {
     readonly skills: string;
     readonly skillsActive: string;
     readonly skillsPersonal: string;
+    readonly apps: string;
     readonly home: string;
     readonly databases: string;
     readonly desktop: string;
@@ -22,6 +23,7 @@ export class UserHome {
         this.skills = path.join(this.root, "skills");
         this.skillsActive = path.join(this.skills, "active");
         this.skillsPersonal = path.join(this.skills, "personal");
+        this.apps = path.join(this.root, "apps");
         this.home = path.join(this.root, "home");
         this.databases = path.join(this.root, "databases");
         this.desktop = path.join(this.home, "desktop");

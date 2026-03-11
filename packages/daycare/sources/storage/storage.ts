@@ -16,6 +16,7 @@ import { FragmentsRepository } from "./fragmentsRepository.js";
 import { HistoryRepository } from "./historyRepository.js";
 import { InboxRepository } from "./inboxRepository.js";
 import { KeyValuesRepository } from "./keyValuesRepository.js";
+import { MiniAppsRepository } from "./miniAppsRepository.js";
 import { ModelRoleRulesRepository } from "./modelRoleRulesRepository.js";
 import { ObservationLogRepository } from "./observationLogRepository.js";
 import { ProcessesRepository } from "./processesRepository.js";
@@ -60,6 +61,7 @@ export class Storage {
     readonly keyValues: KeyValuesRepository;
     readonly modelRoleRules: ModelRoleRulesRepository;
     readonly psqlDatabases: PsqlDatabasesRepository;
+    readonly miniApps: MiniAppsRepository;
     readonly observationLog: ObservationLogRepository;
 
     readonly db: DaycareDb;
@@ -94,6 +96,7 @@ export class Storage {
         this.keyValues = new KeyValuesRepository(db);
         this.modelRoleRules = new ModelRoleRulesRepository(db);
         this.psqlDatabases = new PsqlDatabasesRepository(db);
+        this.miniApps = new MiniAppsRepository(db);
         this.observationLog = new ObservationLogRepository(db);
     }
 

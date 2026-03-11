@@ -592,6 +592,28 @@ export const psqlDatabasesTable = pgTable(
     ]
 );
 
+export const miniAppsTable = pgTable(
+    "mini_apps",
+    {
+        userId: text("user_id").notNull(),
+        id: text("id").notNull(),
+        version: integer("version").notNull().default(1),
+        validFrom: bigint("valid_from", { mode: "number" }).notNull(),
+        validTo: bigint("valid_to", { mode: "number" }),
+        title: text("title").notNull(),
+        icon: text("icon").notNull(),
+        createdAt: bigint("created_at", { mode: "number" }).notNull(),
+        updatedAt: bigint("updated_at", { mode: "number" }).notNull()
+    },
+    (table) => [
+        primaryKey({ columns: [table.userId, table.id, table.version] }),
+        index("idx_mini_apps_user_id").on(table.userId),
+        index("idx_mini_apps_updated_at").on(table.updatedAt),
+        uniqueIndex("idx_mini_apps_user_id_active").on(table.userId, table.id).where(sql`${table.validTo} IS NULL`),
+        index("idx_mini_apps_id_valid_to").on(table.id, table.validTo)
+    ]
+);
+
 export const observationLogTable = pgTable(
     "observation_log",
     {
@@ -744,6 +766,7 @@ export const schema = {
     keyValuesTable,
     observationLogTable,
     psqlDatabasesTable,
+    miniAppsTable,
     modelRoleRulesTable,
     appAuthUsersTable,
     appAuthSessionsTable,

@@ -2,6 +2,7 @@ import type http from "node:http";
 import type { Tool } from "@mariozechner/pi-ai";
 import type { AgentSkill, Context, TaskActiveSummary, TaskListAllResult } from "@/types";
 import type { EngineEventBus } from "../../engine/ipc/events.js";
+import type { MiniApps } from "../../engine/mini-apps/MiniApps.js";
 import type { Secret } from "../../engine/secrets/secretTypes.js";
 import { UserHome } from "../../engine/users/userHome.js";
 import type { PsqlService } from "../../services/psql/PsqlService.js";
@@ -23,6 +24,7 @@ import { filesRouteHandle } from "./files/filesRoutes.js";
 import { fragmentsRouteHandle } from "./fragments/fragmentsRoutes.js";
 import { inviteRouteHandle } from "./invite/inviteRoutes.js";
 import { kvRouteHandle } from "./kv/kvRoutes.js";
+import { miniAppsRouteHandle } from "./mini-apps/miniAppsRoutes.js";
 import { observationsRouteHandle } from "./observations/observationsRoutes.js";
 import { profileRouteHandle } from "./profile/profileRoutes.js";
 import type { RouteAgentCallbacks, RouteTaskCallbacks } from "./routeTypes.js";
@@ -52,6 +54,7 @@ export type ApiRouteContext = {
     documents: DocumentsRepository | null;
     fragments: FragmentsRepository | null;
     keyValues: KeyValuesRepository | null;
+    miniApps: MiniApps | null;
     psql: PsqlService | null;
     observationLog: ObservationLogRepository | null;
     publicEndpoints?: {
@@ -65,6 +68,7 @@ export type ApiRouteContext = {
         remove: (ctx: Context, name: string) => Promise<boolean>;
     } | null;
     emailConnectRequest: ((userId: string, email: string) => Promise<void>) | null;
+    miniAppLaunch: ((ctx: Context, id: string) => Promise<{ launchPath: string; expiresAt: number }>) | null;
 };
 
 /**
@@ -198,6 +202,15 @@ export async function apiRouteHandle(
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody,
             keyValues: context.keyValues
+        });
+    }
+    if (pathname.startsWith("/mini-apps")) {
+        return miniAppsRouteHandle(request, response, pathname, {
+            ctx: context.ctx,
+            sendJson: context.sendJson,
+            readJsonBody: context.readJsonBody,
+            miniApps: context.miniApps,
+            launch: context.miniAppLaunch
         });
     }
     if (pathname.startsWith("/files")) {

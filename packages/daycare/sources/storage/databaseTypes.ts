@@ -656,6 +656,30 @@ export type PsqlDatabaseDbRecord = {
     createdAt: number;
 };
 
+export type DatabaseMiniAppRow = {
+    user_id: string;
+    id: string;
+    version: number;
+    valid_from: number;
+    valid_to: number | null;
+    title: string;
+    icon: string;
+    created_at: number;
+    updated_at: number;
+};
+
+export type MiniAppDbRecord = {
+    userId: string;
+    id: string;
+    version?: number;
+    validFrom?: number;
+    validTo?: number | null;
+    title: string;
+    icon: string;
+    createdAt: number;
+    updatedAt: number;
+};
+
 export type ObservationLogDbRecord = {
     id: string;
     userId: string;

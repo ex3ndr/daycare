@@ -9,6 +9,7 @@ import { configResolve } from "../../config/configResolve.js";
 import { contextForUser } from "../../engine/agents/context.js";
 import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import { ConfigModule } from "../../engine/config/configModule.js";
+import { MiniApps } from "../../engine/mini-apps/MiniApps.js";
 import { ModuleRegistry } from "../../engine/modules/moduleRegistry.js";
 import { Secrets } from "../../engine/secrets/secrets.js";
 import type { Storage } from "../../storage/storage.js";
@@ -182,6 +183,10 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         usersDir: config.current.usersDir,
         observationLog: storage.observationLog
     });
+    const miniApps = new MiniApps({
+        usersDir: config.current.usersDir,
+        storage
+    });
 
     const auth = {
         getEntry: vi.fn(async (id: string) => entries.get(id) ?? null),
@@ -225,6 +230,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         documents: null,
         fragments: null,
         keyValues: storage.keyValues,
+        miniApps,
         observationLog: storage.observationLog,
         secrets,
         connectorTargetResolve: async (target) => {
@@ -246,6 +252,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         auth,
         storage,
         secrets,
+        miniApps,
         commands: modules.commands,
         tools: modules.tools,
         connectors: modules.connectors
@@ -274,6 +281,45 @@ describe("AppServer auth endpoints", () => {
         expect(response.status).toBe(200);
         expect(await response.text()).toBe("Welcome to Daycare App API!");
         expect(response.headers.get("content-type")).toContain("text/plain");
+    });
+
+    it("launches and serves token-scoped mini apps", async () => {
+        const secret = "valid-secret-for-tests-1234567890";
+        const built = await appServerCreateForTests({ secret });
+        const ctx = contextForUser({ userId: "user-1" });
+        await built.miniApps.create(ctx, {
+            id: "crm",
+            title: "CRM",
+            icon: "browser",
+            html: '<!doctype html><html><head></head><body><script src="assets/app.js"></script><div id="app"></div></body></html>',
+            files: [{ path: "assets/app.js", content: "window.__miniAppLoaded = true;" }]
+        });
+        const token = await jwtSign({ userId: "user-1" }, secret, 3600);
+
+        const launchResponse = await fetch(`http://127.0.0.1:${built.port}/mini-apps/crm/launch`, {
+            headers: { authorization: `Bearer ${token}` }
+        });
+        expect(launchResponse.status).toBe(200);
+        const launchPayload = (await launchResponse.json()) as {
+            ok: boolean;
+            launchPath: string;
+        };
+        expect(launchPayload.ok).toBe(true);
+        expect(launchPayload.launchPath).toContain("/mini-apps/s/");
+
+        const htmlResponse = await fetch(`http://127.0.0.1:${built.port}${launchPayload.launchPath}`);
+        expect(htmlResponse.status).toBe(200);
+        const html = await htmlResponse.text();
+        expect(html).toContain("<base href=");
+        expect(html).toContain("assets/app.js");
+
+        const assetResponse = await fetch(`http://127.0.0.1:${built.port}${launchPayload.launchPath}assets/app.js`);
+        expect(assetResponse.status).toBe(200);
+        await expect(assetResponse.text()).resolves.toContain("__miniAppLoaded");
+
+        const spaResponse = await fetch(`http://127.0.0.1:${built.port}${launchPayload.launchPath}customers/42`);
+        expect(spaResponse.status).toBe(200);
+        await expect(spaResponse.text()).resolves.toContain('<div id="app"></div>');
     });
 
     it("registers app command and app_auth_link tool when enabled", async () => {

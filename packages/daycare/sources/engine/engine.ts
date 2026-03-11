@@ -46,6 +46,11 @@ import type { EngineEventBus } from "./ipc/events.js";
 import { MemoryWorker } from "./memory/memoryWorker.js";
 import { IncomingMessages } from "./messages/incomingMessages.js";
 import { messageContextEnrichIncoming } from "./messages/messageContextEnrichIncoming.js";
+import { MiniApps } from "./mini-apps/MiniApps.js";
+import { miniAppCreateToolBuild } from "./mini-apps/miniAppCreateToolBuild.js";
+import { miniAppDeleteToolBuild } from "./mini-apps/miniAppDeleteToolBuild.js";
+import { miniAppEjectToolBuild } from "./mini-apps/miniAppEjectToolBuild.js";
+import { miniAppUpdateToolBuild } from "./mini-apps/miniAppUpdateToolBuild.js";
 import { InferenceRouter } from "./modules/inference/router.js";
 import { ModuleRegistry } from "./modules/moduleRegistry.js";
 import { taskParameterInputsNormalize } from "./modules/tasks/taskParameterInputsNormalize.js";
@@ -170,6 +175,7 @@ export class Engine {
     readonly modelRoles: ModelRoles;
     readonly eventBus: EngineEventBus;
     readonly workspaces: Workspaces;
+    readonly miniApps: MiniApps;
     readonly secrets: Secrets;
     readonly friends: Friends;
     private readonly memoryWorker: MemoryWorker;
@@ -194,6 +200,10 @@ export class Engine {
         this.psqlService = new PsqlService({
             usersDir: this.config.current.usersDir,
             databases: this.storage.psqlDatabases
+        });
+        this.miniApps = new MiniApps({
+            usersDir: this.config.current.usersDir,
+            storage: this.storage
         });
         // memoryWorker is initialized after inferenceRouter — see below
         this.eventBus = options.eventBus;
@@ -699,6 +709,7 @@ export class Engine {
             documents: this.storage.documents,
             fragments: this.storage.fragments,
             keyValues: this.storage.keyValues,
+            miniApps: this.miniApps,
             psql: this.psqlService,
             observationLog: this.storage.observationLog,
             secrets: this.secrets,
@@ -809,6 +820,10 @@ export class Engine {
         this.modules.tools.register("core", sessionHistoryToolBuild());
         this.modules.tools.register("core", permanentAgentToolBuild());
         this.modules.tools.register("core", workspaceCreateToolBuild(this.workspaces));
+        this.modules.tools.register("core", miniAppCreateToolBuild(this.miniApps));
+        this.modules.tools.register("core", miniAppUpdateToolBuild(this.miniApps));
+        this.modules.tools.register("core", miniAppDeleteToolBuild(this.miniApps));
+        this.modules.tools.register("core", miniAppEjectToolBuild(this.miniApps));
         this.modules.tools.register("core", channelCreateToolBuild(this.channels));
         this.modules.tools.register("core", channelSendToolBuild(this.channels));
         this.modules.tools.register("core", channelHistoryToolBuild(this.channels));

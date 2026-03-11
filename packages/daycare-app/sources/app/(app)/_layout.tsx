@@ -2,6 +2,7 @@ import { Redirect, Stack, usePathname } from "expo-router";
 import * as React from "react";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useConfigStore } from "@/modules/config/configContext";
+import { useMiniAppsStore } from "@/modules/mini-apps/miniAppsContext";
 import { routeDebugLog } from "@/modules/navigation/routeDebugLog";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
@@ -31,6 +32,7 @@ export default function AuthenticatedLayout() {
     const workspacesLoaded = useWorkspacesStore((s) => s.loaded);
     const workspaces = useWorkspacesStore((s) => s.workspaces);
     const fetchAllConfigs = useConfigStore((s) => s.fetchAll);
+    const fetchAllMiniApps = useMiniAppsStore((s) => s.fetchAll);
     const configLoaded = useConfigStore((s) => s.loaded);
     const workspaceIds = React.useMemo(() => workspaces.map((workspace) => workspace.userId), [workspaces]);
 
@@ -55,8 +57,9 @@ export default function AuthenticatedLayout() {
     React.useEffect(() => {
         if (workspacesLoaded && baseUrl && token && workspaces.length > 0) {
             void fetchAllConfigs(baseUrl, token, workspaceIds);
+            void fetchAllMiniApps(baseUrl, token, workspaceIds);
         }
-    }, [workspacesLoaded, baseUrl, token, workspaces.length, workspaceIds, fetchAllConfigs]);
+    }, [workspacesLoaded, baseUrl, token, workspaces.length, workspaceIds, fetchAllConfigs, fetchAllMiniApps]);
 
     // Periodic refresh of workspaces and configs
     React.useEffect(() => {
@@ -66,10 +69,20 @@ export default function AuthenticatedLayout() {
             void fetchWorkspaces(baseUrl, token);
             if (workspaces.length > 0) {
                 void fetchAllConfigs(baseUrl, token, workspaceIds);
+                void fetchAllMiniApps(baseUrl, token, workspaceIds);
             }
         }, REFRESH_INTERVAL_MS);
         return () => clearInterval(interval);
-    }, [workspacesLoaded, baseUrl, token, workspaces.length, workspaceIds, fetchWorkspaces, fetchAllConfigs]);
+    }, [
+        workspacesLoaded,
+        baseUrl,
+        token,
+        workspaces.length,
+        workspaceIds,
+        fetchWorkspaces,
+        fetchAllConfigs,
+        fetchAllMiniApps
+    ]);
 
     // Redirect when auth drops
     if (authState !== "authenticated") {

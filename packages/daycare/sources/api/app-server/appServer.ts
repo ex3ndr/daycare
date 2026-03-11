@@ -1,3 +1,4 @@
+import { promises as fs } from "node:fs";
 import http from "node:http";
 import type {
     AgentPath,
@@ -14,6 +15,8 @@ import { emailSend } from "../../email/emailSend.js";
 import { contextForUser } from "../../engine/agents/context.js";
 import type { ConfigModule } from "../../engine/config/configModule.js";
 import type { EngineEvent, EngineEventBus } from "../../engine/ipc/events.js";
+import type { MiniApps } from "../../engine/mini-apps/MiniApps.js";
+import { miniAppDirectoryResolve } from "../../engine/mini-apps/miniAppDirectoryResolve.js";
 import type { CommandRegistry } from "../../engine/modules/commandRegistry.js";
 import type { ConnectorRegistry } from "../../engine/modules/connectorRegistry.js";
 import type { ToolResolver } from "../../engine/modules/toolResolver.js";
@@ -47,6 +50,8 @@ import { appRequestEndpointsResolve } from "./appRequestEndpointsResolve.js";
 import type { AppServerResolvedSettings } from "./appServerSettingsResolve.js";
 import { appServerSettingsResolve } from "./appServerSettingsResolve.js";
 import { appWorkspaceResolve, WorkspaceAccessError } from "./appWorkspaceResolve.js";
+import { miniAppServe } from "./miniAppServe.js";
+import { miniAppTokenSign } from "./miniAppToken.js";
 import { routeAuthEmailConnectVerify } from "./routes/routeAuthEmailConnectVerify.js";
 import { routeAuthEmailRequest } from "./routes/routeAuthEmailRequest.js";
 import { routeAuthEmailVerify } from "./routes/routeAuthEmailVerify.js";
@@ -56,6 +61,7 @@ import { routeAuthValidate } from "./routes/routeAuthValidate.js";
 import { routeWebhookTrigger } from "./routes/routeWebhookTrigger.js";
 
 const APP_SERVER_OWNER = "core.app-server";
+const MINI_APP_TOKEN_TTL_SECONDS = 60 * 30;
 
 export type AppServerOptions = {
     config: ConfigModule;
@@ -80,6 +86,7 @@ export type AppServerOptions = {
     keyValues: KeyValuesRepository | null;
     psql?: PsqlService | null;
     observationLog: ObservationLogRepository | null;
+    miniApps?: MiniApps | null;
     secrets: {
         list: (ctx: Context) => Promise<Secret[]>;
         add: (ctx: Context, secret: Secret) => Promise<void>;
@@ -117,6 +124,7 @@ export class AppServer {
     private readonly keyValues: KeyValuesRepository | null;
     private readonly psql: PsqlService | null;
     private readonly observationLog: ObservationLogRepository | null;
+    private readonly miniApps: MiniApps | null;
     private readonly secrets: AppServerOptions["secrets"];
     private readonly connectorTargetResolve: AppServerOptions["connectorTargetResolve"];
     private readonly logger = getLogger("api.app-server");
@@ -151,6 +159,7 @@ export class AppServer {
         this.keyValues = options.keyValues;
         this.psql = options.psql ?? null;
         this.observationLog = options.observationLog;
+        this.miniApps = options.miniApps ?? null;
         this.secrets = options.secrets;
         this.connectorTargetResolve = options.connectorTargetResolve;
     }
@@ -279,6 +288,26 @@ export class AppServer {
             return;
         }
 
+        if (
+            request.method === "GET" &&
+            (await miniAppServe({
+                requestPathname: pathname,
+                response,
+                secret: await this.secretResolve(),
+                rootDirectoryResolve: async (userId, appId, version) => {
+                    const absolutePath = miniAppDirectoryResolve(this.config.current.usersDir, userId, appId, version);
+                    try {
+                        const stat = await fs.stat(absolutePath);
+                        return stat.isDirectory() ? absolutePath : null;
+                    } catch {
+                        return null;
+                    }
+                }
+            }))
+        ) {
+            return;
+        }
+
         if (pathname === "/") {
             appSendText(response, 200, "Welcome to Daycare App API!");
             return;
@@ -373,12 +402,34 @@ export class AppServer {
             documents: this.documents,
             fragments: this.fragments,
             keyValues: this.keyValues,
+            miniApps: this.miniApps,
             psql: this.psql,
             observationLog: this.observationLog,
             publicEndpoints,
             secretResolve: () => this.secretResolve(),
             secrets: this.secrets,
-            emailConnectRequest: (userId, email) => this.emailConnectRequest(userId, email, request.headers)
+            emailConnectRequest: (userId, email) => this.emailConnectRequest(userId, email, request.headers),
+            miniAppLaunch: this.miniApps
+                ? async (requestCtx, id) => {
+                      const app = await this.miniApps!.find(requestCtx, id);
+                      if (!app) {
+                          throw new Error("Mini app not found.");
+                      }
+                      const token = await miniAppTokenSign(
+                          {
+                              userId: requestCtx.userId,
+                              appId: app.id,
+                              version: app.version
+                          },
+                          await this.secretResolve(),
+                          MINI_APP_TOKEN_TTL_SECONDS
+                      );
+                      return {
+                          launchPath: `/mini-apps/s/${encodeURIComponent(token)}/`,
+                          expiresAt: Date.now() + MINI_APP_TOKEN_TTL_SECONDS * 1000
+                      };
+                  }
+                : null
         });
         if (handled) {
             return;

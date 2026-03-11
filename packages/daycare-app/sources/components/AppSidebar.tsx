@@ -5,6 +5,7 @@ import { Pressable, ScrollView, type StyleProp, Text, View, type ViewStyle } fro
 import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useConfigStore } from "@/modules/config/configContext";
+import { useMiniAppsStore } from "@/modules/mini-apps/miniAppsContext";
 import { type AppMode, appModes } from "@/modules/navigation/appModes";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
@@ -13,36 +14,43 @@ import type { WorkspaceListItem } from "@/modules/workspaces/workspacesFetch";
 export const SIDEBAR_WIDTH = 240;
 export const SIDEBAR_COLLAPSED_WIDTH = 56;
 
-type Segment = { mode: AppMode; icon: React.ComponentProps<typeof Octicons>["name"]; label: string };
+type Segment = {
+    key: string;
+    mode: AppMode;
+    icon: React.ComponentProps<typeof Octicons>["name"];
+    label: string;
+    itemId?: string;
+};
 
 /** Sidebar items grouped with visual spacing between groups. */
 const segmentGroups: Segment[][] = [
-    [{ mode: "home", icon: "home", label: "Home" }],
+    [{ key: "home", mode: "home", icon: "home", label: "Home" }],
     [
-        { mode: "todos", icon: "checklist", label: "Todos" },
-        { mode: "documents", icon: "file", label: "Documents" }
+        { key: "todos", mode: "todos", icon: "checklist", label: "Todos" },
+        { key: "documents", mode: "documents", icon: "file", label: "Documents" }
     ],
     [
-        { mode: "agents", icon: "device-desktop", label: "Agents" },
-        { mode: "fragments", icon: "note", label: "Fragments" },
-        { mode: "automations", icon: "clock", label: "Automations" },
-        { mode: "files", icon: "file-directory", label: "Files" },
-        { mode: "skills", icon: "zap", label: "Skills" },
-        { mode: "tools", icon: "tools", label: "Tools" },
-        { mode: "members", icon: "people", label: "Members" },
-        { mode: "costs", icon: "credit-card", label: "Costs" }
+        { key: "agents", mode: "agents", icon: "device-desktop", label: "Agents" },
+        { key: "fragments", mode: "fragments", icon: "note", label: "Fragments" },
+        { key: "automations", mode: "automations", icon: "clock", label: "Automations" },
+        { key: "files", mode: "files", icon: "file-directory", label: "Files" },
+        { key: "skills", mode: "skills", icon: "zap", label: "Skills" },
+        { key: "tools", mode: "tools", icon: "tools", label: "Tools" },
+        { key: "members", mode: "members", icon: "people", label: "Members" },
+        { key: "costs", mode: "costs", icon: "credit-card", label: "Costs" }
     ]
 ];
 
 /** Bottom-pinned items shown as icons in the workspace strip. */
 const stripBottomSegments: Segment[] = [
-    { mode: "dev", icon: "code-square", label: "Dev" },
-    { mode: "settings", icon: "gear", label: "Settings" }
+    { key: "dev", mode: "dev", icon: "code-square", label: "Dev" },
+    { key: "settings", mode: "settings", icon: "gear", label: "Settings" }
 ];
 
 /** Sub-items for each mode that expand when the mode is active. */
 const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     home: [],
+    "mini-apps": [],
     agents: [],
     fragments: [],
     todos: [],
@@ -313,19 +321,28 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         const activeMode = extractModeFromPath(pathname);
         const selectedItem = extractItemFromPath(pathname);
         const { workspaceId, workspace: activeWorkspace } = useWorkspace();
-        const visibleSegmentGroups = React.useMemo(
-            () =>
-                segmentGroups.map((group) =>
-                    group.filter((segment) => !(segment.mode === "members" && activeWorkspace?.isSelf === true))
-                ),
-            [activeWorkspace?.isSelf]
-        );
+        const miniApps = useMiniAppsStore((state) => state.appsFor(workspaceId));
+        const visibleSegmentGroups = React.useMemo(() => {
+            const staticGroups = segmentGroups.map((group) =>
+                group.filter((segment) => !(segment.mode === "members" && activeWorkspace?.isSelf === true))
+            );
+            const miniAppGroup = miniApps.map((app) => ({
+                key: `mini-app-${app.id}`,
+                mode: "mini-apps" as const,
+                icon: app.icon as React.ComponentProps<typeof Octicons>["name"],
+                label: app.title,
+                itemId: app.id
+            }));
+            return miniAppGroup.length > 0
+                ? [...staticGroups.slice(0, 2), miniAppGroup, ...staticGroups.slice(2)]
+                : staticGroups;
+        }, [activeWorkspace?.isSelf, miniApps]);
 
         const wsPrefix = workspaceId ? `/${workspaceId}` : "";
 
         const handleModePress = React.useCallback(
-            (mode: AppMode) => {
-                router.replace(`${wsPrefix}/${mode}` as Href);
+            (mode: AppMode, itemId?: string) => {
+                router.replace((itemId ? `${wsPrefix}/${mode}/${itemId}` : `${wsPrefix}/${mode}`) as Href);
                 onNavigate?.();
             },
             [router, onNavigate, wsPrefix]
@@ -373,19 +390,22 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                 <ScrollView style={styles.treeContainer} showsVerticalScrollIndicator={false}>
                     {visibleSegmentGroups.map((group, groupIndex) => (
                         <View
-                            key={group.map((s) => s.mode).join("-")}
+                            key={group.map((s) => s.key).join("-")}
                             style={groupIndex > 0 ? styles.groupSpacer : undefined}
                         >
                             {group.map((seg) => {
-                                const isActive = activeMode === seg.mode;
+                                const isActive =
+                                    activeMode === seg.mode &&
+                                    (seg.itemId ? selectedItem === seg.itemId : seg.mode !== "mini-apps");
                                 const items = modeItems[seg.mode];
                                 const hasItems = items.length > 0;
+                                const testId = seg.itemId ? `sidebar-mini-app-${seg.itemId}` : `sidebar-${seg.mode}`;
 
                                 return (
-                                    <View key={seg.mode}>
+                                    <View key={seg.key}>
                                         <Pressable
-                                            testID={`sidebar-${seg.mode}`}
-                                            onPress={() => handleModePress(seg.mode)}
+                                            testID={testId}
+                                            onPress={() => handleModePress(seg.mode, seg.itemId)}
                                             style={styles.modeRow}
                                         >
                                             {isActive && (
