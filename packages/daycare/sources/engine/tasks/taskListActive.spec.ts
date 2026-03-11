@@ -109,4 +109,33 @@ describe("taskListActive", () => {
             storage.connection.close();
         }
     });
+
+    it("includes active bundled core tasks when they have triggers", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const ctx = contextForUser({ userId: "user-1" });
+            await storage.webhookTasks.create({
+                id: "webhook-core",
+                taskId: "core:ralph-loop",
+                userId: "user-1",
+                agentId: null,
+                lastRunAt: 200,
+                createdAt: 20,
+                updatedAt: 20
+            });
+
+            const result = await taskListActive({ storage, ctx });
+            const coreTask = result.find((task) => task.id === "core:ralph-loop");
+
+            expect(coreTask).toMatchObject({
+                id: "core:ralph-loop",
+                lastExecutedAt: 200,
+                triggers: {
+                    webhook: [{ id: "webhook-core", lastExecutedAt: 200 }]
+                }
+            });
+        } finally {
+            storage.connection.close();
+        }
+    });
 });

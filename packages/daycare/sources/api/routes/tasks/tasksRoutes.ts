@@ -116,7 +116,8 @@ export async function tasksRouteHandle(
             taskId: decodeURIComponent(deleteMatch[1]),
             tasksDelete: context.callbacks.tasksDelete
         });
-        context.sendJson(response, result.ok ? 200 : 404, result);
+        const statusCode = result.ok ? 200 : result.error === "Task not found." ? 404 : 400;
+        context.sendJson(response, statusCode, result);
         return true;
     }
 

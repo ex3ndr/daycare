@@ -34,8 +34,8 @@ describe("TasksRepository", () => {
             expect(byId).toEqual(record);
 
             const byUser = await repo.findMany(ctx);
-            expect(byUser).toHaveLength(1);
-            expect(byUser[0]?.id).toBe("task-1");
+            expect(byUser).toHaveLength(2);
+            expect(byUser.some((task) => task.id === "task-1")).toBe(true);
 
             vi.spyOn(Date, "now").mockReturnValue(20);
             await repo.update(ctx, "task-1", {
@@ -164,6 +164,73 @@ describe("TasksRepository", () => {
             expect(version1?.code).toBe("print('v1')");
             expect(version2?.code).toBe("print('v2')");
             expect(version3).toBeNull();
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("resolves bundled core tasks as virtual version-one records", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new TasksRepository(storage.db);
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+
+            const task = await repo.findById(ctx, "core:ralph-loop");
+            const version1 = await repo.findByVersion(ctx, "core:ralph-loop", 1);
+            const version2 = await repo.findByVersion(ctx, "core:ralph-loop", 2);
+
+            expect(task).toMatchObject({
+                id: "core:ralph-loop",
+                userId: "user-1",
+                version: 1,
+                title: "Ralph Loop"
+            });
+            expect(task?.description).toContain("ralphex-style");
+            expect(task?.code).toContain("Read the plan file and execute exactly one incomplete section.");
+            expect(version1?.id).toBe("core:ralph-loop");
+            expect(version2).toBeNull();
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("includes bundled core tasks in user task listings", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new TasksRepository(storage.db);
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+
+            const tasks = await repo.findMany(ctx);
+
+            expect(tasks.some((task) => task.id === "core:ralph-loop")).toBe(true);
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("blocks create, update, and delete operations for the core namespace", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const repo = new TasksRepository(storage.db);
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+
+            await expect(
+                repo.create({
+                    id: "core:test",
+                    userId: "user-1",
+                    title: "Reserved",
+                    description: null,
+                    code: "print('reserved')",
+                    parameters: null,
+                    createdAt: 1,
+                    updatedAt: 1
+                })
+            ).rejects.toThrow("Task ids in the core: namespace are reserved.");
+
+            await expect(repo.update(ctx, "core:ralph-loop", { title: "Changed" })).rejects.toThrow(
+                "Core tasks cannot be updated."
+            );
+            await expect(repo.delete(ctx, "core:ralph-loop")).rejects.toThrow("Core tasks cannot be deleted.");
         } finally {
             storage.connection.close();
         }

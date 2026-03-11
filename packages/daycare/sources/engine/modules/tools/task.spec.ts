@@ -103,6 +103,26 @@ describe("task tools", () => {
         );
     });
 
+    it("reads bundled core tasks and rejects deleting them", async () => {
+        const runtime = await runtimeBuild();
+        tempDirs.push(runtime.dir);
+        storages.push(runtime.storage);
+
+        const readTool = buildTaskReadTool();
+        const deleteTool = buildTaskDeleteTool();
+
+        const readResult = await readTool.execute(
+            { taskId: "core:ralph-loop" },
+            runtime.context,
+            toolCall("task_read")
+        );
+
+        expect(readResult.typedResult.summary).toContain("Task core:ralph-loop: Ralph Loop");
+        await expect(
+            deleteTool.execute({ taskId: "core:ralph-loop" }, runtime.context, toolCall("task_delete"))
+        ).rejects.toThrow("Core tasks cannot be deleted.");
+    });
+
     it("uses slug task ids from title and appends numeric suffix on collisions", async () => {
         const runtime = await runtimeBuild();
         tempDirs.push(runtime.dir);

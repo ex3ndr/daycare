@@ -26,9 +26,14 @@ export async function tasksDelete(input: TasksDeleteInput): Promise<TasksDeleteR
         return { ok: false, error: "taskId is required." };
     }
 
-    const deleted = await input.tasksDelete(input.ctx, taskId);
-    if (!deleted) {
-        return { ok: false, error: "Task not found." };
+    try {
+        const deleted = await input.tasksDelete(input.ctx, taskId);
+        if (!deleted) {
+            return { ok: false, error: "Task not found." };
+        }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to delete task.";
+        return { ok: false, error: message };
     }
 
     return { ok: true, deleted: true };

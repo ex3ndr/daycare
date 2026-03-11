@@ -35,4 +35,17 @@ describe("tasksDelete", () => {
 
         expect(result).toEqual({ ok: false, error: "taskId is required." });
     });
+
+    it("surfaces delete callback errors", async () => {
+        const ctx = contextForUser({ userId: "u1" });
+        const result = await tasksDelete({
+            ctx,
+            taskId: "core:ralph-loop",
+            tasksDelete: async () => {
+                throw new Error("Core tasks cannot be deleted.");
+            }
+        });
+
+        expect(result).toEqual({ ok: false, error: "Core tasks cannot be deleted." });
+    });
 });

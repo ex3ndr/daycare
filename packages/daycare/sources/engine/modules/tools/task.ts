@@ -9,6 +9,7 @@ import { agentPathTask } from "../../agents/ops/agentPathBuild.js";
 import { cronExpressionParse } from "../../cron/ops/cronExpressionParse.js";
 import { cronTimezoneResolve } from "../../cron/ops/cronTimezoneResolve.js";
 import { TOPO_EVENT_TYPES, TOPO_SOURCE_TASKS, topographyObservationEmit } from "../../observations/topographyEvents.js";
+import { taskCoreIdIs } from "../../tasks/core/taskCoreIdIs.js";
 import { rlmVerify } from "../rlm/rlmVerify.js";
 import { taskParameterPreambleStubs } from "../tasks/taskParameterCodegen.js";
 import { taskParameterInputsNormalize } from "../tasks/taskParameterInputsNormalize.js";
@@ -316,6 +317,9 @@ export function buildTaskUpdateTool(): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as TaskUpdateArgs;
             const task = await taskResolveForUser(toolContext, payload.taskId);
+            if (taskCoreIdIs(task.id)) {
+                throw new Error("Core tasks cannot be updated.");
+            }
             if (
                 payload.title === undefined &&
                 payload.code === undefined &&
@@ -422,6 +426,9 @@ export function buildTaskDeleteTool(): ToolDefinition {
         execute: async (args, toolContext, toolCall) => {
             const payload = args as TaskDeleteArgs;
             const task = await taskResolveForUser(toolContext, payload.taskId);
+            if (taskCoreIdIs(task.id)) {
+                throw new Error("Core tasks cannot be deleted.");
+            }
 
             const [removedCron, removedWebhook] = await Promise.all([
                 toolContext.agentSystem.crons.deleteTriggersForTask(toolContext.ctx, task.id),

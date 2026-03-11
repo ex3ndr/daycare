@@ -88,8 +88,13 @@ describe("taskListAll", () => {
 
             const result = await taskListAll({ storage, ctx });
 
-            // All three tasks returned (including task-inactive without enabled triggers)
-            expect(result.tasks.map((t) => t.id)).toEqual(["task-active", "task-webhook", "task-inactive"]);
+            // Stored tasks are returned alongside bundled core tasks.
+            expect(result.tasks.map((t) => t.id)).toEqual([
+                "task-active",
+                "task-webhook",
+                "task-inactive",
+                "core:ralph-loop"
+            ]);
 
             // task-active: lastExecutedAt from max of cron(100) and webhook(150) = 150
             expect(result.tasks[0]).toMatchObject({
@@ -132,6 +137,19 @@ describe("taskListAll", () => {
                 id: "webhook-only",
                 taskId: "task-webhook"
             });
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("includes bundled core tasks alongside stored tasks", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const ctx = contextForUser({ userId: "user-1" });
+
+            const result = await taskListAll({ storage, ctx });
+
+            expect(result.tasks.some((task) => task.id === "core:ralph-loop")).toBe(true);
         } finally {
             storage.connection.close();
         }

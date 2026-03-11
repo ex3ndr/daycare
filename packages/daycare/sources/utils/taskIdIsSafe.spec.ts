@@ -8,11 +8,12 @@ describe("taskIdIsSafe", () => {
         expect(taskIdIsSafe("ABC")).toBe(true);
     });
 
-    it("accepts dots, underscores, and hyphens", () => {
+    it("accepts dots, underscores, hyphens, and namespace separators", () => {
         expect(taskIdIsSafe("my-task")).toBe(true);
         expect(taskIdIsSafe("my_task")).toBe(true);
         expect(taskIdIsSafe("my.task")).toBe(true);
         expect(taskIdIsSafe("my-task_v2.0")).toBe(true);
+        expect(taskIdIsSafe("core:ralph-loop")).toBe(true);
     });
 
     it("rejects spaces", () => {

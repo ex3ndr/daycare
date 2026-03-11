@@ -1,5 +1,8 @@
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import type { Context } from "@/types";
+import { taskCoreIdIs } from "../engine/tasks/core/taskCoreIdIs.js";
+import { taskCoreList } from "../engine/tasks/core/taskCoreList.js";
+import { taskCoreResolve } from "../engine/tasks/core/taskCoreResolve.js";
 import type { DaycareDb } from "../schema.js";
 import { tasksTable } from "../schema.js";
 import { AsyncLock } from "../utils/lock.js";
@@ -12,19 +15,24 @@ import { versionAdvance } from "./versionAdvance.js";
  */
 export class TasksRepository {
     private readonly db: DaycareDb;
+    private readonly coreTasksRoot: string | undefined;
     private readonly tasksById = new Map<string, TaskDbRecord>();
     private readonly taskLocks = new Map<string, AsyncLock>();
     private readonly cacheLock = new AsyncLock();
     private readonly createLock = new AsyncLock();
 
-    constructor(db: DaycareDb) {
+    constructor(db: DaycareDb, options?: { coreTasksRoot?: string }) {
         this.db = db;
+        this.coreTasksRoot = options?.coreTasksRoot;
     }
 
     async findById(ctx: Context, id: string): Promise<TaskDbRecord | null> {
         const userId = ctx.userId.trim();
         if (!userId) {
             return null;
+        }
+        if (taskCoreIdIs(id)) {
+            return taskCoreResolve({ taskId: id, userId, root: this.coreTasksRoot });
         }
         const key = taskKey(userId, id);
         const cached = this.tasksById.get(key);
@@ -53,6 +61,9 @@ export class TasksRepository {
         const userId = ctx.userId.trim();
         if (!userId) {
             return null;
+        }
+        if (taskCoreIdIs(id)) {
+            return taskCoreResolve({ taskId: id, userId, root: this.coreTasksRoot });
         }
         const key = taskKey(userId, id);
         const cached = this.tasksById.get(key);
@@ -88,6 +99,9 @@ export class TasksRepository {
         if (!userId) {
             return null;
         }
+        if (taskCoreIdIs(id)) {
+            return Math.trunc(version) === 1 ? taskCoreResolve({ taskId: id, userId, root: this.coreTasksRoot }) : null;
+        }
         const normalizedVersion = Math.trunc(version);
         if (!Number.isFinite(normalizedVersion) || normalizedVersion <= 0) {
             return null;
@@ -105,12 +119,17 @@ export class TasksRepository {
     }
 
     async findMany(ctx: Context): Promise<TaskDbRecord[]> {
-        const rows = await this.db
-            .select()
-            .from(tasksTable)
-            .where(and(eq(tasksTable.userId, ctx.userId), isNull(tasksTable.validTo)))
-            .orderBy(asc(tasksTable.updatedAt));
-        return rows.map((row) => taskClone(taskParse(row)));
+        const [rows, coreTasks] = await Promise.all([
+            this.db
+                .select()
+                .from(tasksTable)
+                .where(and(eq(tasksTable.userId, ctx.userId), isNull(tasksTable.validTo)))
+                .orderBy(asc(tasksTable.updatedAt)),
+            taskCoreList({ userId: ctx.userId, root: this.coreTasksRoot })
+        ]);
+        return [...rows.map((row) => taskClone(taskParse(row))), ...coreTasks].sort(
+            (left, right) => left.updatedAt - right.updatedAt
+        );
     }
 
     async findAll(): Promise<TaskDbRecord[]> {
@@ -135,6 +154,9 @@ export class TasksRepository {
             const userId = record.userId.trim();
             if (!userId) {
                 throw new Error("Task userId is required.");
+            }
+            if (taskCoreIdIs(record.id)) {
+                throw new Error("Task ids in the core: namespace are reserved.");
             }
             const current = await this.taskLoadById(userId, record.id);
             if (!current && (await this.taskLoadAnyById(userId, record.id))) {
@@ -222,6 +244,9 @@ export class TasksRepository {
         if (!userId) {
             throw new Error("Task userId is required.");
         }
+        if (taskCoreIdIs(id)) {
+            throw new Error("Core tasks cannot be updated.");
+        }
         const key = taskKey(userId, id);
         const lock = this.taskLockForId(key);
         await lock.inLock(async () => {
@@ -298,6 +323,9 @@ export class TasksRepository {
         const userId = ctx.userId.trim();
         if (!userId) {
             return false;
+        }
+        if (taskCoreIdIs(id)) {
+            throw new Error("Core tasks cannot be deleted.");
         }
         const key = taskKey(userId, id);
         const lock = this.taskLockForId(key);

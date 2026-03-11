@@ -126,6 +126,7 @@ import { Secrets } from "./secrets/secrets.js";
 import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Signals } from "./signals/signals.js";
 import { Skills } from "./skills/skills.js";
+import { taskCoreIdIs } from "./tasks/core/taskCoreIdIs.js";
 import { taskDeleteSuccessResolve } from "./tasks/taskDeleteSuccessResolve.js";
 import { TaskExecutionRunner } from "./tasks/taskExecutionRunner.js";
 import { TaskExecutions } from "./tasks/taskExecutions.js";
@@ -580,6 +581,9 @@ export class Engine {
                     if (!normalizedTaskId) {
                         return null;
                     }
+                    if (taskCoreIdIs(normalizedTaskId)) {
+                        throw new Error("Core tasks cannot be updated.");
+                    }
                     const existing = await this.storage.tasks.findById(ctx, normalizedTaskId);
                     if (!existing) {
                         return null;
@@ -597,6 +601,9 @@ export class Engine {
                     const normalizedTaskId = taskId.trim();
                     if (!normalizedTaskId) {
                         return false;
+                    }
+                    if (taskCoreIdIs(normalizedTaskId)) {
+                        throw new Error("Core tasks cannot be deleted.");
                     }
                     const existing = await this.storage.tasks.findById(ctx, normalizedTaskId);
                     if (!existing) {
