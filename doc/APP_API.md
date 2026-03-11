@@ -229,6 +229,7 @@ Workspace-scoped todo routes use the authenticated workspace context. When the a
         {
             "id": "user:my-skill",
             "name": "My Skill",
+            "category": "research",
             "description": "Custom helper",
             "sandbox": true,
             "permissions": ["@read:/tmp"],

@@ -7,11 +7,14 @@ import { describe, expect, it } from "vitest";
 import { skillListFromRoot } from "./skillListFromRoot.js";
 
 describe("skillListFromRoot", () => {
-    it("collects skill metadata from frontmatter", async () => {
+    it("collects skill metadata from frontmatter and nested categories", async () => {
         const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skills-"));
         try {
             const coreRoot = path.join(baseDir, "core");
-            const coreSkillDir = path.join(coreRoot, "deploy");
+            const categoryDir = path.join(coreRoot, "software-development");
+            await fs.mkdir(categoryDir, { recursive: true });
+            await fs.writeFile(path.join(categoryDir, "DESCRIPTION.md"), "# Category notes");
+            const coreSkillDir = path.join(categoryDir, "deploy");
             await fs.mkdir(coreSkillDir, { recursive: true });
 
             const coreSkillPath = path.join(coreSkillDir, "SKILL.md");
@@ -24,8 +27,9 @@ describe("skillListFromRoot", () => {
 
             expect(skills).toHaveLength(1);
             const skill = skills[0];
-            expect(skill?.id).toBe("core:deploy");
+            expect(skill?.id).toBe("core:software-development/deploy");
             expect(skill?.name).toBe("deploy");
+            expect(skill?.category).toBe("software-development");
             expect(skill?.description).toBe("Use <cron>");
             expect(skill?.sourcePath).toBe(path.resolve(coreSkillPath));
         } finally {

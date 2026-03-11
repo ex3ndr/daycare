@@ -61,13 +61,13 @@ The `create-fragment` skill is generated from:
 - Template header: `packages/daycare/sources/prompts/SKILL_TEMPLATE.md`
 - Widget catalog prompt: `widgetsCatalog.prompt()` in `packages/daycare-app/sources/widgets/widgets.ts`
 - Export script: `npx tsx packages/daycare-app/scripts/exportFragmentSkill.ts`
-- Output: `packages/daycare/sources/skills/create-fragment/SKILL.md`
+- Output: `packages/daycare/sources/skills/software-development/create-fragment/SKILL.md`
 
 ```mermaid
 flowchart TD
     A[SKILL_TEMPLATE.md] --> C[exportFragmentSkill.ts]
     B[widgetsCatalog.prompt()] --> C
-    C --> D[skills/create-fragment/SKILL.md]
+    C --> D[skills/software-development/create-fragment/SKILL.md]
     D --> E[Skills loader]
     E --> F[LLM can call fragment_create/update/archive]
 ```

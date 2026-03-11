@@ -6,7 +6,10 @@ import { fragmentsCatalog } from "../sources/fragments/catalog";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const templatePath = path.resolve(scriptDir, "../../daycare/sources/prompts/SKILL_TEMPLATE.md");
-const skillOutputPath = path.resolve(scriptDir, "../../daycare/sources/skills/create-fragment/SKILL.md");
+const skillOutputPath = path.resolve(
+    scriptDir,
+    "../../daycare/sources/skills/software-development/create-fragment/SKILL.md"
+);
 const schemaOutputPath = path.resolve(scriptDir, "../../daycare/sources/fragments/_fragmentSchema.ts");
 
 interface ComponentMeta {

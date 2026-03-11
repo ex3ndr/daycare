@@ -7,6 +7,21 @@ import { describe, expect, it } from "vitest";
 import { skillResolve } from "./skillResolve.js";
 
 describe("skillResolve", () => {
+    it("derives category from the nested skill path", async () => {
+        const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skill-resolve-"));
+        try {
+            const skillDir = path.join(baseDir, "software-development", "review");
+            await fs.mkdir(skillDir, { recursive: true });
+            const skillPath = path.join(skillDir, "SKILL.md");
+            await fs.writeFile(skillPath, "---\nname: review\n---\n\n# Review");
+
+            const skill = await skillResolve(skillPath, { source: "config", root: baseDir }, baseDir);
+            expect(skill?.category).toBe("software-development");
+        } finally {
+            await fs.rm(baseDir, { recursive: true, force: true });
+        }
+    });
+
     it("parses sandbox true and permissions from frontmatter", async () => {
         const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skill-resolve-"));
         try {
@@ -72,13 +87,14 @@ describe("skillResolve", () => {
     it("builds agents source ids for ~/.agents/skills entries", async () => {
         const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skill-resolve-"));
         try {
-            const skillDir = path.join(baseDir, "agents-helper");
+            const skillDir = path.join(baseDir, "research", "agents-helper");
             await fs.mkdir(skillDir, { recursive: true });
             const skillPath = path.join(skillDir, "SKILL.md");
             await fs.writeFile(skillPath, "---\nname: agents-helper\n---\n\n# Helper");
 
             const skill = await skillResolve(skillPath, { source: "agents", root: baseDir }, baseDir);
-            expect(skill?.id).toBe("agents:agents-helper");
+            expect(skill?.id).toBe("agents:research/agents-helper");
+            expect(skill?.category).toBe("research");
             expect(skill?.source).toBe("agents");
         } finally {
             await fs.rm(baseDir, { recursive: true, force: true });

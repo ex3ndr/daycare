@@ -9,6 +9,7 @@ describe("skillPromptFormat", () => {
             {
                 id: "core:deploy",
                 name: "deploy",
+                category: "software-development",
                 description: "Use <cron> & webhook",
                 sourcePath: "/tmp/deploy/SKILL.md",
                 source: "core",
@@ -35,6 +36,7 @@ describe("skillPromptFormat", () => {
 
         expect(prompt).toContain("<available_skills>");
         expect(prompt).toContain("</available_skills>");
+        expect(prompt).toContain("<category>software-development</category>");
         expect(prompt).toContain("<name>deploy</name>");
         expect(prompt).toContain("Use &lt;cron&gt; &amp; webhook");
         expect(prompt).toContain("<source>plugin:alpha</source>");

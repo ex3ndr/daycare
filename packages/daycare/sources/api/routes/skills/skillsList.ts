@@ -12,6 +12,7 @@ export type SkillsListResult = {
     skills: Array<{
         id: string;
         name: string;
+        category: string | null;
         description: string | null;
         sandbox: boolean;
         permissions: string[];
@@ -31,6 +32,7 @@ export async function skillsList(input: SkillsListInput): Promise<SkillsListResu
         listed.map(async (skill) => ({
             id: skill.id,
             name: skill.name,
+            category: skill.category ?? null,
             description: skill.description ?? null,
             sandbox: skill.sandbox === true,
             permissions: skill.permissions ?? [],

@@ -27,6 +27,7 @@ describe("skillsList", () => {
                     {
                         id: "user:my-skill",
                         name: "My Skill",
+                        category: "research",
                         description: "desc",
                         sandbox: true,
                         permissions: ["@read:/tmp"],
@@ -44,6 +45,7 @@ describe("skillsList", () => {
             expect.objectContaining({
                 id: "user:my-skill",
                 name: "My Skill",
+                category: "research",
                 description: "desc",
                 sandbox: true,
                 permissions: ["@read:/tmp"],

@@ -4,7 +4,7 @@
 Create a core skill `daycare-friendship` that teaches daycare agents how to use the friendship system. The skill provides a comprehensive embedded prompt covering nametags, friend requests, messaging, and subuser sharing. Agents load this skill to understand the full friendship lifecycle and use the 5 friend tools correctly.
 
 ## Context
-- Skill location: `packages/daycare/sources/skills/daycare-friendship/SKILL.md`
+- Skill location: `packages/daycare/sources/skills/autonomous-ai-agents/daycare-friendship/SKILL.md`
 - Mode: embedded (inline prompt, no sandbox)
 - Audience: daycare agents (AI agents running inside daycare)
 - Existing patterns: see `scheduling/SKILL.md`, `permanent-agent-creator/SKILL.md`
@@ -19,7 +19,7 @@ Create a core skill `daycare-friendship` that teaches daycare agents how to use 
 ## Implementation Steps
 
 ### Task 1: Create daycare-friendship SKILL.md
-- [ ] Create `packages/daycare/sources/skills/daycare-friendship/SKILL.md` with YAML frontmatter (`name`, `description`)
+- [ ] Create `packages/daycare/sources/skills/autonomous-ai-agents/daycare-friendship/SKILL.md` with YAML frontmatter (`name`, `description`)
 - [ ] Write "What is a Nametag" section — explain format, purpose, uniqueness, case-insensitivity
 - [ ] Write "Why Friends" section — motivation for connecting agents/users, sharing capabilities
 - [ ] Write "Friendship Lifecycle" section — request flow, states (None → PendingOut/PendingIn → Friends), cooldown rules

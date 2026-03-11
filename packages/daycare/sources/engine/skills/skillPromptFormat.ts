@@ -20,9 +20,13 @@ export function skillPromptFormat(skills: AgentSkill[]): string {
 
     for (const skill of ordered) {
         const sourceLabel = skill.source === "plugin" ? `plugin:${skill.pluginId ?? "unknown"}` : skill.source;
+        const category = skill.category ? xmlEscape(skill.category) : "";
         const name = xmlEscape(skill.name);
         const description = skill.description ? xmlEscape(skill.description) : "";
         lines.push("  <skill>");
+        if (category.length > 0) {
+            lines.push(`    <category>${category}</category>`);
+        }
         lines.push(`    <name>${name}</name>`);
         if (description.length > 0) {
             lines.push(`    <description>${description}</description>`);

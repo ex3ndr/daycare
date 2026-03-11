@@ -26,17 +26,17 @@ Per-user skills are split into:
 - `skills/personal/`: user-authored skills
 - `skills/active/`: system-managed activation copies used at runtime
 
-Each skill is a folder containing a `SKILL.md` file. The folder name becomes
-the skill name shown to the agent.
+Each skill is a folder containing a `SKILL.md` file. Skills may be nested under
+category folders. The leaf folder name becomes the skill name shown to the agent.
 
 Core examples in this repo include:
-- `skill-creator`
-- `permanent-agent-creator`
-- `scheduling`
-- `app-creator`
+- `software-development/skill-creator`
+- `autonomous-ai-agents/permanent-agent-creator`
+- `autonomous-ai-agents/scheduling`
+- `software-development/app-creator`
 
 The skills section prompt (`SYSTEM_SKILLS.md`) contains mandatory invocation guidance.
-`skillPromptFormat()` contributes only the dynamic XML list (`<available_skills>...</available_skills>`), appended after section render.
+`skillPromptFormat()` contributes only the dynamic XML list (`<available_skills>...</available_skills>`), appended after section render. Each skill entry may include a derived category from its relative path.
 
 ## Skills catalog flow (code)
 
@@ -57,7 +57,7 @@ flowchart TD
   User --> FromRoot
   Agents --> FromRoot
   FromRoot --> Resolve[skillResolve]
-  Resolve --> Sort[skillSort]
+  Resolve --> Sort[skillSort by category+name]
   Plugin --> Resolve
   Plugin --> Sort
   Sort --> SkillsList[combined AgentSkill[]]
@@ -78,6 +78,8 @@ flowchart TD
 - `user:<relative-path>`
 - `agents:<relative-path>`
 - `plugin:<plugin-id>/<relative-path>`
+
+For folder-categorized core skills, `<relative-path>` includes the category segment.
 
 Activation keys are built from `skill.id` (replace `:` and `/` with `--`, sanitize to `[a-zA-Z0-9._-]`).
 This avoids cross-source collisions and path traversal from skill names.

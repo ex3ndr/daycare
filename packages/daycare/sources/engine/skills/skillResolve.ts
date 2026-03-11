@@ -39,12 +39,14 @@ export async function skillResolve(filePath: string, source: SkillSource, root?:
 
     const metadata = skillFrontmatterParse(content);
     const name = metadata.name?.trim().length ? metadata.name.trim() : skillNameFormat(resolvedPath);
+    const category = skillCategoryResolve(resolvedPath, root);
     const description = metadata.description?.trim().length ? metadata.description.trim() : null;
     const id = skillIdBuild(resolvedPath, source, root);
 
     return {
         id,
         name,
+        category,
         description,
         sandbox: metadata.sandbox,
         permissions: metadata.permissions,
@@ -147,6 +149,19 @@ function skillIdBuild(filePath: string, source: SkillSource, root?: string): str
     return `core:${normalized}`;
 }
 
+function skillCategoryResolve(filePath: string, root?: string): string | null {
+    if (!root) {
+        return null;
+    }
+    const skillDir = path.relative(root, path.dirname(filePath));
+    const segments = skillDir.split(path.sep).filter((segment) => segment.length > 0);
+    if (segments.length <= 1) {
+        return null;
+    }
+    const category = segments[0];
+    return category ? (skillCategoryNormalize(category) ?? null) : null;
+}
+
 function skillNameFormat(filePath: string): string {
     const fileName = path.basename(filePath).toLowerCase();
     if (fileName === SKILL_FILENAME_NORMALIZED) {
@@ -157,4 +172,13 @@ function skillNameFormat(filePath: string): string {
 
 function skillNameNormalize(value: string): string {
     return value.replace(/[-_]+/g, " ").trim();
+}
+
+function skillCategoryNormalize(value: string): string | null {
+    const normalized = value
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_]+/g, "-")
+        .replace(/-+/g, "-");
+    return normalized.length > 0 ? normalized : null;
 }

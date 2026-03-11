@@ -6,7 +6,7 @@ Add LLM tools for fragment CRUD and a `create-fragment` skill that guides the LL
 **Deliverables:**
 1. Three LLM tools: `fragment_create`, `fragment_update`, `fragment_archive` — registered as core tools, visible to all agents
 2. A skill template (`packages/daycare-app/sources/prompts/fragments/SKILL_TEMPLATE.md`) with the static header (frontmatter + workflow + tool docs + design guidelines)
-3. An export script (`packages/daycare-app/scripts/exportFragmentSkill.ts`) that concatenates the template with `widgetsCatalog.prompt()` and writes the final `SKILL.md` to `packages/daycare/sources/skills/create-fragment/SKILL.md`
+3. An export script (`packages/daycare-app/scripts/exportFragmentSkill.ts`) that concatenates the template with `widgetsCatalog.prompt()` and writes the final `SKILL.md` to `packages/daycare/sources/skills/software-development/create-fragment/SKILL.md`
 
 **Key behaviors:**
 - `fragment_create` accepts `title`, `kitVersion`, `spec` (json-render spec), optional `description`; returns `{ fragmentId, version }`
@@ -18,7 +18,7 @@ Add LLM tools for fragment CRUD and a `create-fragment` skill that guides the LL
 - Fragment repository: `packages/daycare/sources/storage/fragmentsRepository.ts` (already implemented)
 - Tool pattern: `packages/daycare/sources/engine/modules/tools/documentWriteToolBuild.ts` — TypeBox schema, `ToolDefinition`, `ToolResultContract`
 - Tool registration: `packages/daycare/sources/engine/engine.ts` line ~708 — `this.modules.tools.register("core", ...)`
-- Skill pattern: `packages/daycare/sources/skills/task-creation/SKILL.md` — YAML frontmatter + markdown body
+- Skill pattern: `packages/daycare/sources/skills/autonomous-ai-agents/task-creation/SKILL.md` — YAML frontmatter + markdown body
 - Widget catalog: `packages/daycare-app/sources/widgets/widgets.ts` — `widgetsCatalog` with `jsonSchema()` and `prompt()` methods
 - Skills directory: `packages/daycare/sources/skills/`
 
@@ -134,7 +134,7 @@ Before finishing:
   - Imports `widgetsCatalog` from `../sources/widgets/widgets.ts`
   - Calls `widgetsCatalog.prompt()` to get the catalog prompt
   - Concatenates: `header + "\n" + catalogPrompt`
-  - Writes result to `packages/daycare/sources/skills/create-fragment/SKILL.md` (creates directory if needed)
+  - Writes result to `packages/daycare/sources/skills/software-development/create-fragment/SKILL.md` (creates directory if needed)
 - [ ] Verify script runs: `npx tsx packages/daycare-app/scripts/exportFragmentSkill.ts`
 - [ ] Verify generated SKILL.md has valid YAML frontmatter (parseable by gray-matter)
 - [ ] Verify generated SKILL.md contains widget catalog component documentation

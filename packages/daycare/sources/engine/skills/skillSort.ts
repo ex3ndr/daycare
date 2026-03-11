@@ -7,10 +7,27 @@ import type { AgentSkill } from "./skillTypes.js";
  */
 export function skillSort(skills: AgentSkill[]): AgentSkill[] {
     return [...skills].sort((a, b) => {
+        const categorySort = skillCategoryCompare(a.category, b.category);
+        if (categorySort !== 0) {
+            return categorySort;
+        }
         const nameSort = a.name.localeCompare(b.name);
         if (nameSort !== 0) {
             return nameSort;
         }
         return a.sourcePath.localeCompare(b.sourcePath);
     });
+}
+
+function skillCategoryCompare(a: string | null | undefined, b: string | null | undefined): number {
+    if (a && b) {
+        return a.localeCompare(b);
+    }
+    if (a) {
+        return -1;
+    }
+    if (b) {
+        return 1;
+    }
+    return 0;
 }

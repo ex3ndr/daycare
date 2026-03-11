@@ -6,12 +6,12 @@ Skills are opt-in prompts stored as files on disk. They are **not** loaded into 
 
 | Location | Purpose |
 |----------|---------|
-| `packages/daycare/sources/skills/` | Core built-in skills |
+| `packages/daycare/sources/skills/` | Core built-in skills (may be grouped into category folders) |
 | `~/.daycare/skills/` | Config-local skills |
 | `~/.agents/skills/` | Shared home-directory skills |
 | Plugin-registered via `registerSkill(path)` | Plugin-provided skills |
 
-Each skill is a folder containing a `SKILL.md` file. The folder name becomes the skill name shown to the agent.
+Each skill is a folder containing a `SKILL.md` file. Core skills may be nested under category folders such as `software-development/` or `research/`. The leaf folder name becomes the skill name shown to the agent.
 
 ## SKILL.md format
 
@@ -37,7 +37,7 @@ Skill content in Markdown...
 
 ## Loading
 
-1. The system prompt lists available skills with metadata (name, description, source, sandbox flag)
+1. The system prompt lists available skills with metadata (category, name, description, source, sandbox flag)
 2. The agent calls `skill(name: "...")`
 3. Non-sandbox skills return instructions to follow in-context; sandbox skills run in a subagent and return results
 
@@ -88,3 +88,7 @@ The skill catalog uses stable ID prefixes by source:
 - `config:<relative-path>`
 - `user:<relative-path>`
 - `plugin:<plugin-id>/<relative-path>`
+
+For categorized core skills, the relative path includes the category folder. Example:
+- `packages/daycare/sources/skills/software-development/code-review/SKILL.md`
+- skill id: `core:software-development/code-review`

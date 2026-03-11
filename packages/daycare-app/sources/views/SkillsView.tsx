@@ -19,6 +19,16 @@ function sourceLabel(source: string): string {
     return source;
 }
 
+function categoryLabel(category: string | null): string {
+    if (!category) {
+        return "Uncategorized";
+    }
+    return category
+        .split("-")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+}
+
 export function SkillsView() {
     const { theme } = useUnistyles();
 
@@ -67,24 +77,50 @@ export function SkillsView() {
         );
     }
 
-    const sorted = [...skills].sort((a, b) => a.name.localeCompare(b.name));
+    const groups = new Map<string | null, typeof skills>();
+    for (const skill of skills) {
+        const key = skill.category ?? null;
+        const current = groups.get(key) ?? [];
+        current.push(skill);
+        groups.set(key, current);
+    }
+    const orderedGroups = Array.from(groups.entries()).sort(([a], [b]) => {
+        if (a && b) {
+            return a.localeCompare(b);
+        }
+        if (a) {
+            return -1;
+        }
+        if (b) {
+            return 1;
+        }
+        return 0;
+    });
 
     return (
         <View style={{ flex: 1 }}>
             <PageHeader title="Skills" icon="zap" />
             <ItemList>
-                <ItemGroup title={`${skills.length} skills`}>
-                    {sorted.map((skill, index) => (
-                        <Item
-                            key={skill.id}
-                            title={skill.name}
-                            subtitle={skill.description ?? undefined}
-                            detail={sourceLabel(skill.source)}
-                            showChevron={false}
-                            showDivider={index < sorted.length - 1}
-                        />
-                    ))}
-                </ItemGroup>
+                {orderedGroups.map(([category, group]) => {
+                    const sorted = [...group].sort((a, b) => a.name.localeCompare(b.name));
+                    return (
+                        <ItemGroup
+                            key={category ?? "uncategorized"}
+                            title={`${categoryLabel(category)} (${sorted.length})`}
+                        >
+                            {sorted.map((skill, index) => (
+                                <Item
+                                    key={skill.id}
+                                    title={skill.name}
+                                    subtitle={skill.description ?? undefined}
+                                    detail={sourceLabel(skill.source)}
+                                    showChevron={false}
+                                    showDivider={index < sorted.length - 1}
+                                />
+                            ))}
+                        </ItemGroup>
+                    );
+                })}
             </ItemList>
         </View>
     );

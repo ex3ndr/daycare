@@ -2,7 +2,7 @@
 
 ## Summary
 
-Added a new core skill at `packages/daycare/sources/skills/task-creation/SKILL.md`.
+Added a new core skill at `packages/daycare/sources/skills/autonomous-ai-agents/task-creation/SKILL.md`.
 The skill is sandboxed (`sandbox: true`) so it runs asynchronously in a subagent and focuses on robust task authoring:
 
 - minimal Python orchestration
