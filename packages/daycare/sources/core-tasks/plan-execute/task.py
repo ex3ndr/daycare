@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 
 def section_body(title: str, text: str) -> str:
@@ -9,12 +10,12 @@ def section_body(title: str, text: str) -> str:
     return match.group("body").strip()
 
 
-def task_entries(implementation_text: str) -> list[dict[str, object]]:
+def task_entries(implementation_text: str) -> list[dict[str, Any]]:
     pattern = re.compile(
         r"^### Task (?P<number>[^:\n]+): (?P<title>[^\n]+)\n(?P<body>.*?)(?=^### |\Z)",
         re.MULTILINE | re.DOTALL,
     )
-    tasks: list[dict[str, object]] = []
+    tasks: list[dict[str, Any]] = []
     for match in pattern.finditer(implementation_text):
         body = match.group("body").strip()
         checkbox_lines = [
@@ -42,7 +43,7 @@ branch_value = ""
 if default_branch is not None:
     branch_value = str(default_branch).strip()
 
-plan_text = read(path=plan_path_value)
+plan_text = read(path=plan_path_value)["content"]
 overview = section_body("Overview", plan_text)
 context = section_body("Context", plan_text)
 implementation_text = section_body("Implementation Steps", plan_text)

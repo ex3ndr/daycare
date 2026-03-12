@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 
 def section_body(title: str, text: str) -> str:
@@ -50,12 +51,12 @@ def validation_commands(text: str) -> list[str]:
     return commands
 
 
-def task_entries(implementation_text: str) -> list[dict[str, object]]:
+def task_entries(implementation_text: str) -> list[dict[str, Any]]:
     pattern = re.compile(
         r"^### Task (?P<number>[^:\n]+): (?P<title>[^\n]+)\n(?P<body>.*?)(?=^### |\Z)",
         re.MULTILINE | re.DOTALL,
     )
-    tasks: list[dict[str, object]] = []
+    tasks: list[dict[str, Any]] = []
     for match in pattern.finditer(implementation_text):
         body = match.group("body").strip()
         checkboxes = checkbox_items(body)
@@ -73,7 +74,7 @@ def task_entries(implementation_text: str) -> list[dict[str, object]]:
     return tasks
 
 
-def find_task(tasks: list[dict[str, object]], number: str) -> dict[str, object] | None:
+def find_task(tasks: list[dict[str, Any]], number: str) -> dict[str, Any] | None:
     normalized = number.strip()
     if not normalized:
         return None
@@ -83,7 +84,7 @@ def find_task(tasks: list[dict[str, object]], number: str) -> dict[str, object] 
     return None
 
 
-def last_completed_task(tasks: list[dict[str, object]]) -> dict[str, object] | None:
+def last_completed_task(tasks: list[dict[str, Any]]) -> dict[str, Any] | None:
     completed = [task for task in tasks if bool(task["complete"])]
     if len(completed) == 0:
         return None
@@ -110,7 +111,7 @@ task_number_value = ""
 if task_number is not None:
     task_number_value = str(task_number).strip()
 
-plan_text = read(path=plan_path_value)
+plan_text = read(path=plan_path_value)["content"]
 overview = section_body("Overview", plan_text)
 context = section_body("Context", plan_text)
 tasks = task_entries(section_body("Implementation Steps", plan_text))

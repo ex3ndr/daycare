@@ -9,3 +9,4 @@ packages/daycare-dashboard/out
 :memory:
 packages/daycare-app/android
 packages/daycare-app/ios
+packages/daycare/sources/core-tasks/**/__pycache__/

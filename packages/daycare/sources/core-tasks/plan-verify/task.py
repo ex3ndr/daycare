@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 
 REQUIRED_SECTIONS = [
@@ -20,27 +21,6 @@ def section_body(title: str, text: str) -> str:
     if not match:
         return ""
     return match.group("body").strip()
-
-
-def task_entries(implementation_text: str) -> list[dict[str, object]]:
-    pattern = re.compile(
-        r"^### Task (?P<number>[^:\n]+): (?P<title>[^\n]+)\n(?P<body>.*?)(?=^### |\Z)",
-        re.MULTILINE | re.DOTALL,
-    )
-    tasks: list[dict[str, object]] = []
-    for match in pattern.finditer(implementation_text):
-        body = match.group("body").strip()
-        tasks.append(
-            {
-                "number": match.group("number").strip(),
-                "title": match.group("title").strip(),
-                "body": body,
-                "files": labeled_items(body, "Files"),
-                "verify": labeled_items(body, "Verify"),
-                "checkboxes": checkbox_items(body),
-            }
-        )
-    return tasks
 
 
 def labeled_items(body: str, label: str) -> list[str]:
@@ -70,6 +50,27 @@ def checkbox_items(body: str) -> list[str]:
     ]
 
 
+def task_entries(implementation_text: str) -> list[dict[str, Any]]:
+    pattern = re.compile(
+        r"^### Task (?P<number>[^:\n]+): (?P<title>[^\n]+)\n(?P<body>.*?)(?=^### |\Z)",
+        re.MULTILINE | re.DOTALL,
+    )
+    tasks: list[dict[str, Any]] = []
+    for match in pattern.finditer(implementation_text):
+        body = match.group("body").strip()
+        tasks.append(
+            {
+                "number": match.group("number").strip(),
+                "title": match.group("title").strip(),
+                "body": body,
+                "files": labeled_items(body, "Files"),
+                "verify": labeled_items(body, "Verify"),
+                "checkboxes": checkbox_items(body),
+            }
+        )
+    return tasks
+
+
 def validation_commands(text: str) -> list[str]:
     commands: list[str] = []
     for raw_line in section_body("Validation Commands", text).splitlines():
@@ -95,7 +96,7 @@ plan_path_value = plan_path.strip()
 if not plan_path_value:
     raise Exception("plan_path is required.")
 
-plan_text = read(path=plan_path_value)
+plan_text = read(path=plan_path_value)["content"]
 issues: list[str] = []
 
 title = plan_title(plan_text)
