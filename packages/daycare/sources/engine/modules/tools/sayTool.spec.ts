@@ -5,7 +5,7 @@ import { contextForAgent } from "../../agents/context.js";
 import { sayTool } from "./sayTool.js";
 
 const toolCall = { id: "tool-1", name: "say" };
-const recipient = { connectorKey: "telegram:channel-1" };
+const recipient = { name: "telegram", key: "channel-1" };
 
 describe("sayTool", () => {
     it("sends text to the current foreground target", async () => {
@@ -86,7 +86,7 @@ describe("sayTool", () => {
 
         expect(sendMessage).not.toHaveBeenCalled();
         expect(result.deferredPayload).toEqual({
-            connector: "telegram",
+            connector: recipient,
             recipient,
             text: "Hello user",
             replyToMessageId: "message-1",
@@ -279,7 +279,7 @@ describe("sayTool", () => {
 
         expect(sendMessage).not.toHaveBeenCalled();
         expect(result.deferredPayload).toMatchObject({
-            connector: "telegram",
+            connector: recipient,
             recipient,
             text: "Deferred file.",
             files: [
@@ -304,7 +304,7 @@ describe("sayTool", () => {
 
         await tool.executeDeferred!(
             {
-                connector: "telegram",
+                connector: recipient,
                 recipient,
                 text: "deferred msg",
                 replyToMessageId: "msg-1",
@@ -348,8 +348,7 @@ describe("sayTool", () => {
             config: {
                 kind: "connector",
                 modelRole: "user",
-                connectorName: "telegram",
-                connectorKey: "telegram:channel-1",
+                connector: recipient,
                 parentAgentId: null,
                 foreground: true,
                 name: null,
@@ -364,7 +363,7 @@ describe("sayTool", () => {
             config: {
                 kind: "sub",
                 modelRole: "subagent",
-                connectorName: null,
+                connector: null,
                 parentAgentId: "agent-1",
                 foreground: false,
                 name: "subagent",
@@ -379,7 +378,7 @@ describe("sayTool", () => {
     });
 });
 
-type TestSendMessage = (recipient: { connectorKey: string }, message: Record<string, unknown>) => Promise<void>;
+type TestSendMessage = (recipient: { name: string; key: string }, message: Record<string, unknown>) => Promise<void>;
 
 function contextBuild(options: {
     sendMessage: TestSendMessage;
@@ -437,8 +436,7 @@ function contextBuild(options: {
             config: {
                 kind: "connector",
                 modelRole: "user",
-                connectorName: "telegram",
-                connectorKey: "telegram:channel-1",
+                connector: recipient,
                 parentAgentId: null,
                 foreground: true,
                 name: null,
