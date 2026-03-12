@@ -23,7 +23,9 @@ describe("Engine reset command", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
-            const agentIdForTargetSpy = vi.spyOn(engine.agentSystem, "agentIdForTarget").mockResolvedValue("agent-1");
+            const existingAgentIdForTargetSpy = vi
+                .spyOn(engine.agentSystem, "existingAgentIdForTarget")
+                .mockResolvedValue("agent-1");
 
             const sendMessage = vi.fn(async () => undefined);
             const commandState: {
@@ -48,7 +50,7 @@ describe("Engine reset command", () => {
             }
 
             const target = agentPathConnector("123", "telegram");
-            const context: MessageContext = { messageId: "55" };
+            const context: MessageContext = { messageId: "55", connectorKey: "telegram:123" };
 
             await commandHandler("/reset", context, target);
 
@@ -60,9 +62,18 @@ describe("Engine reset command", () => {
             const ctx = postCall[0] as { userId: string };
             const postTarget = postCall[1] as { agentId: string };
             const payload = postCall[2] as { type: string; message: string; context: MessageContext };
-            expect(agentIdForTargetSpy).toHaveBeenCalledWith(ctx, {
-                path: expect.stringMatching(/^\/[^/]+\/telegram$/)
-            });
+            expect(existingAgentIdForTargetSpy).toHaveBeenCalledWith(
+                ctx,
+                {
+                    path: expect.stringMatching(/^\/[^/]+\/telegram$/)
+                },
+                {
+                    kind: "connector",
+                    foreground: true,
+                    connectorName: "telegram",
+                    connectorKey: "telegram:123"
+                }
+            );
             expect(postTarget.agentId).toBe("agent-1");
             expect(payload).toEqual({
                 type: "reset",
@@ -85,7 +96,9 @@ describe("Engine reset command", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
-            const agentIdForTargetSpy = vi.spyOn(engine.agentSystem, "agentIdForTarget").mockResolvedValue("agent-1");
+            const existingAgentIdForTargetSpy = vi
+                .spyOn(engine.agentSystem, "existingAgentIdForTarget")
+                .mockResolvedValue("agent-1");
             const state: {
                 messageHandler?: (
                     message: ConnectorMessage,
@@ -118,8 +131,12 @@ describe("Engine reset command", () => {
                 throw new Error("Expected handlers to be registered");
             }
 
-            await messageHandler({ text: "can you check downloads?" }, { messageId: "1" }, target);
-            await commandHandler("/reset", { messageId: "2" }, target);
+            await messageHandler(
+                { text: "can you check downloads?" },
+                { messageId: "1", connectorKey: "telegram:123" },
+                target
+            );
+            await commandHandler("/reset", { messageId: "2", connectorKey: "telegram:123" }, target);
             await vi.advanceTimersByTimeAsync(100);
 
             expect(postSpy).toHaveBeenCalledTimes(1);
@@ -130,9 +147,18 @@ describe("Engine reset command", () => {
             const ctx = postCall[0] as { userId: string };
             const postTarget = postCall[1] as { agentId: string };
             const payload = postCall[2] as { type: string; message: string; context: MessageContext };
-            expect(agentIdForTargetSpy).toHaveBeenCalledWith(ctx, {
-                path: expect.stringMatching(/^\/[^/]+\/telegram$/)
-            });
+            expect(existingAgentIdForTargetSpy).toHaveBeenCalledWith(
+                ctx,
+                {
+                    path: expect.stringMatching(/^\/[^/]+\/telegram$/)
+                },
+                {
+                    kind: "connector",
+                    foreground: true,
+                    connectorName: "telegram",
+                    connectorKey: "telegram:123"
+                }
+            );
             expect(postTarget.agentId).toBe("agent-1");
             expect(payload).toEqual({
                 type: "reset",
@@ -706,7 +732,9 @@ describe("Engine compact command", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
-            const agentIdForTargetSpy = vi.spyOn(engine.agentSystem, "agentIdForTarget").mockResolvedValue("agent-1");
+            const existingAgentIdForTargetSpy = vi
+                .spyOn(engine.agentSystem, "existingAgentIdForTarget")
+                .mockResolvedValue("agent-1");
 
             const sendMessage = vi.fn(async () => undefined);
             const commandState: {
@@ -731,7 +759,7 @@ describe("Engine compact command", () => {
             }
 
             const target = agentPathConnector("123", "telegram");
-            const context: MessageContext = { messageId: "57" };
+            const context: MessageContext = { messageId: "57", connectorKey: "telegram:123" };
 
             await commandHandler("/compact", context, target);
 
@@ -743,9 +771,18 @@ describe("Engine compact command", () => {
             const ctx = postCall[0] as { userId: string };
             const postTarget = postCall[1] as { agentId: string };
             const payload = postCall[2] as { type: string; context: MessageContext };
-            expect(agentIdForTargetSpy).toHaveBeenCalledWith(ctx, {
-                path: expect.stringMatching(/^\/[^/]+\/telegram$/)
-            });
+            expect(existingAgentIdForTargetSpy).toHaveBeenCalledWith(
+                ctx,
+                {
+                    path: expect.stringMatching(/^\/[^/]+\/telegram$/)
+                },
+                {
+                    kind: "connector",
+                    foreground: true,
+                    connectorName: "telegram",
+                    connectorKey: "telegram:123"
+                }
+            );
             expect(postTarget.agentId).toBe("agent-1");
             expect(payload).toEqual({ type: "compact", context: expect.objectContaining(context) });
             expect(sendMessage).not.toHaveBeenCalled();
@@ -793,7 +830,7 @@ describe("Engine plugin commands", () => {
             }
 
             const target = agentPathConnector("123", "telegram");
-            const context: MessageContext = { messageId: "56" };
+            const context: MessageContext = { messageId: "56", connectorKey: "telegram:123" };
             await commandHandler("/upgrade now", context, target);
 
             expect(pluginHandler).toHaveBeenCalledWith(
@@ -843,9 +880,9 @@ describe("Engine message batching", () => {
             }
 
             const target = agentPathConnector("123", "telegram");
-            await handler({ text: "first" }, { messageId: "1" }, target);
+            await handler({ text: "first" }, { messageId: "1", connectorKey: "telegram:123" }, target);
             await vi.advanceTimersByTimeAsync(50);
-            await handler({ text: "second" }, { messageId: "2" }, target);
+            await handler({ text: "second" }, { messageId: "2", connectorKey: "telegram:123" }, target);
             await vi.advanceTimersByTimeAsync(99);
             expect(postSpy).not.toHaveBeenCalled();
 
@@ -1023,7 +1060,7 @@ describe("Engine message batching", () => {
             }
 
             const target = agentPathConnector("123", "telegram");
-            await handler({ text: "   " }, { messageId: "1" }, target);
+            await handler({ text: "   " }, { messageId: "1", connectorKey: "telegram:123" }, target);
             await vi.advanceTimersByTimeAsync(100);
 
             expect(postSpy).not.toHaveBeenCalled();
@@ -1085,7 +1122,7 @@ describe("Engine message batching", () => {
                         }
                     ]
                 },
-                { messageId: "1" },
+                { messageId: "1", connectorKey: "telegram:123" },
                 target
             );
 

@@ -1058,46 +1058,34 @@ export class Engine {
 
     private async targetCanonicalize(
         target: ConnectorTarget,
-        context?: MessageContext
+        context: MessageContext
     ): Promise<{ ctx: Context; path: AgentPath }> {
         return this.pathCanonicalize(target, context);
     }
 
     /**
-     * Resolves runtime user context from an incoming path.
-     * Expects: paths are rooted under /<userId>/... for user-scoped agents.
+     * Resolves runtime user context from connector metadata and rewrites only the user scope of the route.
+     * Expects: connector callbacks include a normalized connectorKey.
      */
     private async pathCanonicalize(
         path: AgentPath,
-        context?: Pick<MessageContext, "connectorKey">
-    ): Promise<{ ctx: Context; path: AgentPath }> {
+        context: Pick<MessageContext, "connectorKey">
+    ): Promise<{
+        ctx: Context;
+        path: AgentPath;
+    }> {
         await this.migrationReady;
-        const connectorKey = context?.connectorKey?.trim() ?? "";
-        if (!connectorKey) {
-            return {
-                ctx: await this.pathContextResolve(path),
-                path
-            };
+        const recipient = messageContextRecipientResolve(context);
+        if (!recipient) {
+            throw new Error("Connector callbacks require connectorKey.");
         }
+        const connectorKey = recipient.recipient.connectorKey;
         const user = await this.storage.resolveUserByConnectorKey(connectorKey);
         const existingForeground = await this.storage.agents.findForegroundByConnectorKey(user.id, connectorKey);
         return {
             ctx: contextForUser({ userId: user.id }),
             path: existingForeground?.path ?? pathUserIdReplace(path, user.id)
         };
-    }
-
-    /**
-     * Resolves runtime user context from an incoming path.
-     * Expects: paths are rooted under /<userId>/... for user-scoped agents.
-     */
-    private async pathContextResolve(path: AgentPath) {
-        await this.migrationReady;
-        const userId = pathUserIdResolve(path);
-        if (!userId) {
-            throw new Error(`Path does not resolve to a user context: ${path}`);
-        }
-        return contextForUser({ userId });
     }
 
     private async connectorRecipientResolve(path: AgentPath): Promise<ConnectorResolvedRecipient | null> {
@@ -1214,15 +1202,6 @@ function pathSegments(path: AgentPath): string[] {
     return String(path)
         .split("/")
         .filter((segment) => segment.length > 0);
-}
-
-function pathUserIdResolve(path: AgentPath): string | null {
-    const segments = pathSegments(path);
-    const first = segments[0]?.trim() ?? "";
-    if (!first) {
-        return null;
-    }
-    return first;
 }
 
 function pathUserIdReplace(path: AgentPath, userId: string): AgentPath {
