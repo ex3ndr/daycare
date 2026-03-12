@@ -72,11 +72,14 @@ Missing most sections.
 const readTool = {
     name: "read",
     description: "Read file contents.",
-    parameters: Type.Object({
-        path: Type.String(),
-        offset: Type.Optional(Type.Number()),
-        limit: Type.Optional(Type.Number())
-    }, { additionalProperties: false })
+    parameters: Type.Object(
+        {
+            path: Type.String(),
+            offset: Type.Optional(Type.Number()),
+            limit: Type.Optional(Type.Number())
+        },
+        { additionalProperties: false }
+    )
 };
 
 function createResolver(readContent: string) {
@@ -146,8 +149,13 @@ describe("core-tasks VM execution", () => {
             const preamble = montyPreambleBuild([readTool]);
 
             const result = await rlmExecute(
-                code, preamble, createContext(), resolver, "plan-verify-test",
-                undefined, undefined,
+                code,
+                preamble,
+                createContext(),
+                resolver,
+                "plan-verify-test",
+                undefined,
+                undefined,
                 { plan_path: "/test/plan.md" },
                 [{ name: "plan_path", type: "string", nullable: false }]
             );
@@ -162,8 +170,13 @@ describe("core-tasks VM execution", () => {
             const preamble = montyPreambleBuild([readTool]);
 
             const result = await rlmExecute(
-                code, preamble, createContext(), resolver, "plan-verify-incomplete",
-                undefined, undefined,
+                code,
+                preamble,
+                createContext(),
+                resolver,
+                "plan-verify-incomplete",
+                undefined,
+                undefined,
                 { plan_path: "/test/plan.md" },
                 [{ name: "plan_path", type: "string", nullable: false }]
             );
@@ -180,8 +193,13 @@ describe("core-tasks VM execution", () => {
             const preamble = montyPreambleBuild([readTool]);
 
             const result = await rlmExecute(
-                code, preamble, createContext(), resolver, "ralph-loop-test",
-                undefined, undefined,
+                code,
+                preamble,
+                createContext(),
+                resolver,
+                "ralph-loop-test",
+                undefined,
+                undefined,
                 { plan_path: "/test/plan.md", default_branch: "main", task_number: null },
                 [
                     { name: "plan_path", type: "string", nullable: false },
@@ -202,8 +220,13 @@ describe("core-tasks VM execution", () => {
             const preamble = montyPreambleBuild([readTool]);
 
             const result = await rlmExecute(
-                code, preamble, createContext(), resolver, "plan-execute-test",
-                undefined, undefined,
+                code,
+                preamble,
+                createContext(),
+                resolver,
+                "plan-execute-test",
+                undefined,
+                undefined,
                 { plan_path: "/test/plan.md", default_branch: "main" },
                 [
                     { name: "plan_path", type: "string", nullable: false },
@@ -223,8 +246,13 @@ describe("core-tasks VM execution", () => {
             const preamble = montyPreambleBuild([readTool]);
 
             const result = await rlmExecute(
-                code, preamble, createContext(), resolver, "section-exec-test",
-                undefined, undefined,
+                code,
+                preamble,
+                createContext(),
+                resolver,
+                "section-exec-test",
+                undefined,
+                undefined,
                 { plan_path: "/test/plan.md", task_number: "1", default_branch: "main" },
                 [
                     { name: "plan_path", type: "string", nullable: false },
@@ -240,17 +268,19 @@ describe("core-tasks VM execution", () => {
 
     describe("review-results", () => {
         it("executes without error for a completed task", async () => {
-            const completedPlan = SAMPLE_PLAN.replace(
-                "- [ ] fix the rendering logic",
-                "- [x] fix the rendering logic"
-            );
+            const completedPlan = SAMPLE_PLAN.replace("- [ ] fix the rendering logic", "- [x] fix the rendering logic");
             const code = await loadTaskCode("review-results");
             const { resolver, execute } = createResolver(completedPlan);
             const preamble = montyPreambleBuild([readTool]);
 
             const result = await rlmExecute(
-                code, preamble, createContext(), resolver, "review-results-test",
-                undefined, undefined,
+                code,
+                preamble,
+                createContext(),
+                resolver,
+                "review-results-test",
+                undefined,
+                undefined,
                 { plan_path: "/test/plan.md", task_number: "1" },
                 [
                     { name: "plan_path", type: "string", nullable: false },
@@ -270,8 +300,13 @@ describe("core-tasks VM execution", () => {
             const preamble = montyPreambleBuild([readTool]);
 
             const result = await rlmExecute(
-                code, preamble, createContext(), resolver, "software-dev-test",
-                undefined, undefined,
+                code,
+                preamble,
+                createContext(),
+                resolver,
+                "software-dev-test",
+                undefined,
+                undefined,
                 { user_prompt: "Fix the login bug", plan_path: "/test/plan.md", default_branch: "main" },
                 [
                     { name: "user_prompt", type: "string", nullable: false },
