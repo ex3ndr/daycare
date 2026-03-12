@@ -104,7 +104,7 @@ describe("TelegramConnector commands", () => {
         const [command, context, target] = commandHandler.mock.calls[0] as [string, MessageContext, string];
         expect(command).toBe("/reset");
         expect(context).toMatchObject({ messageId: "55", connectorKey: "telegram:123" });
-        expect(target).toBe("/123/telegram/123/123");
+        expect(target).toBe("/123/telegram");
     });
 
     it("ignores group commands", async () => {
@@ -175,7 +175,7 @@ describe("TelegramConnector callback queries", () => {
         const [payload, context, target] = messageHandler.mock.calls[0] as [{ text: string }, MessageContext, string];
         expect(payload.text).toBe("approve_request");
         expect(context).toMatchObject({ messageId: "66", connectorKey: "telegram:123" });
-        expect(target).toBe("/123/telegram/123/123");
+        expect(target).toBe("/123/telegram");
     });
 
     it("rejects unauthorized callback queries in private mode", async () => {
@@ -309,7 +309,7 @@ describe("TelegramConnector incoming documents", () => {
             }
         ]);
         expect(context).toMatchObject({ messageId: "55", connectorKey: "telegram:123" });
-        expect(target).toBe("/123/telegram/123/123");
+        expect(target).toBe("/123/telegram");
     });
 
     it("adds fallback text when document download fails", async () => {
@@ -414,7 +414,7 @@ describe("TelegramConnector incoming voice", () => {
             }
         ]);
         expect(context).toMatchObject({ messageId: "57", connectorKey: "telegram:123" });
-        expect(target).toBe("/123/telegram/123/123");
+        expect(target).toBe("/123/telegram");
     });
 });
 

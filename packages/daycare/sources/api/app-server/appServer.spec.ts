@@ -359,7 +359,11 @@ describe("AppServer auth endpoints", () => {
         const command = built.commands.get("app");
         expect(command).not.toBeNull();
 
-        await command!.handler("/app", { messageId: "42" }, agentPathConnector("123", "telegram"));
+        await command!.handler(
+            "/app",
+            { messageId: "42", connectorKey: userConnectorKeyCreate("telegram", "123") },
+            agentPathConnector("123", "telegram")
+        );
 
         expect(sendMessage).toHaveBeenCalledTimes(1);
         const sentCall = sendMessage.mock.calls[0];

@@ -632,7 +632,7 @@ export class AppServer {
                 }
                 const connectorTarget =
                     messageContextRecipientResolve(context) ?? (await this.connectorRecipientResolve(path));
-                const userId = await this.userIdResolve(path, context);
+                const userId = await this.userIdResolve(context);
                 if (!userId || !connectorTarget) {
                     return;
                 }
@@ -704,15 +704,27 @@ export class AppServer {
         });
     }
 
-    private async userIdResolve(path: AgentPath, context: { connectorKey?: string }): Promise<string | null> {
+    private async userIdResolve(context: { connectorKey?: string }): Promise<string | null> {
         const connectorKey = context.connectorKey?.trim() ?? "";
-        if (connectorKey && this.users) {
-            const user = await this.users.findByConnectorKey(connectorKey);
-            if (user) {
-                return user.id;
-            }
+        if (!connectorKey || !this.users) {
+            return null;
         }
-        return pathUserIdResolve(path);
+        const existing = await this.users.findByConnectorKey(connectorKey);
+        if (existing) {
+            return existing.id;
+        }
+        try {
+            const created = await this.users.create({
+                connectorKey
+            });
+            return created.id;
+        } catch (error) {
+            const raced = await this.users.findByConnectorKey(connectorKey);
+            if (raced) {
+                return raced.id;
+            }
+            throw error;
+        }
     }
 
     private pathFromConnectorTarget(target: ConnectorTarget): AgentPath | null {
@@ -735,17 +747,6 @@ function webhookTokenResolve(pathname: string): string | null {
     const webhookToken = parts[2] ?? "";
     const normalized = webhookToken.trim();
     return normalized.length > 0 ? normalized : null;
-}
-
-function pathUserIdResolve(path: AgentPath): string | null {
-    const segments = String(path)
-        .split("/")
-        .filter((segment) => segment.length > 0);
-    const first = segments[0]?.trim() ?? "";
-    if (!first) {
-        return null;
-    }
-    return first;
 }
 
 function appServerSettingsEqual(left: AppServerResolvedSettings, right: AppServerResolvedSettings): boolean {

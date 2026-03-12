@@ -28,6 +28,7 @@ import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
 import { connectorKeyValueResolve } from "../../engine/modules/connectors/connectorKeyValueResolve.js";
 import { getLogger } from "../../log.js";
+import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { useAuthStoreState } from "./authState.js";
 import { markdownToWhatsAppText } from "./markdownToWhatsAppText.js";
 
@@ -311,7 +312,8 @@ export class WhatsAppConnector implements Connector {
 
         const path = agentPathConnector(phone, "whatsapp");
         const context: MessageContext = {
-            messageId
+            messageId,
+            connectorKey: userConnectorKeyCreate("whatsapp", phone)
         };
 
         // Check for commands

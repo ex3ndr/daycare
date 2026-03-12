@@ -18,7 +18,6 @@ import type {
     SlashCommandEntry
 } from "@/types";
 import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
-import { agentPath } from "../../engine/agents/ops/agentPathTypes.js";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
 import { connectorKeyValueResolve } from "../../engine/modules/connectors/connectorKeyValueResolve.js";
 import { getLogger } from "../../log.js";
@@ -162,7 +161,7 @@ export class TelegramConnector implements Connector {
 
             const channelId = String(message.chat.id);
             const telegramUserId = String(senderId);
-            const path = agentPath(`${agentPathConnector(telegramUserId, "telegram")}/${channelId}/${telegramUserId}`);
+            const path = agentPathConnector(telegramUserId, "telegram");
             const context: MessageContext = {
                 messageId: message.message_id ? String(message.message_id) : undefined,
                 connectorKey: telegramConnectorKeyBuild(channelId, telegramUserId)
@@ -227,7 +226,7 @@ export class TelegramConnector implements Connector {
 
             const channelId = String(chat.id);
             const telegramUserId = String(senderId);
-            const path = agentPath(`${agentPathConnector(telegramUserId, "telegram")}/${channelId}/${telegramUserId}`);
+            const path = agentPathConnector(telegramUserId, "telegram");
             const context: MessageContext = {
                 messageId: callbackQuery.message?.message_id ? String(callbackQuery.message.message_id) : undefined,
                 connectorKey: telegramConnectorKeyBuild(channelId, telegramUserId)

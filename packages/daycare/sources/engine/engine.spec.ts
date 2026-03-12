@@ -874,7 +874,7 @@ describe("Engine message batching", () => {
         }
     });
 
-    it("canonicalizes connector path with channel/user suffix", async () => {
+    it("canonicalizes connector callbacks from connectorKey into the stored connector route", async () => {
         vi.useFakeTimers();
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         try {
@@ -905,7 +905,11 @@ describe("Engine message batching", () => {
                 throw new Error("Expected message handler to be registered");
             }
 
-            await handler({ text: "hello" }, { messageId: "1" }, "/user-7/telegram/channel-1/user-7" as AgentPath);
+            await handler(
+                { text: "hello" },
+                { messageId: "1", connectorKey: "telegram:channel-1/user-7" },
+                "/user-7/telegram" as AgentPath
+            );
             await vi.advanceTimersByTimeAsync(100);
 
             expect(postSpy).toHaveBeenCalledTimes(1);
@@ -915,7 +919,7 @@ describe("Engine message batching", () => {
             }
             const ctx = call[0] as { userId: string };
             const target = call[1] as { path: string };
-            expect(target.path).toBe(`/${ctx.userId}/telegram/channel-1/user-7`);
+            expect(target.path).toBe(`/${ctx.userId}/telegram`);
 
             const user = await engine.storage.resolveUserByConnectorKey(
                 userConnectorKeyCreate("telegram", "channel-1/user-7")
@@ -930,7 +934,7 @@ describe("Engine message batching", () => {
         }
     });
 
-    it("uses connectorKey from context for connector user lookup without rewriting the path", async () => {
+    it("uses connectorKey from context for connector user lookup without path suffixes", async () => {
         vi.useFakeTimers();
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         try {
@@ -964,7 +968,7 @@ describe("Engine message batching", () => {
             await handler(
                 { text: "hello" },
                 { messageId: "1", connectorKey: "telegram:123" },
-                "/user-7/telegram/123/123" as AgentPath
+                "/user-7/telegram" as AgentPath
             );
             await vi.advanceTimersByTimeAsync(100);
 
@@ -977,7 +981,7 @@ describe("Engine message batching", () => {
             const target = call[1] as { path: string };
             const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
             expect(user.id).toBe(ctx.userId);
-            expect(target.path).toBe(`/${ctx.userId}/telegram/123/123`);
+            expect(target.path).toBe(`/${ctx.userId}/telegram`);
 
             await engine.modules.connectors.unregisterAll("test");
             await engine.shutdown();
