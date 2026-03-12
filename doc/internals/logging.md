@@ -196,7 +196,7 @@ Example output tracing a message:
 [09:41:12] [inference.router    ] Inference completed successfully providerId=anthropic modelId=claude-sonnet-4-20250514 stopReason=end_turn contentBlocks=1 inputTokens=50 outputTokens=100
 [09:41:12] [engine.modules      ] Extracted tool calls from response toolCallCount=0
 [09:41:12] [engine.runtime      ] No tool calls, breaking inference loop iteration=0
-[09:41:12] (telegram            ) Sending response to user textLength=200 fileCount=0 targetId=123
+[09:41:12] (telegram            ) Sending response to user textLength=200 fileCount=0 address=123
 [09:41:12] (telegram            ) Response sent successfully
 [09:41:12] [engine.runtime      ] handleMessage completed successfully
 ```

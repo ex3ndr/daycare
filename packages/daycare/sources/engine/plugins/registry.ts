@@ -4,7 +4,7 @@ import type {
     AgentPath,
     Connector,
     ConnectorMessage,
-    ConnectorResolvedTarget,
+    ConnectorResolvedRecipient,
     ImageGenerationProvider,
     InferenceProvider,
     MediaAnalysisProvider,
@@ -42,7 +42,7 @@ export class PluginRegistrar {
     private speechRegistry: SpeechGenerationRegistry;
     private mediaAnalysisRegistry: MediaAnalysisRegistry;
     private toolResolver: ToolResolver;
-    private connectorTargetResolve: (path: AgentPath) => Promise<ConnectorResolvedTarget | null>;
+    private connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorResolvedRecipient | null>;
     private registrations: PluginRegistrations;
 
     constructor(
@@ -54,7 +54,7 @@ export class PluginRegistrar {
         speechRegistry: SpeechGenerationRegistry,
         mediaAnalysisRegistry: MediaAnalysisRegistry,
         toolResolver: ToolResolver,
-        connectorTargetResolve: (path: AgentPath) => Promise<ConnectorResolvedTarget | null>
+        connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorResolvedRecipient | null>
     ) {
         this.pluginId = pluginId;
         this.commandRegistry = commandRegistry;
@@ -64,7 +64,7 @@ export class PluginRegistrar {
         this.speechRegistry = speechRegistry;
         this.mediaAnalysisRegistry = mediaAnalysisRegistry;
         this.toolResolver = toolResolver;
-        this.connectorTargetResolve = connectorTargetResolve;
+        this.connectorRecipientResolve = connectorRecipientResolve;
         this.registrations = {
             connectors: new Set(),
             providers: new Set(),
@@ -88,7 +88,7 @@ export class PluginRegistrar {
     }
 
     async sendMessage(path: AgentPath, context: MessageContext, message: ConnectorMessage): Promise<void> {
-        const target = await this.connectorTargetResolve(path);
+        const target = await this.connectorRecipientResolve(path);
         if (!target) {
             return;
         }
@@ -217,11 +217,11 @@ export class PluginRegistry {
     private speechRegistry: SpeechGenerationRegistry;
     private mediaAnalysisRegistry: MediaAnalysisRegistry;
     private toolResolver: ToolResolver;
-    private connectorTargetResolve: (path: AgentPath) => Promise<ConnectorResolvedTarget | null>;
+    private connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorResolvedRecipient | null>;
 
     constructor(
         modules: ModuleRegistry,
-        connectorTargetResolve: (path: AgentPath) => Promise<ConnectorResolvedTarget | null>
+        connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorResolvedRecipient | null>
     ) {
         this.commandRegistry = modules.commands;
         this.connectorRegistry = modules.connectors;
@@ -230,7 +230,7 @@ export class PluginRegistry {
         this.speechRegistry = modules.speech;
         this.mediaAnalysisRegistry = modules.mediaAnalysis;
         this.toolResolver = modules.tools;
-        this.connectorTargetResolve = connectorTargetResolve;
+        this.connectorRecipientResolve = connectorRecipientResolve;
     }
 
     createRegistrar(pluginId: string): PluginRegistrar {
@@ -243,7 +243,7 @@ export class PluginRegistry {
             this.speechRegistry,
             this.mediaAnalysisRegistry,
             this.toolResolver,
-            this.connectorTargetResolve
+            this.connectorRecipientResolve
         );
     }
 }

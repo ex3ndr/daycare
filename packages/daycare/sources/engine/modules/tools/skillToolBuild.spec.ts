@@ -289,7 +289,7 @@ describe("skillToolBuild", () => {
                     systemPrompt: null,
                     workspaceDir: null
                 },
-                connectorTargetId: "c1",
+                connectorKey: "telegram:c1",
                 connectorRegistry: {
                     get: () => ({ capabilities: { sendText: true }, sendMessage })
                 }
@@ -383,7 +383,7 @@ function contextBuild(input?: {
     dockerEnabled?: boolean;
     path?: string;
     config?: ToolExecutionContext["agent"]["config"];
-    connectorTargetId?: string;
+    connectorKey?: string;
     connectorRegistry?: { get: (id: string) => unknown };
     agentSystem?: {
         agentIdForTarget?: (ctx: unknown, target: unknown) => Promise<string>;
@@ -446,9 +446,7 @@ function contextBuild(input?: {
                 users: {
                     findById: async () => ({
                         id: "user-1",
-                        connectorKeys: input?.connectorTargetId
-                            ? [{ connectorKey: `telegram:${input.connectorTargetId}` }]
-                            : []
+                        connectorKeys: input?.connectorKey ? [{ connectorKey: input.connectorKey }] : []
                     })
                 }
             },

@@ -5,21 +5,21 @@ import { ModuleRegistry } from "../modules/moduleRegistry.js";
 import { PluginRegistry } from "./registry.js";
 
 describe("PluginRegistrar command registration", () => {
-    const connectorTargetResolve = async (path: AgentPath) => {
+    const connectorRecipientResolve = async (path: AgentPath) => {
         const segments = path.split("/").filter((segment) => segment.length > 0);
         const userId = segments[0] ?? "";
         const connector = segments[1] ?? "";
         if (!userId || !connector) {
             return null;
         }
-        return { connector, targetId: userId, recipient: { connectorKey: `${connector}:${userId}` } };
+        return { connector, recipient: { connectorKey: `${connector}:${userId}` } };
     };
 
     it("registers and unregisters plugin commands", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules, connectorTargetResolve);
+        const registry = new PluginRegistry(modules, connectorRecipientResolve);
         const registrar = registry.createRegistrar("upgrade-instance");
         const handler = vi.fn(async () => undefined);
 
@@ -44,7 +44,7 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules, connectorTargetResolve);
+        const registry = new PluginRegistry(modules, connectorRecipientResolve);
         const registrar = registry.createRegistrar("upgrade-instance");
 
         registrar.registerCommand({
@@ -67,7 +67,7 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules, connectorTargetResolve);
+        const registry = new PluginRegistry(modules, connectorRecipientResolve);
         const registrar = registry.createRegistrar("upgrade-instance");
         const sendMessage = vi.fn(async () => undefined);
         const connector: Connector = {
@@ -92,7 +92,7 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules, connectorTargetResolve);
+        const registry = new PluginRegistry(modules, connectorRecipientResolve);
         const registrar = registry.createRegistrar("media-instance");
 
         registrar.registerMediaAnalysisProvider({
@@ -117,7 +117,7 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules, connectorTargetResolve);
+        const registry = new PluginRegistry(modules, connectorRecipientResolve);
         const registrar = registry.createRegistrar("speech-instance");
 
         registrar.registerSpeechProvider({

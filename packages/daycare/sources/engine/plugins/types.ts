@@ -38,7 +38,7 @@ export type PluginSystemPromptContext = {
     ctx: Context;
     path?: AgentPath;
     config?: AgentConfig;
-    connectorTargetId?: string;
+    connectorKey?: string;
     userDownloadsDir?: string;
 };
 

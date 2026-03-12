@@ -1,4 +1,4 @@
-import type { AgentConfig, AgentPath, ConnectorResolvedTarget } from "@/types";
+import type { AgentConfig, AgentPath, ConnectorResolvedRecipient } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
 
 /**
@@ -10,7 +10,7 @@ export async function agentPathTargetResolve(
     userId: string,
     config: Pick<AgentConfig, "connectorName">,
     path?: AgentPath | null
-): Promise<ConnectorResolvedTarget | null> {
+): Promise<ConnectorResolvedRecipient | null> {
     const user = await storage.users.findById(userId);
     if (!user) {
         return null;
@@ -25,14 +25,14 @@ export async function agentPathTargetResolve(
         const exactKey = `${prefix}${targetHint}`;
         const exact = user.connectorKeys.find((entry) => entry.connectorKey === exactKey)?.connectorKey;
         if (exact) {
-            return { connector, targetId: targetHint, recipient: { connectorKey: exact } };
+            return { connector, recipient: { connectorKey: exact } };
         }
         const legacyFallback = connectorTargetLegacyFallback(targetHint);
         if (legacyFallback) {
             const fallbackKey = `${prefix}${legacyFallback}`;
             const fallback = user.connectorKeys.find((entry) => entry.connectorKey === fallbackKey)?.connectorKey;
             if (fallback) {
-                return { connector, targetId: legacyFallback, recipient: { connectorKey: fallback } };
+                return { connector, recipient: { connectorKey: fallback } };
             }
         }
     }
@@ -40,11 +40,10 @@ export async function agentPathTargetResolve(
     if (!connectorKey) {
         return null;
     }
-    const targetId = connectorKey.slice(prefix.length).trim();
-    if (!targetId) {
+    if (!connectorKey.slice(prefix.length).trim()) {
         return null;
     }
-    return { connector, targetId, recipient: { connectorKey } };
+    return { connector, recipient: { connectorKey } };
 }
 
 function connectorResolve(configured: string | null | undefined): string | null {

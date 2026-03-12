@@ -239,9 +239,9 @@ Connectors bridge external messaging platforms and the engine. They normalize in
 interface Connector {
   capabilities: ConnectorCapabilities;
   onMessage(handler: MessageHandler): MessageUnsubscribe;
-  sendMessage(targetId: string, message: ConnectorMessage): Promise<void>;
-  startTyping?: (targetId: string) => () => void;
-  setReaction?: (targetId: string, messageId: string, reaction: string) => Promise<void>;
+  sendMessage(recipient: ConnectorRecipient, message: ConnectorMessage): Promise<void>;
+  startTyping?: (recipient: ConnectorRecipient) => () => void;
+  setReaction?: (recipient: ConnectorRecipient, messageId: string, reaction: string) => Promise<void>;
   shutdown?: (reason?: string) => void | Promise<void>;
 }
 ```

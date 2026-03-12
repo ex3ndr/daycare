@@ -929,7 +929,7 @@ describe("Engine message batching", () => {
         }
     });
 
-    it("uses connectorTargetId from context for connector user lookup without rewriting the path", async () => {
+    it("uses connectorKey from context for connector user lookup without rewriting the path", async () => {
         vi.useFakeTimers();
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         try {
@@ -962,7 +962,7 @@ describe("Engine message batching", () => {
 
             await handler(
                 { text: "hello" },
-                { messageId: "1", connectorTargetId: "123" },
+                { messageId: "1", connectorKey: "telegram:123" },
                 "/user-7/telegram/123/123" as AgentPath
             );
             await vi.advanceTimersByTimeAsync(100);

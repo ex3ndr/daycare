@@ -2,7 +2,7 @@
 
 ## Summary
 
-`send_file` now resolves a connector target from the user's `most-recent-foreground` agent when the executing agent (for example, a cron/task agent) has no connector target.
+`send_file` now resolves a connector recipient from the user's `most-recent-foreground` agent when the executing agent (for example, a cron/task agent) has no connector recipient.
 
 This keeps cron executions compatible with `send_file` without requiring explicit `source` and `channelId` on every task.
 
@@ -14,12 +14,12 @@ Cron/task agents do not have connector path metadata, so `send_file` previously 
 
 ```mermaid
 flowchart TD
-    A[send_file invoked] --> B[Resolve target from current agent path/config]
-    B -->|target found| C[Use target.connector + target.targetId]
-    B -->|no target| D[Resolve most-recent-foreground agent id]
+    A[send_file invoked] --> B[Resolve recipient from current agent path/config]
+    B -->|recipient found| C[Use target.connector + target.recipient.connectorKey]
+    B -->|no recipient| D[Resolve most-recent-foreground agent id]
     D --> E[Load foreground agent record]
-    E --> F[Resolve connector target from foreground path/config]
-    F -->|target found| C
-    F -->|no target| G[Fallback to legacy source logic]
+    E --> F[Resolve connector recipient from foreground path/config]
+    F -->|recipient found| C
+    F -->|no recipient| G[Fallback to legacy source logic]
     C --> H[Send via connectorRegistry.get(source)]
 ```

@@ -20,8 +20,9 @@ import type {
 import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import { agentPath } from "../../engine/agents/ops/agentPathTypes.js";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
-import { connectorKeyTargetIdResolve } from "../../engine/modules/connectors/connectorKeyTargetIdResolve.js";
+import { connectorKeyValueResolve } from "../../engine/modules/connectors/connectorKeyValueResolve.js";
 import { getLogger } from "../../log.js";
+import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { markdownToTelegramHtml } from "./markdownToTelegramHtml.js";
 import { telegramMessageSplit } from "./telegramMessageSplit.js";
 import { telegramWebAppUrlMatch } from "./telegramWebAppUrlMatch.js";
@@ -164,7 +165,7 @@ export class TelegramConnector implements Connector {
             const path = agentPath(`${agentPathConnector(telegramUserId, "telegram")}/${channelId}/${telegramUserId}`);
             const context: MessageContext = {
                 messageId: message.message_id ? String(message.message_id) : undefined,
-                connectorTargetId: telegramUserId
+                connectorKey: telegramConnectorKeyBuild(channelId, telegramUserId)
             };
 
             if (isCommand && rawText) {
@@ -229,7 +230,7 @@ export class TelegramConnector implements Connector {
             const path = agentPath(`${agentPathConnector(telegramUserId, "telegram")}/${channelId}/${telegramUserId}`);
             const context: MessageContext = {
                 messageId: callbackQuery.message?.message_id ? String(callbackQuery.message.message_id) : undefined,
-                connectorTargetId: telegramUserId
+                connectorKey: telegramConnectorKeyBuild(channelId, telegramUserId)
             };
             const payload: ConnectorMessage = {
                 text: callbackQuery.data
@@ -296,24 +297,24 @@ export class TelegramConnector implements Connector {
     }
 
     async sendMessage(recipient: ConnectorRecipient, message: ConnectorMessage): Promise<void> {
-        const targetId = connectorKeyTargetIdResolve("telegram", recipient.connectorKey);
+        const address = connectorKeyValueResolve("telegram", recipient.connectorKey);
         logger.debug(
-            `event: sendMessage() called targetId=${targetId} hasText=${!!message.text} textLength=${message.text?.length ?? 0} fileCount=${message.files?.length ?? 0}`
+            `event: sendMessage() called address=${address} hasText=${!!message.text} textLength=${message.text?.length ?? 0} fileCount=${message.files?.length ?? 0}`
         );
-        if (!this.isAllowedTarget(targetId, "sendMessage")) {
+        if (!this.isAllowedAddress(address, "sendMessage")) {
             return;
         }
-        const chatId = telegramTargetChatIdResolve(targetId);
+        const chatId = telegramAddressChatIdResolve(address);
         const files = message.files ?? [];
         if (files.length === 0) {
-            logger.debug(`send: Sending text-only message targetId=${targetId} chatId=${chatId}`);
+            logger.debug(`send: Sending text-only message address=${address} chatId=${chatId}`);
             await this.sendTextWithFallback(chatId, message.text ?? "", {
                 ...messageReplyOptionsBuild(message, chatId, this.sendReplies, this.sendRepliesInGroups),
                 ...(message.buttons?.length
-                    ? { reply_markup: messageButtonsBuild(message.buttons, targetId, this.webAppUrl) }
+                    ? { reply_markup: messageButtonsBuild(message.buttons, address, this.webAppUrl) }
                     : {})
             });
-            logger.debug(`send: Text message sent targetId=${targetId} chatId=${chatId}`);
+            logger.debug(`send: Text message sent address=${address} chatId=${chatId}`);
             return;
         }
 
@@ -328,31 +329,31 @@ export class TelegramConnector implements Connector {
         const sendCaption = captionChunks.length === 1 ? captionChunks[0] : undefined;
         if (!sendCaption && caption) {
             logger.debug(
-                `send: Caption too long for Telegram; sending as separate message targetId=${targetId} captionLength=${caption.length}`
+                `send: Caption too long for Telegram; sending separately address=${address} captionLength=${caption.length}`
             );
         }
         logger.debug(
-            `send: Sending first file targetId=${targetId} chatId=${chatId} fileName=${first.name} mimeType=${first.mimeType} hasCaption=${!!sendCaption}`
+            `send: Sending first file address=${address} chatId=${chatId} fileName=${first.name} mimeType=${first.mimeType} hasCaption=${!!sendCaption}`
         );
         await this.sendFile(chatId, first, sendCaption, message.replyToMessageId);
         for (const file of rest) {
             logger.debug(
-                `send: Sending additional file targetId=${targetId} chatId=${chatId} fileName=${file.name} mimeType=${file.mimeType}`
+                `send: Sending additional file address=${address} chatId=${chatId} fileName=${file.name} mimeType=${file.mimeType}`
             );
             await this.sendFile(chatId, file);
         }
         if (!sendCaption && caption) {
             await this.sendTextWithFallback(chatId, caption);
         }
-        logger.debug(`send: All files sent targetId=${targetId} chatId=${chatId} totalFiles=${files.length}`);
+        logger.debug(`send: All files sent address=${address} chatId=${chatId} totalFiles=${files.length}`);
     }
 
     async createDraft(recipient: ConnectorRecipient, message: ConnectorMessage): Promise<ConnectorDraft | null> {
         if (!this.enableDrafts) {
             return null;
         }
-        const targetId = connectorKeyTargetIdResolve("telegram", recipient.connectorKey);
-        if (!this.isAllowedTarget(targetId, "createDraft")) {
+        const address = connectorKeyValueResolve("telegram", recipient.connectorKey);
+        if (!this.isAllowedAddress(address, "createDraft")) {
             return null;
         }
         if ((message.files?.length ?? 0) > 0 || (message.buttons?.length ?? 0) > 0) {
@@ -366,7 +367,7 @@ export class TelegramConnector implements Connector {
             return null;
         }
 
-        const chatId = telegramTargetChatIdResolve(targetId);
+        const chatId = telegramAddressChatIdResolve(address);
         const sent = await this.sendTextMessage(
             chatId,
             initialText,
@@ -386,8 +387,8 @@ export class TelegramConnector implements Connector {
         if (!this.enableDrafts) {
             return null;
         }
-        const targetId = connectorKeyTargetIdResolve("telegram", recipient.connectorKey);
-        if (!this.isAllowedTarget(targetId, "resumeDraft")) {
+        const address = connectorKeyValueResolve("telegram", recipient.connectorKey);
+        if (!this.isAllowedAddress(address, "resumeDraft")) {
             return null;
         }
         if (reference.type !== "telegram") {
@@ -397,16 +398,16 @@ export class TelegramConnector implements Connector {
         if (!Number.isInteger(messageId) || messageId <= 0) {
             return null;
         }
-        const chatId = telegramTargetChatIdResolve(targetId);
+        const chatId = telegramAddressChatIdResolve(address);
         return this.draftBuild(chatId, messageId);
     }
 
     startTyping(recipient: ConnectorRecipient): () => void {
-        const targetId = connectorKeyTargetIdResolve("telegram", recipient.connectorKey);
-        if (!this.isAllowedTarget(targetId, "startTyping")) {
+        const address = connectorKeyValueResolve("telegram", recipient.connectorKey);
+        if (!this.isAllowedAddress(address, "startTyping")) {
             return () => undefined;
         }
-        const chatId = telegramTargetChatIdResolve(targetId);
+        const chatId = telegramAddressChatIdResolve(address);
         const key = chatId;
         if (this.typingTimers.has(key)) {
             return () => {
@@ -430,11 +431,11 @@ export class TelegramConnector implements Connector {
     }
 
     async setReaction(recipient: ConnectorRecipient, messageId: string, reaction: string): Promise<void> {
-        const targetId = connectorKeyTargetIdResolve("telegram", recipient.connectorKey);
-        if (!this.isAllowedTarget(targetId, "setReaction")) {
+        const address = connectorKeyValueResolve("telegram", recipient.connectorKey);
+        if (!this.isAllowedAddress(address, "setReaction")) {
             return;
         }
-        const chatId = telegramTargetChatIdResolve(targetId);
+        const chatId = telegramAddressChatIdResolve(address);
         const emoji = reaction as TelegramBot.TelegramEmoji;
         await this.bot.setMessageReaction(chatId, Number(messageId), {
             reaction: [{ type: "emoji", emoji }]
@@ -442,7 +443,7 @@ export class TelegramConnector implements Connector {
     }
 
     private async sendFile(
-        targetId: string,
+        chatId: string,
         file: ConnectorFile,
         caption?: string,
         replyToMessageId?: string
@@ -453,60 +454,51 @@ export class TelegramConnector implements Connector {
             ? {
                   caption: htmlCaption,
                   parse_mode: "HTML" as TelegramBot.ParseMode,
-                  ...messageReplyOptionsBuild(
-                      { replyToMessageId },
-                      targetId,
-                      this.sendReplies,
-                      this.sendRepliesInGroups
-                  )
+                  ...messageReplyOptionsBuild({ replyToMessageId }, chatId, this.sendReplies, this.sendRepliesInGroups)
               }
             : caption
               ? {
                     caption,
                     ...messageReplyOptionsBuild(
                         { replyToMessageId },
-                        targetId,
+                        chatId,
                         this.sendReplies,
                         this.sendRepliesInGroups
                     )
                 }
-              : messageReplyOptionsBuild({ replyToMessageId }, targetId, this.sendReplies, this.sendRepliesInGroups);
+              : messageReplyOptionsBuild({ replyToMessageId }, chatId, this.sendReplies, this.sendRepliesInGroups);
         const sendAs = file.sendAs ?? "auto";
         try {
-            await this.sendFileWithOptions(targetId, file, sendAs, options);
+            await this.sendFileWithOptions(chatId, file, sendAs, options);
         } catch (error) {
             if (!caption || !useHtmlCaption || !isTelegramParseError(error)) {
                 throw error;
             }
             logger.warn({ error }, "error: Telegram HTML caption parse error; retrying without parse_mode");
-            await this.sendFileWithOptions(targetId, file, sendAs, {
+            await this.sendFileWithOptions(chatId, file, sendAs, {
                 caption,
-                ...messageReplyOptionsBuild({ replyToMessageId }, targetId, this.sendReplies, this.sendRepliesInGroups)
+                ...messageReplyOptionsBuild({ replyToMessageId }, chatId, this.sendReplies, this.sendRepliesInGroups)
             });
         }
     }
 
     private async sendTextWithFallback(
-        targetId: string,
+        chatId: string,
         text: string,
         options?: TelegramBot.SendMessageOptions
     ): Promise<void> {
         const chunks = telegramMessageSplit(text, TELEGRAM_MESSAGE_MAX_LENGTH);
         for (const [index, chunk] of chunks.entries()) {
-            await this.sendTextChunk(targetId, chunk, index === chunks.length - 1 ? options : undefined);
+            await this.sendTextChunk(chatId, chunk, index === chunks.length - 1 ? options : undefined);
         }
     }
 
-    private async sendTextChunk(
-        targetId: string,
-        text: string,
-        options?: TelegramBot.SendMessageOptions
-    ): Promise<void> {
-        await this.sendTextMessage(targetId, text, options);
+    private async sendTextChunk(chatId: string, text: string, options?: TelegramBot.SendMessageOptions): Promise<void> {
+        await this.sendTextMessage(chatId, text, options);
     }
 
     private async sendTextMessage(
-        targetId: string,
+        chatId: string,
         text: string,
         options?: TelegramBot.SendMessageOptions
     ): Promise<TelegramBot.Message> {
@@ -514,35 +506,35 @@ export class TelegramConnector implements Connector {
         const useHtml = html.length <= TELEGRAM_MESSAGE_MAX_LENGTH;
         try {
             if (useHtml) {
-                return await this.bot.sendMessage(targetId, html, {
+                return await this.bot.sendMessage(chatId, html, {
                     ...options,
                     parse_mode: "HTML"
                 });
             }
-            return await this.bot.sendMessage(targetId, text, options);
+            return await this.bot.sendMessage(chatId, text, options);
         } catch (error) {
             if (!useHtml || !isTelegramParseError(error)) {
                 throw error;
             }
             logger.warn({ error }, "error: Telegram HTML parse error; retrying without parse_mode");
-            return await this.bot.sendMessage(targetId, text, options);
+            return await this.bot.sendMessage(chatId, text, options);
         }
     }
 
-    private async editTextMessage(targetId: string, messageId: number, text: string): Promise<void> {
+    private async editTextMessage(chatId: string, messageId: number, text: string): Promise<void> {
         const html = markdownToTelegramHtml(text);
         const useHtml = html.length <= TELEGRAM_MESSAGE_MAX_LENGTH;
         try {
             if (useHtml) {
                 await this.bot.editMessageText(html, {
-                    chat_id: targetId,
+                    chat_id: chatId,
                     message_id: messageId,
                     parse_mode: "HTML"
                 });
                 return;
             }
             await this.bot.editMessageText(text, {
-                chat_id: targetId,
+                chat_id: chatId,
                 message_id: messageId
             });
         } catch (error) {
@@ -551,7 +543,7 @@ export class TelegramConnector implements Connector {
             }
             logger.warn({ error }, "error: Telegram HTML edit parse error; retrying without parse_mode");
             await this.bot.editMessageText(text, {
-                chat_id: targetId,
+                chat_id: chatId,
                 message_id: messageId
             });
         }
@@ -590,7 +582,7 @@ export class TelegramConnector implements Connector {
     }
 
     private async sendFileWithOptions(
-        targetId: string,
+        chatId: string,
         file: ConnectorFile,
         sendAs: ConnectorFile["sendAs"] | "auto",
         options?:
@@ -605,30 +597,30 @@ export class TelegramConnector implements Connector {
         };
 
         if (sendAs === "photo") {
-            await this.bot.sendPhoto(targetId, file.path, options, fileOptions);
+            await this.bot.sendPhoto(chatId, file.path, options, fileOptions);
             return;
         }
         if (sendAs === "video") {
-            await this.bot.sendVideo(targetId, file.path, options, fileOptions);
+            await this.bot.sendVideo(chatId, file.path, options, fileOptions);
             return;
         }
         if (sendAs === "document") {
-            await this.bot.sendDocument(targetId, file.path, options, fileOptions);
+            await this.bot.sendDocument(chatId, file.path, options, fileOptions);
             return;
         }
         if (sendAs === "voice") {
-            await this.bot.sendVoice(targetId, file.path, options, fileOptions);
+            await this.bot.sendVoice(chatId, file.path, options, fileOptions);
             return;
         }
         if (file.mimeType.startsWith("image/")) {
-            await this.bot.sendPhoto(targetId, file.path, options, fileOptions);
+            await this.bot.sendPhoto(chatId, file.path, options, fileOptions);
             return;
         }
         if (file.mimeType.startsWith("video/")) {
-            await this.bot.sendVideo(targetId, file.path, options, fileOptions);
+            await this.bot.sendVideo(chatId, file.path, options, fileOptions);
             return;
         }
-        await this.bot.sendDocument(targetId, file.path, options, fileOptions);
+        await this.bot.sendDocument(chatId, file.path, options, fileOptions);
     }
 
     private async initialize(): Promise<void> {
@@ -833,8 +825,8 @@ export class TelegramConnector implements Connector {
         return this.allowedUids.has(String(uid));
     }
 
-    private isAllowedTarget(targetId: string, action: string): boolean {
-        const candidates = telegramTargetAllowedCandidatesResolve(targetId);
+    private isAllowedAddress(address: string, action: string): boolean {
+        const candidates = telegramAddressAllowedCandidatesResolve(address);
         for (const candidate of candidates) {
             if (this.isAllowedUid(candidate)) {
                 return true;
@@ -842,10 +834,10 @@ export class TelegramConnector implements Connector {
         }
         logger.warn(
             {
-                targetId,
+                address,
                 action,
-                chatId: telegramTargetChatIdResolve(targetId),
-                senderId: telegramTargetSenderIdResolve(targetId)
+                chatId: telegramAddressChatIdResolve(address),
+                senderId: telegramAddressSenderIdResolve(address)
             },
             "event: Blocked telegram action for unapproved uid"
         );
@@ -1149,13 +1141,18 @@ function recoverLastUpdateId(content: string): number | null {
     return null;
 }
 
-function telegramTargetPartsResolve(targetId: string): { chatId: string; senderId: string | null } {
-    const segments = targetId
+function telegramConnectorKeyBuild(chatId: string, senderId: string): string {
+    const address = chatId === senderId ? senderId : `${chatId}/${senderId}`;
+    return userConnectorKeyCreate("telegram", address);
+}
+
+function telegramAddressPartsResolve(address: string): { chatId: string; senderId: string | null } {
+    const segments = address
         .split("/")
         .map((segment) => segment.trim())
         .filter((segment) => segment.length > 0);
     if (segments.length === 0) {
-        return { chatId: targetId.trim(), senderId: null };
+        return { chatId: address.trim(), senderId: null };
     }
     if (segments.length === 1) {
         return { chatId: segments[0]!, senderId: null };
@@ -1163,27 +1160,27 @@ function telegramTargetPartsResolve(targetId: string): { chatId: string; senderI
     return { chatId: segments[0]!, senderId: segments[1] ?? null };
 }
 
-function telegramTargetChatIdResolve(targetId: string): string {
-    return telegramTargetPartsResolve(targetId).chatId;
+function telegramAddressChatIdResolve(address: string): string {
+    return telegramAddressPartsResolve(address).chatId;
 }
 
-function telegramTargetSenderIdResolve(targetId: string): string | null {
-    return telegramTargetPartsResolve(targetId).senderId;
+function telegramAddressSenderIdResolve(address: string): string | null {
+    return telegramAddressPartsResolve(address).senderId;
 }
 
-function telegramTargetAllowedCandidatesResolve(targetId: string): string[] {
-    const { chatId, senderId } = telegramTargetPartsResolve(targetId);
-    const candidates = [targetId.trim(), chatId, senderId ?? ""].filter((value) => value.length > 0);
+function telegramAddressAllowedCandidatesResolve(address: string): string[] {
+    const { chatId, senderId } = telegramAddressPartsResolve(address);
+    const candidates = [address.trim(), chatId, senderId ?? ""].filter((value) => value.length > 0);
     return Array.from(new Set(candidates));
 }
 
 function messageReplyOptionsBuild(
     message: Pick<ConnectorMessage, "replyToMessageId">,
-    targetId: string,
+    address: string,
     sendReplies: boolean,
     sendRepliesInGroups: boolean
 ): Pick<TelegramBot.SendMessageOptions, "reply_to_message_id"> | undefined {
-    const shouldSendReply = sendReplies || (sendRepliesInGroups && targetIdIsGroupChat(targetId));
+    const shouldSendReply = sendReplies || (sendRepliesInGroups && addressIsGroupChat(address));
     if (!shouldSendReply) {
         return undefined;
     }
@@ -1200,24 +1197,24 @@ function messageReplyOptionsBuild(
     };
 }
 
-function targetIdIsGroupChat(targetId: string): boolean {
-    const parsed = Number(telegramTargetChatIdResolve(targetId));
+function addressIsGroupChat(address: string): boolean {
+    const parsed = Number(telegramAddressChatIdResolve(address));
     return Number.isFinite(parsed) && parsed < 0;
 }
 
 function messageButtonsBuild(
     buttons: NonNullable<ConnectorMessage["buttons"]>,
-    targetId: string,
+    address: string,
     webAppUrl: string | null
 ): TelegramBot.InlineKeyboardMarkup {
     return {
-        inline_keyboard: buttons.map((button) => [messageButtonBuild(button, targetId, webAppUrl)])
+        inline_keyboard: buttons.map((button) => [messageButtonBuild(button, address, webAppUrl)])
     };
 }
 
 function messageButtonBuild(
     button: NonNullable<ConnectorMessage["buttons"]>[number],
-    targetId: string,
+    address: string,
     webAppUrl: string | null
 ): TelegramBot.InlineKeyboardButton {
     if (button.type === "callback") {
@@ -1229,7 +1226,7 @@ function messageButtonBuild(
 
     if (
         button.openMode !== "browser" &&
-        !targetIdIsGroupChat(targetId) &&
+        !addressIsGroupChat(address) &&
         telegramWebAppUrlMatch(button.url, webAppUrl)
     ) {
         return {

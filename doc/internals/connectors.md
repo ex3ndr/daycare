@@ -8,7 +8,7 @@ Incoming files are persisted on disk and passed to the LLM as file-path referenc
 Each connector exposes:
 - `onMessage(handler)` to receive `ConnectorMessage` events.
 - `onCommand(handler)` to receive command text events.
-- `sendMessage(targetId, message)` to respond (including files).
+- `sendMessage(recipient, message)` to respond (including files).
 
 Messages are normalized to:
 ```
@@ -22,15 +22,19 @@ classDiagram
     <<interface>>
     +onMessage(handler)
     +onCommand(handler)
-    +sendMessage(targetId, message)
+    +sendMessage(recipient, message)
   }
   class ConnectorMessage {
     +text: string | null
     +files?: FileReference[]
     +replyToMessageId?: string
   }
+  class ConnectorRecipient {
+    +connectorKey: string
+  }
   class MessageContext {
     +messageId?: string
+    +connectorKey?: string
   }
 ```
 

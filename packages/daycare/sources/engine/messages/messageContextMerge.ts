@@ -6,13 +6,13 @@ import type { MessageContext, MessageContextEnrichment } from "@/types";
  */
 export function messageContextMerge(left: MessageContext, right: MessageContext): MessageContext {
     const messageId = right.messageId ?? left.messageId;
-    const connectorTargetId = right.connectorTargetId ?? left.connectorTargetId;
+    const connectorKey = right.connectorKey ?? left.connectorKey;
     const timezone = right.timezone ?? left.timezone;
     const enrichments = messageContextEnrichmentsMerge(left.enrichments ?? [], right.enrichments ?? []);
 
     return {
         ...(messageId ? { messageId } : {}),
-        ...(connectorTargetId ? { connectorTargetId } : {}),
+        ...(connectorKey ? { connectorKey } : {}),
         ...(timezone ? { timezone } : {}),
         ...(enrichments.length > 0 ? { enrichments } : {})
     };

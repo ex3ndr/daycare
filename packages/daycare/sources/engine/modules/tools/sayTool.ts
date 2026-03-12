@@ -70,7 +70,7 @@ const sayResultSchema = Type.Object(
     {
         summary: Type.String(),
         connector: Type.String(),
-        targetId: Type.String()
+        connectorKey: Type.String()
     },
     { additionalProperties: false }
 );
@@ -147,7 +147,7 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
                     typedResult: {
                         summary,
                         connector: target.connector,
-                        targetId: target.targetId
+                        connectorKey: target.recipient.connectorKey
                     },
                     deferredPayload
                 };
@@ -175,7 +175,7 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
                 typedResult: {
                     summary,
                     connector: target.connector,
-                    targetId: target.targetId
+                    connectorKey: target.recipient.connectorKey
                 }
             };
         },

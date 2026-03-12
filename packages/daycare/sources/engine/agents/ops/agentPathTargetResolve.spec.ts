@@ -16,7 +16,6 @@ describe("agentPathTargetResolve", () => {
 
         expect(resolved).toEqual({
             connector: "telegram",
-            targetId: "channel-1/user-2",
             recipient: { connectorKey: "telegram:channel-1/user-2" }
         });
     });
@@ -33,7 +32,6 @@ describe("agentPathTargetResolve", () => {
 
         expect(resolved).toEqual({
             connector: "telegram",
-            targetId: "123",
             recipient: { connectorKey: "telegram:123" }
         });
     });
@@ -45,7 +43,6 @@ describe("agentPathTargetResolve", () => {
 
         expect(resolved).toEqual({
             connector: "telegram",
-            targetId: "channel-3/user-9",
             recipient: { connectorKey: "telegram:channel-3/user-9" }
         });
     });

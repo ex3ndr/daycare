@@ -227,7 +227,6 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
 
 async function foregroundTargetResolve(context: ToolExecutionContext): Promise<{
     connector: string;
-    targetId: string;
     recipient: ConnectorRecipient;
 } | null> {
     const foregroundAgentId = context.agentSystem.agentFor(context.ctx, "most-recent-foreground");

@@ -7,7 +7,7 @@ import type {
     AgentPath,
     Config,
     ConnectorMessage,
-    ConnectorResolvedTarget,
+    ConnectorResolvedRecipient,
     ConnectorTarget,
     Context,
     MessageContext
@@ -276,7 +276,7 @@ export class Engine {
             onCommand: async (command, context, target) =>
                 this.runConnectorCallback("command", async () => {
                     const resolved = await this.targetCanonicalize(target, context);
-                    const connectorTarget = await this.connectorTargetResolve(resolved.path);
+                    const connectorTarget = await this.connectorRecipientResolve(resolved.path);
                     const isConnector = connectorTarget !== null;
                     const connector = connectorTarget?.connector ?? "unknown";
                     const messageContext = await this.messageContextWithTimezone(resolved.ctx, context);
@@ -352,7 +352,7 @@ export class Engine {
         });
         const stagingFileStore = new FileFolder(path.join(this.config.current.dataDir, "tmp", "staging"));
 
-        this.pluginRegistry = new PluginRegistry(this.modules, (path) => this.connectorTargetResolve(path));
+        this.pluginRegistry = new PluginRegistry(this.modules, (path) => this.connectorRecipientResolve(path));
 
         this.pluginManager = new PluginManager({
             config: this.config,
@@ -721,7 +721,7 @@ export class Engine {
             psql: this.psqlService,
             observationLog: this.storage.observationLog,
             secrets: this.secrets,
-            connectorTargetResolve: (path) => this.connectorTargetResolve(path)
+            connectorRecipientResolve: (path) => this.connectorRecipientResolve(path)
         });
         this.channels = new Channels({
             channels: this.storage.channels,
@@ -946,7 +946,7 @@ export class Engine {
     }
 
     private async handleContextCommand(path: AgentPath, context: MessageContext): Promise<void> {
-        const target = await this.connectorTargetResolve(path);
+        const target = await this.connectorRecipientResolve(path);
         if (!target) {
             return;
         }
@@ -996,7 +996,7 @@ export class Engine {
     }
 
     private async handleStopCommand(path: AgentPath, context: MessageContext): Promise<void> {
-        const target = await this.connectorTargetResolve(path);
+        const target = await this.connectorRecipientResolve(path);
         if (!target) {
             return;
         }
@@ -1049,7 +1049,7 @@ export class Engine {
      */
     private async pathCanonicalize(
         path: AgentPath,
-        context?: Pick<MessageContext, "connectorTargetId">
+        context?: Pick<MessageContext, "connectorKey">
     ): Promise<{ ctx: Context; path: AgentPath }> {
         await this.migrationReady;
         const connectorPath = connectorPathResolve(path);
@@ -1059,8 +1059,8 @@ export class Engine {
         }
 
         // Canonical connector paths already use internal user ids.
-        const canonicalTarget = await this.connectorTargetResolve(path);
-        if (canonicalTarget) {
+        const canonicalRecipient = await this.connectorRecipientResolve(path);
+        if (canonicalRecipient) {
             return {
                 ctx: contextForUser({ userId: connectorPath.ownerId }),
                 path
@@ -1068,18 +1068,14 @@ export class Engine {
         }
 
         // Connector callbacks may still arrive with external ids; normalize them.
-        const lookupTargetIds = connectorPathLookupTargetIds(connectorPath, context?.connectorTargetId);
-        const existing = await connectorPathUserFindByTargets(this.storage, connectorPath.connector, lookupTargetIds);
-        const primaryTargetId = lookupTargetIds[0];
-        if (!primaryTargetId) {
+        const lookupConnectorKeys = connectorPathLookupConnectorKeys(connectorPath, context?.connectorKey);
+        const existing = await connectorPathUserFindByKeys(this.storage, lookupConnectorKeys);
+        const primaryConnectorKey = lookupConnectorKeys[0];
+        if (!primaryConnectorKey) {
             throw new Error(`Connector target is required for path: ${path}`);
         }
-        const user =
-            existing?.user ??
-            (await this.storage.resolveUserByConnectorKey(
-                userConnectorKeyCreate(connectorPath.connector, primaryTargetId)
-            ));
-        const canonicalPath = connectorPathCanonicalize(user.id, connectorPath.connector, connectorPath.targetId);
+        const user = existing ?? (await this.storage.resolveUserByConnectorKey(primaryConnectorKey));
+        const canonicalPath = connectorPathCanonicalize(user.id, connectorPath.connector, connectorPath.connectorValue);
         return {
             ctx: contextForUser({ userId: user.id }),
             path: canonicalPath
@@ -1099,7 +1095,7 @@ export class Engine {
         return contextForUser({ userId });
     }
 
-    private async connectorTargetResolve(path: AgentPath): Promise<ConnectorResolvedTarget | null> {
+    private async connectorRecipientResolve(path: AgentPath): Promise<ConnectorResolvedRecipient | null> {
         const connectorPath = connectorPathResolve(path);
         if (!connectorPath) {
             return null;
@@ -1109,24 +1105,22 @@ export class Engine {
             return null;
         }
         const keyPrefix = `${connectorPath.connector}:`;
-        if (connectorPath.targetId) {
-            const exactKey = `${keyPrefix}${connectorPath.targetId}`;
+        if (connectorPath.connectorValue) {
+            const exactKey = `${keyPrefix}${connectorPath.connectorValue}`;
             const exact = user.connectorKeys.find((entry) => entry.connectorKey === exactKey);
             if (exact) {
                 return {
                     connector: connectorPath.connector,
-                    targetId: connectorPath.targetId,
                     recipient: { connectorKey: exact.connectorKey }
                 };
             }
-            const legacyFallback = connectorPathLegacyTargetFallback(connectorPath.targetId);
+            const legacyFallback = connectorPathLegacyValueFallback(connectorPath.connectorValue);
             if (legacyFallback) {
                 const fallbackKey = `${keyPrefix}${legacyFallback}`;
                 const fallback = user.connectorKeys.find((entry) => entry.connectorKey === fallbackKey);
                 if (fallback) {
                     return {
                         connector: connectorPath.connector,
-                        targetId: legacyFallback,
                         recipient: { connectorKey: fallback.connectorKey }
                     };
                 }
@@ -1136,11 +1130,10 @@ export class Engine {
         if (!connectorKey) {
             return null;
         }
-        const targetId = connectorKey.connectorKey.slice(keyPrefix.length).trim();
-        if (!targetId) {
+        if (!connectorKey.connectorKey.slice(keyPrefix.length).trim()) {
             return null;
         }
-        return { connector: connectorPath.connector, targetId, recipient: { connectorKey: connectorKey.connectorKey } };
+        return { connector: connectorPath.connector, recipient: { connectorKey: connectorKey.connectorKey } };
     }
 
     /**
@@ -1247,7 +1240,7 @@ const RESERVED_USER_SCOPE_SEGMENTS = new Set(["agent", "cron", "task", "subuser"
 type ConnectorPath = {
     ownerId: string;
     connector: string;
-    targetId: string | null;
+    connectorValue: string | null;
 };
 
 type ConnectorPathUser = NonNullable<Awaited<ReturnType<Storage["users"]["findByConnectorKey"]>>>;
@@ -1284,51 +1277,56 @@ function connectorPathResolve(path: AgentPath): ConnectorPath | null {
         .slice(2)
         .map((segment) => segment.trim())
         .filter(Boolean);
-    const targetId = targetSegments.length > 0 ? targetSegments.join("/") : null;
-    return { ownerId, connector, targetId };
+    const connectorValue = targetSegments.length > 0 ? targetSegments.join("/") : null;
+    return { ownerId, connector, connectorValue };
 }
 
-async function connectorPathUserFindByTargets(
+async function connectorPathUserFindByKeys(
     storage: Storage,
-    connector: string,
-    targetIds: string[]
-): Promise<{ user: ConnectorPathUser; targetId: string } | null> {
-    for (const targetId of targetIds) {
-        const connectorKey = userConnectorKeyCreate(connector, targetId);
+    connectorKeys: string[]
+): Promise<ConnectorPathUser | null> {
+    for (const connectorKey of connectorKeys) {
         const user = await storage.users.findByConnectorKey(connectorKey);
         if (user) {
-            return { user, targetId };
+            return user;
         }
     }
     return null;
 }
 
-function connectorPathLookupTargetIds(connectorPath: ConnectorPath, connectorTargetId?: string): string[] {
-    const targetIds: string[] = [];
-    const contextTargetId = connectorTargetId?.trim() ?? "";
-    if (contextTargetId) {
-        targetIds.push(contextTargetId);
+function connectorPathLookupConnectorKeys(connectorPath: ConnectorPath, contextConnectorKey?: string): string[] {
+    const connectorKeys: string[] = [];
+    const normalizedContextKey = contextConnectorKey?.trim() ?? "";
+    if (normalizedContextKey) {
+        connectorKeys.push(normalizedContextKey);
     }
-    const targetId = connectorPath.targetId?.trim() ?? "";
-    if (!targetId) {
+    const connectorValue = connectorPath.connectorValue?.trim() ?? "";
+    if (!connectorValue) {
         const ownerId = connectorPath.ownerId.trim();
-        if (ownerId && !targetIds.includes(ownerId)) {
-            targetIds.push(ownerId);
+        if (ownerId) {
+            const fallbackKey = userConnectorKeyCreate(connectorPath.connector, ownerId);
+            if (!connectorKeys.includes(fallbackKey)) {
+                connectorKeys.push(fallbackKey);
+            }
         }
-        return targetIds;
+        return connectorKeys;
     }
-    if (!targetIds.includes(targetId)) {
-        targetIds.push(targetId);
+    const exactKey = userConnectorKeyCreate(connectorPath.connector, connectorValue);
+    if (!connectorKeys.includes(exactKey)) {
+        connectorKeys.push(exactKey);
     }
-    const legacyFallback = connectorPathLegacyTargetFallback(targetId);
-    if (legacyFallback && !targetIds.includes(legacyFallback)) {
-        targetIds.push(legacyFallback);
+    const legacyFallback = connectorPathLegacyValueFallback(connectorValue);
+    if (legacyFallback) {
+        const fallbackKey = userConnectorKeyCreate(connectorPath.connector, legacyFallback);
+        if (!connectorKeys.includes(fallbackKey)) {
+            connectorKeys.push(fallbackKey);
+        }
     }
-    return targetIds;
+    return connectorKeys;
 }
 
-function connectorPathLegacyTargetFallback(targetId: string): string | null {
-    const segments = targetId
+function connectorPathLegacyValueFallback(connectorValue: string): string | null {
+    const segments = connectorValue
         .split("/")
         .map((segment) => segment.trim())
         .filter(Boolean);
@@ -1340,12 +1338,12 @@ function connectorPathLegacyTargetFallback(targetId: string): string | null {
     return channelId === senderUserId ? channelId : null;
 }
 
-function connectorPathCanonicalize(ownerId: string, connector: string, targetId: string | null): AgentPath {
+function connectorPathCanonicalize(ownerId: string, connector: string, connectorValue: string | null): AgentPath {
     const base = agentPathConnector(ownerId, connector);
-    if (!targetId) {
+    if (!connectorValue) {
         return base;
     }
-    const targetSegments = targetId
+    const targetSegments = connectorValue
         .split("/")
         .map((segment) => segment.trim())
         .filter(Boolean);

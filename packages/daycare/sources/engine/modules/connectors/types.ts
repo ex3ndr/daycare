@@ -7,9 +7,8 @@ export type ConnectorRecipient = {
     connectorKey: string;
 };
 
-export type ConnectorResolvedTarget = {
+export type ConnectorResolvedRecipient = {
     connector: string;
-    targetId: string;
     recipient: ConnectorRecipient;
 };
 
@@ -64,7 +63,7 @@ export type ConnectorMessageButton =
 
 export type MessageContext = {
     messageId?: string;
-    connectorTargetId?: string;
+    connectorKey?: string;
     timezone?: string;
     enrichments?: MessageContextEnrichment[];
 };

@@ -1,6 +1,7 @@
 import os from "node:os";
 
 import Handlebars from "handlebars";
+import { connectorKeyValueResolve } from "../../modules/connectors/connectorKeyValueResolve.js";
 import { agentPathTargetResolve } from "./agentPathTargetResolve.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
@@ -12,7 +13,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 export async function agentSystemPromptSectionEnvironment(context: AgentSystemPromptContext): Promise<string> {
     const connector = context.config?.connectorName?.trim() ?? null;
     const isForeground = Boolean(context.config?.foreground && connector);
-    const targetId = await connectorTargetResolve(context, connector);
+    const connectorValue = await connectorValueResolve(context, connector);
     const targetUserId = context.ctx.userId;
     const profile = await profileResolve(context);
     const template = await agentPromptBundledRead("SYSTEM_ENVIRONMENT.md");
@@ -24,7 +25,7 @@ export async function agentSystemPromptSectionEnvironment(context: AgentSystemPr
         model: context.model ?? "unknown",
         provider: context.provider ?? "unknown",
         connector: isForeground ? connector : "unknown",
-        channelId: isForeground ? targetId : "unknown",
+        channelId: isForeground ? connectorValue : "unknown",
         userId: isForeground ? targetUserId : "unknown",
         nametag: profile?.nametag ?? null,
         firstName: profile?.firstName ?? null,
@@ -35,7 +36,7 @@ export async function agentSystemPromptSectionEnvironment(context: AgentSystemPr
     return section.trim();
 }
 
-async function connectorTargetResolve(context: AgentSystemPromptContext, connector: string | null): Promise<string> {
+async function connectorValueResolve(context: AgentSystemPromptContext, connector: string | null): Promise<string> {
     if (!connector || !context.agentSystem || !context.config) {
         return "unknown";
     }
@@ -45,7 +46,7 @@ async function connectorTargetResolve(context: AgentSystemPromptContext, connect
         context.config,
         context.path
     );
-    return resolved?.targetId?.trim() || "unknown";
+    return resolved ? connectorKeyValueResolve(connector, resolved.recipient.connectorKey) : "unknown";
 }
 
 /** Looks up structured user profile fields from storage. */

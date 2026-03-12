@@ -471,16 +471,16 @@ export class Agent {
         }
 
         logger.debug(`event: handleMessage building system prompt agentId=${this.id}`);
-        const connectorTargetId = (
+        const connectorKey = (
             await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path)
-        )?.targetId;
+        )?.recipient.connectorKey;
         const pluginPrompts =
             typeof pluginManager.getSystemPrompts === "function"
                 ? await pluginManager.getSystemPrompts({
                       ctx: this.ctx,
                       path: this.path,
                       config: this.config,
-                      connectorTargetId,
+                      connectorKey,
                       userDownloadsDir: this.userHome.downloads
                   })
                 : [];

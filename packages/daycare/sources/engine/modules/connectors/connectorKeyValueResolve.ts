@@ -1,8 +1,8 @@
 /**
- * Resolves the connector-specific target id from a normalized connector key.
- * Expects: connectorKey starts with "<connector>:" and includes a non-empty target id.
+ * Resolves the connector-specific value from a normalized connector key.
+ * Expects: connectorKey starts with "<connector>:" and includes a non-empty value.
  */
-export function connectorKeyTargetIdResolve(connector: string, connectorKey: string): string {
+export function connectorKeyValueResolve(connector: string, connectorKey: string): string {
     const normalizedConnector = connector.trim();
     const normalizedKey = connectorKey.trim();
     if (!normalizedConnector) {
@@ -15,9 +15,9 @@ export function connectorKeyTargetIdResolve(connector: string, connectorKey: str
     if (!normalizedKey.startsWith(prefix)) {
         throw new Error(`Connector key does not match connector ${normalizedConnector}`);
     }
-    const targetId = normalizedKey.slice(prefix.length).trim();
-    if (!targetId) {
-        throw new Error(`Connector key is missing target id for ${normalizedConnector}`);
+    const connectorValue = normalizedKey.slice(prefix.length).trim();
+    if (!connectorValue) {
+        throw new Error(`Connector key is missing value for ${normalizedConnector}`);
     }
-    return targetId;
+    return connectorValue;
 }

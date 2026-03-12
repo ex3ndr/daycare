@@ -233,14 +233,14 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         miniApps,
         observationLog: storage.observationLog,
         secrets,
-        connectorTargetResolve: async (target) => {
+        connectorRecipientResolve: async (target) => {
             const segments = target.split("/").filter((segment) => segment.length > 0);
             const userId = segments[0] ?? "";
             const connector = segments[1] ?? "";
             if (!userId || !connector) {
                 return null;
             }
-            return { connector, targetId: userId, recipient: { connectorKey: `${connector}:${userId}` } };
+            return { connector, recipient: { connectorKey: `${connector}:${userId}` } };
         }
     });
 

@@ -26,7 +26,7 @@ import type {
 import type { AuthStore } from "../../auth/store.js";
 import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
-import { connectorKeyTargetIdResolve } from "../../engine/modules/connectors/connectorKeyTargetIdResolve.js";
+import { connectorKeyValueResolve } from "../../engine/modules/connectors/connectorKeyValueResolve.js";
 import { getLogger } from "../../log.js";
 import { useAuthStoreState } from "./authState.js";
 import { markdownToWhatsAppText } from "./markdownToWhatsAppText.js";
@@ -114,9 +114,9 @@ export class WhatsAppConnector implements Connector {
     }
 
     async sendMessage(recipient: ConnectorRecipient, message: ConnectorMessage): Promise<void> {
-        const targetId = connectorKeyTargetIdResolve("whatsapp", recipient.connectorKey);
+        const phone = connectorKeyValueResolve("whatsapp", recipient.connectorKey);
         logger.debug(
-            `event: sendMessage() called targetId=${targetId} hasText=${!!message.text} fileCount=${message.files?.length ?? 0}`
+            `event: sendMessage() called phone=${phone} hasText=${!!message.text} fileCount=${message.files?.length ?? 0}`
         );
 
         if (!this.socket) {
@@ -124,11 +124,11 @@ export class WhatsAppConnector implements Connector {
             return;
         }
 
-        if (!this.isAllowedTarget(targetId, "sendMessage")) {
+        if (!this.isAllowedPhoneAction(phone, "sendMessage")) {
             return;
         }
 
-        const jid = phoneToJid(targetId);
+        const jid = phoneToJid(phone);
         const files = message.files ?? [];
 
         if (files.length === 0) {
@@ -153,12 +153,12 @@ export class WhatsAppConnector implements Connector {
     }
 
     startTyping(recipient: ConnectorRecipient): () => void {
-        const targetId = connectorKeyTargetIdResolve("whatsapp", recipient.connectorKey);
-        if (!this.socket || !this.isAllowedTarget(targetId, "startTyping")) {
+        const phone = connectorKeyValueResolve("whatsapp", recipient.connectorKey);
+        if (!this.socket || !this.isAllowedPhoneAction(phone, "startTyping")) {
             return () => undefined;
         }
 
-        const jid = phoneToJid(targetId);
+        const jid = phoneToJid(phone);
         void this.socket.sendPresenceUpdate("composing", jid);
 
         return () => {
@@ -169,12 +169,12 @@ export class WhatsAppConnector implements Connector {
     }
 
     async setReaction(recipient: ConnectorRecipient, messageId: string, reaction: string): Promise<void> {
-        const targetId = connectorKeyTargetIdResolve("whatsapp", recipient.connectorKey);
-        if (!this.socket || !this.isAllowedTarget(targetId, "setReaction")) {
+        const phone = connectorKeyValueResolve("whatsapp", recipient.connectorKey);
+        if (!this.socket || !this.isAllowedPhoneAction(phone, "setReaction")) {
             return;
         }
 
-        const jid = phoneToJid(targetId);
+        const jid = phoneToJid(phone);
         await this.socket.sendMessage(jid, {
             react: {
                 text: reaction,
@@ -441,11 +441,11 @@ export class WhatsAppConnector implements Connector {
         return this.allowedPhones.has(normalizePhoneNumber(phone));
     }
 
-    private isAllowedTarget(targetId: string, action: string): boolean {
-        if (this.isAllowedPhone(targetId)) {
+    private isAllowedPhoneAction(phone: string, action: string): boolean {
+        if (this.isAllowedPhone(phone)) {
             return true;
         }
-        logger.warn({ targetId, action }, "event: Blocked WhatsApp action for unapproved phone");
+        logger.warn({ phone, action }, "event: Blocked WhatsApp action for unapproved phone");
         return false;
     }
 }

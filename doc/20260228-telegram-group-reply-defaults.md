@@ -17,7 +17,7 @@
 flowchart TD
     A[Outgoing message has replyToMessageId] --> B{sendReplies}
     B -->|true| E[Set reply_to_message_id]
-    B -->|false| C{sendRepliesInGroups and targetId < 0}
+    B -->|false| C{sendRepliesInGroups and chatId < 0}
     C -->|true| E
     C -->|false| D[Do not set reply_to_message_id]
 ```

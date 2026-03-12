@@ -49,7 +49,7 @@ export type {
     ConnectorMessage,
     ConnectorMessageButton,
     ConnectorRecipient,
-    ConnectorResolvedTarget,
+    ConnectorResolvedRecipient,
     ConnectorTarget,
     MessageContext,
     MessageContextEnrichment,

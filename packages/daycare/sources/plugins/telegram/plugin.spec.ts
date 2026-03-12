@@ -288,7 +288,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorTargetId: "123",
+            connectorKey: "telegram:123",
             userDownloadsDir: path.join(dataDir, "downloads")
         });
 
@@ -327,7 +327,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorTargetId: "channel-1/456",
+            connectorKey: "telegram:channel-1/456",
             userDownloadsDir: path.join(dataDir, "downloads")
         });
 
@@ -377,7 +377,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorTargetId: "123",
+            connectorKey: "telegram:123",
             userDownloadsDir
         });
 
@@ -402,7 +402,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorTargetId: "123",
+            connectorKey: "telegram:123",
             userDownloadsDir
         });
 
@@ -460,7 +460,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorTargetId: "123",
+            connectorKey: "telegram:123",
             userDownloadsDir: path.join(dataDir, "user-downloads")
         });
 
@@ -485,7 +485,7 @@ describe("telegram plugin system prompt", () => {
                     systemPrompt: null,
                     workspaceDir: null
                 },
-                connectorTargetId: "123",
+                connectorKey: "telegram:123",
                 userDownloadsDir: path.join(dataDir, "user-downloads")
             });
             expect(systemPromptResultRequire(fresh).text).toContain("Name: Fresh Name");
@@ -552,7 +552,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorTargetId: "123",
+            connectorKey: "telegram:123",
             userDownloadsDir
         });
         expect(systemPromptResultRequire(stale).images).toEqual([oldDownloadA, oldDownloadB]);
@@ -580,7 +580,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorTargetId: "123",
+            connectorKey: "telegram:123",
             userDownloadsDir
         });
         expect(systemPromptResultRequire(fresh).images).toBeUndefined();

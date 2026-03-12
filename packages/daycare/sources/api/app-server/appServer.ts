@@ -3,7 +3,7 @@ import type {
     AgentPath,
     AgentSkill,
     ConnectorMessage,
-    ConnectorResolvedTarget,
+    ConnectorResolvedRecipient,
     ConnectorTarget,
     Context,
     TaskActiveSummary,
@@ -91,7 +91,7 @@ export type AppServerOptions = {
         add: (ctx: Context, secret: Secret) => Promise<void>;
         remove: (ctx: Context, name: string) => Promise<boolean>;
     } | null;
-    connectorTargetResolve: (path: AgentPath) => Promise<ConnectorResolvedTarget | null>;
+    connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorResolvedRecipient | null>;
 };
 
 /**
@@ -125,7 +125,7 @@ export class AppServer {
     private readonly observationLog: ObservationLogRepository | null;
     private readonly miniApps: MiniApps | null;
     private readonly secrets: AppServerOptions["secrets"];
-    private readonly connectorTargetResolve: AppServerOptions["connectorTargetResolve"];
+    private readonly connectorRecipientResolve: AppServerOptions["connectorRecipientResolve"];
     private readonly logger = getLogger("api.app-server");
 
     private server: http.Server | null = null;
@@ -160,7 +160,7 @@ export class AppServer {
         this.observationLog = options.observationLog;
         this.miniApps = options.miniApps ?? null;
         this.secrets = options.secrets;
-        this.connectorTargetResolve = options.connectorTargetResolve;
+        this.connectorRecipientResolve = options.connectorRecipientResolve;
     }
 
     async start(): Promise<void> {
@@ -630,7 +630,7 @@ export class AppServer {
                     return;
                 }
                 const userId = pathUserIdResolve(path);
-                const connectorTarget = userId ? await this.connectorTargetResolve(path) : null;
+                const connectorTarget = userId ? await this.connectorRecipientResolve(path) : null;
                 if (!userId || !connectorTarget) {
                     return;
                 }
@@ -688,7 +688,7 @@ export class AppServer {
         context: { messageId?: string },
         message: ConnectorMessage
     ): Promise<void> {
-        const target = await this.connectorTargetResolve(path);
+        const target = await this.connectorRecipientResolve(path);
         if (!target) {
             return;
         }

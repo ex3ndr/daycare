@@ -54,7 +54,7 @@ export async function messageContextEnrichIncoming(
     const timezone = incomingTimezone || profileTimezone;
     return {
         ...(context.messageId ? { messageId: context.messageId } : {}),
-        ...(context.connectorTargetId ? { connectorTargetId: context.connectorTargetId } : {}),
+        ...(context.connectorKey ? { connectorKey: context.connectorKey } : {}),
         ...(timezone ? { timezone } : {}),
         ...(enrichments.length > 0 ? { enrichments } : {})
     };
