@@ -649,6 +649,7 @@ describe("Engine abort command", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             vi.spyOn(engine.agentSystem, "abortInferenceForTarget").mockReturnValue(true);
+            vi.spyOn(engine.agentSystem, "existingAgentIdForTarget").mockResolvedValue("agent-1");
             const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
 
             const sendMessage = vi.fn(async () => undefined);
@@ -674,12 +675,12 @@ describe("Engine abort command", () => {
             }
 
             const target = agentPathConnector("123", "telegram");
-            const context: MessageContext = { messageId: "56" };
+            const context: MessageContext = { messageId: "56", connectorKey: "telegram:123" };
 
             await commandHandler("/abort", context, target);
 
             expect(engine.agentSystem.abortInferenceForTarget).toHaveBeenCalledWith({
-                path: expect.stringMatching(/^\/[^/]+\/telegram$/)
+                agentId: "agent-1"
             });
             expect(sendMessage).toHaveBeenCalledWith(
                 { connectorKey: "telegram:123" },

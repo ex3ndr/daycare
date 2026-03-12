@@ -519,6 +519,63 @@ describe("AgentSystem", () => {
         }
     });
 
+    it("reuses an existing foreground agent by stored connector key when route paths differ", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
+        try {
+            const harness = await harnessCreate(dir);
+            const ownerCtx = await harness.agentSystem.ownerCtxEnsure();
+            const now = Date.now();
+            const permissions = { workingDir: "/tmp", writeDirs: ["/tmp"] };
+
+            await harness.storage.agents.create({
+                id: "telegram-agent",
+                userId: ownerCtx.userId,
+                kind: "connector",
+                connectorName: "telegram",
+                connectorKey: "telegram:stable-route",
+                foreground: true,
+                path: agentPath(`/${ownerCtx.userId}/telegram/original-route`),
+                activeSessionId: null,
+                permissions,
+                lifecycle: "active",
+                createdAt: now,
+                updatedAt: now
+            });
+            await agentStateWrite(
+                harness.storage,
+                contextForAgent({ userId: ownerCtx.userId, agentId: "telegram-agent" }),
+                {
+                    context: { messages: [] },
+                    activeSessionId: null,
+                    permissions,
+                    createdAt: now,
+                    updatedAt: now,
+                    state: "active",
+                    modelOverride: null
+                }
+            );
+
+            await harness.agentSystem.load();
+            await harness.agentSystem.start();
+
+            const agentId = await harness.agentSystem.agentIdForTarget(
+                ownerCtx,
+                { path: agentPath(`/${ownerCtx.userId}/telegram/new-route-shape`) },
+                {
+                    kind: "connector",
+                    foreground: true,
+                    connectorName: "telegram",
+                    connectorKey: "telegram:stable-route"
+                }
+            );
+
+            expect(agentId).toBe("telegram-agent");
+            expect((await harness.storage.agents.findMany()).map((record) => record.id)).toEqual(["telegram-agent"]);
+        } finally {
+            await tempDirRemove(dir);
+        }
+    });
+
     it("does not derive personUserId from workspace parent ownership", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
         try {
@@ -1146,7 +1203,8 @@ function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
     return {
         kind: "connector",
         foreground: true,
-        connectorName: segments[1] ?? null
+        connectorName: segments[1] ?? null,
+        connectorKey: segments[1] ? `${segments[1]}:${segments.slice(2).join("/") || segments[0] || ""}` : null
     };
 }
 

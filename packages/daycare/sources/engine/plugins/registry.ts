@@ -15,6 +15,7 @@ import type {
 } from "@/types";
 import type { CommandRegistry } from "../modules/commandRegistry.js";
 import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
+import { messageContextRecipientResolve } from "../modules/connectors/messageContextRecipientResolve.js";
 import type { ImageGenerationRegistry } from "../modules/imageGenerationRegistry.js";
 import type { InferenceRegistry } from "../modules/inferenceRegistry.js";
 import type { MediaAnalysisRegistry } from "../modules/mediaAnalysisRegistry.js";
@@ -88,7 +89,7 @@ export class PluginRegistrar {
     }
 
     async sendMessage(path: AgentPath, context: MessageContext, message: ConnectorMessage): Promise<void> {
-        const target = await this.connectorRecipientResolve(path);
+        const target = messageContextRecipientResolve(context) ?? (await this.connectorRecipientResolve(path));
         if (!target) {
             return;
         }

@@ -5,7 +5,7 @@ import matter from "gray-matter";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import type { SandboxReadResult } from "../../../sandbox/sandboxTypes.js";
 import { agentPathChildAllocate } from "../../agents/ops/agentPathChildAllocate.js";
-import { agentPathTargetResolve } from "../../agents/ops/agentPathTargetResolve.js";
+import { agentRecipientResolve } from "../../agents/ops/agentRecipientResolve.js";
 import { skillActivationKeyBuild } from "../../skills/skillActivationKeyBuild.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
 import { toolMessageTextExtract } from "./toolReturnOutcome.js";
@@ -336,12 +336,7 @@ function toolMessageBuild(toolCallId: string, toolName: string, text: string): T
  */
 async function skillNotifyConnector(skillName: string, toolContext: ToolExecutionContext): Promise<void> {
     try {
-        const target = await agentPathTargetResolve(
-            toolContext.agentSystem.storage,
-            toolContext.ctx.userId,
-            toolContext.agent.config,
-            toolContext.agent.path
-        );
+        const target = agentRecipientResolve(toolContext.agent.config);
         if (!target) {
             return;
         }

@@ -147,6 +147,7 @@ describe("Storage", () => {
                         kind: "cron",
                         modelRole: null,
                         connectorName: null,
+                        connectorKey: null,
                         parentAgentId: null,
                         foreground: false,
                         name: "sync",

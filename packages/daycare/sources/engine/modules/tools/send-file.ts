@@ -10,7 +10,7 @@ import type {
     ToolResultContract
 } from "@/types";
 import { userConnectorKeyCreate } from "../../../storage/userConnectorKeyCreate.js";
-import { agentPathTargetResolve } from "../../agents/ops/agentPathTargetResolve.js";
+import { agentRecipientResolve } from "../../agents/ops/agentRecipientResolve.js";
 import { fileResolve } from "./fileResolve.js";
 
 const schema = Type.Object(
@@ -95,12 +95,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
                 throw new Error("Connector registry unavailable");
             }
 
-            let target = await agentPathTargetResolve(
-                context.agentSystem.storage,
-                context.ctx.userId,
-                context.agent.config,
-                context.agent.path
-            );
+            let target = agentRecipientResolve(context.agent.config);
             if (!target) {
                 target = await foregroundTargetResolve(context);
             }
@@ -237,10 +232,8 @@ async function foregroundTargetResolve(context: ToolExecutionContext): Promise<{
     if (!foregroundAgent) {
         return null;
     }
-    return agentPathTargetResolve(
-        context.agentSystem.storage,
-        context.ctx.userId,
-        { connectorName: foregroundAgent.connectorName },
-        foregroundAgent.path
-    );
+    return agentRecipientResolve({
+        connectorName: foregroundAgent.connectorName,
+        connectorKey: foregroundAgent.connectorKey
+    });
 }

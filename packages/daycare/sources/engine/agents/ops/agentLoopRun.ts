@@ -52,7 +52,7 @@ import { agentInferencePromptWrite } from "./agentInferencePromptWrite.js";
 import type { AgentLoopPendingPhase, PersistedDeferredEntry } from "./agentLoopPendingPhaseResolve.js";
 import type { AgentLoopPhase } from "./agentLoopStepTypes.js";
 import { agentMessageRunPythonFailureTrim } from "./agentMessageRunPythonFailureTrim.js";
-import { agentPathTargetResolve } from "./agentPathTargetResolve.js";
+import { agentRecipientResolve } from "./agentRecipientResolve.js";
 import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlistResolve.js";
 import type { AgentHistoryRecord, AgentMessage } from "./agentTypes.js";
 import { inferenceErrorAnthropicPromptOverflowIs } from "./inferenceErrorAnthropicPromptOverflowIs.js";
@@ -162,7 +162,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     const isChildAgent = kind === "sub" || kind === "search";
     let childAgentNudged = false;
     let childAgentMessageSent = false;
-    const target = await agentPathTargetResolve(agentSystem.storage, agent.ctx.userId, agent.config, agent.path);
+    const target = agentRecipientResolve(agent.config);
     const parentAgentId = isChildAgent ? agent.config.parentAgentId : null;
     const recipient = target?.recipient ?? null;
     const connectorKey = recipient?.connectorKey ?? null;

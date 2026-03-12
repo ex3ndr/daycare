@@ -33,6 +33,7 @@ describe("AgentsRepository", () => {
                 kind: "cron" as const,
                 modelRole: null,
                 connectorName: null,
+                connectorKey: null,
                 parentAgentId: null,
                 foreground: false,
                 name: "cron",

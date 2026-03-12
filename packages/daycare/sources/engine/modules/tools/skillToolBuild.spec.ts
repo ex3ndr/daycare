@@ -416,6 +416,21 @@ function contextBuild(input?: {
         }
     });
 
+    const config = input?.config
+        ? { connectorKey: input?.connectorKey ?? null, ...input.config }
+        : {
+              kind: "connector",
+              modelRole: "user",
+              connectorName: "telegram",
+              connectorKey: input?.connectorKey ?? null,
+              parentAgentId: null,
+              foreground: true,
+              name: null,
+              description: null,
+              systemPrompt: null,
+              workspaceDir: null
+          };
+
     return {
         connectorRegistry: (input?.connectorRegistry ?? null) as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox,
@@ -425,17 +440,7 @@ function contextBuild(input?: {
         agent: {
             id: "agent-parent",
             path: input?.path ?? "/user-1/telegram",
-            config: input?.config ?? {
-                kind: "connector",
-                modelRole: "user",
-                connectorName: "telegram",
-                parentAgentId: null,
-                foreground: true,
-                name: null,
-                description: null,
-                systemPrompt: null,
-                workspaceDir: null
-            }
+            config
         } as unknown as ToolExecutionContext["agent"],
         ctx: contextForAgent({ userId: "user-1", agentId: "agent-parent" }),
         source: "test",

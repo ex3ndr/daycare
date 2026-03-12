@@ -16,6 +16,7 @@ export type AgentConfig = {
     kind?: AgentKind;
     modelRole?: ModelRoleKey | null;
     connectorName?: string | null;
+    connectorKey?: string | null;
     parentAgentId?: string | null;
     foreground: boolean;
     name: string | null;

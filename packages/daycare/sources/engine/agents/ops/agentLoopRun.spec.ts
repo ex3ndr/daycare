@@ -652,6 +652,7 @@ function configFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): {
     kind?: string;
     modelRole?: string | null;
     connectorName?: string | null;
+    connectorKey?: string | null;
     parentAgentId?: string | null;
     foreground: boolean;
     name: string | null;
@@ -664,6 +665,7 @@ function configFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): {
             kind: "connector",
             modelRole: "user",
             connectorName: descriptor.connector,
+            connectorKey: `${descriptor.connector}:${descriptor.channelId}`,
             parentAgentId: null,
             foreground: true,
             name: null,

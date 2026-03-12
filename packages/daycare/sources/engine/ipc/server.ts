@@ -140,6 +140,7 @@ const modelRoleRuleDeleteSchema = z.object({
 const agentPathSchema = z.string().min(1);
 const messageContextSchema = z.object({
     messageId: z.string().min(1).optional(),
+    connectorKey: z.string().min(1).optional(),
     timezone: z.string().min(1).optional(),
     enrichments: z
         .array(
@@ -154,6 +155,7 @@ const agentCreationConfigSchema = z.object({
     kind: z.enum(["connector", "agent", "app", "cron", "task", "subuser", "sub", "memory", "search", "supervisor"]),
     modelRole: z.enum(["user", "memory", "memorySearch", "subagent", "task"]).nullable().optional(),
     connectorName: z.string().nullable().optional(),
+    connectorKey: z.string().nullable().optional(),
     parentAgentId: z.string().nullable().optional(),
     foreground: z.boolean().optional(),
     name: z.string().nullable().optional(),

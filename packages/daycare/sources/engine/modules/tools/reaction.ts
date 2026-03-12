@@ -2,7 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { agentPathTargetResolve } from "../../agents/ops/agentPathTargetResolve.js";
+import { agentRecipientResolve } from "../../agents/ops/agentRecipientResolve.js";
 
 const schema = Type.Object(
     {
@@ -45,12 +45,7 @@ export function buildReactionTool(): ToolDefinition {
             if (!toolContext.connectorRegistry) {
                 throw new Error("Connector registry unavailable");
             }
-            const target = await agentPathTargetResolve(
-                toolContext.agentSystem.storage,
-                toolContext.ctx.userId,
-                toolContext.agent.config,
-                toolContext.agent.path
-            );
+            const target = agentRecipientResolve(toolContext.agent.config);
             if (!target) {
                 throw new Error("Reactions require a user agent.");
             }

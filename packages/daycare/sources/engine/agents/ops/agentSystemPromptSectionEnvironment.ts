@@ -2,8 +2,8 @@ import os from "node:os";
 
 import Handlebars from "handlebars";
 import { connectorKeyValueResolve } from "../../modules/connectors/connectorKeyValueResolve.js";
-import { agentPathTargetResolve } from "./agentPathTargetResolve.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
+import { agentRecipientResolve } from "./agentRecipientResolve.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 
 /**
@@ -40,12 +40,7 @@ async function connectorValueResolve(context: AgentSystemPromptContext, connecto
     if (!connector || !context.agentSystem || !context.config) {
         return "unknown";
     }
-    const resolved = await agentPathTargetResolve(
-        context.agentSystem.storage,
-        context.ctx.userId,
-        context.config,
-        context.path
-    );
+    const resolved = agentRecipientResolve(context.config);
     return resolved ? connectorKeyValueResolve(connector, resolved.recipient.connectorKey) : "unknown";
 }
 

@@ -55,6 +55,7 @@ async function setupUserWithAgent(
             kind: "connector",
             modelRole: "user",
             connectorName: "test",
+            connectorKey: "test:ch1",
             parentAgentId: null,
             foreground: true,
             name: null,

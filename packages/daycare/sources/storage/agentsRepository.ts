@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import type { DaycareDb } from "../schema.js";
 import { agentsTable } from "../schema.js";
 import { AsyncLock } from "../utils/lock.js";
@@ -11,6 +11,7 @@ type AgentCreateInput = Omit<
     | "kind"
     | "modelRole"
     | "connectorName"
+    | "connectorKey"
     | "parentAgentId"
     | "foreground"
     | "name"
@@ -28,6 +29,7 @@ type AgentCreateInput = Omit<
             | "kind"
             | "modelRole"
             | "connectorName"
+            | "connectorKey"
             | "parentAgentId"
             | "foreground"
             | "name"
@@ -154,6 +156,48 @@ export class AgentsRepository {
         return parsed.map((record) => agentClone(record));
     }
 
+    async findForegroundByConnectorKey(userId: string, connectorKey: string): Promise<AgentDbRecord | null> {
+        const normalizedUserId = userId.trim();
+        const normalizedConnectorKey = connectorKey.trim();
+        if (!normalizedUserId || !normalizedConnectorKey) {
+            return null;
+        }
+        if (this.allAgentsLoaded) {
+            const match = Array.from(this.agentsById.values())
+                .filter(
+                    (record) =>
+                        record.userId === normalizedUserId &&
+                        record.foreground &&
+                        record.connectorKey === normalizedConnectorKey
+                )
+                .sort((left, right) => right.updatedAt - left.updatedAt)[0];
+            return match ? agentClone(match) : null;
+        }
+
+        const rows = await this.db
+            .select()
+            .from(agentsTable)
+            .where(
+                and(
+                    eq(agentsTable.userId, normalizedUserId),
+                    eq(agentsTable.foreground, true),
+                    eq(agentsTable.connectorKey, normalizedConnectorKey),
+                    isNull(agentsTable.validTo)
+                )
+            )
+            .orderBy(desc(agentsTable.updatedAt))
+            .limit(1);
+        const row = rows[0];
+        if (!row) {
+            return null;
+        }
+        const parsed = agentParse(row);
+        await this.cacheLock.inLock(() => {
+            this.agentCacheSet(parsed);
+        });
+        return agentClone(parsed);
+    }
+
     async create(record: AgentCreateInput): Promise<void> {
         await this.createLock.inLock(async () => {
             const current = this.agentsById.get(record.id) ?? (await this.agentLoadById(record.id));
@@ -176,6 +220,7 @@ export class AgentsRepository {
                     kind: next.kind,
                     modelRole: next.modelRole,
                     connectorName: next.connectorName,
+                    connectorKey: next.connectorKey,
                     parentAgentId: next.parentAgentId,
                     foreground: next.foreground,
                     name: next.name,
@@ -200,6 +245,7 @@ export class AgentsRepository {
                             kind: normalized.kind,
                             modelRole: normalized.modelRole,
                             connectorName: normalized.connectorName,
+                            connectorKey: normalized.connectorKey,
                             parentAgentId: normalized.parentAgentId,
                             foreground: normalized.foreground,
                             name: normalized.name,
@@ -239,6 +285,7 @@ export class AgentsRepository {
                                 kind: row.kind,
                                 modelRole: row.modelRole,
                                 connectorName: row.connectorName,
+                                connectorKey: row.connectorKey,
                                 parentAgentId: row.parentAgentId,
                                 foreground: row.foreground,
                                 name: row.name,
@@ -279,6 +326,7 @@ export class AgentsRepository {
                 kind: data.kind ?? current.kind,
                 modelRole: data.modelRole === undefined ? current.modelRole : data.modelRole,
                 connectorName: data.connectorName === undefined ? current.connectorName : data.connectorName,
+                connectorKey: data.connectorKey === undefined ? current.connectorKey : data.connectorKey,
                 parentAgentId: data.parentAgentId === undefined ? current.parentAgentId : data.parentAgentId,
                 foreground: data.foreground ?? current.foreground,
                 name: data.name === undefined ? current.name : data.name,
@@ -322,6 +370,7 @@ export class AgentsRepository {
                         kind: next.kind,
                         modelRole: next.modelRole,
                         connectorName: next.connectorName,
+                        connectorKey: next.connectorKey,
                         parentAgentId: next.parentAgentId,
                         foreground: next.foreground,
                         name: next.name,
@@ -361,6 +410,7 @@ export class AgentsRepository {
                             kind: row.kind,
                             modelRole: row.modelRole,
                             connectorName: row.connectorName,
+                            connectorKey: row.connectorKey,
                             parentAgentId: row.parentAgentId,
                             foreground: row.foreground,
                             name: row.name,
@@ -428,6 +478,12 @@ function agentCreateInputNormalize(input: AgentCreateInput, current: AgentDbReco
         descriptorType === "user" && typeof descriptor?.connector === "string" && descriptor.connector.trim().length > 0
             ? descriptor.connector.trim()
             : null;
+    const connectorKeyFromDescriptor =
+        descriptorType === "user" &&
+        typeof descriptor?.connectorKey === "string" &&
+        descriptor.connectorKey.trim().length > 0
+            ? descriptor.connectorKey.trim()
+            : null;
     const parentAgentIdFromDescriptor =
         typeof descriptor?.parentAgentId === "string" && descriptor.parentAgentId.trim().length > 0
             ? descriptor.parentAgentId.trim()
@@ -436,6 +492,8 @@ function agentCreateInputNormalize(input: AgentCreateInput, current: AgentDbReco
         input.connectorName === undefined
             ? (current?.connectorName ?? connectorNameFromDescriptor)
             : input.connectorName;
+    const connectorKey =
+        input.connectorKey === undefined ? (current?.connectorKey ?? connectorKeyFromDescriptor) : input.connectorKey;
     const parentAgentId =
         input.parentAgentId === undefined
             ? (current?.parentAgentId ?? parentAgentIdFromDescriptor)
@@ -463,6 +521,7 @@ function agentCreateInputNormalize(input: AgentCreateInput, current: AgentDbReco
         kind,
         modelRole,
         connectorName,
+        connectorKey,
         parentAgentId,
         foreground,
         name,
@@ -544,6 +603,7 @@ function agentParse(row: typeof agentsTable.$inferSelect): AgentDbRecord {
         kind: row.kind as AgentDbRecord["kind"],
         modelRole: row.modelRole as AgentDbRecord["modelRole"],
         connectorName: row.connectorName,
+        connectorKey: row.connectorKey,
         parentAgentId: row.parentAgentId,
         foreground: row.foreground,
         name: row.name,
@@ -585,6 +645,7 @@ function agentRuntimeOnlyChangeIs(current: AgentDbRecord, next: AgentDbRecord): 
         current.kind === next.kind &&
         current.modelRole === next.modelRole &&
         current.connectorName === next.connectorName &&
+        current.connectorKey === next.connectorKey &&
         current.parentAgentId === next.parentAgentId &&
         current.foreground === next.foreground &&
         current.name === next.name &&

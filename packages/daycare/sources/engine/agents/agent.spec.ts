@@ -169,7 +169,7 @@ describe("Agent", () => {
 
             expect(result).toEqual({ type: "reset", ok: true });
             expect(sendMessage).toHaveBeenCalledWith(
-                { connectorKey: "telegram:user-1" },
+                { connectorKey: "telegram:channel-1/user-1" },
                 {
                     text: "🔄 Session reset.",
                     replyToMessageId: "42"
@@ -1473,7 +1473,7 @@ describe("Agent", () => {
             expect(result).toEqual({ type: "message", responseText: "after compaction" });
             expect(complete).toHaveBeenCalledTimes(3);
             expect(sendMessage).toHaveBeenCalledWith(
-                { connectorKey: "telegram:user-1" },
+                { connectorKey: "telegram:channel-1/user-1" },
                 {
                     text: "⏳ Compacting session context. I'll continue shortly.",
                     replyToMessageId: "90"
@@ -2963,7 +2963,8 @@ function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
     return {
         kind: "connector",
         foreground: true,
-        connectorName: segments[1] ?? null
+        connectorName: segments[1] ?? null,
+        connectorKey: segments[1] ? `${segments[1]}:${segments.slice(2).join("/") || segments[0] || ""}` : null
     };
 }
 
@@ -2973,6 +2974,7 @@ function agentConfigFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): Age
         kind: creation.kind,
         modelRole: creation.modelRole ?? null,
         connectorName: creation.connectorName ?? null,
+        connectorKey: creation.connectorKey ?? null,
         parentAgentId: creation.parentAgentId ?? null,
         foreground: creation.foreground ?? creation.kind === "connector",
         name: creation.name ?? null,

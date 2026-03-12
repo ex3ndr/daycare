@@ -81,6 +81,7 @@ export const agentsTable = pgTable(
         kind: text("kind").notNull().default("agent"),
         modelRole: text("model_role"),
         connectorName: text("connector_name"),
+        connectorKey: text("connector_key"),
         parentAgentId: text("parent_agent_id"),
         foreground: boolean("foreground").notNull().default(false),
         name: text("name"),
@@ -99,6 +100,9 @@ export const agentsTable = pgTable(
         primaryKey({ columns: [table.id, table.version] }),
         index("idx_agents_user_id").on(table.userId),
         uniqueIndex("idx_agents_path_active").on(table.path).where(sql`${table.validTo} IS NULL`),
+        index("idx_agents_connector_key_active")
+            .on(table.connectorKey)
+            .where(sql`${table.validTo} IS NULL AND ${table.connectorKey} IS NOT NULL`),
         index("idx_agents_parent_agent_id").on(table.parentAgentId).where(sql`${table.validTo} IS NULL`),
         index("idx_agents_id_valid_to").on(table.id, table.validTo)
     ]

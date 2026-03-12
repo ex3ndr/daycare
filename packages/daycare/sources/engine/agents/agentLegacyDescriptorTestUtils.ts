@@ -1,4 +1,5 @@
 import type { AgentCreationConfig } from "@/types";
+import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import {
     agentPathAgent,
     agentPathConnector,
@@ -100,10 +101,15 @@ export function agentPathFromLegacyDescriptor(
  */
 export function agentCreationConfigFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): AgentCreationConfig {
     if (descriptor.type === "user") {
+        const connectorValue =
+            descriptor.channelId === descriptor.userId
+                ? descriptor.userId
+                : `${descriptor.channelId}/${descriptor.userId}`;
         return {
             kind: "connector",
             foreground: true,
-            connectorName: descriptor.connector
+            connectorName: descriptor.connector,
+            connectorKey: userConnectorKeyCreate(descriptor.connector, connectorValue)
         };
     }
     if (descriptor.type === "cron") {

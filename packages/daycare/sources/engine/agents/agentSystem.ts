@@ -755,7 +755,7 @@ export class AgentSystem {
         }
 
         const path = target.path;
-        const existing = await this.pathEntryResolve(ctx, path);
+        const existing = await this.pathEntryResolve(ctx, path, creationConfig);
         if (existing) {
             return existing;
         }
@@ -789,7 +789,16 @@ export class AgentSystem {
      * Resolves an existing path-targeted agent from memory or persisted storage.
      * Returns null when no existing agent is found for the path.
      */
-    private async pathEntryResolve(ctx: Context, path: AgentPath): Promise<AgentEntry | null> {
+    private async pathEntryResolve(
+        ctx: Context,
+        path: AgentPath,
+        creationConfig?: AgentCreationConfig
+    ): Promise<AgentEntry | null> {
+        const connectorResolved = await this.connectorEntryResolve(ctx, creationConfig);
+        if (connectorResolved) {
+            return connectorResolved;
+        }
+
         const existingAgentId = this.pathMap.get(path);
         if (existingAgentId) {
             const existing = this.entries.get(existingAgentId);
@@ -822,7 +831,57 @@ export class AgentSystem {
             }
             return restored;
         }
+
         return null;
+    }
+
+    private async connectorEntryResolve(
+        ctx: Context,
+        creationConfig?: AgentCreationConfig
+    ): Promise<AgentEntry | null> {
+        const connectorKey = creationConfig?.connectorKey?.trim() ?? "";
+        if (!connectorKey) {
+            return null;
+        }
+        const persistedByConnectorKey = await this.storage.agents.findForegroundByConnectorKey(
+            ctx.userId,
+            connectorKey
+        );
+        if (!persistedByConnectorKey) {
+            return null;
+        }
+        const loadedByConnectorKey = this.entries.get(persistedByConnectorKey.id);
+        if (loadedByConnectorKey) {
+            if (loadedByConnectorKey.ctx.userId !== ctx.userId) {
+                throw new Error(`Cannot resolve agent from another user: ${persistedByConnectorKey.id}`);
+            }
+            return loadedByConnectorKey;
+        }
+        const restoredByConnectorKey = await this.restoreAgent(persistedByConnectorKey.id, { allowSleeping: true });
+        if (restoredByConnectorKey) {
+            if (restoredByConnectorKey.ctx.userId !== ctx.userId) {
+                throw new Error(`Cannot resolve agent from another user: ${persistedByConnectorKey.id}`);
+            }
+            return restoredByConnectorKey;
+        }
+        return null;
+    }
+
+    async existingAgentIdForTarget(
+        ctx: Context,
+        target: AgentPostTarget,
+        creationConfig?: AgentCreationConfig
+    ): Promise<string | null> {
+        if ("agentId" in target) {
+            const existing = this.entries.get(target.agentId);
+            if (existing) {
+                return existing.ctx.userId === ctx.userId ? existing.ctx.agentId : null;
+            }
+            const restored = await this.restoreAgent(target.agentId, { allowSleeping: true });
+            return restored && restored.ctx.userId === ctx.userId ? restored.ctx.agentId : null;
+        }
+        const entry = await this.pathEntryResolve(ctx, target.path, creationConfig);
+        return entry?.ctx.agentId ?? null;
     }
 
     private registerEntry(input: {
@@ -1329,6 +1388,7 @@ function agentConfigFromRecord(
         | "kind"
         | "modelRole"
         | "connectorName"
+        | "connectorKey"
         | "parentAgentId"
         | "foreground"
         | "name"
@@ -1341,6 +1401,7 @@ function agentConfigFromRecord(
         kind: record.kind,
         modelRole: record.modelRole,
         connectorName: record.connectorName,
+        connectorKey: record.connectorKey,
         parentAgentId: record.parentAgentId,
         foreground: record.foreground,
         name: record.name,
@@ -1362,6 +1423,7 @@ function configForCreation(
         kind,
         modelRole: creationConfig.modelRole === undefined ? modelRoleForKind(kind) : creationConfig.modelRole,
         connectorName: creationConfig.connectorName === undefined ? null : creationConfig.connectorName,
+        connectorKey: creationConfig.connectorKey === undefined ? null : creationConfig.connectorKey,
         parentAgentId: creationConfig.parentAgentId === undefined ? null : creationConfig.parentAgentId,
         foreground: creationConfig.foreground ?? kind === "connector",
         name: creationConfig.name ?? null,

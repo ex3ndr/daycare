@@ -10,7 +10,7 @@ import type {
     ToolExecutionContext,
     ToolResultContract
 } from "@/types";
-import { agentPathTargetResolve } from "../../agents/ops/agentPathTargetResolve.js";
+import { agentRecipientResolve } from "../../agents/ops/agentRecipientResolve.js";
 import { fileResolve } from "./fileResolve.js";
 
 const schema = Type.Object(
@@ -98,12 +98,7 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
         visibleByDefault: (context) => context.config.foreground === true,
         execute: async (args, context, toolCall) => {
             const payload = args as SayArgs;
-            const target = await agentPathTargetResolve(
-                context.agentSystem.storage,
-                context.ctx.userId,
-                context.agent.config,
-                context.agent.path
-            );
+            const target = agentRecipientResolve(context.agent.config);
             if (!target) {
                 throw new Error("say is only available for foreground user agents.");
             }

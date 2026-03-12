@@ -14,6 +14,7 @@ export type DatabaseAgentRow = {
     kind: AgentKind;
     model_role: ModelRoleKey | null;
     connector_name: string | null;
+    connector_key: string | null;
     parent_agent_id: string | null;
     foreground: boolean;
     name: string | null;
@@ -65,6 +66,7 @@ export type AgentDbRecord = {
     kind: AgentKind;
     modelRole: ModelRoleKey | null;
     connectorName: string | null;
+    connectorKey: string | null;
     parentAgentId: string | null;
     foreground: boolean;
     name: string | null;

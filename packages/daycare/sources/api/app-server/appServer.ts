@@ -18,6 +18,7 @@ import type { EngineEvent, EngineEventBus } from "../../engine/ipc/events.js";
 import type { MiniApps } from "../../engine/mini-apps/MiniApps.js";
 import type { CommandRegistry } from "../../engine/modules/commandRegistry.js";
 import type { ConnectorRegistry } from "../../engine/modules/connectorRegistry.js";
+import { messageContextRecipientResolve } from "../../engine/modules/connectors/messageContextRecipientResolve.js";
 import type { ToolResolver } from "../../engine/modules/toolResolver.js";
 import type { Secret } from "../../engine/secrets/secretTypes.js";
 import { userConfigurationSyncEventBuild } from "../../engine/users/userConfigurationSyncEventBuild.js";
@@ -629,8 +630,9 @@ export class AppServer {
                 if (!path) {
                     return;
                 }
-                const userId = pathUserIdResolve(path);
-                const connectorTarget = userId ? await this.connectorRecipientResolve(path) : null;
+                const connectorTarget =
+                    messageContextRecipientResolve(context) ?? (await this.connectorRecipientResolve(path));
+                const userId = await this.userIdResolve(path, context);
                 if (!userId || !connectorTarget) {
                     return;
                 }
@@ -685,10 +687,10 @@ export class AppServer {
 
     private async messageSend(
         path: AgentPath,
-        context: { messageId?: string },
+        context: { messageId?: string; connectorKey?: string },
         message: ConnectorMessage
     ): Promise<void> {
-        const target = await this.connectorRecipientResolve(path);
+        const target = messageContextRecipientResolve(context) ?? (await this.connectorRecipientResolve(path));
         if (!target) {
             return;
         }
@@ -700,6 +702,17 @@ export class AppServer {
             ...message,
             replyToMessageId: context.messageId
         });
+    }
+
+    private async userIdResolve(path: AgentPath, context: { connectorKey?: string }): Promise<string | null> {
+        const connectorKey = context.connectorKey?.trim() ?? "";
+        if (connectorKey && this.users) {
+            const user = await this.users.findByConnectorKey(connectorKey);
+            if (user) {
+                return user.id;
+            }
+        }
+        return pathUserIdResolve(path);
     }
 
     private pathFromConnectorTarget(target: ConnectorTarget): AgentPath | null {

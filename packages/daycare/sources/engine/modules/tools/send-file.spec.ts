@@ -158,7 +158,8 @@ describe("buildSendFileTool", () => {
             foregroundAgentRecord: {
                 id: "fg-agent",
                 path: "/123/telegram/456",
-                connectorName: "telegram"
+                connectorName: "telegram",
+                connectorKey: "telegram:456"
             },
             connectorKeys: [{ connectorKey: "telegram:456" }]
         });
@@ -195,13 +196,19 @@ function contextBuild(options: {
     source?: string;
     connectorKeys?: Array<{ connectorKey: string }>;
     foregroundAgentId?: string | null;
-    foregroundAgentRecord?: { id: string; path: string; connectorName: string | null } | null;
+    foregroundAgentRecord?: {
+        id: string;
+        path: string;
+        connectorName: string | null;
+        connectorKey: string | null;
+    } | null;
     agent?: {
         path: string;
         config: {
             kind: "connector" | "agent" | "cron" | "task" | "memory" | "sub" | "search";
             modelRole: "user" | "assistant" | "system";
             connectorName: string | null;
+            connectorKey?: string | null;
             parentAgentId: string | null;
             foreground: boolean;
             name: string | null;
@@ -223,6 +230,7 @@ function contextBuild(options: {
                 kind: "connector",
                 modelRole: "user",
                 connectorName: "telegram",
+                connectorKey: connectorKeys[0]?.connectorKey ?? null,
                 parentAgentId: null,
                 foreground: true,
                 name: null,

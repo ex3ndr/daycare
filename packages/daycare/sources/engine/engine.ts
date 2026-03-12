@@ -27,7 +27,6 @@ import { databaseClose } from "../storage/databaseClose.js";
 import { databaseMigrate } from "../storage/databaseMigrate.js";
 import { databaseOpen } from "../storage/databaseOpen.js";
 import { Storage } from "../storage/storage.js";
-import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
 import { stringSlugify } from "../utils/stringSlugify.js";
 import { InvalidateSync } from "../utils/sync.js";
 import { valueDeepEqual } from "../utils/valueDeepEqual.js";
@@ -35,14 +34,9 @@ import { AcpSessions } from "./acp/acpSessions.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForAgent, contextForUser } from "./agents/context.js";
 import { agentHistoryLoad } from "./agents/ops/agentHistoryLoad.js";
-import {
-    agentPathApp,
-    agentPathConnector,
-    agentPathDirect,
-    agentPathSupervisor,
-    agentPathTask
-} from "./agents/ops/agentPathBuild.js";
+import { agentPathApp, agentPathDirect, agentPathSupervisor, agentPathTask } from "./agents/ops/agentPathBuild.js";
 import { agentPath } from "./agents/ops/agentPathTypes.js";
+import { agentRecipientResolve } from "./agents/ops/agentRecipientResolve.js";
 import { contextEstimateTokens } from "./agents/ops/contextEstimateTokens.js";
 import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
 import { Channels } from "./channels/channels.js";
@@ -59,6 +53,7 @@ import { miniAppCreateToolBuild } from "./mini-apps/miniAppCreateToolBuild.js";
 import { miniAppDeleteToolBuild } from "./mini-apps/miniAppDeleteToolBuild.js";
 import { miniAppEjectToolBuild } from "./mini-apps/miniAppEjectToolBuild.js";
 import { miniAppUpdateToolBuild } from "./mini-apps/miniAppUpdateToolBuild.js";
+import { messageContextRecipientResolve } from "./modules/connectors/messageContextRecipientResolve.js";
 import { InferenceRouter } from "./modules/inference/router.js";
 import { ModuleRegistry } from "./modules/moduleRegistry.js";
 import { taskParameterInputsNormalize } from "./modules/tasks/taskParameterInputsNormalize.js";
@@ -248,7 +243,7 @@ export class Engine {
                         logger.debug(
                             `receive: Connector message received: path=${resolved.path} merged=${item.count} text=${item.message.text?.length ?? 0}chars files=${item.message.files?.length ?? 0}`
                         );
-                        const connectorPath = connectorPathResolve(resolved.path);
+                        const recipient = messageContextRecipientResolve(item.context);
                         await this.agentSystem.post(
                             resolved.ctx,
                             { path: resolved.path },
@@ -256,7 +251,8 @@ export class Engine {
                             {
                                 kind: "connector",
                                 foreground: true,
-                                connectorName: connectorPath?.connector ?? null
+                                connectorName: recipient?.connector ?? null,
+                                connectorKey: recipient?.recipient.connectorKey ?? null
                             }
                         );
                     }
@@ -276,10 +272,12 @@ export class Engine {
             onCommand: async (command, context, target) =>
                 this.runConnectorCallback("command", async () => {
                     const resolved = await this.targetCanonicalize(target, context);
-                    const connectorTarget = await this.connectorRecipientResolve(resolved.path);
+                    const messageContext = await this.messageContextWithTimezone(resolved.ctx, context);
+                    const connectorTarget =
+                        messageContextRecipientResolve(messageContext) ??
+                        (await this.connectorRecipientResolve(resolved.path));
                     const isConnector = connectorTarget !== null;
                     const connector = connectorTarget?.connector ?? "unknown";
-                    const messageContext = await this.messageContextWithTimezone(resolved.ctx, context);
                     const parsed = parseCommand(command);
                     if (!parsed) {
                         return;
@@ -289,7 +287,7 @@ export class Engine {
                             return;
                         }
                         logger.info({ connector, path: resolved.path }, "receive: Reset command received");
-                        await this.handleResetCommand(resolved.path, messageContext);
+                        await this.handleResetCommand(resolved.ctx, resolved.path, messageContext);
                         return;
                     }
                     if (parsed.name === "context") {
@@ -297,7 +295,7 @@ export class Engine {
                             return;
                         }
                         logger.info({ connector, path: resolved.path }, "receive: Context command received");
-                        await this.handleContextCommand(resolved.path, messageContext);
+                        await this.handleContextCommand(resolved.ctx, resolved.path, messageContext);
                         return;
                     }
                     if (parsed.name === "compact") {
@@ -305,7 +303,7 @@ export class Engine {
                             return;
                         }
                         logger.info({ connector, path: resolved.path }, "receive: Compact command received");
-                        await this.handleCompactCommand(resolved.path, messageContext);
+                        await this.handleCompactCommand(resolved.ctx, resolved.path, messageContext);
                         return;
                     }
                     if (parsed.name === "abort") {
@@ -313,7 +311,7 @@ export class Engine {
                             return;
                         }
                         logger.info({ connector, path: resolved.path }, "stop: Abort command received");
-                        await this.handleStopCommand(resolved.path, messageContext);
+                        await this.handleStopCommand(resolved.ctx, resolved.path, messageContext);
                         return;
                     }
                     if (!isConnector) {
@@ -945,8 +943,8 @@ export class Engine {
         };
     }
 
-    private async handleContextCommand(path: AgentPath, context: MessageContext): Promise<void> {
-        const target = await this.connectorRecipientResolve(path);
+    private async handleContextCommand(ctx: Context, path: AgentPath, context: MessageContext): Promise<void> {
+        const target = messageContextRecipientResolve(context) ?? (await this.connectorRecipientResolve(path));
         if (!target) {
             return;
         }
@@ -956,10 +954,15 @@ export class Engine {
         }
         let usedTokens: number | null = null;
         try {
-            const ctx = await this.pathContextResolve(path);
-            const agentId = await this.agentSystem.agentIdForTarget(ctx, { path });
-            const history = await agentHistoryLoad(this.storage, contextForAgent({ userId: ctx.userId, agentId }));
-            usedTokens = history.length > 0 ? contextEstimateTokens(history) : null;
+            const agentId = await this.agentSystem.existingAgentIdForTarget(
+                ctx,
+                { path },
+                connectorCreationConfigResolve(context)
+            );
+            if (agentId) {
+                const history = await agentHistoryLoad(this.storage, contextForAgent({ userId: ctx.userId, agentId }));
+                usedTokens = history.length > 0 ? contextEstimateTokens(history) : null;
+            }
         } catch (error) {
             logger.warn({ connector: target.connector, error }, "error: Context command failed to estimate usage");
         }
@@ -975,19 +978,31 @@ export class Engine {
         }
     }
 
-    private async handleCompactCommand(path: AgentPath, context: MessageContext): Promise<void> {
-        const ctx = await this.pathContextResolve(path);
-        const agentId = await this.agentSystem.agentIdForTarget(ctx, { path });
+    private async handleCompactCommand(ctx: Context, path: AgentPath, context: MessageContext): Promise<void> {
+        const agentId = await this.agentSystem.existingAgentIdForTarget(
+            ctx,
+            { path },
+            connectorCreationConfigResolve(context)
+        );
+        if (!agentId) {
+            return;
+        }
         await this.agentSystem.post(ctx, { agentId }, { type: "compact", context });
     }
 
-    private async handleResetCommand(path: AgentPath, context: MessageContext): Promise<void> {
+    private async handleResetCommand(ctx: Context, path: AgentPath, context: MessageContext): Promise<void> {
         const dropped = this.incomingMessages.dropForPath(path);
         if (dropped > 0) {
             logger.debug({ dropped }, "event: Dropped pending connector messages before reset");
         }
-        const ctx = await this.pathContextResolve(path);
-        const agentId = await this.agentSystem.agentIdForTarget(ctx, { path });
+        const agentId = await this.agentSystem.existingAgentIdForTarget(
+            ctx,
+            { path },
+            connectorCreationConfigResolve(context)
+        );
+        if (!agentId) {
+            return;
+        }
         await this.agentSystem.post(
             ctx,
             { agentId },
@@ -995,8 +1010,8 @@ export class Engine {
         );
     }
 
-    private async handleStopCommand(path: AgentPath, context: MessageContext): Promise<void> {
-        const target = await this.connectorRecipientResolve(path);
+    private async handleStopCommand(ctx: Context, path: AgentPath, context: MessageContext): Promise<void> {
+        const target = messageContextRecipientResolve(context) ?? (await this.connectorRecipientResolve(path));
         if (!target) {
             return;
         }
@@ -1004,7 +1019,12 @@ export class Engine {
         if (!connector?.capabilities.sendText) {
             return;
         }
-        const aborted = this.agentSystem.abortInferenceForTarget({ path });
+        const agentId = await this.agentSystem.existingAgentIdForTarget(
+            ctx,
+            { path },
+            connectorCreationConfigResolve(context)
+        );
+        const aborted = agentId ? this.agentSystem.abortInferenceForTarget({ agentId }) : false;
         const text = aborted ? "Stopped current inference." : "No active inference to stop.";
         try {
             await connector.sendMessage(target.recipient, {
@@ -1052,33 +1072,18 @@ export class Engine {
         context?: Pick<MessageContext, "connectorKey">
     ): Promise<{ ctx: Context; path: AgentPath }> {
         await this.migrationReady;
-        const connectorPath = connectorPathResolve(path);
-        if (!connectorPath) {
-            const ctx = await this.pathContextResolve(path);
-            return { ctx, path };
-        }
-
-        // Canonical connector paths already use internal user ids.
-        const canonicalRecipient = await this.connectorRecipientResolve(path);
-        if (canonicalRecipient) {
+        const connectorKey = context?.connectorKey?.trim() ?? "";
+        if (!connectorKey) {
             return {
-                ctx: contextForUser({ userId: connectorPath.ownerId }),
+                ctx: await this.pathContextResolve(path),
                 path
             };
         }
-
-        // Connector callbacks may still arrive with external ids; normalize them.
-        const lookupConnectorKeys = connectorPathLookupConnectorKeys(connectorPath, context?.connectorKey);
-        const existing = await connectorPathUserFindByKeys(this.storage, lookupConnectorKeys);
-        const primaryConnectorKey = lookupConnectorKeys[0];
-        if (!primaryConnectorKey) {
-            throw new Error(`Connector target is required for path: ${path}`);
-        }
-        const user = existing ?? (await this.storage.resolveUserByConnectorKey(primaryConnectorKey));
-        const canonicalPath = connectorPathCanonicalize(user.id, connectorPath.connector, connectorPath.connectorValue);
+        const user = await this.storage.resolveUserByConnectorKey(connectorKey);
+        const existingForeground = await this.storage.agents.findForegroundByConnectorKey(user.id, connectorKey);
         return {
             ctx: contextForUser({ userId: user.id }),
-            path: canonicalPath
+            path: existingForeground?.path ?? pathUserIdReplace(path, user.id)
         };
     }
 
@@ -1096,44 +1101,14 @@ export class Engine {
     }
 
     private async connectorRecipientResolve(path: AgentPath): Promise<ConnectorResolvedRecipient | null> {
-        const connectorPath = connectorPathResolve(path);
-        if (!connectorPath) {
+        const agent = await this.storage.agents.findByPath(path);
+        if (!agent) {
             return null;
         }
-        const user = await this.storage.users.findById(connectorPath.ownerId);
-        if (!user) {
-            return null;
-        }
-        const keyPrefix = `${connectorPath.connector}:`;
-        if (connectorPath.connectorValue) {
-            const exactKey = `${keyPrefix}${connectorPath.connectorValue}`;
-            const exact = user.connectorKeys.find((entry) => entry.connectorKey === exactKey);
-            if (exact) {
-                return {
-                    connector: connectorPath.connector,
-                    recipient: { connectorKey: exact.connectorKey }
-                };
-            }
-            const legacyFallback = connectorPathLegacyValueFallback(connectorPath.connectorValue);
-            if (legacyFallback) {
-                const fallbackKey = `${keyPrefix}${legacyFallback}`;
-                const fallback = user.connectorKeys.find((entry) => entry.connectorKey === fallbackKey);
-                if (fallback) {
-                    return {
-                        connector: connectorPath.connector,
-                        recipient: { connectorKey: fallback.connectorKey }
-                    };
-                }
-            }
-        }
-        const connectorKey = user.connectorKeys.find((entry) => entry.connectorKey.startsWith(keyPrefix));
-        if (!connectorKey) {
-            return null;
-        }
-        if (!connectorKey.connectorKey.slice(keyPrefix.length).trim()) {
-            return null;
-        }
-        return { connector: connectorPath.connector, recipient: { connectorKey: connectorKey.connectorKey } };
+        return agentRecipientResolve({
+            connectorName: agent.connectorName,
+            connectorKey: agent.connectorKey
+        });
     }
 
     /**
@@ -1235,16 +1210,6 @@ export class Engine {
     }
 }
 
-const RESERVED_USER_SCOPE_SEGMENTS = new Set(["agent", "cron", "task", "subuser", "app", "supervisor"]);
-
-type ConnectorPath = {
-    ownerId: string;
-    connector: string;
-    connectorValue: string | null;
-};
-
-type ConnectorPathUser = NonNullable<Awaited<ReturnType<Storage["users"]["findByConnectorKey"]>>>;
-
 function pathSegments(path: AgentPath): string[] {
     return String(path)
         .split("/")
@@ -1260,97 +1225,36 @@ function pathUserIdResolve(path: AgentPath): string | null {
     return first;
 }
 
-function connectorPathResolve(path: AgentPath): ConnectorPath | null {
+function pathUserIdReplace(path: AgentPath, userId: string): AgentPath {
+    const normalizedUserId = userId.trim();
+    if (!normalizedUserId) {
+        throw new Error("userId is required");
+    }
     const segments = pathSegments(path);
-    if (segments.length < 2) {
-        return null;
+    if (segments.length === 0) {
+        throw new Error(`Path does not resolve to a user context: ${path}`);
     }
-    const ownerId = segments[0]?.trim() ?? "";
-    const connector = segments[1]?.trim() ?? "";
-    if (!ownerId || !connector) {
-        return null;
-    }
-    if (RESERVED_USER_SCOPE_SEGMENTS.has(connector)) {
-        return null;
-    }
-    const targetSegments = segments
-        .slice(2)
-        .map((segment) => segment.trim())
-        .filter(Boolean);
-    const connectorValue = targetSegments.length > 0 ? targetSegments.join("/") : null;
-    return { ownerId, connector, connectorValue };
+    return agentPath(`/${[normalizedUserId, ...segments.slice(1)].join("/")}`);
 }
 
-async function connectorPathUserFindByKeys(
-    storage: Storage,
-    connectorKeys: string[]
-): Promise<ConnectorPathUser | null> {
-    for (const connectorKey of connectorKeys) {
-        const user = await storage.users.findByConnectorKey(connectorKey);
-        if (user) {
-            return user;
-        }
+function connectorCreationConfigResolve(context: Pick<MessageContext, "connectorKey">):
+    | {
+          kind: "connector";
+          foreground: true;
+          connectorName: string;
+          connectorKey: string;
+      }
+    | undefined {
+    const recipient = messageContextRecipientResolve(context);
+    if (!recipient) {
+        return undefined;
     }
-    return null;
-}
-
-function connectorPathLookupConnectorKeys(connectorPath: ConnectorPath, contextConnectorKey?: string): string[] {
-    const connectorKeys: string[] = [];
-    const normalizedContextKey = contextConnectorKey?.trim() ?? "";
-    if (normalizedContextKey) {
-        connectorKeys.push(normalizedContextKey);
-    }
-    const connectorValue = connectorPath.connectorValue?.trim() ?? "";
-    if (!connectorValue) {
-        const ownerId = connectorPath.ownerId.trim();
-        if (ownerId) {
-            const fallbackKey = userConnectorKeyCreate(connectorPath.connector, ownerId);
-            if (!connectorKeys.includes(fallbackKey)) {
-                connectorKeys.push(fallbackKey);
-            }
-        }
-        return connectorKeys;
-    }
-    const exactKey = userConnectorKeyCreate(connectorPath.connector, connectorValue);
-    if (!connectorKeys.includes(exactKey)) {
-        connectorKeys.push(exactKey);
-    }
-    const legacyFallback = connectorPathLegacyValueFallback(connectorValue);
-    if (legacyFallback) {
-        const fallbackKey = userConnectorKeyCreate(connectorPath.connector, legacyFallback);
-        if (!connectorKeys.includes(fallbackKey)) {
-            connectorKeys.push(fallbackKey);
-        }
-    }
-    return connectorKeys;
-}
-
-function connectorPathLegacyValueFallback(connectorValue: string): string | null {
-    const segments = connectorValue
-        .split("/")
-        .map((segment) => segment.trim())
-        .filter(Boolean);
-    const channelId = segments[0] ?? "";
-    const senderUserId = segments[1] ?? "";
-    if (!channelId || !senderUserId) {
-        return null;
-    }
-    return channelId === senderUserId ? channelId : null;
-}
-
-function connectorPathCanonicalize(ownerId: string, connector: string, connectorValue: string | null): AgentPath {
-    const base = agentPathConnector(ownerId, connector);
-    if (!connectorValue) {
-        return base;
-    }
-    const targetSegments = connectorValue
-        .split("/")
-        .map((segment) => segment.trim())
-        .filter(Boolean);
-    if (targetSegments.length === 0) {
-        return base;
-    }
-    return agentPath(`${base}/${targetSegments.join("/")}`);
+    return {
+        kind: "connector",
+        foreground: true,
+        connectorName: recipient.connector,
+        connectorKey: recipient.recipient.connectorKey
+    };
 }
 
 function parseCommand(command: string): { name: string; args: string[] } | null {

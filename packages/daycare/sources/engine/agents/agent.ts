@@ -31,7 +31,7 @@ import type { AgentInbox } from "./ops/agentInbox.js";
 import { agentLoopPendingPhaseResolve } from "./ops/agentLoopPendingPhaseResolve.js";
 import { agentLoopRun } from "./ops/agentLoopRun.js";
 import { agentModelOverrideApply } from "./ops/agentModelOverrideApply.js";
-import { agentPathTargetResolve } from "./ops/agentPathTargetResolve.js";
+import { agentRecipientResolve } from "./ops/agentRecipientResolve.js";
 import { agentSandboxBackendConfigBuild } from "./ops/agentSandboxBackendConfigBuild.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { type AgentSystemPromptContext, agentSystemPrompt } from "./ops/agentSystemPrompt.js";
@@ -392,7 +392,7 @@ export class Agent {
         if (!this.config.foreground) {
             return;
         }
-        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path);
+        const target = agentRecipientResolve(this.config);
         if (!target) {
             return;
         }
@@ -471,9 +471,7 @@ export class Agent {
         }
 
         logger.debug(`event: handleMessage building system prompt agentId=${this.id}`);
-        const connectorKey = (
-            await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path)
-        )?.recipient.connectorKey;
+        const connectorKey = agentRecipientResolve(this.config)?.recipient.connectorKey;
         const pluginPrompts =
             typeof pluginManager.getSystemPrompts === "function"
                 ? await pluginManager.getSystemPrompts({
@@ -536,12 +534,7 @@ export class Agent {
             }
         );
         if (compactionStatus.severity !== "ok") {
-            const target = await agentPathTargetResolve(
-                this.agentSystem.storage,
-                this.ctx.userId,
-                this.config,
-                this.path
-            );
+            const target = agentRecipientResolve(this.config);
             if (agentKind === "foreground" && connector?.capabilities.sendText && target) {
                 await connector.sendMessage(target.recipient, {
                     text: messageContextReset({ kind: "compaction" }),
@@ -1119,7 +1112,7 @@ export class Agent {
             return true;
         }
 
-        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path);
+        const target = agentRecipientResolve(this.config);
         if (!target) {
             return true;
         }
@@ -1144,7 +1137,7 @@ export class Agent {
         if (!this.config.foreground) {
             return result.ok;
         }
-        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path);
+        const target = agentRecipientResolve(this.config);
         if (!target) {
             return result.ok;
         }
@@ -1188,7 +1181,7 @@ export class Agent {
             return;
         }
 
-        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path);
+        const target = agentRecipientResolve(this.config);
         if (!target) {
             return;
         }
@@ -1234,7 +1227,7 @@ export class Agent {
         if (this.resolveAgentKind() !== "foreground") {
             return;
         }
-        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path);
+        const target = agentRecipientResolve(this.config);
         if (!target) {
             return;
         }
@@ -1527,7 +1520,7 @@ export class Agent {
         if (!this.config.foreground) {
             return null;
         }
-        const target = await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path);
+        const target = agentRecipientResolve(this.config);
         if (!target) {
             return null;
         }

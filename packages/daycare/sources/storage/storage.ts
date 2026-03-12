@@ -175,6 +175,7 @@ export class Storage {
                 kind: baseRecord.kind,
                 modelRole: baseRecord.modelRole,
                 connectorName: baseRecord.connectorName,
+                connectorKey: baseRecord.connectorKey,
                 parentAgentId: baseRecord.parentAgentId,
                 foreground: baseRecord.foreground,
                 name: baseRecord.name,

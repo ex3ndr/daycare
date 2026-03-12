@@ -579,7 +579,8 @@ function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
     return {
         kind: "connector",
         foreground: true,
-        connectorName: segments[1] ?? null
+        connectorName: segments[1] ?? null,
+        connectorKey: segments[1] ? `${segments[1]}:${segments.slice(2).join("/") || segments[0] || ""}` : null
     };
 }
 
