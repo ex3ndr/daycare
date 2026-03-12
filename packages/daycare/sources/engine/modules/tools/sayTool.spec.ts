@@ -5,6 +5,7 @@ import { contextForAgent } from "../../agents/context.js";
 import { sayTool } from "./sayTool.js";
 
 const toolCall = { id: "tool-1", name: "say" };
+const recipient = { connectorKey: "telegram:channel-1" };
 
 describe("sayTool", () => {
     it("sends text to the current foreground target", async () => {
@@ -14,7 +15,7 @@ describe("sayTool", () => {
 
         const result = await tool.execute({ text: "Hello user" }, context, toolCall);
 
-        expect(sendMessage).toHaveBeenCalledWith("channel-1", {
+        expect(sendMessage).toHaveBeenCalledWith(recipient, {
             text: "Hello user",
             replyToMessageId: "message-1",
             buttons: undefined,
@@ -38,7 +39,7 @@ describe("sayTool", () => {
         );
 
         expect(sendMessage).toHaveBeenCalledWith(
-            "channel-1",
+            recipient,
             expect.objectContaining({
                 text: "Open the app.",
                 buttons: [{ type: "url", text: "Open Daycare", url: "https://app.example.com" }]
@@ -61,7 +62,7 @@ describe("sayTool", () => {
         );
 
         expect(sendMessage).toHaveBeenCalledWith(
-            "channel-1",
+            recipient,
             expect.objectContaining({
                 buttons: [{ type: "callback", text: "Retry", callback: "retry_action" }]
             })
@@ -86,7 +87,7 @@ describe("sayTool", () => {
         expect(sendMessage).not.toHaveBeenCalled();
         expect(result.deferredPayload).toEqual({
             connector: "telegram",
-            targetId: "channel-1",
+            recipient,
             text: "Hello user",
             replyToMessageId: "message-1",
             buttons: [{ type: "callback", text: "Approve", callback: "approve_request" }],
@@ -103,7 +104,7 @@ describe("sayTool", () => {
 
         const result = await tool.execute({ text: "Urgent", now: true }, context, toolCall);
 
-        expect(sendMessage).toHaveBeenCalledWith("channel-1", {
+        expect(sendMessage).toHaveBeenCalledWith(recipient, {
             text: "Urgent",
             replyToMessageId: "message-1",
             buttons: undefined,
@@ -142,7 +143,7 @@ describe("sayTool", () => {
         );
 
         expect(sendMessage).toHaveBeenCalledWith(
-            "channel-1",
+            recipient,
             expect.objectContaining({
                 text: "See attachment.",
                 files: [
@@ -279,7 +280,7 @@ describe("sayTool", () => {
         expect(sendMessage).not.toHaveBeenCalled();
         expect(result.deferredPayload).toMatchObject({
             connector: "telegram",
-            targetId: "channel-1",
+            recipient,
             text: "Deferred file.",
             files: [
                 {
@@ -304,7 +305,7 @@ describe("sayTool", () => {
         await tool.executeDeferred!(
             {
                 connector: "telegram",
-                targetId: "channel-1",
+                recipient,
                 text: "deferred msg",
                 replyToMessageId: "msg-1",
                 buttons: [{ type: "callback", text: "Ack", callback: "ack" }],
@@ -322,7 +323,7 @@ describe("sayTool", () => {
             context
         );
 
-        expect(sendMessage).toHaveBeenCalledWith("channel-1", {
+        expect(sendMessage).toHaveBeenCalledWith(recipient, {
             text: "deferred msg",
             replyToMessageId: "msg-1",
             buttons: [{ type: "callback", text: "Ack", callback: "ack" }],
@@ -377,7 +378,7 @@ describe("sayTool", () => {
     });
 });
 
-type TestSendMessage = (targetId: string, message: Record<string, unknown>) => Promise<void>;
+type TestSendMessage = (recipient: { connectorKey: string }, message: Record<string, unknown>) => Promise<void>;
 
 function contextBuild(options: {
     sendMessage: TestSendMessage;

@@ -48,6 +48,8 @@ export type {
     ConnectorFileMode,
     ConnectorMessage,
     ConnectorMessageButton,
+    ConnectorRecipient,
+    ConnectorResolvedTarget,
     ConnectorTarget,
     MessageContext,
     MessageContextEnrichment,

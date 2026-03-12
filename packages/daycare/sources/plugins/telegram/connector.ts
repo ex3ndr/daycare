@@ -11,6 +11,7 @@ import type {
     ConnectorDraftReference,
     ConnectorFile,
     ConnectorMessage,
+    ConnectorRecipient,
     FileReference,
     MessageContext,
     MessageHandler,
@@ -19,6 +20,7 @@ import type {
 import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import { agentPath } from "../../engine/agents/ops/agentPathTypes.js";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
+import { connectorKeyTargetIdResolve } from "../../engine/modules/connectors/connectorKeyTargetIdResolve.js";
 import { getLogger } from "../../log.js";
 import { markdownToTelegramHtml } from "./markdownToTelegramHtml.js";
 import { telegramMessageSplit } from "./telegramMessageSplit.js";
@@ -293,7 +295,8 @@ export class TelegramConnector implements Connector {
         this.scheduleCommandSync();
     }
 
-    async sendMessage(targetId: string, message: ConnectorMessage): Promise<void> {
+    async sendMessage(recipient: ConnectorRecipient, message: ConnectorMessage): Promise<void> {
+        const targetId = connectorKeyTargetIdResolve("telegram", recipient.connectorKey);
         logger.debug(
             `event: sendMessage() called targetId=${targetId} hasText=${!!message.text} textLength=${message.text?.length ?? 0} fileCount=${message.files?.length ?? 0}`
         );
@@ -344,10 +347,11 @@ export class TelegramConnector implements Connector {
         logger.debug(`send: All files sent targetId=${targetId} chatId=${chatId} totalFiles=${files.length}`);
     }
 
-    async createDraft(targetId: string, message: ConnectorMessage): Promise<ConnectorDraft | null> {
+    async createDraft(recipient: ConnectorRecipient, message: ConnectorMessage): Promise<ConnectorDraft | null> {
         if (!this.enableDrafts) {
             return null;
         }
+        const targetId = connectorKeyTargetIdResolve("telegram", recipient.connectorKey);
         if (!this.isAllowedTarget(targetId, "createDraft")) {
             return null;
         }
@@ -375,10 +379,14 @@ export class TelegramConnector implements Connector {
         return this.draftBuild(chatId, sent.message_id, initialText);
     }
 
-    async resumeDraft(targetId: string, reference: ConnectorDraftReference): Promise<ConnectorDraft | null> {
+    async resumeDraft(
+        recipient: ConnectorRecipient,
+        reference: ConnectorDraftReference
+    ): Promise<ConnectorDraft | null> {
         if (!this.enableDrafts) {
             return null;
         }
+        const targetId = connectorKeyTargetIdResolve("telegram", recipient.connectorKey);
         if (!this.isAllowedTarget(targetId, "resumeDraft")) {
             return null;
         }
@@ -393,7 +401,8 @@ export class TelegramConnector implements Connector {
         return this.draftBuild(chatId, messageId);
     }
 
-    startTyping(targetId: string): () => void {
+    startTyping(recipient: ConnectorRecipient): () => void {
+        const targetId = connectorKeyTargetIdResolve("telegram", recipient.connectorKey);
         if (!this.isAllowedTarget(targetId, "startTyping")) {
             return () => undefined;
         }
@@ -420,7 +429,8 @@ export class TelegramConnector implements Connector {
         };
     }
 
-    async setReaction(targetId: string, messageId: string, reaction: string): Promise<void> {
+    async setReaction(recipient: ConnectorRecipient, messageId: string, reaction: string): Promise<void> {
+        const targetId = connectorKeyTargetIdResolve("telegram", recipient.connectorKey);
         if (!this.isAllowedTarget(targetId, "setReaction")) {
             return;
         }

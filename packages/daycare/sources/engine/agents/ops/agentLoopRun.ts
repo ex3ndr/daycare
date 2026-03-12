@@ -164,6 +164,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     let childAgentMessageSent = false;
     const target = await agentPathTargetResolve(agentSystem.storage, agent.ctx.userId, agent.config, agent.path);
     const parentAgentId = isChildAgent ? agent.config.parentAgentId : null;
+    const recipient = target?.recipient ?? null;
     const targetId = target?.targetId ?? null;
     const toolVisibilityContext = {
         ctx: agent.ctx,
@@ -173,7 +174,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     const allowedToolNames = agentToolExecutionAllowlistResolve(kind);
     const restoreOnly = Boolean(initialPhase && stopAfterPendingPhase);
     logger.debug(`start: Starting typing indicator targetId=${targetId ?? "none"}`);
-    const stopTyping = targetId ? connector?.startTyping?.(targetId) : null;
+    const stopTyping = recipient ? connector?.startTyping?.(recipient) : null;
     let draftHandle: ConnectorDraft | null = null;
     let draftResponseText: string | null = null;
     let usedDraftOutput = false;
@@ -214,7 +215,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     };
 
     const draftSync = async (createIfNeeded: boolean): Promise<boolean> => {
-        if (!connector || !targetId) {
+        if (!connector || !recipient) {
             return false;
         }
         const draftMessage = draftMessageResolve();
@@ -226,7 +227,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                 if (!createIfNeeded || !connector.createDraft) {
                     return false;
                 }
-                draftHandle = await connector.createDraft(targetId, draftMessage);
+                draftHandle = await connector.createDraft(recipient, draftMessage);
                 if (!draftHandle) {
                     return false;
                 }
@@ -270,11 +271,11 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
 
     const draftRestore = async (): Promise<void> => {
         const draftReference = initialPhase?.type !== "error" ? initialPhase?.draftReference : null;
-        if (!draftReference || !connector?.resumeDraft || !targetId) {
+        if (!draftReference || !connector?.resumeDraft || !recipient) {
             return;
         }
         try {
-            draftHandle = await connector.resumeDraft(targetId, draftReference);
+            draftHandle = await connector.resumeDraft(recipient, draftReference);
             if (draftHandle) {
                 usedDraftOutput = true;
             }
@@ -717,9 +718,9 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         }
                         lastResponseTextSent = await draftSync(toolCallPartition.runPythonCalls.length > 0);
                     }
-                    if (hasResponseText && connector && targetId && !lastResponseTextSent) {
+                    if (hasResponseText && connector && recipient && !lastResponseTextSent) {
                         try {
-                            await connector.sendMessage(targetId, {
+                            await connector.sendMessage(recipient, {
                                 text: effectiveResponseText,
                                 replyToMessageId: entry.context.messageId
                             });
@@ -1195,7 +1196,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                 : "Inference failed.";
         logger.debug(`error: Sending error message to user message=${message}`);
         await notifySubagentFailure("Inference failed", error);
-        if (connector && targetId) {
+        if (connector && recipient) {
             try {
                 if (draftHandle) {
                     if (!draftResponseText?.trim()) {
@@ -1204,7 +1205,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                     draftEntryPush(message, "error");
                     await draftFinish();
                 } else {
-                    await connector.sendMessage(targetId, {
+                    await connector.sendMessage(recipient, {
                         text: message,
                         replyToMessageId: entry.context.messageId
                     });
@@ -1262,7 +1263,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
         );
         await notifySubagentFailure("Inference failed", response.message.errorMessage);
         try {
-            if (connector && targetId) {
+            if (connector && recipient) {
                 if (draftHandle) {
                     if (!draftResponseText?.trim()) {
                         draftResponseText = message;
@@ -1270,7 +1271,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                     draftEntryPush(message, "error");
                     await draftFinish();
                 } else {
-                    await connector.sendMessage(targetId, {
+                    await connector.sendMessage(recipient, {
                         text: message,
                         replyToMessageId: entry.context.messageId
                     });
@@ -1299,7 +1300,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
             logger.debug("error: Tool loop exceeded, sending error message");
             await notifySubagentFailure(message);
             try {
-                if (connector && targetId && !lastResponseNoMessage) {
+                if (connector && recipient && !lastResponseNoMessage) {
                     if (draftHandle) {
                         if (!draftResponseText?.trim()) {
                             draftResponseText = message;
@@ -1307,7 +1308,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                         draftEntryPush(message, "error");
                         await draftFinish();
                     } else {
-                        await connector.sendMessage(targetId, {
+                        await connector.sendMessage(recipient, {
                             text: message,
                             replyToMessageId: entry.context.messageId
                         });
@@ -1337,8 +1338,8 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
         `send: Sending response to user textLength=${outgoingText?.length ?? 0} targetId=${targetId ?? "none"}`
     );
     try {
-        if (connector && targetId && outgoingText) {
-            await connector.sendMessage(targetId, {
+        if (connector && recipient && outgoingText) {
+            await connector.sendMessage(recipient, {
                 text: outgoingText,
                 replyToMessageId: entry.context.messageId
             });

@@ -1,10 +1,5 @@
-import type { AgentConfig, AgentPath } from "@/types";
+import type { AgentConfig, AgentPath, ConnectorResolvedTarget } from "@/types";
 import type { Storage } from "../../../storage/storage.js";
-
-export type AgentConnectorTarget = {
-    connector: string;
-    targetId: string;
-};
 
 /**
  * Resolves connector send target for a foreground agent.
@@ -15,7 +10,7 @@ export async function agentPathTargetResolve(
     userId: string,
     config: Pick<AgentConfig, "connectorName">,
     path?: AgentPath | null
-): Promise<AgentConnectorTarget | null> {
+): Promise<ConnectorResolvedTarget | null> {
     const user = await storage.users.findById(userId);
     if (!user) {
         return null;
@@ -30,14 +25,14 @@ export async function agentPathTargetResolve(
         const exactKey = `${prefix}${targetHint}`;
         const exact = user.connectorKeys.find((entry) => entry.connectorKey === exactKey)?.connectorKey;
         if (exact) {
-            return { connector, targetId: targetHint };
+            return { connector, targetId: targetHint, recipient: { connectorKey: exact } };
         }
         const legacyFallback = connectorTargetLegacyFallback(targetHint);
         if (legacyFallback) {
             const fallbackKey = `${prefix}${legacyFallback}`;
             const fallback = user.connectorKeys.find((entry) => entry.connectorKey === fallbackKey)?.connectorKey;
             if (fallback) {
-                return { connector, targetId: legacyFallback };
+                return { connector, targetId: legacyFallback, recipient: { connectorKey: fallback } };
             }
         }
     }
@@ -49,7 +44,7 @@ export async function agentPathTargetResolve(
     if (!targetId) {
         return null;
     }
-    return { connector, targetId };
+    return { connector, targetId, recipient: { connectorKey } };
 }
 
 function connectorResolve(configured: string | null | undefined): string | null {

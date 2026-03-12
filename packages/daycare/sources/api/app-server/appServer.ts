@@ -3,6 +3,7 @@ import type {
     AgentPath,
     AgentSkill,
     ConnectorMessage,
+    ConnectorResolvedTarget,
     ConnectorTarget,
     Context,
     TaskActiveSummary,
@@ -90,7 +91,7 @@ export type AppServerOptions = {
         add: (ctx: Context, secret: Secret) => Promise<void>;
         remove: (ctx: Context, name: string) => Promise<boolean>;
     } | null;
-    connectorTargetResolve: (path: AgentPath) => Promise<{ connector: string; targetId: string } | null>;
+    connectorTargetResolve: (path: AgentPath) => Promise<ConnectorResolvedTarget | null>;
 };
 
 /**
@@ -695,7 +696,7 @@ export class AppServer {
         if (!connector?.capabilities.sendText) {
             return;
         }
-        await connector.sendMessage(target.targetId, {
+        await connector.sendMessage(target.recipient, {
             ...message,
             replyToMessageId: context.messageId
         });

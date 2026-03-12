@@ -66,7 +66,7 @@ export function buildReactionTool(): ToolDefinition {
             if (!messageId) {
                 throw new Error("Missing message id for reaction");
             }
-            await connector.setReaction(target.targetId, String(messageId), payload.reaction);
+            await connector.setReaction(target.recipient, String(messageId), payload.reaction);
 
             const summary = `Reaction set: ${payload.reaction}`;
             const toolMessage: ToolResultMessage = {

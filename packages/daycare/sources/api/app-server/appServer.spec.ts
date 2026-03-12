@@ -240,7 +240,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
             if (!userId || !connector) {
                 return null;
             }
-            return { connector, targetId: userId };
+            return { connector, targetId: userId, recipient: { connectorKey: `${connector}:${userId}` } };
         }
     });
 
@@ -336,7 +336,7 @@ describe("AppServer auth endpoints", () => {
         const built = await appServerCreateForTests({ secret: "valid-secret-for-tests-1234567890" });
         const sendMessage = vi.fn(
             async (
-                _targetId: string,
+                _recipient: { connectorKey: string },
                 _message: {
                     text: string | null;
                     replyToMessageId?: string;

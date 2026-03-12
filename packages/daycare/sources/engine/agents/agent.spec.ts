@@ -168,10 +168,13 @@ describe("Agent", () => {
             );
 
             expect(result).toEqual({ type: "reset", ok: true });
-            expect(sendMessage).toHaveBeenCalledWith("user-1", {
-                text: "🔄 Session reset.",
-                replyToMessageId: "42"
-            });
+            expect(sendMessage).toHaveBeenCalledWith(
+                { connectorKey: "telegram:user-1" },
+                {
+                    text: "🔄 Session reset.",
+                    replyToMessageId: "42"
+                }
+            );
 
             await connectorRegistry.unregisterAll("test");
         } finally {
@@ -1469,10 +1472,13 @@ describe("Agent", () => {
 
             expect(result).toEqual({ type: "message", responseText: "after compaction" });
             expect(complete).toHaveBeenCalledTimes(3);
-            expect(sendMessage).toHaveBeenCalledWith("user-1", {
-                text: "⏳ Compacting session context. I'll continue shortly.",
-                replyToMessageId: "90"
-            });
+            expect(sendMessage).toHaveBeenCalledWith(
+                { connectorKey: "telegram:user-1" },
+                {
+                    text: "⏳ Compacting session context. I'll continue shortly.",
+                    replyToMessageId: "90"
+                }
+            );
 
             await connectorRegistry.unregisterAll("test");
         } finally {

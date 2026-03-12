@@ -5,6 +5,7 @@ import type {
     ConnectorFile,
     ConnectorFileMode,
     ConnectorMessageButton,
+    ConnectorRecipient,
     ToolDefinition,
     ToolExecutionContext,
     ToolResultContract
@@ -58,7 +59,7 @@ type SayArgs = Static<typeof schema>;
 
 type SayDeferredPayload = {
     connector: string;
-    targetId: string;
+    recipient: ConnectorRecipient;
     text: string;
     replyToMessageId?: string;
     buttons?: ConnectorMessageButton[];
@@ -135,7 +136,7 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
                 };
                 const deferredPayload: SayDeferredPayload = {
                     connector: target.connector,
-                    targetId: target.targetId,
+                    recipient: target.recipient,
                     text,
                     replyToMessageId: context.messageContext.messageId,
                     buttons,
@@ -152,7 +153,7 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
                 };
             }
 
-            await connector.sendMessage(target.targetId, {
+            await connector.sendMessage(target.recipient, {
                 text,
                 replyToMessageId: context.messageContext.messageId,
                 buttons,
@@ -184,7 +185,7 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
             if (!connector) {
                 throw new Error(`Connector not loaded: ${p.connector}`);
             }
-            await connector.sendMessage(p.targetId, {
+            await connector.sendMessage(p.recipient, {
                 text: p.text,
                 replyToMessageId: p.replyToMessageId,
                 buttons: p.buttons,

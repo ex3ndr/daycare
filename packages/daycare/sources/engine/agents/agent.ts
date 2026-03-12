@@ -401,7 +401,7 @@ export class Agent {
             return;
         }
         try {
-            await connector.sendMessage(target.targetId, {
+            await connector.sendMessage(target.recipient, {
                 text: "Unexpected error",
                 replyToMessageId: item.context.messageId
             });
@@ -536,11 +536,14 @@ export class Agent {
             }
         );
         if (compactionStatus.severity !== "ok") {
-            const targetId =
-                (await agentPathTargetResolve(this.agentSystem.storage, this.ctx.userId, this.config, this.path))
-                    ?.targetId ?? null;
-            if (agentKind === "foreground" && connector?.capabilities.sendText && targetId) {
-                await connector.sendMessage(targetId, {
+            const target = await agentPathTargetResolve(
+                this.agentSystem.storage,
+                this.ctx.userId,
+                this.config,
+                this.path
+            );
+            if (agentKind === "foreground" && connector?.capabilities.sendText && target) {
+                await connector.sendMessage(target.recipient, {
                     text: messageContextReset({ kind: "compaction" }),
                     replyToMessageId: entry.context.messageId
                 });
@@ -1126,7 +1129,7 @@ export class Agent {
         }
 
         try {
-            await connector.sendMessage(target.targetId, {
+            await connector.sendMessage(target.recipient, {
                 text: messageContextReset({ kind: "manual" }),
                 replyToMessageId: item.context?.messageId
             });
@@ -1151,7 +1154,7 @@ export class Agent {
         }
         const text = this.compactionResultText(result);
         try {
-            await connector.sendMessage(target.targetId, {
+            await connector.sendMessage(target.recipient, {
                 text,
                 replyToMessageId: item.context?.messageId
             });
@@ -1196,7 +1199,7 @@ export class Agent {
         }
 
         try {
-            await connector.sendMessage(target.targetId, {
+            await connector.sendMessage(target.recipient, {
                 text: messageContextReset({ kind: "overflow", estimatedTokens }),
                 replyToMessageId: entry.context.messageId
             });
@@ -1240,7 +1243,7 @@ export class Agent {
             return;
         }
         try {
-            await connector.sendMessage(target.targetId, { text });
+            await connector.sendMessage(target.recipient, { text });
         } catch (error) {
             logger.warn({ agentId: this.id, error }, "error: Failed to send restore failure notification");
         }
@@ -1529,7 +1532,7 @@ export class Agent {
             return null;
         }
         const connector = this.agentSystem.connectorRegistry.get(target.connector);
-        return connector?.startTyping?.(target.targetId) ?? null;
+        return connector?.startTyping?.(target.recipient) ?? null;
     }
 
     private async buildHistoryContext(records: AgentHistoryRecord[]): Promise<InferenceContext["messages"]> {

@@ -12,7 +12,7 @@ describe("PluginRegistrar command registration", () => {
         if (!userId || !connector) {
             return null;
         }
-        return { connector, targetId: userId };
+        return { connector, targetId: userId, recipient: { connectorKey: `${connector}:${userId}` } };
     };
 
     it("registers and unregisters plugin commands", () => {
@@ -79,10 +79,13 @@ describe("PluginRegistrar command registration", () => {
 
         await registrar.sendMessage("/123/telegram" as AgentPath, { messageId: "77" }, { text: "Upgrading..." });
 
-        expect(sendMessage).toHaveBeenCalledWith("123", {
-            text: "Upgrading...",
-            replyToMessageId: "77"
-        });
+        expect(sendMessage).toHaveBeenCalledWith(
+            { connectorKey: "telegram:123" },
+            {
+                text: "Upgrading...",
+                replyToMessageId: "77"
+            }
+        );
     });
 
     it("registers and unregisters media analysis providers", async () => {

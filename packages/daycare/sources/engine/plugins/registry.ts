@@ -4,6 +4,7 @@ import type {
     AgentPath,
     Connector,
     ConnectorMessage,
+    ConnectorResolvedTarget,
     ImageGenerationProvider,
     InferenceProvider,
     MediaAnalysisProvider,
@@ -41,7 +42,7 @@ export class PluginRegistrar {
     private speechRegistry: SpeechGenerationRegistry;
     private mediaAnalysisRegistry: MediaAnalysisRegistry;
     private toolResolver: ToolResolver;
-    private connectorTargetResolve: (path: AgentPath) => Promise<{ connector: string; targetId: string } | null>;
+    private connectorTargetResolve: (path: AgentPath) => Promise<ConnectorResolvedTarget | null>;
     private registrations: PluginRegistrations;
 
     constructor(
@@ -53,7 +54,7 @@ export class PluginRegistrar {
         speechRegistry: SpeechGenerationRegistry,
         mediaAnalysisRegistry: MediaAnalysisRegistry,
         toolResolver: ToolResolver,
-        connectorTargetResolve: (path: AgentPath) => Promise<{ connector: string; targetId: string } | null>
+        connectorTargetResolve: (path: AgentPath) => Promise<ConnectorResolvedTarget | null>
     ) {
         this.pluginId = pluginId;
         this.commandRegistry = commandRegistry;
@@ -95,7 +96,7 @@ export class PluginRegistrar {
         if (!connector?.capabilities.sendText) {
             return;
         }
-        await connector.sendMessage(target.targetId, {
+        await connector.sendMessage(target.recipient, {
             ...message,
             replyToMessageId: context.messageId
         });
@@ -216,11 +217,11 @@ export class PluginRegistry {
     private speechRegistry: SpeechGenerationRegistry;
     private mediaAnalysisRegistry: MediaAnalysisRegistry;
     private toolResolver: ToolResolver;
-    private connectorTargetResolve: (path: AgentPath) => Promise<{ connector: string; targetId: string } | null>;
+    private connectorTargetResolve: (path: AgentPath) => Promise<ConnectorResolvedTarget | null>;
 
     constructor(
         modules: ModuleRegistry,
-        connectorTargetResolve: (path: AgentPath) => Promise<{ connector: string; targetId: string } | null>
+        connectorTargetResolve: (path: AgentPath) => Promise<ConnectorResolvedTarget | null>
     ) {
         this.commandRegistry = modules.commands;
         this.connectorRegistry = modules.connectors;

@@ -18,6 +18,7 @@ import type {
     ConnectorCapabilities,
     ConnectorFile,
     ConnectorMessage,
+    ConnectorRecipient,
     FileReference,
     MessageContext,
     MessageHandler
@@ -25,6 +26,7 @@ import type {
 import type { AuthStore } from "../../auth/store.js";
 import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
+import { connectorKeyTargetIdResolve } from "../../engine/modules/connectors/connectorKeyTargetIdResolve.js";
 import { getLogger } from "../../log.js";
 import { useAuthStoreState } from "./authState.js";
 import { markdownToWhatsAppText } from "./markdownToWhatsAppText.js";
@@ -111,7 +113,8 @@ export class WhatsAppConnector implements Connector {
         };
     }
 
-    async sendMessage(targetId: string, message: ConnectorMessage): Promise<void> {
+    async sendMessage(recipient: ConnectorRecipient, message: ConnectorMessage): Promise<void> {
+        const targetId = connectorKeyTargetIdResolve("whatsapp", recipient.connectorKey);
         logger.debug(
             `event: sendMessage() called targetId=${targetId} hasText=${!!message.text} fileCount=${message.files?.length ?? 0}`
         );
@@ -149,7 +152,8 @@ export class WhatsAppConnector implements Connector {
         }
     }
 
-    startTyping(targetId: string): () => void {
+    startTyping(recipient: ConnectorRecipient): () => void {
+        const targetId = connectorKeyTargetIdResolve("whatsapp", recipient.connectorKey);
         if (!this.socket || !this.isAllowedTarget(targetId, "startTyping")) {
             return () => undefined;
         }
@@ -164,7 +168,8 @@ export class WhatsAppConnector implements Connector {
         };
     }
 
-    async setReaction(targetId: string, messageId: string, reaction: string): Promise<void> {
+    async setReaction(recipient: ConnectorRecipient, messageId: string, reaction: string): Promise<void> {
+        const targetId = connectorKeyTargetIdResolve("whatsapp", recipient.connectorKey);
         if (!this.socket || !this.isAllowedTarget(targetId, "setReaction")) {
             return;
         }

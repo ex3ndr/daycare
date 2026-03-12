@@ -14,7 +14,11 @@ describe("agentPathTargetResolve", () => {
             "/owner-1/telegram/channel-1/user-2"
         );
 
-        expect(resolved).toEqual({ connector: "telegram", targetId: "channel-1/user-2" });
+        expect(resolved).toEqual({
+            connector: "telegram",
+            targetId: "channel-1/user-2",
+            recipient: { connectorKey: "telegram:channel-1/user-2" }
+        });
     });
 
     it("falls back to legacy channel key for private channel/user hints", async () => {
@@ -27,7 +31,11 @@ describe("agentPathTargetResolve", () => {
             "/owner-1/telegram/123/123"
         );
 
-        expect(resolved).toEqual({ connector: "telegram", targetId: "123" });
+        expect(resolved).toEqual({
+            connector: "telegram",
+            targetId: "123",
+            recipient: { connectorKey: "telegram:123" }
+        });
     });
 
     it("uses connector prefix fallback when no path hint is provided", async () => {
@@ -35,7 +43,11 @@ describe("agentPathTargetResolve", () => {
 
         const resolved = await agentPathTargetResolve(storage, "owner-1", { connectorName: "telegram" });
 
-        expect(resolved).toEqual({ connector: "telegram", targetId: "channel-3/user-9" });
+        expect(resolved).toEqual({
+            connector: "telegram",
+            targetId: "channel-3/user-9",
+            recipient: { connectorKey: "telegram:channel-3/user-9" }
+        });
     });
 });
 

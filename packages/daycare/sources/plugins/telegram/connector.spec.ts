@@ -62,6 +62,10 @@ vi.mock("node-telegram-bot-api", () => {
 
 import { TelegramConnector } from "./connector.js";
 
+function recipient(targetId: string) {
+    return { connectorKey: `telegram:${targetId}` };
+}
+
 describe("TelegramConnector commands", () => {
     beforeEach(() => {
         telegramInstances.length = 0;
@@ -918,7 +922,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        const draft = await connector.createDraft?.("123", {
+        const draft = await connector.createDraft?.(recipient("123"), {
             text: "Working",
             replyToMessageId: "77"
         });
@@ -967,7 +971,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        const draft = await connector.resumeDraft?.("123", { type: "telegram", messageId: "101" });
+        const draft = await connector.resumeDraft?.(recipient("123"), { type: "telegram", messageId: "101" });
 
         expect(draft).toBeTruthy();
         const bot = telegramInstances[0];
@@ -1006,12 +1010,14 @@ describe("TelegramConnector file uploads", () => {
         });
 
         await expect(
-            connector.createDraft?.("123", {
+            connector.createDraft?.(recipient("123"), {
                 text: "Working",
                 replyToMessageId: "77"
             })
         ).resolves.toBeNull();
-        await expect(connector.resumeDraft?.("123", { type: "telegram", messageId: "101" })).resolves.toBeNull();
+        await expect(
+            connector.resumeDraft?.(recipient("123"), { type: "telegram", messageId: "101" })
+        ).resolves.toBeNull();
 
         const bot = telegramInstances[0];
         expect(bot).toBeTruthy();
@@ -1032,7 +1038,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("123/123", { text: "hello" });
+        await connector.sendMessage(recipient("123/123"), { text: "hello" });
 
         const bot = telegramInstances[0];
         expect(bot).toBeTruthy();
@@ -1055,7 +1061,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("-100123/123", { text: "hello group" });
+        await connector.sendMessage(recipient("-100123/123"), { text: "hello group" });
 
         const bot = telegramInstances[0];
         expect(bot).toBeTruthy();
@@ -1077,7 +1083,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("123", {
+        await connector.sendMessage(recipient("123"), {
             text: "Here's the file",
             files: [
                 {
@@ -1114,7 +1120,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("123", {
+        await connector.sendMessage(recipient("123"), {
             text: "Voice note",
             files: [
                 {
@@ -1152,7 +1158,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("123", {
+        await connector.sendMessage(recipient("123"), {
             text: "Use button below to authenticate.",
             replyToMessageId: "77",
             buttons: [
@@ -1200,7 +1206,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("123", {
+        await connector.sendMessage(recipient("123"), {
             text: "Open Daycare",
             buttons: [{ type: "url", text: "Open", url: "https://daycare.dev/auth#token" }]
         });
@@ -1238,7 +1244,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("123", {
+        await connector.sendMessage(recipient("123"), {
             text: "Open configured app",
             buttons: [{ type: "url", text: "Open", url: "https://app.example.com/auth#token" }]
         });
@@ -1277,7 +1283,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("-100321/123", {
+        await connector.sendMessage(recipient("-100321/123"), {
             text: "Open configured app",
             buttons: [{ type: "url", text: "Open", url: "https://app.example.com/auth#token" }]
         });
@@ -1314,7 +1320,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("123", {
+        await connector.sendMessage(recipient("123"), {
             text: "Open configured app in browser",
             buttons: [
                 {
@@ -1356,7 +1362,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("123", {
+        await connector.sendMessage(recipient("123"), {
             text: "Use button below to authenticate.",
             replyToMessageId: "77",
             buttons: [
@@ -1401,7 +1407,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("123", {
+        await connector.sendMessage(recipient("123"), {
             text: "Choose an option.",
             buttons: [
                 {
@@ -1444,7 +1450,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("123", {
+        await connector.sendMessage(recipient("123"), {
             text: "Pick one.",
             buttons: [
                 {
@@ -1501,7 +1507,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("-100123", {
+        await connector.sendMessage(recipient("-100123"), {
             text: "Group reply",
             replyToMessageId: "77"
         });
@@ -1532,7 +1538,7 @@ describe("TelegramConnector file uploads", () => {
             enableGracefulShutdown: false
         });
 
-        await connector.sendMessage("-100123/123", {
+        await connector.sendMessage(recipient("-100123/123"), {
             text: "Group reply",
             replyToMessageId: "77"
         });

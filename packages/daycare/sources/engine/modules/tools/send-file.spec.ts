@@ -33,7 +33,7 @@ describe("buildSendFileTool", () => {
 
         expect(sendMessage).toHaveBeenCalledTimes(1);
         expect(sendMessage).toHaveBeenCalledWith(
-            "123",
+            { connectorKey: "telegram:123" },
             expect.objectContaining({
                 files: [
                     expect.objectContaining({
@@ -167,7 +167,7 @@ describe("buildSendFileTool", () => {
 
         expect(sendMessage).toHaveBeenCalledTimes(1);
         expect(sendMessage).toHaveBeenCalledWith(
-            "456",
+            { connectorKey: "telegram:456" },
             expect.objectContaining({
                 files: [
                     expect.objectContaining({
@@ -186,7 +186,7 @@ type TestConnector = {
             modes: Array<"document" | "photo" | "video" | "voice">;
         };
     };
-    sendMessage: (targetId: string, message: unknown) => Promise<void>;
+    sendMessage: (recipient: { connectorKey: string }, message: unknown) => Promise<void>;
 };
 
 function contextBuild(options: {

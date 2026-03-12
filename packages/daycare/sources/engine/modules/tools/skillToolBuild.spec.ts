@@ -298,7 +298,10 @@ describe("skillToolBuild", () => {
             await tool.execute({ name: "scheduling" }, context, toolCall);
             // Allow fire-and-forget promise to resolve
             await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1));
-            expect(sendMessage).toHaveBeenCalledWith("c1", { text: "⚡ Skill loaded: scheduling" });
+            expect(sendMessage).toHaveBeenCalledWith(
+                { connectorKey: "telegram:c1" },
+                { text: "⚡ Skill loaded: scheduling" }
+            );
         } finally {
             await dirs.cleanup();
         }

@@ -3,6 +3,16 @@ import type { AgentPath } from "../../agents/ops/agentPathTypes.js";
 
 export type ConnectorTarget = AgentPath;
 
+export type ConnectorRecipient = {
+    connectorKey: string;
+};
+
+export type ConnectorResolvedTarget = {
+    connector: string;
+    targetId: string;
+    recipient: ConnectorRecipient;
+};
+
 export type ConnectorFileMode = "document" | "photo" | "video" | "voice";
 export type ConnectorFileDisposition = ConnectorFileMode | "auto";
 
@@ -93,10 +103,10 @@ export interface Connector {
     onMessage(handler: MessageHandler): MessageUnsubscribe;
     onCommand?: (handler: CommandHandler) => CommandUnsubscribe;
     updateCommands?: (commands: SlashCommandEntry[]) => void | Promise<void>;
-    sendMessage(targetId: string, message: ConnectorMessage): Promise<void>;
-    createDraft?: (targetId: string, message: ConnectorMessage) => Promise<ConnectorDraft | null>;
-    resumeDraft?: (targetId: string, reference: ConnectorDraftReference) => Promise<ConnectorDraft | null>;
-    startTyping?: (targetId: string) => () => void;
-    setReaction?: (targetId: string, messageId: string, reaction: string) => Promise<void>;
+    sendMessage(recipient: ConnectorRecipient, message: ConnectorMessage): Promise<void>;
+    createDraft?: (recipient: ConnectorRecipient, message: ConnectorMessage) => Promise<ConnectorDraft | null>;
+    resumeDraft?: (recipient: ConnectorRecipient, reference: ConnectorDraftReference) => Promise<ConnectorDraft | null>;
+    startTyping?: (recipient: ConnectorRecipient) => () => void;
+    setReaction?: (recipient: ConnectorRecipient, messageId: string, reaction: string) => Promise<void>;
     shutdown?: (reason?: string) => void | Promise<void>;
 }

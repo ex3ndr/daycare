@@ -59,7 +59,10 @@ describe("agentLoopRun", () => {
             )
         ).toBe(true);
         expect(connectorSend).toHaveBeenCalledTimes(1);
-        expect(connectorSend).toHaveBeenCalledWith("channel-1", expect.objectContaining({ text: "Finished" }));
+        expect(connectorSend).toHaveBeenCalledWith(
+            { connectorKey: "telegram:channel-1" },
+            expect.objectContaining({ text: "Finished" })
+        );
         const firstAssistant = result.historyRecords.find(
             (record): record is Extract<(typeof result.historyRecords)[number], { type: "assistant_message" }> =>
                 record.type === "assistant_message"
@@ -103,7 +106,7 @@ describe("agentLoopRun", () => {
         );
 
         expect(createDraft).toHaveBeenCalledWith(
-            "channel-1",
+            { connectorKey: "telegram:channel-1" },
             expect.objectContaining({ text: expect.stringContaining("Check status") })
         );
         expect(
@@ -189,7 +192,10 @@ describe("agentLoopRun", () => {
 
         await agentLoopRun(restoreOptions);
 
-        expect(resumeDraft).toHaveBeenCalledWith("channel-1", { type: "telegram", messageId: "101" });
+        expect(resumeDraft).toHaveBeenCalledWith(
+            { connectorKey: "telegram:channel-1" },
+            { type: "telegram", messageId: "101" }
+        );
         expect(finish).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining("Finished") }));
         expect(sendMessage).not.toHaveBeenCalled();
     });
@@ -393,7 +399,10 @@ describe("agentLoopRun", () => {
 
         expect(sawNonErrorComplete).toBe(true);
         expect(execute).not.toHaveBeenCalled();
-        expect(connectorSend).toHaveBeenCalledWith("channel-1", expect.objectContaining({ text: "Finished" }));
+        expect(connectorSend).toHaveBeenCalledWith(
+            { connectorKey: "telegram:channel-1" },
+            expect.objectContaining({ text: "Finished" })
+        );
     });
 
     it("emits token stats updates with cost from usage", async () => {
@@ -755,7 +764,9 @@ function inferenceRouterBuild(messages: AssistantMessage[]): InferenceRouter & {
     return { complete } as unknown as InferenceRouter & { complete: ReturnType<typeof vi.fn> };
 }
 
-function connectorBuild(sendMessage: (targetId: string, message: unknown) => Promise<void>): Connector {
+function connectorBuild(
+    sendMessage: (recipient: { connectorKey: string }, message: unknown) => Promise<void>
+): Connector {
     return {
         capabilities: { sendText: true },
         onMessage: () => () => undefined,

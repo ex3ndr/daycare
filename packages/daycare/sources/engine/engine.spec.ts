@@ -681,10 +681,13 @@ describe("Engine abort command", () => {
             expect(engine.agentSystem.abortInferenceForTarget).toHaveBeenCalledWith({
                 path: expect.stringMatching(/^\/[^/]+\/telegram$/)
             });
-            expect(sendMessage).toHaveBeenCalledWith("123", {
-                text: "Stopped current inference.",
-                replyToMessageId: "56"
-            });
+            expect(sendMessage).toHaveBeenCalledWith(
+                { connectorKey: "telegram:123" },
+                {
+                    text: "Stopped current inference.",
+                    replyToMessageId: "56"
+                }
+            );
             expect(postSpy).not.toHaveBeenCalled();
 
             await engine.modules.connectors.unregisterAll("test");

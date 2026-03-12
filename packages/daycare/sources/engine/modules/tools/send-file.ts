@@ -3,11 +3,13 @@ import { Type } from "@sinclair/typebox";
 
 import type {
     ConnectorFileDisposition,
+    ConnectorRecipient,
     FileReference,
     ToolDefinition,
     ToolExecutionContext,
     ToolResultContract
 } from "@/types";
+import { userConnectorKeyCreate } from "../../../storage/userConnectorKeyCreate.js";
 import { agentPathTargetResolve } from "../../agents/ops/agentPathTargetResolve.js";
 import { fileResolve } from "./fileResolve.js";
 
@@ -46,7 +48,7 @@ type SendFileArgs = {
 
 type SendFileDeferredPayload = {
     source: string;
-    targetId: string;
+    recipient: ConnectorRecipient;
     text: string | null;
     file: FileReference;
     sendAs: ConnectorFileDisposition | "auto";
@@ -131,8 +133,11 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
             );
             const messageText = typeof payload.text === "string" && payload.text.length > 0 ? payload.text : null;
 
-            const targetId = payload.channelId ?? target?.targetId;
-            if (!targetId) {
+            const recipient =
+                payload.channelId && source
+                    ? { connectorKey: userConnectorKeyCreate(source, payload.channelId) }
+                    : target?.recipient;
+            if (!recipient) {
                 throw new Error("Send file requires a user agent or explicit channelId.");
             }
 
@@ -149,7 +154,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
                 };
                 const deferredPayload: SendFileDeferredPayload = {
                     source,
-                    targetId,
+                    recipient,
                     text: messageText,
                     file,
                     sendAs
@@ -168,7 +173,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
                 };
             }
 
-            await connector.sendMessage(targetId, {
+            await connector.sendMessage(recipient, {
                 text: messageText,
                 files: [{ ...file, sendAs }]
             });
@@ -212,7 +217,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
             if (!connector) {
                 throw new Error(`Connector not loaded: ${p.source}`);
             }
-            await connector.sendMessage(p.targetId, {
+            await connector.sendMessage(p.recipient, {
                 text: p.text,
                 files: [{ ...p.file, sendAs: p.sendAs }]
             });
@@ -223,6 +228,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
 async function foregroundTargetResolve(context: ToolExecutionContext): Promise<{
     connector: string;
     targetId: string;
+    recipient: ConnectorRecipient;
 } | null> {
     const foregroundAgentId = context.agentSystem.agentFor(context.ctx, "most-recent-foreground");
     if (!foregroundAgentId) {

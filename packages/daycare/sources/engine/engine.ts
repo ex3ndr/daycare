@@ -3,7 +3,15 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import Docker from "dockerode";
 
-import type { AgentPath, Config, ConnectorMessage, ConnectorTarget, Context, MessageContext } from "@/types";
+import type {
+    AgentPath,
+    Config,
+    ConnectorMessage,
+    ConnectorResolvedTarget,
+    ConnectorTarget,
+    Context,
+    MessageContext
+} from "@/types";
 import { AppServer } from "../api/app-server/appServer.js";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
@@ -958,7 +966,7 @@ export class Engine {
         const contextLimit = this.config.current.settings.agents.emergencyContextLimit;
         const text = messageContextStatus({ usedTokens, contextLimit });
         try {
-            await connector.sendMessage(target.targetId, {
+            await connector.sendMessage(target.recipient, {
                 text,
                 replyToMessageId: context.messageId
             });
@@ -999,7 +1007,7 @@ export class Engine {
         const aborted = this.agentSystem.abortInferenceForTarget({ path });
         const text = aborted ? "Stopped current inference." : "No active inference to stop.";
         try {
-            await connector.sendMessage(target.targetId, {
+            await connector.sendMessage(target.recipient, {
                 text,
                 replyToMessageId: context.messageId
             });
@@ -1091,7 +1099,7 @@ export class Engine {
         return contextForUser({ userId });
     }
 
-    private async connectorTargetResolve(path: AgentPath): Promise<{ connector: string; targetId: string } | null> {
+    private async connectorTargetResolve(path: AgentPath): Promise<ConnectorResolvedTarget | null> {
         const connectorPath = connectorPathResolve(path);
         if (!connectorPath) {
             return null;
@@ -1105,14 +1113,22 @@ export class Engine {
             const exactKey = `${keyPrefix}${connectorPath.targetId}`;
             const exact = user.connectorKeys.find((entry) => entry.connectorKey === exactKey);
             if (exact) {
-                return { connector: connectorPath.connector, targetId: connectorPath.targetId };
+                return {
+                    connector: connectorPath.connector,
+                    targetId: connectorPath.targetId,
+                    recipient: { connectorKey: exact.connectorKey }
+                };
             }
             const legacyFallback = connectorPathLegacyTargetFallback(connectorPath.targetId);
             if (legacyFallback) {
                 const fallbackKey = `${keyPrefix}${legacyFallback}`;
                 const fallback = user.connectorKeys.find((entry) => entry.connectorKey === fallbackKey);
                 if (fallback) {
-                    return { connector: connectorPath.connector, targetId: legacyFallback };
+                    return {
+                        connector: connectorPath.connector,
+                        targetId: legacyFallback,
+                        recipient: { connectorKey: fallback.connectorKey }
+                    };
                 }
             }
         }
@@ -1124,7 +1140,7 @@ export class Engine {
         if (!targetId) {
             return null;
         }
-        return { connector: connectorPath.connector, targetId };
+        return { connector: connectorPath.connector, targetId, recipient: { connectorKey: connectorKey.connectorKey } };
     }
 
     /**

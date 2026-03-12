@@ -129,7 +129,11 @@ describe("agentLoopPendingPhaseResolve", () => {
                 toolName: "say",
                 toolResult: "deferred",
                 toolIsError: false,
-                deferredPayload: { connector: "telegram", targetId: "ch-1", text: "hello" }
+                deferredPayload: {
+                    connector: "telegram",
+                    recipient: { connectorKey: "telegram:ch-1" },
+                    text: "hello"
+                }
             },
             {
                 type: "rlm_tool_call",
@@ -148,7 +152,11 @@ describe("agentLoopPendingPhaseResolve", () => {
                 toolName: "send_file",
                 toolResult: "deferred",
                 toolIsError: false,
-                deferredPayload: { connector: "telegram", targetId: "ch-1", file: "data" }
+                deferredPayload: {
+                    connector: "telegram",
+                    recipient: { connectorKey: "telegram:ch-1" },
+                    file: "data"
+                }
             },
             {
                 type: "rlm_tool_call",
@@ -176,8 +184,14 @@ describe("agentLoopPendingPhaseResolve", () => {
         expect(pending?.type).toBe("tool_call");
         if (pending?.type === "tool_call") {
             expect(pending.persistedDeferredEntries).toEqual([
-                { toolName: "say", payload: { connector: "telegram", targetId: "ch-1", text: "hello" } },
-                { toolName: "send_file", payload: { connector: "telegram", targetId: "ch-1", file: "data" } }
+                {
+                    toolName: "say",
+                    payload: { connector: "telegram", recipient: { connectorKey: "telegram:ch-1" }, text: "hello" }
+                },
+                {
+                    toolName: "send_file",
+                    payload: { connector: "telegram", recipient: { connectorKey: "telegram:ch-1" }, file: "data" }
+                }
             ]);
         }
     });
