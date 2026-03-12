@@ -263,7 +263,7 @@ describe("Engine timezone mismatch handling", () => {
                 throw new Error("Expected message handler to be registered");
             }
 
-            await messageHandler({ text: "seed" }, { messageId: "seed-1" }, target);
+            await messageHandler({ text: "seed" }, { messageId: "seed-1", connectorKey: "telegram:123" }, target);
             await vi.advanceTimersByTimeAsync(100);
             postSpy.mockClear();
 
@@ -273,7 +273,11 @@ describe("Engine timezone mismatch handling", () => {
                 updatedAt: Date.now()
             });
 
-            await messageHandler({ text: "hello" }, { messageId: "msg-1", timezone: "America/New_York" }, target);
+            await messageHandler(
+                { text: "hello" },
+                { messageId: "msg-1", connectorKey: "telegram:123", timezone: "America/New_York" },
+                target
+            );
             await vi.advanceTimersByTimeAsync(100);
 
             expect(postSpy).toHaveBeenCalledTimes(1);
