@@ -13,7 +13,7 @@ function agentCreate(overrides: Partial<AgentListItem> & { agentId: string }): A
         kind: "agent",
         name: null,
         description: null,
-        connectorName: null,
+        connector: null,
         foreground: false,
         lifecycle: "active",
         createdAt: 1000,
@@ -36,7 +36,7 @@ describe("agentsStoreCreate", () => {
                 lifecycle: "active",
                 path: "/user-1/agent/primary",
                 description: null,
-                connectorName: null,
+                connector: null,
                 foreground: true,
                 createdAt: 1000,
                 updatedAt: 1000
@@ -55,7 +55,7 @@ describe("agentsStoreCreate", () => {
                 lifecycle: "active",
                 path: "/user-1/agent/primary",
                 description: null,
-                connectorName: null,
+                connector: null,
                 foreground: true,
                 createdAt: 1000,
                 updatedAt: 1000

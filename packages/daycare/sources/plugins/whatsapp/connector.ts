@@ -26,9 +26,8 @@ import type {
 import type { AuthStore } from "../../auth/store.js";
 import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
-import { connectorKeyValueResolve } from "../../engine/modules/connectors/connectorKeyValueResolve.js";
+import { connectorRecipientKeyResolve } from "../../engine/modules/connectors/connectorRecipientKeyResolve.js";
 import { getLogger } from "../../log.js";
-import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { useAuthStoreState } from "./authState.js";
 import { markdownToWhatsAppText } from "./markdownToWhatsAppText.js";
 
@@ -115,7 +114,7 @@ export class WhatsAppConnector implements Connector {
     }
 
     async sendMessage(recipient: ConnectorRecipient, message: ConnectorMessage): Promise<void> {
-        const phone = connectorKeyValueResolve("whatsapp", recipient.connectorKey);
+        const phone = connectorRecipientKeyResolve("whatsapp", recipient);
         logger.debug(
             `event: sendMessage() called phone=${phone} hasText=${!!message.text} fileCount=${message.files?.length ?? 0}`
         );
@@ -154,7 +153,7 @@ export class WhatsAppConnector implements Connector {
     }
 
     startTyping(recipient: ConnectorRecipient): () => void {
-        const phone = connectorKeyValueResolve("whatsapp", recipient.connectorKey);
+        const phone = connectorRecipientKeyResolve("whatsapp", recipient);
         if (!this.socket || !this.isAllowedPhoneAction(phone, "startTyping")) {
             return () => undefined;
         }
@@ -170,7 +169,7 @@ export class WhatsAppConnector implements Connector {
     }
 
     async setReaction(recipient: ConnectorRecipient, messageId: string, reaction: string): Promise<void> {
-        const phone = connectorKeyValueResolve("whatsapp", recipient.connectorKey);
+        const phone = connectorRecipientKeyResolve("whatsapp", recipient);
         if (!this.socket || !this.isAllowedPhoneAction(phone, "setReaction")) {
             return;
         }
@@ -313,7 +312,10 @@ export class WhatsAppConnector implements Connector {
         const path = agentPathConnector(phone, "whatsapp");
         const context: MessageContext = {
             messageId,
-            connectorKey: userConnectorKeyCreate("whatsapp", phone)
+            connector: {
+                name: "whatsapp",
+                key: phone
+            }
         };
 
         // Check for commands

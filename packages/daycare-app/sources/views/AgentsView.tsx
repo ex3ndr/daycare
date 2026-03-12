@@ -4,73 +4,13 @@ import { useCallback, useEffect } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
+import { agentDisplayName } from "@/modules/agents/agentDisplayName";
 import { useAgentsStore } from "@/modules/agents/agentsContext";
 import type { AgentListItem } from "@/modules/agents/agentsTypes";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 const CARD_SIZE = 120;
-
-/** Capitalizes the first letter of a string. */
-function capitalize(value: string): string {
-    return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-/** Well-known connector display names. */
-const CONNECTOR_NAMES: Record<string, string> = {
-    whatsapp: "WhatsApp",
-    telegram: "Telegram",
-    discord: "Discord",
-    slack: "Slack",
-    web: "Web Chat",
-    sms: "SMS",
-    email: "Email"
-};
-
-/** Derives a display name from agent metadata. */
-function agentDisplayName(agent: AgentListItem): string {
-    if (agent.name?.trim()) {
-        return capitalize(agent.name.trim());
-    }
-
-    const path = agent.path?.trim();
-    if (path) {
-        const segments = path.split("/").filter((s) => s.length > 0);
-
-        if (agent.kind === "connector" && segments.length >= 2) {
-            const connector = segments[1];
-            return CONNECTOR_NAMES[connector] ?? capitalize(connector);
-        }
-        if (agent.kind === "agent" && segments.length >= 3) {
-            return capitalize(segments[2]);
-        }
-        if (agent.kind === "app" && segments.length >= 3) {
-            return `App ${capitalize(segments[2])}`;
-        }
-        if (agent.kind === "supervisor") return "Supervisor";
-        if (agent.kind === "cron") return "Cron Task";
-        if (agent.kind === "task") return "Task";
-        if (agent.kind === "memory") return "Memory Worker";
-        if (agent.kind === "search") {
-            return `Memory Search #${segments[segments.length - 1]}`;
-        }
-        if (agent.kind === "sub") {
-            return `Subagent #${segments[segments.length - 1]}`;
-        }
-        if (agent.kind === "subuser") return "Subuser";
-    }
-
-    if (agent.kind === "connector") return "Connection";
-    if (agent.kind === "app") return "App Agent";
-    if (agent.kind === "supervisor") return "Supervisor";
-    if (agent.kind === "cron") return "Cron Task";
-    if (agent.kind === "task") return "Task";
-    if (agent.kind === "memory") return "Memory Worker";
-    if (agent.kind === "search") return "Memory Search";
-    if (agent.kind === "sub") return "Subagent";
-
-    return `Agent ${agent.agentId.slice(0, 8)}`;
-}
 
 type KindMeta = {
     icon: React.ComponentProps<typeof Octicons>["name"];

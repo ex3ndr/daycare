@@ -625,14 +625,6 @@ export class AgentSystem {
             return null;
         }
         candidates.sort((a, b) => {
-            const aConnector = a.config.connectorName;
-            const bConnector = b.config.connectorName;
-            const aPrefix = aConnector ? (aConnector === "telegram" ? "aa-telegram" : "bb-user") : "zz-other";
-            const bPrefix = bConnector ? (bConnector === "telegram" ? "aa-telegram" : "bb-user") : "zz-other";
-            if (aPrefix !== bPrefix) {
-                return aPrefix.localeCompare(bPrefix);
-            }
-
             const aStateRank = a.agent.state.state === "active" ? 0 : a.agent.state.state === "sleeping" ? 1 : 2;
             const bStateRank = b.agent.state.state === "active" ? 0 : b.agent.state.state === "sleeping" ? 1 : 2;
             if (aStateRank !== bStateRank) {
@@ -641,7 +633,17 @@ export class AgentSystem {
 
             const aTime = agentTimestampGet(a.agent.state.updatedAt);
             const bTime = agentTimestampGet(b.agent.state.updatedAt);
-            return bTime - aTime;
+            if (aTime !== bTime) {
+                return bTime - aTime;
+            }
+
+            const aCreatedAt = agentTimestampGet(a.agent.state.createdAt);
+            const bCreatedAt = agentTimestampGet(b.agent.state.createdAt);
+            if (aCreatedAt !== bCreatedAt) {
+                return bCreatedAt - aCreatedAt;
+            }
+
+            return a.ctx.agentId.localeCompare(b.ctx.agentId);
         });
         return candidates[0]?.ctx.agentId ?? null;
     }
@@ -839,30 +841,27 @@ export class AgentSystem {
         ctx: Context,
         creationConfig?: AgentCreationConfig
     ): Promise<AgentEntry | null> {
-        const connectorKey = creationConfig?.connectorKey?.trim() ?? "";
-        if (!connectorKey) {
+        const connector = creationConfig?.connector;
+        if (!connector?.name || !connector.key) {
             return null;
         }
-        const persistedByConnectorKey = await this.storage.agents.findForegroundByConnectorKey(
-            ctx.userId,
-            connectorKey
-        );
-        if (!persistedByConnectorKey) {
+        const persistedByConnector = await this.storage.agents.findForegroundByConnector(ctx.userId, connector);
+        if (!persistedByConnector) {
             return null;
         }
-        const loadedByConnectorKey = this.entries.get(persistedByConnectorKey.id);
-        if (loadedByConnectorKey) {
-            if (loadedByConnectorKey.ctx.userId !== ctx.userId) {
-                throw new Error(`Cannot resolve agent from another user: ${persistedByConnectorKey.id}`);
+        const loadedByConnector = this.entries.get(persistedByConnector.id);
+        if (loadedByConnector) {
+            if (loadedByConnector.ctx.userId !== ctx.userId) {
+                throw new Error(`Cannot resolve agent from another user: ${persistedByConnector.id}`);
             }
-            return loadedByConnectorKey;
+            return loadedByConnector;
         }
-        const restoredByConnectorKey = await this.restoreAgent(persistedByConnectorKey.id, { allowSleeping: true });
-        if (restoredByConnectorKey) {
-            if (restoredByConnectorKey.ctx.userId !== ctx.userId) {
-                throw new Error(`Cannot resolve agent from another user: ${persistedByConnectorKey.id}`);
+        const restoredByConnector = await this.restoreAgent(persistedByConnector.id, { allowSleeping: true });
+        if (restoredByConnector) {
+            if (restoredByConnector.ctx.userId !== ctx.userId) {
+                throw new Error(`Cannot resolve agent from another user: ${persistedByConnector.id}`);
             }
-            return restoredByConnectorKey;
+            return restoredByConnector;
         }
         return null;
     }
@@ -1387,8 +1386,7 @@ function agentConfigFromRecord(
         AgentDbRecord,
         | "kind"
         | "modelRole"
-        | "connectorName"
-        | "connectorKey"
+        | "connector"
         | "parentAgentId"
         | "foreground"
         | "name"
@@ -1400,8 +1398,7 @@ function agentConfigFromRecord(
     return {
         kind: record.kind,
         modelRole: record.modelRole,
-        connectorName: record.connectorName,
-        connectorKey: record.connectorKey,
+        connector: record.connector,
         parentAgentId: record.parentAgentId,
         foreground: record.foreground,
         name: record.name,
@@ -1422,8 +1419,7 @@ function configForCreation(
     return {
         kind,
         modelRole: creationConfig.modelRole === undefined ? modelRoleForKind(kind) : creationConfig.modelRole,
-        connectorName: creationConfig.connectorName === undefined ? null : creationConfig.connectorName,
-        connectorKey: creationConfig.connectorKey === undefined ? null : creationConfig.connectorKey,
+        connector: creationConfig.connector === undefined ? null : creationConfig.connector,
         parentAgentId: creationConfig.parentAgentId === undefined ? null : creationConfig.parentAgentId,
         foreground: creationConfig.foreground ?? kind === "connector",
         name: creationConfig.name ?? null,

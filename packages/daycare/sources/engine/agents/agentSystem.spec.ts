@@ -16,7 +16,6 @@ import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageOpen } from "../../storage/storageOpen.js";
-import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
 import { EngineEventBus } from "../ipc/events.js";
@@ -439,7 +438,10 @@ describe("AgentSystem", () => {
             await postAndAwait(harness.agentSystem, { descriptor }, { type: "reset", message: "init user" });
             const agentId = await agentIdForTarget(harness.agentSystem, { descriptor });
             const ctx = await harness.agentSystem.contextForAgentId(agentId);
-            const linked = await harness.storage.users.findByConnectorKey("telegram:connector-user-1");
+            const linked = await harness.storage.users.findByConnector({
+                name: "telegram",
+                key: "connector-user-1"
+            });
 
             expect(ctx).toBeTruthy();
             expect(linked?.id).toBe(ctx!.userId);
@@ -531,8 +533,7 @@ describe("AgentSystem", () => {
                 id: "telegram-agent",
                 userId: ownerCtx.userId,
                 kind: "connector",
-                connectorName: "telegram",
-                connectorKey: "telegram:stable-route",
+                connector: { name: "telegram", key: "stable-route" },
                 foreground: true,
                 path: agentPath(`/${ownerCtx.userId}/telegram/original-route`),
                 activeSessionId: null,
@@ -564,8 +565,7 @@ describe("AgentSystem", () => {
                 {
                     kind: "connector",
                     foreground: true,
-                    connectorName: "telegram",
-                    connectorKey: "telegram:stable-route"
+                    connector: { name: "telegram", key: "stable-route" }
                 }
             );
 
@@ -654,7 +654,7 @@ describe("AgentSystem", () => {
         }
     });
 
-    it("prefers active telegram foreground agents for most-recent-foreground strategy", async () => {
+    it("prefers the most recently updated foreground agent for most-recent-foreground strategy", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-agent-system-"));
         try {
             const harness = await harnessCreate(dir);
@@ -666,6 +666,7 @@ describe("AgentSystem", () => {
                 id: "tg-agent",
                 userId: ownerCtx.userId,
                 kind: "connector",
+                connector: { name: "telegram", key: "tg-ext" },
                 type: "user",
                 descriptor: { type: "user", connector: "telegram", userId: "tg-ext", channelId: "tg-ext" },
                 path: agentPath(`/${ownerCtx.userId}/telegram`),
@@ -691,6 +692,7 @@ describe("AgentSystem", () => {
                 id: "wa-agent",
                 userId: ownerCtx.userId,
                 kind: "connector",
+                connector: { name: "whatsapp", key: "wa-ext" },
                 type: "user",
                 descriptor: { type: "user", connector: "whatsapp", userId: "wa-ext", channelId: "wa-ext" },
                 path: agentPath(`/${ownerCtx.userId}/whatsapp`),
@@ -716,7 +718,7 @@ describe("AgentSystem", () => {
             await harness.agentSystem.start();
 
             const target = harness.agentSystem.agentFor(ownerCtx, "most-recent-foreground");
-            expect(target).toBe("tg-agent");
+            expect(target).toBe("wa-agent");
         } finally {
             await tempDirRemove(dir);
         }
@@ -1126,9 +1128,10 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentTargetInp
         return agentSystem.ownerCtxEnsure();
     }
     if (target.descriptor.type === "user") {
-        const user = await agentSystem.storage.resolveUserByConnectorKey(
-            userConnectorKeyCreate(target.descriptor.connector, target.descriptor.userId)
-        );
+        const user = await agentSystem.storage.resolveUserByConnector({
+            name: target.descriptor.connector,
+            key: target.descriptor.userId
+        });
         return contextForUser({ userId: user.id });
     }
     return agentSystem.ownerCtxEnsure();
@@ -1203,8 +1206,10 @@ function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
     return {
         kind: "connector",
         foreground: true,
-        connectorName: segments[1] ?? null,
-        connectorKey: segments[1] ? `${segments[1]}:${segments.slice(2).join("/") || segments[0] || ""}` : null
+        connector:
+            segments[1] && (segments.slice(2).join("/") || segments[0] || "")
+                ? { name: segments[1], key: segments.slice(2).join("/") || segments[0] || "" }
+                : null
     };
 }
 

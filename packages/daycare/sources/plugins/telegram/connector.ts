@@ -19,9 +19,8 @@ import type {
 } from "@/types";
 import { agentPathConnector } from "../../engine/agents/ops/agentPathBuild.js";
 import type { FileFolder } from "../../engine/files/fileFolder.js";
-import { connectorKeyValueResolve } from "../../engine/modules/connectors/connectorKeyValueResolve.js";
+import { connectorRecipientKeyResolve } from "../../engine/modules/connectors/connectorRecipientKeyResolve.js";
 import { getLogger } from "../../log.js";
-import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { markdownToTelegramHtml } from "./markdownToTelegramHtml.js";
 import { telegramMessageSplit } from "./telegramMessageSplit.js";
 import { telegramWebAppUrlMatch } from "./telegramWebAppUrlMatch.js";
@@ -164,7 +163,10 @@ export class TelegramConnector implements Connector {
             const path = agentPathConnector(telegramUserId, "telegram");
             const context: MessageContext = {
                 messageId: message.message_id ? String(message.message_id) : undefined,
-                connectorKey: telegramConnectorKeyBuild(channelId, telegramUserId)
+                connector: {
+                    name: "telegram",
+                    key: telegramRecipientKeyBuild(channelId, telegramUserId)
+                }
             };
 
             if (isCommand && rawText) {
@@ -229,7 +231,10 @@ export class TelegramConnector implements Connector {
             const path = agentPathConnector(telegramUserId, "telegram");
             const context: MessageContext = {
                 messageId: callbackQuery.message?.message_id ? String(callbackQuery.message.message_id) : undefined,
-                connectorKey: telegramConnectorKeyBuild(channelId, telegramUserId)
+                connector: {
+                    name: "telegram",
+                    key: telegramRecipientKeyBuild(channelId, telegramUserId)
+                }
             };
             const payload: ConnectorMessage = {
                 text: callbackQuery.data
@@ -296,7 +301,7 @@ export class TelegramConnector implements Connector {
     }
 
     async sendMessage(recipient: ConnectorRecipient, message: ConnectorMessage): Promise<void> {
-        const address = connectorKeyValueResolve("telegram", recipient.connectorKey);
+        const address = connectorRecipientKeyResolve("telegram", recipient);
         logger.debug(
             `event: sendMessage() called address=${address} hasText=${!!message.text} textLength=${message.text?.length ?? 0} fileCount=${message.files?.length ?? 0}`
         );
@@ -351,7 +356,7 @@ export class TelegramConnector implements Connector {
         if (!this.enableDrafts) {
             return null;
         }
-        const address = connectorKeyValueResolve("telegram", recipient.connectorKey);
+        const address = connectorRecipientKeyResolve("telegram", recipient);
         if (!this.isAllowedAddress(address, "createDraft")) {
             return null;
         }
@@ -386,7 +391,7 @@ export class TelegramConnector implements Connector {
         if (!this.enableDrafts) {
             return null;
         }
-        const address = connectorKeyValueResolve("telegram", recipient.connectorKey);
+        const address = connectorRecipientKeyResolve("telegram", recipient);
         if (!this.isAllowedAddress(address, "resumeDraft")) {
             return null;
         }
@@ -402,7 +407,7 @@ export class TelegramConnector implements Connector {
     }
 
     startTyping(recipient: ConnectorRecipient): () => void {
-        const address = connectorKeyValueResolve("telegram", recipient.connectorKey);
+        const address = connectorRecipientKeyResolve("telegram", recipient);
         if (!this.isAllowedAddress(address, "startTyping")) {
             return () => undefined;
         }
@@ -430,7 +435,7 @@ export class TelegramConnector implements Connector {
     }
 
     async setReaction(recipient: ConnectorRecipient, messageId: string, reaction: string): Promise<void> {
-        const address = connectorKeyValueResolve("telegram", recipient.connectorKey);
+        const address = connectorRecipientKeyResolve("telegram", recipient);
         if (!this.isAllowedAddress(address, "setReaction")) {
             return;
         }
@@ -1140,9 +1145,9 @@ function recoverLastUpdateId(content: string): number | null {
     return null;
 }
 
-function telegramConnectorKeyBuild(chatId: string, senderId: string): string {
+function telegramRecipientKeyBuild(chatId: string, senderId: string): string {
     const address = chatId === senderId ? senderId : `${chatId}/${senderId}`;
-    return userConnectorKeyCreate("telegram", address);
+    return address;
 }
 
 function telegramAddressPartsResolve(address: string): { chatId: string; senderId: string | null } {

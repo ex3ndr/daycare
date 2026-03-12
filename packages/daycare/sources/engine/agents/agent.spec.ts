@@ -24,7 +24,6 @@ import { configResolve } from "../../config/configResolve.js";
 import { sessionHistoryTable } from "../../schema.js";
 import { storageOpen } from "../../storage/storageOpen.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
-import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
 import { EngineEventBus } from "../ipc/events.js";
@@ -169,7 +168,7 @@ describe("Agent", () => {
 
             expect(result).toEqual({ type: "reset", ok: true });
             expect(sendMessage).toHaveBeenCalledWith(
-                { connectorKey: "telegram:channel-1/user-1" },
+                { name: "telegram", key: "channel-1/user-1" },
                 {
                     text: "🔄 Session reset.",
                     replyToMessageId: "42"
@@ -1197,12 +1196,15 @@ describe("Agent", () => {
             expect(result).toEqual({ type: "compact", ok: true });
             expect(complete).toHaveBeenCalledTimes(1);
             expect(receivedSessionId).toBe(beforeCompaction?.inferenceSessionId);
-            expect(startTyping).toHaveBeenCalledWith("user-1");
+            expect(startTyping).toHaveBeenCalledWith({ name: "telegram", key: "channel-1/user-1" });
             expect(stopTyping).toHaveBeenCalledTimes(1);
-            expect(sendMessage).toHaveBeenLastCalledWith("user-1", {
-                text: "Session compacted.",
-                replyToMessageId: "88"
-            });
+            expect(sendMessage).toHaveBeenLastCalledWith(
+                { name: "telegram", key: "channel-1/user-1" },
+                {
+                    text: "Session compacted.",
+                    replyToMessageId: "88"
+                }
+            );
 
             const state = await agentStateRead(
                 agentSystem.storage,
@@ -1307,10 +1309,13 @@ describe("Agent", () => {
             );
 
             expect(result).toEqual({ type: "compact", ok: false });
-            expect(sendMessage).toHaveBeenLastCalledWith("user-1", {
-                text: "Compaction produced an empty summary; context unchanged.",
-                replyToMessageId: "89"
-            });
+            expect(sendMessage).toHaveBeenLastCalledWith(
+                { name: "telegram", key: "channel-1/user-1" },
+                {
+                    text: "Compaction produced an empty summary; context unchanged.",
+                    replyToMessageId: "89"
+                }
+            );
 
             await connectorRegistry.unregisterAll("test");
         } finally {
@@ -1473,7 +1478,7 @@ describe("Agent", () => {
             expect(result).toEqual({ type: "message", responseText: "after compaction" });
             expect(complete).toHaveBeenCalledTimes(3);
             expect(sendMessage).toHaveBeenCalledWith(
-                { connectorKey: "telegram:channel-1/user-1" },
+                { name: "telegram", key: "channel-1/user-1" },
                 {
                     text: "⏳ Compacting session context. I'll continue shortly.",
                     replyToMessageId: "90"
@@ -2196,7 +2201,7 @@ describe("Agent", () => {
             const restoreResult = await postAndAwait(agentSystem, { agentId }, { type: "restore" });
             expect(restoreResult).toEqual({ type: "restore", ok: true });
             expect(sendMessage).toHaveBeenCalledWith(
-                "user-1",
+                { name: "telegram", key: "channel-1/user-1" },
                 expect.objectContaining({
                     text: "continued after restart"
                 })
@@ -2733,7 +2738,7 @@ describe("Agent", () => {
             expect(restoredSession?.resetMessage).toBe("Session restore failed - starting from scratch.");
 
             expect(sendMessage).toHaveBeenCalledWith(
-                "user-1",
+                { name: "telegram", key: "channel-1/user-1" },
                 expect.objectContaining({
                     text: "Session restore failed - starting from scratch."
                 })
@@ -2881,9 +2886,10 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentTargetInp
         return agentSystem.ownerCtxEnsure();
     }
     if (target.descriptor.type === "user") {
-        const user = await agentSystem.storage.resolveUserByConnectorKey(
-            userConnectorKeyCreate(target.descriptor.connector, target.descriptor.userId)
-        );
+        const user = await agentSystem.storage.resolveUserByConnector({
+            name: target.descriptor.connector,
+            key: target.descriptor.userId
+        });
         return contextForUser({ userId: user.id });
     }
     return agentSystem.ownerCtxEnsure();
@@ -2963,8 +2969,10 @@ function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
     return {
         kind: "connector",
         foreground: true,
-        connectorName: segments[1] ?? null,
-        connectorKey: segments[1] ? `${segments[1]}:${segments.slice(2).join("/") || segments[0] || ""}` : null
+        connector:
+            segments[1] && (segments.slice(2).join("/") || segments[0] || "")
+                ? { name: segments[1], key: segments.slice(2).join("/") || segments[0] || "" }
+                : null
     };
 }
 
@@ -2973,8 +2981,7 @@ function agentConfigFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): Age
     return {
         kind: creation.kind,
         modelRole: creation.modelRole ?? null,
-        connectorName: creation.connectorName ?? null,
-        connectorKey: creation.connectorKey ?? null,
+        connector: creation.connector ?? null,
         parentAgentId: creation.parentAgentId ?? null,
         foreground: creation.foreground ?? creation.kind === "connector",
         name: creation.name ?? null,

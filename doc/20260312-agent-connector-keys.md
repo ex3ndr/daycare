@@ -1,29 +1,35 @@
-# Agent Connector Keys
+# Agent Connector Identity
 
 ## Summary
-- Foreground connector agents now persist `config.connectorKey` as explicit recipient metadata.
-- Incoming connector callbacks canonicalize user scope from `MessageContext.connectorKey`, not from path suffix parsing.
-- Connectors emit the plain connector route path while `connectorKey` carries the recipient identity.
-- Runtime connectors now send `connectorKey`, and connector ingress prefers that explicit identity over route-derived resolution.
-- Connector slash commands and app-link replies now reuse resolved connector identity instead of reparsing user scope from route paths.
-- Outgoing connector sends, drafts, typing, and reactions now resolve recipients from stored agent config or explicit message context.
-- The storage migration backfills `agents.connector_key` once for legacy rows and only uses the single-key fallback when every historical connector-agent version for that user stays compatible with the same key.
+- Runtime connector identity now uses `connector: { name, key }` instead of namespaced `connectorKey` strings.
+- `MessageContext`, agent config, tool payloads, plugin prompt context, and connector send/draft/reaction APIs all carry the structured connector object.
+- Foreground connector agents persist `connector_name` and raw `connector_key` separately, so multiple connectors can reuse the same key value safely.
+- Foreground agent fallbacks now choose the most recently active foreground agent instead of preferring Telegram by connector name.
+- Incoming connector callbacks resolve users only from `MessageContext.connector`, never from route path parsing.
+- The `users` table remains the only legacy exception: `user_connector_keys.connector_key` still stores namespaced strings internally, but that format is hidden behind `UsersRepository`.
+- The backfill migration now writes raw agent `connector_key` values and only uses the single-key fallback when every historical connector-agent version for that user is compatible with the same raw key.
 
 ## Flow
 ```mermaid
 flowchart TD
-    A[Incoming connector callback] --> B[MessageContext.connectorKey]
-    B --> C[Resolve user by connectorKey]
-    C --> D{Existing foreground agent for connectorKey}
+    A[Incoming connector callback] --> B[MessageContext.connector name+key]
+    B --> C[UsersRepository resolves internal user from legacy user_connector_keys]
+    C --> D{Existing foreground agent for user plus connector}
     D -->|yes| E[Reuse stored opaque agent path]
-    D -->|no| F[Replace only path owner segment]
-    E --> G[Create or restore agent with connectorName and connectorKey]
+    D -->|no| F[Create or restore agent with connector_name and raw connector_key]
+    E --> G[Runtime keeps path opaque]
     F --> G
-    G --> H[Foreground tools and command handlers use stored connector metadata]
-    H --> I[Connector receives recipient.connectorKey]
+    G --> H[Tools commands and app server reuse config.connector or context.connector]
+    H --> I{Need fallback foreground target}
+    I -->|yes| J[Pick active foreground by state plus updatedAt]
+    I -->|no| K[Use explicit connector identity]
+    J --> L[Connector receives recipient name+key]
+    K --> L
 ```
 
 ## Why
 - `AgentPath` remains an opaque routing key instead of a hidden source of recipient identity.
-- Connector recipient resolution becomes deterministic for users with multiple keys on the same connector.
+- Connector identity is explicit at every runtime boundary, so the same raw key can exist on multiple connectors without ambiguity.
+- Foreground fallbacks now follow real activity ordering rather than connector-specific priority rules.
+- Legacy namespaced user connector keys stay isolated inside the user repository instead of leaking into app, engine, tool, or connector code.
 - Legacy path parsing is isolated to the one-time storage migration instead of living in runtime message handling.

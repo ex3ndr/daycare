@@ -1,3 +1,4 @@
+import type { AgentConnectorIdentity } from "@/modules/agents/agentsTypes";
 import type { WorkspaceConfig } from "@/modules/config/configTypes";
 
 /**
@@ -11,7 +12,7 @@ export type SyncAgentPayload = {
     kind?: string;
     name?: string | null;
     description?: string | null;
-    connectorName?: string | null;
+    connector?: AgentConnectorIdentity | null;
     foreground?: boolean;
     lifecycle?: string;
     createdAt?: number;

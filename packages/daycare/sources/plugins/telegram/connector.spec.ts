@@ -63,7 +63,7 @@ vi.mock("node-telegram-bot-api", () => {
 import { TelegramConnector } from "./connector.js";
 
 function recipient(address: string) {
-    return { connectorKey: `telegram:${address}` };
+    return { name: "telegram", key: address };
 }
 
 describe("TelegramConnector commands", () => {
@@ -103,7 +103,7 @@ describe("TelegramConnector commands", () => {
         expect(commandHandler).toHaveBeenCalledTimes(1);
         const [command, context, target] = commandHandler.mock.calls[0] as [string, MessageContext, string];
         expect(command).toBe("/reset");
-        expect(context).toMatchObject({ messageId: "55", connectorKey: "telegram:123" });
+        expect(context).toMatchObject({ messageId: "55", connector: { name: "telegram", key: "123" } });
         expect(target).toBe("/123/telegram");
     });
 
@@ -174,7 +174,7 @@ describe("TelegramConnector callback queries", () => {
         expect(messageHandler).toHaveBeenCalledTimes(1);
         const [payload, context, target] = messageHandler.mock.calls[0] as [{ text: string }, MessageContext, string];
         expect(payload.text).toBe("approve_request");
-        expect(context).toMatchObject({ messageId: "66", connectorKey: "telegram:123" });
+        expect(context).toMatchObject({ messageId: "66", connector: { name: "telegram", key: "123" } });
         expect(target).toBe("/123/telegram");
     });
 
@@ -308,7 +308,7 @@ describe("TelegramConnector incoming documents", () => {
                 size: 128
             }
         ]);
-        expect(context).toMatchObject({ messageId: "55", connectorKey: "telegram:123" });
+        expect(context).toMatchObject({ messageId: "55", connector: { name: "telegram", key: "123" } });
         expect(target).toBe("/123/telegram");
     });
 
@@ -413,7 +413,7 @@ describe("TelegramConnector incoming voice", () => {
                 size: 256
             }
         ]);
-        expect(context).toMatchObject({ messageId: "57", connectorKey: "telegram:123" });
+        expect(context).toMatchObject({ messageId: "57", connector: { name: "telegram", key: "123" } });
         expect(target).toBe("/123/telegram");
     });
 });
@@ -1045,6 +1045,24 @@ describe("TelegramConnector file uploads", () => {
         expect(bot!.sendMessage).toHaveBeenCalledTimes(1);
         const sendCall = bot!.sendMessage.mock.calls[0];
         expect(sendCall?.[0]).toBe("123");
+    });
+
+    it("rejects recipients from another connector", async () => {
+        const fileStore = { saveFromPath: vi.fn() } as unknown as FileFolder;
+        const connector = new TelegramConnector({
+            token: "token",
+            allowedUids: ["123"],
+            polling: false,
+            clearWebhook: false,
+            statePath: null,
+            fileStore,
+            dataDir: "/tmp",
+            enableGracefulShutdown: false
+        });
+
+        await expect(connector.sendMessage({ name: "whatsapp", key: "123" }, { text: "hello" })).rejects.toThrow(
+            "Connector recipient does not match connector telegram: whatsapp"
+        );
     });
 
     it("allows group composite targets by sender uid in private mode", async () => {

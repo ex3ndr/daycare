@@ -5,6 +5,7 @@ import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
 import { ItemList } from "@/components/ItemList";
 import { PageHeader } from "@/components/PageHeader";
+import { agentDisplayName } from "@/modules/agents/agentDisplayName";
 import { useAgentsStore } from "@/modules/agents/agentsContext";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { costsBreakdownByAgent } from "@/modules/costs/costsBreakdownByAgent";
@@ -66,8 +67,7 @@ export function CostsView() {
     const agentNames = useMemo(() => {
         const map = new Map<string, string>();
         for (const agent of agents) {
-            const name = agent.name?.trim() || agent.path?.trim() || agent.agentId.slice(0, 8);
-            map.set(agent.agentId, name);
+            map.set(agent.agentId, agentDisplayName(agent));
         }
         return map;
     }, [agents]);
