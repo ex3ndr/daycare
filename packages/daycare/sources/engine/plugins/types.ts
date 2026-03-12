@@ -1,6 +1,6 @@
 import type { Logger } from "pino";
 import type { ZodType } from "zod";
-import type { AgentConfig, AgentPath } from "@/types";
+import type { AgentConfig, AgentPath, ConnectorIdentity } from "@/types";
 import type { AuthStore } from "../../auth/store.js";
 import type { PluginInstanceSettings, SettingsConfig } from "../../settings.js";
 import type { Context } from "../agents/context.js";
@@ -38,7 +38,7 @@ export type PluginSystemPromptContext = {
     ctx: Context;
     path?: AgentPath;
     config?: AgentConfig;
-    connectorKey?: string;
+    connector?: ConnectorIdentity;
     userDownloadsDir?: string;
 };
 

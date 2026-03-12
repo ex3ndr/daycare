@@ -106,7 +106,7 @@ describe("AppEmailAuth", () => {
         const storage = await storageOpenTest();
         activeStorages.push(storage);
         const existing = await storage.users.create({
-            connectorKey: userConnectorKeyCreate("email", "person@example.com")
+            connector: { name: "email", key: "person@example.com" }
         });
         const auth = new AppEmailAuth({
             db: storage.db,

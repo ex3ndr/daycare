@@ -1,4 +1,4 @@
-import type { AgentKind, AgentLifecycleState, AgentPath, SessionPermissions } from "@/types";
+import type { AgentKind, AgentLifecycleState, AgentPath, ConnectorIdentity, SessionPermissions } from "@/types";
 import type { TaskParameter } from "../engine/modules/tasks/taskParameterTypes.js";
 import type { SignalSource } from "../engine/signals/signalTypes.js";
 import type { ModelRoleKey } from "../settings.js";
@@ -65,8 +65,7 @@ export type AgentDbRecord = {
     path: AgentPath;
     kind: AgentKind;
     modelRole: ModelRoleKey | null;
-    connectorName: string | null;
-    connectorKey: string | null;
+    connector: ConnectorIdentity | null;
     parentAgentId: string | null;
     foreground: boolean;
     name: string | null;
@@ -730,7 +729,7 @@ export type CreateUserInput = {
     emoji?: string | null;
     createdAt?: number;
     updatedAt?: number;
-    connectorKey?: string;
+    connector?: ConnectorIdentity;
 };
 
 export type SystemPromptScope = "global" | "user";

@@ -3,7 +3,6 @@ import path from "node:path";
 
 import { z } from "zod";
 import type { PluginOnboardingApi } from "@/types";
-import { connectorKeyValueResolve } from "../../engine/modules/connectors/connectorKeyValueResolve.js";
 import { definePlugin } from "../../engine/plugins/types.js";
 import { TelegramConnector, type TelegramConnectorOptions } from "./connector.js";
 import { profileAvatarEnsure } from "./profileAvatarEnsure.js";
@@ -173,16 +172,15 @@ export const plugin = definePlugin({
                 profileMemory.clear();
             },
             systemPrompt: async (context) => {
-                const connector = context.config?.connectorName?.trim() ?? null;
+                const connector = context.config?.connector?.name?.trim() ?? null;
                 if (!context.config?.foreground || connector !== "telegram") {
                     return null;
                 }
 
-                const connectorKey = context.connectorKey?.trim() ?? "";
-                if (!connectorKey) {
+                const telegramAddress = context.connector?.key?.trim() ?? "";
+                if (!telegramAddress) {
                     return null;
                 }
-                const telegramAddress = connectorKeyValueResolve("telegram", connectorKey);
                 const targetSegments = telegramAddress
                     .split("/")
                     .map((segment) => segment.trim())

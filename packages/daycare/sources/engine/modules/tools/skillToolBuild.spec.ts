@@ -281,7 +281,7 @@ describe("skillToolBuild", () => {
                 config: {
                     kind: "connector",
                     modelRole: "user",
-                    connectorName: "telegram",
+                    connector: { name: "telegram", key: "c1" },
                     parentAgentId: null,
                     foreground: true,
                     name: null,
@@ -289,7 +289,6 @@ describe("skillToolBuild", () => {
                     systemPrompt: null,
                     workspaceDir: null
                 },
-                connectorKey: "telegram:c1",
                 connectorRegistry: {
                     get: () => ({ capabilities: { sendText: true }, sendMessage })
                 }
@@ -299,7 +298,7 @@ describe("skillToolBuild", () => {
             // Allow fire-and-forget promise to resolve
             await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1));
             expect(sendMessage).toHaveBeenCalledWith(
-                { connectorKey: "telegram:c1" },
+                { name: "telegram", key: "c1" },
                 { text: "⚡ Skill loaded: scheduling" }
             );
         } finally {
@@ -323,7 +322,7 @@ describe("skillToolBuild", () => {
                 config: {
                     kind: "cron",
                     modelRole: null,
-                    connectorName: null,
+                    connector: null,
                     parentAgentId: null,
                     foreground: false,
                     name: null,
@@ -383,7 +382,6 @@ function contextBuild(input?: {
     dockerEnabled?: boolean;
     path?: string;
     config?: ToolExecutionContext["agent"]["config"];
-    connectorKey?: string;
     connectorRegistry?: { get: (id: string) => unknown };
     agentSystem?: {
         agentIdForTarget?: (ctx: unknown, target: unknown) => Promise<string>;
@@ -417,12 +415,11 @@ function contextBuild(input?: {
     });
 
     const config = input?.config
-        ? { connectorKey: input?.connectorKey ?? null, ...input.config }
+        ? input.config
         : {
               kind: "connector",
               modelRole: "user",
-              connectorName: "telegram",
-              connectorKey: input?.connectorKey ?? null,
+              connector: { name: "telegram", key: "c1" },
               parentAgentId: null,
               foreground: true,
               name: null,
@@ -451,7 +448,7 @@ function contextBuild(input?: {
                 users: {
                     findById: async () => ({
                         id: "user-1",
-                        connectorKeys: input?.connectorKey ? [{ connectorKey: input.connectorKey }] : []
+                        connectorKeys: [{ connectorKey: "telegram:c1" }]
                     })
                 }
             },

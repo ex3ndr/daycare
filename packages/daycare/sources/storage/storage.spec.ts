@@ -13,6 +13,7 @@ import { permissionBuildUser } from "../engine/permissions/permissionBuildUser.j
 import { UserHome } from "../engine/users/userHome.js";
 import { cuid2Is } from "../utils/cuid2Is.js";
 import { databaseOpenTest } from "./databaseOpenTest.js";
+import type { UserConnectorKeyDbRecord } from "./databaseTypes.js";
 import { documentPathFind } from "./documentPathFind.js";
 import { documentPathResolve } from "./documentPathResolve.js";
 import { Storage } from "./storage.js";
@@ -99,7 +100,7 @@ describe("Storage", () => {
         const storage = await storageOpenTest();
         try {
             const results = await Promise.all(
-                Array.from({ length: 12 }).map(() => storage.resolveUserByConnectorKey("telegram:alice"))
+                Array.from({ length: 12 }).map(() => storage.resolveUserByConnector({ name: "telegram", key: "alice" }))
             );
             const firstId = results[0]?.id;
             expect(firstId).toBeTruthy();
@@ -108,7 +109,9 @@ describe("Storage", () => {
             const users = await storage.users.findMany();
             expect(users).toHaveLength(2);
             const resolved = users.find((entry) => entry.id === firstId);
-            expect(resolved?.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:alice"]);
+            expect(resolved?.connectorKeys.map((entry: UserConnectorKeyDbRecord) => entry.connectorKey)).toEqual([
+                "telegram:alice"
+            ]);
             expect(resolved?.nametag).toBeTruthy();
         } finally {
             storage.connection.close();
@@ -118,12 +121,14 @@ describe("Storage", () => {
     it("allows reusing connector key after user deletion", async () => {
         const storage = await storageOpenTest();
         try {
-            const first = await storage.resolveUserByConnectorKey("telegram:reusable");
+            const first = await storage.resolveUserByConnector({ name: "telegram", key: "reusable" });
             await storage.users.delete(first.id);
 
-            const second = await storage.resolveUserByConnectorKey("telegram:reusable");
+            const second = await storage.resolveUserByConnector({ name: "telegram", key: "reusable" });
             expect(second.id).not.toBe(first.id);
-            expect(second.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:reusable"]);
+            expect(second.connectorKeys.map((entry: UserConnectorKeyDbRecord) => entry.connectorKey)).toEqual([
+                "telegram:reusable"
+            ]);
         } finally {
             storage.connection.close();
         }
@@ -146,8 +151,7 @@ describe("Storage", () => {
                         path: `/${user.id}/cron/${agentId}`,
                         kind: "cron",
                         modelRole: null,
-                        connectorName: null,
-                        connectorKey: null,
+                        connector: null,
                         parentAgentId: null,
                         foreground: false,
                         name: "sync",

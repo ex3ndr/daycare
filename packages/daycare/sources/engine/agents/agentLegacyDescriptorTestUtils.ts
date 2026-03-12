@@ -1,5 +1,4 @@
 import type { AgentCreationConfig } from "@/types";
-import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import {
     agentPathAgent,
     agentPathConnector,
@@ -108,8 +107,10 @@ export function agentCreationConfigFromLegacyDescriptor(descriptor: AgentLegacyD
         return {
             kind: "connector",
             foreground: true,
-            connectorName: descriptor.connector,
-            connectorKey: userConnectorKeyCreate(descriptor.connector, connectorValue)
+            connector: {
+                name: descriptor.connector,
+                key: connectorValue
+            }
         };
     }
     if (descriptor.type === "cron") {

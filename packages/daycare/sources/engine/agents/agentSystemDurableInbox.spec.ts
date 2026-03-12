@@ -16,7 +16,6 @@ import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
-import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import { ConfigModule } from "../config/configModule.js";
 import type { Crons } from "../cron/crons.js";
 import { EngineEventBus } from "../ipc/events.js";
@@ -505,9 +504,10 @@ async function callerCtxResolve(agentSystem: AgentSystem, target: AgentTargetInp
         return agentSystem.ownerCtxEnsure();
     }
     if (target.descriptor.type === "user") {
-        const user = await agentSystem.storage.resolveUserByConnectorKey(
-            userConnectorKeyCreate(target.descriptor.connector, target.descriptor.userId)
-        );
+        const user = await agentSystem.storage.resolveUserByConnector({
+            name: target.descriptor.connector,
+            key: target.descriptor.userId
+        });
         return contextForUser({ userId: user.id });
     }
     return agentSystem.ownerCtxEnsure();
@@ -579,8 +579,10 @@ function creationConfigFromPath(path: AgentPath): AgentCreationConfig {
     return {
         kind: "connector",
         foreground: true,
-        connectorName: segments[1] ?? null,
-        connectorKey: segments[1] ? `${segments[1]}:${segments.slice(2).join("/") || segments[0] || ""}` : null
+        connector:
+            segments[1] && (segments.slice(2).join("/") || segments[0] || "")
+                ? { name: segments[1], key: segments.slice(2).join("/") || segments[0] || "" }
+                : null
     };
 }
 

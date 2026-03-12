@@ -58,7 +58,7 @@ const schema = Type.Object(
 type SayArgs = Static<typeof schema>;
 
 type SayDeferredPayload = {
-    connector: string;
+    connector: ConnectorRecipient;
     recipient: ConnectorRecipient;
     text: string;
     replyToMessageId?: string;
@@ -69,8 +69,10 @@ type SayDeferredPayload = {
 const sayResultSchema = Type.Object(
     {
         summary: Type.String(),
-        connector: Type.String(),
-        connectorKey: Type.String()
+        connector: Type.Object({
+            name: Type.String(),
+            key: Type.String()
+        })
     },
     { additionalProperties: false }
 );
@@ -102,9 +104,9 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
             if (!target) {
                 throw new Error("say is only available for foreground user agents.");
             }
-            const connector = context.connectorRegistry.get(target.connector);
+            const connector = context.connectorRegistry.get(target.name);
             if (!connector) {
-                throw new Error(`Connector not loaded: ${target.connector}`);
+                throw new Error(`Connector not loaded: ${target.name}`);
             }
             const text = payload.text.trim();
             if (!text) {
@@ -114,7 +116,7 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
             const files = await sayFilesResolve(
                 payload.files,
                 context,
-                target.connector,
+                target.name,
                 connector.capabilities.sendFiles?.modes
             );
 
@@ -130,8 +132,8 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
                     timestamp: Date.now()
                 };
                 const deferredPayload: SayDeferredPayload = {
-                    connector: target.connector,
-                    recipient: target.recipient,
+                    connector: target,
+                    recipient: target,
                     text,
                     replyToMessageId: context.messageContext.messageId,
                     buttons,
@@ -141,14 +143,13 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
                     toolMessage,
                     typedResult: {
                         summary,
-                        connector: target.connector,
-                        connectorKey: target.recipient.connectorKey
+                        connector: target
                     },
                     deferredPayload
                 };
             }
 
-            await connector.sendMessage(target.recipient, {
+            await connector.sendMessage(target, {
                 text,
                 replyToMessageId: context.messageContext.messageId,
                 buttons,
@@ -169,16 +170,15 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
                 toolMessage,
                 typedResult: {
                     summary,
-                    connector: target.connector,
-                    connectorKey: target.recipient.connectorKey
+                    connector: target
                 }
             };
         },
         executeDeferred: async (payload: unknown, context: ToolExecutionContext) => {
             const p = payload as SayDeferredPayload;
-            const connector = context.connectorRegistry.get(p.connector);
+            const connector = context.connectorRegistry.get(p.connector.name);
             if (!connector) {
-                throw new Error(`Connector not loaded: ${p.connector}`);
+                throw new Error(`Connector not loaded: ${p.connector.name}`);
             }
             await connector.sendMessage(p.recipient, {
                 text: p.text,

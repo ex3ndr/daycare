@@ -24,7 +24,7 @@ describe("agentStateWrite", () => {
                 {
                     kind: "cron",
                     modelRole: "user",
-                    connectorName: null,
+                    connector: null,
                     parentAgentId: null,
                     foreground: false,
                     name: "cron",
@@ -74,7 +74,7 @@ describe("agentStateWrite", () => {
                 {
                     kind: "cron",
                     modelRole: "user",
-                    connectorName: null,
+                    connector: null,
                     parentAgentId: null,
                     foreground: false,
                     name: "cron",

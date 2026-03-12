@@ -60,7 +60,7 @@ describe("agentLoopRun", () => {
         ).toBe(true);
         expect(connectorSend).toHaveBeenCalledTimes(1);
         expect(connectorSend).toHaveBeenCalledWith(
-            { connectorKey: "telegram:channel-1" },
+            { name: "telegram", key: "channel-1" },
             expect.objectContaining({ text: "Finished" })
         );
         const firstAssistant = result.historyRecords.find(
@@ -106,7 +106,7 @@ describe("agentLoopRun", () => {
         );
 
         expect(createDraft).toHaveBeenCalledWith(
-            { connectorKey: "telegram:channel-1" },
+            { name: "telegram", key: "channel-1" },
             expect.objectContaining({ text: expect.stringContaining("Check status") })
         );
         expect(
@@ -193,7 +193,7 @@ describe("agentLoopRun", () => {
         await agentLoopRun(restoreOptions);
 
         expect(resumeDraft).toHaveBeenCalledWith(
-            { connectorKey: "telegram:channel-1" },
+            { name: "telegram", key: "channel-1" },
             { type: "telegram", messageId: "101" }
         );
         expect(finish).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining("Finished") }));
@@ -400,7 +400,7 @@ describe("agentLoopRun", () => {
         expect(sawNonErrorComplete).toBe(true);
         expect(execute).not.toHaveBeenCalled();
         expect(connectorSend).toHaveBeenCalledWith(
-            { connectorKey: "telegram:channel-1" },
+            { name: "telegram", key: "channel-1" },
             expect.objectContaining({ text: "Finished" })
         );
     });
@@ -651,8 +651,7 @@ function optionsBuild(params?: {
 function configFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): {
     kind?: string;
     modelRole?: string | null;
-    connectorName?: string | null;
-    connectorKey?: string | null;
+    connector?: { name: string; key: string } | null;
     parentAgentId?: string | null;
     foreground: boolean;
     name: string | null;
@@ -664,8 +663,7 @@ function configFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): {
         return {
             kind: "connector",
             modelRole: "user",
-            connectorName: descriptor.connector,
-            connectorKey: `${descriptor.connector}:${descriptor.channelId}`,
+            connector: { name: descriptor.connector, key: descriptor.channelId },
             parentAgentId: null,
             foreground: true,
             name: null,
@@ -678,7 +676,7 @@ function configFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): {
         return {
             kind: "agent",
             modelRole: "user",
-            connectorName: null,
+            connector: null,
             parentAgentId: null,
             foreground: false,
             name: descriptor.name,
@@ -691,7 +689,7 @@ function configFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): {
         return {
             kind: descriptor.type === "subagent" ? "sub" : "search",
             modelRole: descriptor.type === "subagent" ? "subagent" : "memorySearch",
-            connectorName: null,
+            connector: null,
             parentAgentId: descriptor.parentAgentId,
             foreground: false,
             name: descriptor.name,
@@ -704,7 +702,7 @@ function configFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): {
         return {
             kind: "cron",
             modelRole: null,
-            connectorName: null,
+            connector: null,
             parentAgentId: null,
             foreground: false,
             name: descriptor.name ?? null,
@@ -717,7 +715,7 @@ function configFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): {
         return {
             kind: "memory",
             modelRole: "memory",
-            connectorName: null,
+            connector: null,
             parentAgentId: null,
             foreground: false,
             name: "memory-agent",
@@ -730,7 +728,7 @@ function configFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): {
         return {
             kind: "task",
             modelRole: "task",
-            connectorName: null,
+            connector: null,
             parentAgentId: null,
             foreground: false,
             name: null,
@@ -742,7 +740,7 @@ function configFromLegacyDescriptor(descriptor: AgentLegacyDescriptor): {
     return {
         kind: "agent",
         modelRole: "user",
-        connectorName: null,
+        connector: null,
         parentAgentId: null,
         foreground: false,
         name: null,
@@ -767,7 +765,7 @@ function inferenceRouterBuild(messages: AssistantMessage[]): InferenceRouter & {
 }
 
 function connectorBuild(
-    sendMessage: (recipient: { connectorKey: string }, message: unknown) => Promise<void>
+    sendMessage: (recipient: { name: string; key: string }, message: unknown) => Promise<void>
 ): Connector {
     return {
         capabilities: { sendText: true },

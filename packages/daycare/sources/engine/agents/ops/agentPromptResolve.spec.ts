@@ -7,7 +7,7 @@ describe("agentPromptResolve", () => {
         const resolved = await agentPromptResolve("/u1/agent/memory", {
             kind: "agent",
             modelRole: "user",
-            connectorName: null,
+            connector: null,
             parentAgentId: null,
             foreground: false,
             name: "memory",
@@ -26,7 +26,7 @@ describe("agentPromptResolve", () => {
         const resolved = await agentPromptResolve("/u1/memory/agent-1", {
             kind: "memory",
             modelRole: "memory",
-            connectorName: null,
+            connector: null,
             parentAgentId: null,
             foreground: false,
             name: "memory-agent",
@@ -43,7 +43,7 @@ describe("agentPromptResolve", () => {
         const resolved = await agentPromptResolve("/u1/search/ms-1", {
             kind: "search",
             modelRole: "memorySearch",
-            connectorName: null,
+            connector: null,
             parentAgentId: null,
             foreground: false,
             name: "memory-search",
@@ -60,7 +60,7 @@ describe("agentPromptResolve", () => {
         const resolved = await agentPromptResolve("/u1/supervisor", {
             kind: "supervisor",
             modelRole: "user",
-            connectorName: null,
+            connector: null,
             parentAgentId: null,
             foreground: false,
             name: "Supervisor",
@@ -77,7 +77,7 @@ describe("agentPromptResolve", () => {
         const resolved = await agentPromptResolve("/u1/telegram", {
             kind: "connector",
             modelRole: "user",
-            connectorName: "telegram",
+            connector: { name: "telegram", key: "123" },
             parentAgentId: null,
             foreground: true,
             name: null,
@@ -96,7 +96,7 @@ describe("agentPromptResolve", () => {
         const resolved = await agentPromptResolve("/u1/task/status", {
             kind: "task",
             modelRole: "task",
-            connectorName: null,
+            connector: null,
             parentAgentId: null,
             foreground: false,
             name: "status",

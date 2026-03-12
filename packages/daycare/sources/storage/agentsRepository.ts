@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import type { ConnectorIdentity } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { agentsTable } from "../schema.js";
 import { AsyncLock } from "../utils/lock.js";
@@ -10,8 +11,7 @@ type AgentCreateInput = Omit<
     | "path"
     | "kind"
     | "modelRole"
-    | "connectorName"
-    | "connectorKey"
+    | "connector"
     | "parentAgentId"
     | "foreground"
     | "name"
@@ -28,8 +28,7 @@ type AgentCreateInput = Omit<
             | "path"
             | "kind"
             | "modelRole"
-            | "connectorName"
-            | "connectorKey"
+            | "connector"
             | "parentAgentId"
             | "foreground"
             | "name"
@@ -156,10 +155,11 @@ export class AgentsRepository {
         return parsed.map((record) => agentClone(record));
     }
 
-    async findForegroundByConnectorKey(userId: string, connectorKey: string): Promise<AgentDbRecord | null> {
+    async findForegroundByConnector(userId: string, connector: ConnectorIdentity): Promise<AgentDbRecord | null> {
         const normalizedUserId = userId.trim();
-        const normalizedConnectorKey = connectorKey.trim();
-        if (!normalizedUserId || !normalizedConnectorKey) {
+        const normalizedConnectorName = connector.name.trim();
+        const normalizedConnectorKey = connector.key.trim();
+        if (!normalizedUserId || !normalizedConnectorName || !normalizedConnectorKey) {
             return null;
         }
         if (this.allAgentsLoaded) {
@@ -168,7 +168,8 @@ export class AgentsRepository {
                     (record) =>
                         record.userId === normalizedUserId &&
                         record.foreground &&
-                        record.connectorKey === normalizedConnectorKey
+                        record.connector?.name === normalizedConnectorName &&
+                        record.connector?.key === normalizedConnectorKey
                 )
                 .sort((left, right) => right.updatedAt - left.updatedAt)[0];
             return match ? agentClone(match) : null;
@@ -181,6 +182,7 @@ export class AgentsRepository {
                 and(
                     eq(agentsTable.userId, normalizedUserId),
                     eq(agentsTable.foreground, true),
+                    eq(agentsTable.connectorName, normalizedConnectorName),
                     eq(agentsTable.connectorKey, normalizedConnectorKey),
                     isNull(agentsTable.validTo)
                 )
@@ -219,8 +221,8 @@ export class AgentsRepository {
                     path: next.path,
                     kind: next.kind,
                     modelRole: next.modelRole,
-                    connectorName: next.connectorName,
-                    connectorKey: next.connectorKey,
+                    connectorName: next.connector?.name ?? null,
+                    connectorKey: next.connector?.key ?? null,
                     parentAgentId: next.parentAgentId,
                     foreground: next.foreground,
                     name: next.name,
@@ -244,8 +246,7 @@ export class AgentsRepository {
                             path: normalized.path,
                             kind: normalized.kind,
                             modelRole: normalized.modelRole,
-                            connectorName: normalized.connectorName,
-                            connectorKey: normalized.connectorKey,
+                            connector: normalized.connector,
                             parentAgentId: normalized.parentAgentId,
                             foreground: normalized.foreground,
                             name: normalized.name,
@@ -284,8 +285,8 @@ export class AgentsRepository {
                                 path: row.path,
                                 kind: row.kind,
                                 modelRole: row.modelRole,
-                                connectorName: row.connectorName,
-                                connectorKey: row.connectorKey,
+                                connectorName: row.connector?.name ?? null,
+                                connectorKey: row.connector?.key ?? null,
                                 parentAgentId: row.parentAgentId,
                                 foreground: row.foreground,
                                 name: row.name,
@@ -325,8 +326,7 @@ export class AgentsRepository {
                 path: data.path ?? current.path,
                 kind: data.kind ?? current.kind,
                 modelRole: data.modelRole === undefined ? current.modelRole : data.modelRole,
-                connectorName: data.connectorName === undefined ? current.connectorName : data.connectorName,
-                connectorKey: data.connectorKey === undefined ? current.connectorKey : data.connectorKey,
+                connector: data.connector === undefined ? current.connector : data.connector,
                 parentAgentId: data.parentAgentId === undefined ? current.parentAgentId : data.parentAgentId,
                 foreground: data.foreground ?? current.foreground,
                 name: data.name === undefined ? current.name : data.name,
@@ -369,8 +369,7 @@ export class AgentsRepository {
                         path: next.path,
                         kind: next.kind,
                         modelRole: next.modelRole,
-                        connectorName: next.connectorName,
-                        connectorKey: next.connectorKey,
+                        connector: next.connector,
                         parentAgentId: next.parentAgentId,
                         foreground: next.foreground,
                         name: next.name,
@@ -409,8 +408,8 @@ export class AgentsRepository {
                             path: row.path,
                             kind: row.kind,
                             modelRole: row.modelRole,
-                            connectorName: row.connectorName,
-                            connectorKey: row.connectorKey,
+                            connectorName: row.connector?.name ?? null,
+                            connectorKey: row.connector?.key ?? null,
                             parentAgentId: row.parentAgentId,
                             foreground: row.foreground,
                             name: row.name,
@@ -488,12 +487,11 @@ function agentCreateInputNormalize(input: AgentCreateInput, current: AgentDbReco
         typeof descriptor?.parentAgentId === "string" && descriptor.parentAgentId.trim().length > 0
             ? descriptor.parentAgentId.trim()
             : null;
-    const connectorName =
-        input.connectorName === undefined
-            ? (current?.connectorName ?? connectorNameFromDescriptor)
-            : input.connectorName;
-    const connectorKey =
-        input.connectorKey === undefined ? (current?.connectorKey ?? connectorKeyFromDescriptor) : input.connectorKey;
+    const connectorFromDescriptor =
+        connectorNameFromDescriptor && connectorKeyFromDescriptor
+            ? { name: connectorNameFromDescriptor, key: connectorKeyFromDescriptor }
+            : null;
+    const connector = input.connector === undefined ? (current?.connector ?? connectorFromDescriptor) : input.connector;
     const parentAgentId =
         input.parentAgentId === undefined
             ? (current?.parentAgentId ?? parentAgentIdFromDescriptor)
@@ -505,7 +503,7 @@ function agentCreateInputNormalize(input: AgentCreateInput, current: AgentDbReco
             id: input.id,
             userId: input.userId,
             kind,
-            connectorName
+            connectorName: connector?.name ?? null
         });
     const foreground = input.foreground ?? current?.foreground ?? kind === "connector";
     const modelRole =
@@ -520,8 +518,7 @@ function agentCreateInputNormalize(input: AgentCreateInput, current: AgentDbReco
         path,
         kind,
         modelRole,
-        connectorName,
-        connectorKey,
+        connector,
         parentAgentId,
         foreground,
         name,
@@ -602,8 +599,7 @@ function agentParse(row: typeof agentsTable.$inferSelect): AgentDbRecord {
         path: row.path as AgentDbRecord["path"],
         kind: row.kind as AgentDbRecord["kind"],
         modelRole: row.modelRole as AgentDbRecord["modelRole"],
-        connectorName: row.connectorName,
-        connectorKey: row.connectorKey,
+        connector: row.connectorName && row.connectorKey ? { name: row.connectorName, key: row.connectorKey } : null,
         parentAgentId: row.parentAgentId,
         foreground: row.foreground,
         name: row.name,
@@ -644,8 +640,8 @@ function agentRuntimeOnlyChangeIs(current: AgentDbRecord, next: AgentDbRecord): 
         current.path === next.path &&
         current.kind === next.kind &&
         current.modelRole === next.modelRole &&
-        current.connectorName === next.connectorName &&
-        current.connectorKey === next.connectorKey &&
+        current.connector?.name === next.connector?.name &&
+        current.connector?.key === next.connector?.key &&
         current.parentAgentId === next.parentAgentId &&
         current.foreground === next.foreground &&
         current.name === next.name &&

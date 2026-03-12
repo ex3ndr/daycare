@@ -33,7 +33,7 @@ single_connector_keys AS (
     SELECT
         key.user_id,
         split_part(key.connector_key, ':', 1) AS connector_name,
-        MIN(key.connector_key) AS connector_key
+        MIN(substring(key.connector_key FROM '^[^:]+:(.+)$')) AS connector_key
     FROM "user_connector_keys" AS key
     GROUP BY
         key.user_id,
@@ -53,11 +53,11 @@ single_connector_keys_consistent AS (
             related.user_id = single_key.user_id
             AND related.connector_name = single_key.connector_name
             AND related.path_connector_value IS NOT NULL
-            AND related.path_connector_value <> substring(single_key.connector_key FROM '^[^:]+:(.+)$')
+            AND related.path_connector_value <> single_key.connector_key
             AND NOT (
                 related.path_connector_value_first IS NOT NULL
                 AND related.path_connector_value_first = related.path_connector_value_second
-                AND related.path_connector_value_first = substring(single_key.connector_key FROM '^[^:]+:(.+)$')
+                AND related.path_connector_value_first = single_key.connector_key
             )
     )
 ),
@@ -67,7 +67,7 @@ resolved_connector_keys AS (
         agent.version,
         COALESCE(
             (
-                SELECT key.connector_key
+                SELECT substring(key.connector_key FROM '^[^:]+:(.+)$')
                 FROM "user_connector_keys" AS key
                 WHERE
                     key.user_id = agent.user_id
@@ -75,7 +75,7 @@ resolved_connector_keys AS (
                 LIMIT 1
             ),
             (
-                SELECT key.connector_key
+                SELECT substring(key.connector_key FROM '^[^:]+:(.+)$')
                 FROM "user_connector_keys" AS key
                 WHERE
                     key.user_id = agent.user_id

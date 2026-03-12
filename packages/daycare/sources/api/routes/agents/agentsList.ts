@@ -14,7 +14,7 @@ export type AgentsListResult = {
         kind: string;
         name: string | null;
         description: string | null;
-        connectorName: string | null;
+        connector: AgentListItem["connector"];
         foreground: boolean;
         lifecycle: AgentListItem["lifecycle"];
         createdAt: number;
@@ -36,7 +36,7 @@ export async function agentsList(input: AgentsListInput): Promise<AgentsListResu
             kind: agent.kind,
             name: agent.name,
             description: agent.description,
-            connectorName: agent.connectorName,
+            connector: agent.connector,
             foreground: agent.foreground,
             lifecycle: agent.lifecycle,
             createdAt: agent.createdAt,

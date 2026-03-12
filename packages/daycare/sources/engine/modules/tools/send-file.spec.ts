@@ -33,7 +33,7 @@ describe("buildSendFileTool", () => {
 
         expect(sendMessage).toHaveBeenCalledTimes(1);
         expect(sendMessage).toHaveBeenCalledWith(
-            { connectorKey: "telegram:123" },
+            { name: "telegram", key: "123" },
             expect.objectContaining({
                 files: [
                     expect.objectContaining({
@@ -135,7 +135,7 @@ describe("buildSendFileTool", () => {
                 config: {
                     kind: "cron",
                     modelRole: "system",
-                    connectorName: null,
+                    connector: null,
                     parentAgentId: null,
                     foreground: false,
                     name: "nightly",
@@ -158,8 +158,7 @@ describe("buildSendFileTool", () => {
             foregroundAgentRecord: {
                 id: "fg-agent",
                 path: "/123/telegram/456",
-                connectorName: "telegram",
-                connectorKey: "telegram:456"
+                connector: { name: "telegram", key: "456" }
             },
             connectorKeys: [{ connectorKey: "telegram:456" }]
         });
@@ -168,7 +167,7 @@ describe("buildSendFileTool", () => {
 
         expect(sendMessage).toHaveBeenCalledTimes(1);
         expect(sendMessage).toHaveBeenCalledWith(
-            { connectorKey: "telegram:456" },
+            { name: "telegram", key: "456" },
             expect.objectContaining({
                 files: [
                     expect.objectContaining({
@@ -187,7 +186,7 @@ type TestConnector = {
             modes: Array<"document" | "photo" | "video" | "voice">;
         };
     };
-    sendMessage: (recipient: { connectorKey: string }, message: unknown) => Promise<void>;
+    sendMessage: (recipient: { name: string; key: string }, message: unknown) => Promise<void>;
 };
 
 function contextBuild(options: {
@@ -199,16 +198,14 @@ function contextBuild(options: {
     foregroundAgentRecord?: {
         id: string;
         path: string;
-        connectorName: string | null;
-        connectorKey: string | null;
+        connector: { name: string; key: string } | null;
     } | null;
     agent?: {
         path: string;
         config: {
             kind: "connector" | "agent" | "cron" | "task" | "memory" | "sub" | "search";
             modelRole: "user" | "assistant" | "system";
-            connectorName: string | null;
-            connectorKey?: string | null;
+            connector: { name: string; key: string } | null;
             parentAgentId: string | null;
             foreground: boolean;
             name: string | null;
@@ -229,8 +226,7 @@ function contextBuild(options: {
             config: {
                 kind: "connector",
                 modelRole: "user",
-                connectorName: "telegram",
-                connectorKey: connectorKeys[0]?.connectorKey ?? null,
+                connector: { name: "telegram", key: "123" },
                 parentAgentId: null,
                 foreground: true,
                 name: null,

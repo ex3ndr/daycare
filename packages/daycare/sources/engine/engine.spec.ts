@@ -10,7 +10,6 @@ import { configResolve } from "../config/configResolve.js";
 import * as dockerContainersStaleRemoveModule from "../sandbox/docker/dockerContainersStaleRemove.js";
 import * as dockerImageIdResolveModule from "../sandbox/docker/dockerImageIdResolve.js";
 import { storageOpen } from "../storage/storageOpen.js";
-import { userConnectorKeyCreate } from "../storage/userConnectorKeyCreate.js";
 import { contextForUser } from "./agents/context.js";
 import { agentPathConnector } from "./agents/ops/agentPathBuild.js";
 import { Engine } from "./engine.js";
@@ -50,7 +49,7 @@ describe("Engine reset command", () => {
             }
 
             const target = agentPathConnector("123", "telegram");
-            const context: MessageContext = { messageId: "55", connectorKey: "telegram:123" };
+            const context: MessageContext = { messageId: "55", connector: { name: "telegram", key: "123" } };
 
             await commandHandler("/reset", context, target);
 
@@ -70,8 +69,7 @@ describe("Engine reset command", () => {
                 {
                     kind: "connector",
                     foreground: true,
-                    connectorName: "telegram",
-                    connectorKey: "telegram:123"
+                    connector: { name: "telegram", key: "123" }
                 }
             );
             expect(postTarget.agentId).toBe("agent-1");
@@ -133,10 +131,10 @@ describe("Engine reset command", () => {
 
             await messageHandler(
                 { text: "can you check downloads?" },
-                { messageId: "1", connectorKey: "telegram:123" },
+                { messageId: "1", connector: { name: "telegram", key: "123" } },
                 target
             );
-            await commandHandler("/reset", { messageId: "2", connectorKey: "telegram:123" }, target);
+            await commandHandler("/reset", { messageId: "2", connector: { name: "telegram", key: "123" } }, target);
             await vi.advanceTimersByTimeAsync(100);
 
             expect(postSpy).toHaveBeenCalledTimes(1);
@@ -155,8 +153,7 @@ describe("Engine reset command", () => {
                 {
                     kind: "connector",
                     foreground: true,
-                    connectorName: "telegram",
-                    connectorKey: "telegram:123"
+                    connector: { name: "telegram", key: "123" }
                 }
             );
             expect(postTarget.agentId).toBe("agent-1");
@@ -263,11 +260,15 @@ describe("Engine timezone mismatch handling", () => {
                 throw new Error("Expected message handler to be registered");
             }
 
-            await messageHandler({ text: "seed" }, { messageId: "seed-1", connectorKey: "telegram:123" }, target);
+            await messageHandler(
+                { text: "seed" },
+                { messageId: "seed-1", connector: { name: "telegram", key: "123" } },
+                target
+            );
             await vi.advanceTimersByTimeAsync(100);
             postSpy.mockClear();
 
-            const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
+            const user = await engine.storage.resolveUserByConnector({ name: "telegram", key: "123" });
             await engine.storage.users.update(user.id, {
                 timezone: "UTC",
                 updatedAt: Date.now()
@@ -275,7 +276,7 @@ describe("Engine timezone mismatch handling", () => {
 
             await messageHandler(
                 { text: "hello" },
-                { messageId: "msg-1", connectorKey: "telegram:123", timezone: "America/New_York" },
+                { messageId: "msg-1", connector: { name: "telegram", key: "123" }, timezone: "America/New_York" },
                 target
             );
             await vi.advanceTimersByTimeAsync(100);
@@ -705,7 +706,7 @@ describe("Engine abort command", () => {
             }
 
             const target = agentPathConnector("123", "telegram");
-            const context: MessageContext = { messageId: "56", connectorKey: "telegram:123" };
+            const context: MessageContext = { messageId: "56", connector: { name: "telegram", key: "123" } };
 
             await commandHandler("/abort", context, target);
 
@@ -713,7 +714,7 @@ describe("Engine abort command", () => {
                 agentId: "agent-1"
             });
             expect(sendMessage).toHaveBeenCalledWith(
-                { connectorKey: "telegram:123" },
+                { name: "telegram", key: "123" },
                 {
                     text: "Stopped current inference.",
                     replyToMessageId: "56"
@@ -763,7 +764,7 @@ describe("Engine compact command", () => {
             }
 
             const target = agentPathConnector("123", "telegram");
-            const context: MessageContext = { messageId: "57", connectorKey: "telegram:123" };
+            const context: MessageContext = { messageId: "57", connector: { name: "telegram", key: "123" } };
 
             await commandHandler("/compact", context, target);
 
@@ -783,8 +784,7 @@ describe("Engine compact command", () => {
                 {
                     kind: "connector",
                     foreground: true,
-                    connectorName: "telegram",
-                    connectorKey: "telegram:123"
+                    connector: { name: "telegram", key: "123" }
                 }
             );
             expect(postTarget.agentId).toBe("agent-1");
@@ -834,7 +834,7 @@ describe("Engine plugin commands", () => {
             }
 
             const target = agentPathConnector("123", "telegram");
-            const context: MessageContext = { messageId: "56", connectorKey: "telegram:123" };
+            const context: MessageContext = { messageId: "56", connector: { name: "telegram", key: "123" } };
             await commandHandler("/upgrade now", context, target);
 
             expect(pluginHandler).toHaveBeenCalledWith(
@@ -884,9 +884,9 @@ describe("Engine message batching", () => {
             }
 
             const target = agentPathConnector("123", "telegram");
-            await handler({ text: "first" }, { messageId: "1", connectorKey: "telegram:123" }, target);
+            await handler({ text: "first" }, { messageId: "1", connector: { name: "telegram", key: "123" } }, target);
             await vi.advanceTimersByTimeAsync(50);
-            await handler({ text: "second" }, { messageId: "2", connectorKey: "telegram:123" }, target);
+            await handler({ text: "second" }, { messageId: "2", connector: { name: "telegram", key: "123" } }, target);
             await vi.advanceTimersByTimeAsync(99);
             expect(postSpy).not.toHaveBeenCalled();
 
@@ -915,7 +915,7 @@ describe("Engine message batching", () => {
         }
     });
 
-    it("canonicalizes connector callbacks from connectorKey into the stored connector route", async () => {
+    it("canonicalizes connector callbacks from context.connector into the stored connector route", async () => {
         vi.useFakeTimers();
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         try {
@@ -948,7 +948,7 @@ describe("Engine message batching", () => {
 
             await handler(
                 { text: "hello" },
-                { messageId: "1", connectorKey: "telegram:channel-1/user-7" },
+                { messageId: "1", connector: { name: "telegram", key: "channel-1/user-7" } },
                 "/user-7/telegram" as AgentPath
             );
             await vi.advanceTimersByTimeAsync(100);
@@ -962,9 +962,7 @@ describe("Engine message batching", () => {
             const target = call[1] as { path: string };
             expect(target.path).toBe(`/${ctx.userId}/telegram`);
 
-            const user = await engine.storage.resolveUserByConnectorKey(
-                userConnectorKeyCreate("telegram", "channel-1/user-7")
-            );
+            const user = await engine.storage.resolveUserByConnector({ name: "telegram", key: "channel-1/user-7" });
             expect(user.id).toBe(ctx.userId);
 
             await engine.modules.connectors.unregisterAll("test");
@@ -975,7 +973,7 @@ describe("Engine message batching", () => {
         }
     });
 
-    it("uses connectorKey from context for connector user lookup without path suffixes", async () => {
+    it("uses context.connector for connector user lookup without path suffixes", async () => {
         vi.useFakeTimers();
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         try {
@@ -1008,7 +1006,7 @@ describe("Engine message batching", () => {
 
             await handler(
                 { text: "hello" },
-                { messageId: "1", connectorKey: "telegram:123" },
+                { messageId: "1", connector: { name: "telegram", key: "123" } },
                 "/user-7/telegram" as AgentPath
             );
             await vi.advanceTimersByTimeAsync(100);
@@ -1020,7 +1018,7 @@ describe("Engine message batching", () => {
             }
             const ctx = call[0] as { userId: string };
             const target = call[1] as { path: string };
-            const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
+            const user = await engine.storage.resolveUserByConnector({ name: "telegram", key: "123" });
             expect(user.id).toBe(ctx.userId);
             expect(target.path).toBe(`/${ctx.userId}/telegram`);
 
@@ -1064,7 +1062,7 @@ describe("Engine message batching", () => {
             }
 
             const target = agentPathConnector("123", "telegram");
-            await handler({ text: "   " }, { messageId: "1", connectorKey: "telegram:123" }, target);
+            await handler({ text: "   " }, { messageId: "1", connector: { name: "telegram", key: "123" } }, target);
             await vi.advanceTimersByTimeAsync(100);
 
             expect(postSpy).not.toHaveBeenCalled();
@@ -1126,12 +1124,12 @@ describe("Engine message batching", () => {
                         }
                     ]
                 },
-                { messageId: "1", connectorKey: "telegram:123" },
+                { messageId: "1", connector: { name: "telegram", key: "123" } },
                 target
             );
 
             await new Promise((resolve) => setTimeout(resolve, 120));
-            const user = await engine.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
+            const user = await engine.storage.resolveUserByConnector({ name: "telegram", key: "123" });
             const postPayload = postSpy.mock.calls[0]?.[2] as { type: string; message: ConnectorMessage };
             const postedPath = postPayload.message.files?.[0]?.path ?? "";
             const expectedDownloadsDir = path.join(config.usersDir, user.id, "home", "downloads");

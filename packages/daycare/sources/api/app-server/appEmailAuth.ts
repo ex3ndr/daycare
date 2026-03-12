@@ -9,7 +9,6 @@ import {
     appAuthUsersTable,
     appAuthVerificationsTable
 } from "../../schema.js";
-import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import { APP_AUTH_SESSION_EXPIRES_IN_SECONDS, appAuthPayloadUrlBuild } from "./appAuthLinkTool.js";
 import { type AppRequestEndpointHeaders, appRequestEndpointsResolve } from "./appRequestEndpointsResolve.js";
@@ -140,19 +139,19 @@ export class AppEmailAuth {
     }
 
     private async userIdResolveByEmail(email: string): Promise<string> {
-        const connectorKey = userConnectorKeyCreate("email", email);
-        const existing = await this.users.findByConnectorKey(connectorKey);
+        const connector = { name: "email", key: email };
+        const existing = await this.users.findByConnector(connector);
         if (existing) {
             return existing.id;
         }
 
         try {
             const created = await this.users.create({
-                connectorKey
+                connector
             });
             return created.id;
         } catch (error) {
-            const raced = await this.users.findByConnectorKey(connectorKey);
+            const raced = await this.users.findByConnector(connector);
             if (raced) {
                 return raced.id;
             }

@@ -340,11 +340,11 @@ async function skillNotifyConnector(skillName: string, toolContext: ToolExecutio
         if (!target) {
             return;
         }
-        const connector = toolContext.connectorRegistry.get(target.connector);
+        const connector = toolContext.connectorRegistry.get(target.name);
         if (!connector?.capabilities.sendText) {
             return;
         }
-        await connector.sendMessage(target.recipient, { text: `⚡ Skill loaded: ${skillName}` });
+        await connector.sendMessage(target, { text: `⚡ Skill loaded: ${skillName}` });
     } catch {
         // Best-effort notification; do not break skill execution
     }

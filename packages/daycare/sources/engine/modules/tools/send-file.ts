@@ -9,7 +9,6 @@ import type {
     ToolExecutionContext,
     ToolResultContract
 } from "@/types";
-import { userConnectorKeyCreate } from "../../../storage/userConnectorKeyCreate.js";
 import { agentRecipientResolve } from "../../agents/ops/agentRecipientResolve.js";
 import { fileResolve } from "./fileResolve.js";
 
@@ -99,10 +98,10 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
             if (!target) {
                 target = await foregroundTargetResolve(context);
             }
-            if (payload.source && target && payload.source !== target.connector && !payload.channelId) {
+            if (payload.source && target && payload.source !== target.name && !payload.channelId) {
                 throw new Error("Override source requires an explicit channelId.");
             }
-            const source = payload.source ?? target?.connector ?? context.source;
+            const source = payload.source ?? target?.name ?? context.source;
             const connector = context.connectorRegistry.get(source);
             if (!connector) {
                 throw new Error(`Connector not loaded: ${source}`);
@@ -128,10 +127,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
             );
             const messageText = typeof payload.text === "string" && payload.text.length > 0 ? payload.text : null;
 
-            const recipient =
-                payload.channelId && source
-                    ? { connectorKey: userConnectorKeyCreate(source, payload.channelId) }
-                    : target?.recipient;
+            const recipient = payload.channelId && source ? { name: source, key: payload.channelId } : target;
             if (!recipient) {
                 throw new Error("Send file requires a user agent or explicit channelId.");
             }
@@ -220,10 +216,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
     };
 }
 
-async function foregroundTargetResolve(context: ToolExecutionContext): Promise<{
-    connector: string;
-    recipient: ConnectorRecipient;
-} | null> {
+async function foregroundTargetResolve(context: ToolExecutionContext): Promise<ConnectorRecipient | null> {
     const foregroundAgentId = context.agentSystem.agentFor(context.ctx, "most-recent-foreground");
     if (!foregroundAgentId) {
         return null;
@@ -232,8 +225,5 @@ async function foregroundTargetResolve(context: ToolExecutionContext): Promise<{
     if (!foregroundAgent) {
         return null;
     }
-    return agentRecipientResolve({
-        connectorName: foregroundAgent.connectorName,
-        connectorKey: foregroundAgent.connectorKey
-    });
+    return agentRecipientResolve({ connector: foregroundAgent.connector });
 }

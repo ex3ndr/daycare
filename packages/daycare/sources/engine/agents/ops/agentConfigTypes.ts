@@ -1,4 +1,5 @@
 import type { ModelRoleKey } from "../../../settings.js";
+import type { ConnectorIdentity } from "../../modules/connectors/types.js";
 
 export type AgentKind =
     | "connector"
@@ -15,8 +16,7 @@ export type AgentKind =
 export type AgentConfig = {
     kind?: AgentKind;
     modelRole?: ModelRoleKey | null;
-    connectorName?: string | null;
-    connectorKey?: string | null;
+    connector?: ConnectorIdentity | null;
     parentAgentId?: string | null;
     foreground: boolean;
     name: string | null;

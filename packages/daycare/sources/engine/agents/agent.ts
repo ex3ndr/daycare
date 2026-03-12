@@ -153,7 +153,7 @@ export class Agent {
             kind: config.kind ?? "agent",
             name: config.name ?? null,
             description: config.description ?? null,
-            connectorName: config.connectorName ?? null,
+            connector: config.connector ?? null,
             foreground: config.foreground,
             lifecycle: "active",
             createdAt: state.createdAt,
@@ -396,12 +396,12 @@ export class Agent {
         if (!target) {
             return;
         }
-        const connector = this.agentSystem.connectorRegistry.get(target.connector);
+        const connector = this.agentSystem.connectorRegistry.get(target.name);
         if (!connector?.capabilities.sendText) {
             return;
         }
         try {
-            await connector.sendMessage(target.recipient, {
+            await connector.sendMessage(target, {
                 text: "Unexpected error",
                 replyToMessageId: item.context.messageId
             });
@@ -471,14 +471,14 @@ export class Agent {
         }
 
         logger.debug(`event: handleMessage building system prompt agentId=${this.id}`);
-        const connectorKey = agentRecipientResolve(this.config)?.recipient.connectorKey;
+        const connectorTarget = agentRecipientResolve(this.config);
         const pluginPrompts =
             typeof pluginManager.getSystemPrompts === "function"
                 ? await pluginManager.getSystemPrompts({
                       ctx: this.ctx,
                       path: this.path,
                       config: this.config,
-                      connectorKey,
+                      connector: connectorTarget ?? undefined,
                       userDownloadsDir: this.userHome.downloads
                   })
                 : [];
@@ -536,7 +536,7 @@ export class Agent {
         if (compactionStatus.severity !== "ok") {
             const target = agentRecipientResolve(this.config);
             if (agentKind === "foreground" && connector?.capabilities.sendText && target) {
-                await connector.sendMessage(target.recipient, {
+                await connector.sendMessage(target, {
                     text: messageContextReset({ kind: "compaction" }),
                     replyToMessageId: entry.context.messageId
                 });
@@ -1116,13 +1116,13 @@ export class Agent {
         if (!target) {
             return true;
         }
-        const connector = this.agentSystem.connectorRegistry.get(target.connector);
+        const connector = this.agentSystem.connectorRegistry.get(target.name);
         if (!connector?.capabilities.sendText) {
             return true;
         }
 
         try {
-            await connector.sendMessage(target.recipient, {
+            await connector.sendMessage(target, {
                 text: messageContextReset({ kind: "manual" }),
                 replyToMessageId: item.context?.messageId
             });
@@ -1141,13 +1141,13 @@ export class Agent {
         if (!target) {
             return result.ok;
         }
-        const connector = this.agentSystem.connectorRegistry.get(target.connector);
+        const connector = this.agentSystem.connectorRegistry.get(target.name);
         if (!connector?.capabilities.sendText) {
             return result.ok;
         }
         const text = this.compactionResultText(result);
         try {
-            await connector.sendMessage(target.recipient, {
+            await connector.sendMessage(target, {
                 text,
                 replyToMessageId: item.context?.messageId
             });
@@ -1186,13 +1186,13 @@ export class Agent {
             return;
         }
 
-        const connector = this.agentSystem.connectorRegistry.get(source || target.connector);
+        const connector = this.agentSystem.connectorRegistry.get(source || target.name);
         if (!connector?.capabilities.sendText) {
             return;
         }
 
         try {
-            await connector.sendMessage(target.recipient, {
+            await connector.sendMessage(target, {
                 text: messageContextReset({ kind: "overflow", estimatedTokens }),
                 replyToMessageId: entry.context.messageId
             });
@@ -1231,12 +1231,12 @@ export class Agent {
         if (!target) {
             return;
         }
-        const connector = this.agentSystem.connectorRegistry.get(target.connector);
+        const connector = this.agentSystem.connectorRegistry.get(target.name);
         if (!connector?.capabilities.sendText) {
             return;
         }
         try {
-            await connector.sendMessage(target.recipient, { text });
+            await connector.sendMessage(target, { text });
         } catch (error) {
             logger.warn({ agentId: this.id, error }, "error: Failed to send restore failure notification");
         }
@@ -1437,7 +1437,7 @@ export class Agent {
     }
 
     private sourceResolve(): string {
-        const connector = this.config.connectorName?.trim() ?? "";
+        const connector = this.config.connector?.name?.trim() ?? "";
         if (connector) {
             return connector;
         }
@@ -1524,8 +1524,8 @@ export class Agent {
         if (!target) {
             return null;
         }
-        const connector = this.agentSystem.connectorRegistry.get(target.connector);
-        return connector?.startTyping?.(target.recipient) ?? null;
+        const connector = this.agentSystem.connectorRegistry.get(target.name);
+        return connector?.startTyping?.(target) ?? null;
     }
 
     private async buildHistoryContext(records: AgentHistoryRecord[]): Promise<InferenceContext["messages"]> {

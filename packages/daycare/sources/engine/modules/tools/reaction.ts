@@ -49,8 +49,8 @@ export function buildReactionTool(): ToolDefinition {
             if (!target) {
                 throw new Error("Reactions require a user agent.");
             }
-            const source = payload.source ?? target.connector;
-            if (source !== target.connector) {
+            const source = payload.source ?? target.name;
+            if (source !== target.name) {
                 throw new Error("Reaction source must match the agent connector.");
             }
             const connector = toolContext.connectorRegistry.get(source);
@@ -61,7 +61,7 @@ export function buildReactionTool(): ToolDefinition {
             if (!messageId) {
                 throw new Error("Missing message id for reaction");
             }
-            await connector.setReaction(target.recipient, String(messageId), payload.reaction);
+            await connector.setReaction(target, String(messageId), payload.reaction);
 
             const summary = `Reaction set: ${payload.reaction}`;
             const toolMessage: ToolResultMessage = {

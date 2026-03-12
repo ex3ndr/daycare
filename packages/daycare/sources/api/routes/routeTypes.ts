@@ -1,4 +1,11 @@
-import type { AgentHistoryRecord, AgentInboxItem, AgentLifecycleState, AgentPostTarget, Context } from "@/types";
+import type {
+    AgentHistoryRecord,
+    AgentInboxItem,
+    AgentLifecycleState,
+    AgentPostTarget,
+    ConnectorIdentity,
+    Context
+} from "@/types";
 import type { TaskParameter } from "../../engine/modules/tasks/taskParameterTypes.js";
 import type {
     CronTaskDbRecord,
@@ -14,7 +21,7 @@ export type AgentListItem = {
     kind: string;
     name: string | null;
     description: string | null;
-    connectorName: string | null;
+    connector: ConnectorIdentity | null;
     foreground: boolean;
     lifecycle: AgentLifecycleState;
     createdAt: number;

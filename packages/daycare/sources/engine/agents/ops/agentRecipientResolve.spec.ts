@@ -6,29 +6,23 @@ describe("agentRecipientResolve", () => {
     it("returns connector recipient data from agent config", () => {
         expect(
             agentRecipientResolve({
-                connectorName: "telegram",
-                connectorKey: "telegram:channel-1/user-2"
+                connector: { name: "telegram", key: "channel-1/user-2" }
             })
-        ).toEqual({
-            connector: "telegram",
-            recipient: { connectorKey: "telegram:channel-1/user-2" }
-        });
+        ).toEqual({ name: "telegram", key: "channel-1/user-2" });
     });
 
-    it("returns null when connectorKey is missing", () => {
+    it("returns null when connector key is missing", () => {
         expect(
             agentRecipientResolve({
-                connectorName: "telegram",
-                connectorKey: null
+                connector: { name: "telegram", key: "   " }
             })
         ).toBeNull();
     });
 
-    it("returns null when connectorName conflicts with connectorKey", () => {
+    it("returns null when connector name is missing", () => {
         expect(
             agentRecipientResolve({
-                connectorName: "telegram",
-                connectorKey: "whatsapp:15551234567"
+                connector: { name: "   ", key: "15551234567" }
             })
         ).toBeNull();
     });

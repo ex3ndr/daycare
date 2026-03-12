@@ -23,7 +23,7 @@ describe("agentSystemPrompt", () => {
             config: {
                 kind: "memory",
                 modelRole: null,
-                connectorName: null,
+                connector: null,
                 parentAgentId: null,
                 foreground: false,
                 name: null,
@@ -54,7 +54,7 @@ describe("agentSystemPrompt", () => {
             config: {
                 kind: "memory",
                 modelRole: null,
-                connectorName: null,
+                connector: null,
                 parentAgentId: null,
                 foreground: false,
                 name: null,
@@ -179,7 +179,7 @@ describe("agentSystemPrompt", () => {
                 config: {
                     kind: "connector",
                     modelRole: "user",
-                    connectorName: "telegram",
+                    connector: { name: "telegram", key: "channel-1" },
                     parentAgentId: null,
                     foreground: true,
                     name: null,

@@ -1,7 +1,6 @@
 import os from "node:os";
 
 import Handlebars from "handlebars";
-import { connectorKeyValueResolve } from "../../modules/connectors/connectorKeyValueResolve.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import { agentRecipientResolve } from "./agentRecipientResolve.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
@@ -11,7 +10,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Expects: context matches agentSystemPrompt input shape.
  */
 export async function agentSystemPromptSectionEnvironment(context: AgentSystemPromptContext): Promise<string> {
-    const connector = context.config?.connectorName?.trim() ?? null;
+    const connector = context.config?.connector?.name?.trim() ?? null;
     const isForeground = Boolean(context.config?.foreground && connector);
     const connectorValue = await connectorValueResolve(context, connector);
     const targetUserId = context.ctx.userId;
@@ -41,7 +40,7 @@ async function connectorValueResolve(context: AgentSystemPromptContext, connecto
         return "unknown";
     }
     const resolved = agentRecipientResolve(context.config);
-    return resolved ? connectorKeyValueResolve(connector, resolved.recipient.connectorKey) : "unknown";
+    return resolved ? resolved.key : "unknown";
 }
 
 /** Looks up structured user profile fields from storage. */

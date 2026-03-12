@@ -3,9 +3,9 @@ import type {
     AgentPath,
     AgentSkill,
     ConnectorMessage,
-    ConnectorResolvedRecipient,
     ConnectorTarget,
     Context,
+    MessageContext,
     TaskActiveSummary,
     TaskListAllResult,
     UserConfiguration
@@ -33,7 +33,6 @@ import type { FragmentsRepository } from "../../storage/fragmentsRepository.js";
 import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
 import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
 import type { TodosRepository } from "../../storage/todosRepository.js";
-import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import type { WorkspaceMembersRepository } from "../../storage/workspaceMembersRepository.js";
 import type { TokenStatsFetchOptions } from "../routes/costs/costsRoutes.js";
@@ -92,7 +91,7 @@ export type AppServerOptions = {
         add: (ctx: Context, secret: Secret) => Promise<void>;
         remove: (ctx: Context, name: string) => Promise<boolean>;
     } | null;
-    connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorResolvedRecipient | null>;
+    connectorRecipientResolve: (path: AgentPath) => Promise<NonNullable<MessageContext["connector"]> | null>;
 };
 
 /**
@@ -465,7 +464,7 @@ export class AppServer {
         if (!users) {
             throw new Error("User repository is unavailable.");
         }
-        return this.userIdResolveByTelegramConnectorKey(users, telegramUserId);
+        return this.userIdResolveByTelegram(users, telegramUserId);
     }
 
     private async eventsInitialResolve(userId: string): Promise<EngineEvent[]> {
@@ -497,23 +496,23 @@ export class AppServer {
         if (!/^[0-9]+$/.test(normalizedUserId)) {
             return normalizedUserId;
         }
-        return this.userIdResolveByTelegramConnectorKey(users, normalizedUserId);
+        return this.userIdResolveByTelegram(users, normalizedUserId);
     }
 
-    private async userIdResolveByTelegramConnectorKey(users: UsersRepository, telegramUserId: string): Promise<string> {
-        const connectorKey = userConnectorKeyCreate("telegram", telegramUserId);
-        const existing = await users.findByConnectorKey(connectorKey);
+    private async userIdResolveByTelegram(users: UsersRepository, telegramUserId: string): Promise<string> {
+        const connector = { name: "telegram", key: telegramUserId };
+        const existing = await users.findByConnector(connector);
         if (existing) {
             return existing.id;
         }
 
         try {
             const created = await users.create({
-                connectorKey
+                connector
             });
             return created.id;
         } catch (error) {
-            const raced = await users.findByConnectorKey(connectorKey);
+            const raced = await users.findByConnector(connector);
             if (raced) {
                 return raced.id;
             }
@@ -645,8 +644,8 @@ export class AppServer {
                     secret: await this.secretResolve(),
                     expiresInSeconds: APP_AUTH_LINK_EXPIRES_IN_SECONDS
                 });
-                const connector = connectorTarget.connector;
-                if (connector === "telegram") {
+                const connector = connectorTarget;
+                if (connector.name === "telegram") {
                     await this.messageSend(path, context, {
                         text: "Open your Daycare app using the button below.",
                         buttons: [
@@ -687,39 +686,39 @@ export class AppServer {
 
     private async messageSend(
         path: AgentPath,
-        context: { messageId?: string; connectorKey?: string },
+        context: Pick<MessageContext, "messageId" | "connector">,
         message: ConnectorMessage
     ): Promise<void> {
         const target = messageContextRecipientResolve(context) ?? (await this.connectorRecipientResolve(path));
         if (!target) {
             return;
         }
-        const connector = this.connectorRegistry.get(target.connector);
+        const connector = this.connectorRegistry.get(target.name);
         if (!connector?.capabilities.sendText) {
             return;
         }
-        await connector.sendMessage(target.recipient, {
+        await connector.sendMessage(target, {
             ...message,
             replyToMessageId: context.messageId
         });
     }
 
-    private async userIdResolve(context: { connectorKey?: string }): Promise<string | null> {
-        const connectorKey = context.connectorKey?.trim() ?? "";
-        if (!connectorKey || !this.users) {
+    private async userIdResolve(context: Pick<MessageContext, "connector">): Promise<string | null> {
+        const connector = context.connector;
+        if (!connector?.name || !connector.key || !this.users) {
             return null;
         }
-        const existing = await this.users.findByConnectorKey(connectorKey);
+        const existing = await this.users.findByConnector(connector);
         if (existing) {
             return existing.id;
         }
         try {
             const created = await this.users.create({
-                connectorKey
+                connector
             });
             return created.id;
         } catch (error) {
-            const raced = await this.users.findByConnectorKey(connectorKey);
+            const raced = await this.users.findByConnector(connector);
             if (raced) {
                 return raced.id;
             }

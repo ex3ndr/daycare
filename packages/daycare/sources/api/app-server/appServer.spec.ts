@@ -240,7 +240,7 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
             if (!userId || !connector) {
                 return null;
             }
-            return { connector, recipient: { connectorKey: `${connector}:${userId}` } };
+            return { name: connector, key: userId };
         }
     });
 
@@ -336,7 +336,7 @@ describe("AppServer auth endpoints", () => {
         const built = await appServerCreateForTests({ secret: "valid-secret-for-tests-1234567890" });
         const sendMessage = vi.fn(
             async (
-                _recipient: { connectorKey: string },
+                _recipient: { name: string; key: string },
                 _message: {
                     text: string | null;
                     replyToMessageId?: string;
@@ -361,7 +361,7 @@ describe("AppServer auth endpoints", () => {
 
         await command!.handler(
             "/app",
-            { messageId: "42", connectorKey: userConnectorKeyCreate("telegram", "123") },
+            { messageId: "42", connector: { name: "telegram", key: "123" } },
             agentPathConnector("123", "telegram")
         );
 
@@ -479,7 +479,7 @@ describe("AppServer auth endpoints", () => {
         expect(payload.ok).toBe(true);
         expect(typeof payload.token).toBe("string");
         expect(typeof payload.expiresAt).toBe("number");
-        const mappedUser = await built.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
+        const mappedUser = await built.storage.resolveUserByConnector({ name: "telegram", key: "123" });
         expect(payload.userId).toBe(mappedUser.id);
 
         const verified = await jwtVerify(payload.token!, secret);
@@ -521,9 +521,7 @@ describe("AppServer auth endpoints", () => {
         expect(payload.ok).toBe(true);
         expect(typeof payload.userId).toBe("string");
         expect(typeof payload.token).toBe("string");
-        const mappedUser = await built.storage.resolveUserByConnectorKey(
-            userConnectorKeyCreate("email", "person@example.com")
-        );
+        const mappedUser = await built.storage.resolveUserByConnector({ name: "email", key: "person@example.com" });
         expect(payload.userId).toBe(mappedUser.id);
 
         const verified = await jwtVerify(payload.token!, secret);
@@ -708,7 +706,7 @@ describe("AppServer auth endpoints", () => {
         expect(payload.ok).toBe(true);
         expect(typeof payload.userId).toBe("string");
         expect(typeof payload.token).toBe("string");
-        const mappedUser = await built.storage.resolveUserByConnectorKey(userConnectorKeyCreate("telegram", "123"));
+        const mappedUser = await built.storage.resolveUserByConnector({ name: "telegram", key: "123" });
         expect(payload.userId).toBe(mappedUser.id);
         const verified = await jwtVerify(payload.token!, secret);
         expect(verified.userId).toBe(mappedUser.id);
@@ -768,7 +766,7 @@ describe("AppServer authenticated routes", () => {
                 kind: "app";
                 name: string | null;
                 description: string | null;
-                connectorName: null;
+                connector: null;
                 foreground: false;
                 lifecycle: "active" | "sleeping" | "dead";
                 createdAt: number;
@@ -800,7 +798,7 @@ describe("AppServer authenticated routes", () => {
                     kind: "app",
                     name: "App chat",
                     description: null,
-                    connectorName: null,
+                    connector: null,
                     foreground: false,
                     lifecycle: "active",
                     createdAt,

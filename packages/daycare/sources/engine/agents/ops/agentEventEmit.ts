@@ -1,3 +1,4 @@
+import type { ConnectorIdentity } from "@/types";
 import type { EngineEventBus } from "../../ipc/events.js";
 
 export type AgentSyncEventType = "agent.sync.created" | "agent.sync.updated" | "agent.sync.deleted";
@@ -9,7 +10,7 @@ export type AgentSyncPayload = {
     description?: string | null;
     kind?: string;
     path?: string | null;
-    connectorName?: string | null;
+    connector?: ConnectorIdentity | null;
     foreground?: boolean;
     updatedAt?: number;
     createdAt?: number;

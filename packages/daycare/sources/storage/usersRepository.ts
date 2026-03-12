@@ -1,11 +1,13 @@
 import { createId } from "@paralleldrive/cuid2";
 import { and, asc, eq, isNull } from "drizzle-orm";
+import type { ConnectorIdentity } from "@/types";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
 import { userConfigurationNormalize } from "../engine/users/userConfigurationNormalize.js";
 import type { DaycareDb } from "../schema.js";
 import { userConnectorKeysTable, usersTable } from "../schema.js";
 import { AsyncLock } from "../utils/lock.js";
 import type { CreateUserInput, UpdateUserInput, UserWithConnectorKeysDbRecord } from "./databaseTypes.js";
+import { userConnectorKeyCreate } from "./userConnectorKeyCreate.js";
 import { versionAdvance } from "./versionAdvance.js";
 
 /**
@@ -51,7 +53,8 @@ export class UsersRepository {
         });
     }
 
-    async findByConnectorKey(key: string): Promise<UserWithConnectorKeysDbRecord | null> {
+    async findByConnector(connector: ConnectorIdentity): Promise<UserWithConnectorKeysDbRecord | null> {
+        const key = userConnectorKeyCreate(connector.name, connector.key);
         const cachedUserId = this.userIdByConnectorKey.get(key);
         if (cachedUserId) {
             return this.findById(cachedUserId);
@@ -196,7 +199,14 @@ export class UsersRepository {
             const emoji = textNullableNormalize(input.emoji);
             const memory = input.memory ?? false;
             const configuration = userConfigurationNormalize(input.configuration);
-            const connectorKey = input.connectorKey?.trim() ?? "";
+            const connector =
+                input.connector?.name?.trim() && input.connector?.key?.trim()
+                    ? {
+                          name: input.connector.name.trim(),
+                          key: input.connector.key.trim()
+                      }
+                    : null;
+            const connectorKey = connector ? userConnectorKeyCreate(connector.name, connector.key) : "";
             const explicitNametag = input.nametag?.trim() ?? "";
             const shouldGenerateNametag = explicitNametag.length === 0;
             const maxGeneratedNametagAttempts = 100;
@@ -418,7 +428,8 @@ export class UsersRepository {
         ).map((u) => userClone(u));
     }
 
-    async addConnectorKey(userId: string, connectorKey: string): Promise<void> {
+    async addConnector(userId: string, connector: ConnectorIdentity): Promise<void> {
+        const connectorKey = userConnectorKeyCreate(connector.name, connector.key);
         const lock = this.userLockForId(userId);
         await lock.inLock(async () => {
             const current = this.usersById.get(userId) ?? (await this.userLoadById(userId));

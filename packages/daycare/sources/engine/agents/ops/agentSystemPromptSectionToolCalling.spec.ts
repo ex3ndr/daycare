@@ -41,7 +41,7 @@ describe("agentSystemPromptSectionToolCalling", () => {
             config: {
                 kind: "search",
                 modelRole: "memorySearch",
-                connectorName: null,
+                connector: null,
                 parentAgentId: null,
                 foreground: false,
                 name: "memory-search",
@@ -68,7 +68,7 @@ describe("agentSystemPromptSectionToolCalling", () => {
             config: {
                 kind: "memory",
                 modelRole: "memory",
-                connectorName: null,
+                connector: null,
                 parentAgentId: null,
                 foreground: false,
                 name: "memory-agent",
@@ -95,7 +95,7 @@ describe("agentSystemPromptSectionToolCalling", () => {
             config: {
                 kind: "connector",
                 modelRole: "user",
-                connectorName: "telegram",
+                connector: { name: "telegram", key: "123" },
                 parentAgentId: null,
                 foreground: true,
                 name: null,

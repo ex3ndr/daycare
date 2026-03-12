@@ -19,7 +19,7 @@ describe("UsersRepository", () => {
                 country: "US",
                 timezone: "America/Los_Angeles",
                 nametag: "swift-fox-42",
-                connectorKey: "telegram:1"
+                connector: { name: "telegram", key: "1" }
             });
             expect(created.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:1"]);
             expect(created.nametag).toBe("swift-fox-42");
@@ -36,12 +36,12 @@ describe("UsersRepository", () => {
             const byId = await users.findById(created.id);
             expect(byId?.id).toBe(created.id);
 
-            const byKey = await users.findByConnectorKey("telegram:1");
+            const byKey = await users.findByConnector({ name: "telegram", key: "1" });
             expect(byKey?.id).toBe(created.id);
             const byNametag = await users.findByNametag("swift-fox-42");
             expect(byNametag?.id).toBe(created.id);
 
-            await users.addConnectorKey(created.id, "slack:1");
+            await users.addConnector(created.id, { name: "slack", key: "1" });
             const updated = await users.findById(created.id);
             expect(updated?.connectorKeys.map((entry) => entry.connectorKey)).toEqual(["telegram:1", "slack:1"]);
 
@@ -75,7 +75,7 @@ describe("UsersRepository", () => {
 
             await users.delete(created.id);
             expect(await users.findById(created.id)).toBeNull();
-            expect(await users.findByConnectorKey("telegram:1")).toBeNull();
+            expect(await users.findByConnector({ name: "telegram", key: "1" })).toBeNull();
             expect(await users.findByNametag("swift-fox-42")).toBeNull();
         } finally {
             storage.connection.close();
@@ -119,7 +119,7 @@ describe("UsersRepository", () => {
 
             await users.delete("user-1");
             expect(await users.findById("user-1")).toBeNull();
-            expect(await users.findByConnectorKey("telegram:1")).toBeNull();
+            expect(await users.findByConnector({ name: "telegram", key: "1" })).toBeNull();
             expect(await users.findByNametag("brave-wolf-99")).toBeNull();
         } finally {
             storage.connection.close();

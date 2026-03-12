@@ -164,8 +164,8 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     let childAgentMessageSent = false;
     const target = agentRecipientResolve(agent.config);
     const parentAgentId = isChildAgent ? agent.config.parentAgentId : null;
-    const recipient = target?.recipient ?? null;
-    const connectorKey = recipient?.connectorKey ?? null;
+    const recipient = target ?? null;
+    const recipientKey = recipient?.key ?? null;
     const toolVisibilityContext = {
         ctx: agent.ctx,
         path: agent.path,
@@ -173,7 +173,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
     };
     const allowedToolNames = agentToolExecutionAllowlistResolve(kind);
     const restoreOnly = Boolean(initialPhase && stopAfterPendingPhase);
-    logger.debug(`start: Starting typing indicator connectorKey=${connectorKey ?? "none"}`);
+    logger.debug(`start: Starting typing indicator recipientKey=${recipientKey ?? "none"}`);
     const stopTyping = recipient ? connector?.startTyping?.(recipient) : null;
     let draftHandle: ConnectorDraft | null = null;
     let draftResponseText: string | null = null;
@@ -1335,7 +1335,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
     const shouldSendText = hasResponseText && !lastResponseTextSent && !lastResponseNoMessage && !usedDraftOutput;
     const outgoingText = shouldSendText ? responseText : null;
     logger.debug(
-        `send: Sending response to user textLength=${outgoingText?.length ?? 0} connectorKey=${connectorKey ?? "none"}`
+        `send: Sending response to user textLength=${outgoingText?.length ?? 0} recipientKey=${recipientKey ?? "none"}`
     );
     try {
         if (connector && recipient && outgoingText) {

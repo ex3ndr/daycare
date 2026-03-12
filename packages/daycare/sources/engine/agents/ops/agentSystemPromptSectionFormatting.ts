@@ -7,7 +7,7 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
  * Expects: context matches agentSystemPrompt input shape.
  */
 export async function agentSystemPromptSectionFormatting(context: AgentSystemPromptContext): Promise<string> {
-    const connector = context.config?.connectorName?.trim() ?? null;
+    const connector = context.config?.connector?.name?.trim() ?? null;
     const isForeground = Boolean(context.config?.foreground && connector);
     const messageFormatPrompt = connector
         ? (context.agentSystem?.connectorRegistry?.get(connector)?.capabilities.messageFormatPrompt ?? "")

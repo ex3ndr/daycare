@@ -77,7 +77,7 @@ describe(migrationName, () => {
                 )
                 .all("agent-1")) as Array<{ version: number; connectorKey: string | null }>;
             expect(rows).toEqual([
-                { version: 1, connectorKey: "telegram:123" },
+                { version: 1, connectorKey: "123" },
                 { version: 2, connectorKey: null }
             ]);
         } finally {
@@ -154,8 +154,8 @@ describe(migrationName, () => {
                 )
                 .all("agent-2")) as Array<{ version: number; connectorKey: string | null }>;
             expect(rows).toEqual([
-                { version: 1, connectorKey: "telegram:123" },
-                { version: 2, connectorKey: "telegram:123" }
+                { version: 1, connectorKey: "123" },
+                { version: 2, connectorKey: "123" }
             ]);
         } finally {
             db.close();

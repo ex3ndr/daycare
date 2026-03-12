@@ -1,26 +1,17 @@
-import type { ConnectorResolvedRecipient, MessageContext } from "@/types";
+import type { ConnectorIdentity, MessageContext } from "@/types";
 
 /**
- * Resolves a connector recipient from explicit message context metadata.
- * Expects: connectorKey is normalized as "<connector>:<value>" when present.
+ * Resolves connector identity from explicit message context metadata.
+ * Expects: connector contains non-empty name/key fields when present.
  */
-export function messageContextRecipientResolve(
-    context: Pick<MessageContext, "connectorKey">
-): ConnectorResolvedRecipient | null {
-    const connectorKey = context.connectorKey?.trim() ?? "";
-    if (!connectorKey) {
-        return null;
-    }
-    const separatorIndex = connectorKey.indexOf(":");
-    if (separatorIndex <= 0 || separatorIndex === connectorKey.length - 1) {
-        return null;
-    }
-    const connector = connectorKey.slice(0, separatorIndex).trim();
-    if (!connector) {
+export function messageContextRecipientResolve(context: Pick<MessageContext, "connector">): ConnectorIdentity | null {
+    const name = context.connector?.name?.trim() ?? "";
+    const key = context.connector?.key?.trim() ?? "";
+    if (!name || !key) {
         return null;
     }
     return {
-        connector,
-        recipient: { connectorKey }
+        name,
+        key
     };
 }

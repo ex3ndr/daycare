@@ -3,15 +3,7 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import Docker from "dockerode";
 
-import type {
-    AgentPath,
-    Config,
-    ConnectorMessage,
-    ConnectorResolvedRecipient,
-    ConnectorTarget,
-    Context,
-    MessageContext
-} from "@/types";
+import type { AgentPath, Config, ConnectorMessage, ConnectorTarget, Context, MessageContext } from "@/types";
 import { AppServer } from "../api/app-server/appServer.js";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
@@ -251,8 +243,7 @@ export class Engine {
                             {
                                 kind: "connector",
                                 foreground: true,
-                                connectorName: recipient?.connector ?? null,
-                                connectorKey: recipient?.recipient.connectorKey ?? null
+                                connector: recipient ?? null
                             }
                         );
                     }
@@ -277,7 +268,7 @@ export class Engine {
                         messageContextRecipientResolve(messageContext) ??
                         (await this.connectorRecipientResolve(resolved.path));
                     const isConnector = connectorTarget !== null;
-                    const connector = connectorTarget?.connector ?? "unknown";
+                    const connector = connectorTarget?.name ?? "unknown";
                     const parsed = parseCommand(command);
                     if (!parsed) {
                         return;
@@ -451,7 +442,7 @@ export class Engine {
                         kind: record.kind,
                         name: record.name,
                         description: record.description,
-                        connectorName: record.connectorName,
+                        connector: record.connector,
                         foreground: record.foreground,
                         lifecycle: record.lifecycle,
                         createdAt: record.createdAt,
@@ -948,7 +939,7 @@ export class Engine {
         if (!target) {
             return;
         }
-        const connector = this.modules.connectors.get(target.connector);
+        const connector = this.modules.connectors.get(target.name);
         if (!connector?.capabilities.sendText) {
             return;
         }
@@ -964,17 +955,17 @@ export class Engine {
                 usedTokens = history.length > 0 ? contextEstimateTokens(history) : null;
             }
         } catch (error) {
-            logger.warn({ connector: target.connector, error }, "error: Context command failed to estimate usage");
+            logger.warn({ connector: target.name, error }, "error: Context command failed to estimate usage");
         }
         const contextLimit = this.config.current.settings.agents.emergencyContextLimit;
         const text = messageContextStatus({ usedTokens, contextLimit });
         try {
-            await connector.sendMessage(target.recipient, {
+            await connector.sendMessage(target, {
                 text,
                 replyToMessageId: context.messageId
             });
         } catch (error) {
-            logger.warn({ connector: target.connector, error }, "error: Context command failed to send response");
+            logger.warn({ connector: target.name, error }, "error: Context command failed to send response");
         }
     }
 
@@ -1015,7 +1006,7 @@ export class Engine {
         if (!target) {
             return;
         }
-        const connector = this.modules.connectors.get(target.connector);
+        const connector = this.modules.connectors.get(target.name);
         if (!connector?.capabilities.sendText) {
             return;
         }
@@ -1027,12 +1018,12 @@ export class Engine {
         const aborted = agentId ? this.agentSystem.abortInferenceForTarget({ agentId }) : false;
         const text = aborted ? "Stopped current inference." : "No active inference to stop.";
         try {
-            await connector.sendMessage(target.recipient, {
+            await connector.sendMessage(target, {
                 text,
                 replyToMessageId: context.messageId
             });
         } catch (error) {
-            logger.warn({ connector: target.connector, error }, "error: Stop command failed to send response");
+            logger.warn({ connector: target.name, error }, "error: Stop command failed to send response");
         }
     }
 
@@ -1065,11 +1056,11 @@ export class Engine {
 
     /**
      * Resolves runtime user context from connector metadata and rewrites only the user scope of the route.
-     * Expects: connector callbacks include a normalized connectorKey.
+     * Expects: connector callbacks include a normalized connector object.
      */
     private async pathCanonicalize(
         path: AgentPath,
-        context: Pick<MessageContext, "connectorKey">
+        context: Pick<MessageContext, "connector">
     ): Promise<{
         ctx: Context;
         path: AgentPath;
@@ -1077,26 +1068,22 @@ export class Engine {
         await this.migrationReady;
         const recipient = messageContextRecipientResolve(context);
         if (!recipient) {
-            throw new Error("Connector callbacks require connectorKey.");
+            throw new Error("Connector callbacks require connector.");
         }
-        const connectorKey = recipient.recipient.connectorKey;
-        const user = await this.storage.resolveUserByConnectorKey(connectorKey);
-        const existingForeground = await this.storage.agents.findForegroundByConnectorKey(user.id, connectorKey);
+        const user = await this.storage.resolveUserByConnector(recipient);
+        const existingForeground = await this.storage.agents.findForegroundByConnector(user.id, recipient);
         return {
             ctx: contextForUser({ userId: user.id }),
             path: existingForeground?.path ?? pathUserIdReplace(path, user.id)
         };
     }
 
-    private async connectorRecipientResolve(path: AgentPath): Promise<ConnectorResolvedRecipient | null> {
+    private async connectorRecipientResolve(path: AgentPath): Promise<NonNullable<MessageContext["connector"]> | null> {
         const agent = await this.storage.agents.findByPath(path);
         if (!agent) {
             return null;
         }
-        return agentRecipientResolve({
-            connectorName: agent.connectorName,
-            connectorKey: agent.connectorKey
-        });
+        return agentRecipientResolve({ connector: agent.connector });
     }
 
     /**
@@ -1216,12 +1203,14 @@ function pathUserIdReplace(path: AgentPath, userId: string): AgentPath {
     return agentPath(`/${[normalizedUserId, ...segments.slice(1)].join("/")}`);
 }
 
-function connectorCreationConfigResolve(context: Pick<MessageContext, "connectorKey">):
+function connectorCreationConfigResolve(context: Pick<MessageContext, "connector">):
     | {
           kind: "connector";
           foreground: true;
-          connectorName: string;
-          connectorKey: string;
+          connector: {
+              name: string;
+              key: string;
+          };
       }
     | undefined {
     const recipient = messageContextRecipientResolve(context);
@@ -1231,8 +1220,7 @@ function connectorCreationConfigResolve(context: Pick<MessageContext, "connector
     return {
         kind: "connector",
         foreground: true,
-        connectorName: recipient.connector,
-        connectorKey: recipient.recipient.connectorKey
+        connector: recipient
     };
 }
 

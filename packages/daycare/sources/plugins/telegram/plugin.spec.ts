@@ -280,7 +280,7 @@ describe("telegram plugin system prompt", () => {
             config: {
                 kind: "connector",
                 modelRole: "user",
-                connectorName: "whatsapp",
+                connector: { name: "whatsapp", key: "123" },
                 parentAgentId: null,
                 foreground: true,
                 name: null,
@@ -288,7 +288,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorKey: "telegram:123",
+            connector: { name: "whatsapp", key: "123" },
             userDownloadsDir: path.join(dataDir, "downloads")
         });
 
@@ -319,7 +319,7 @@ describe("telegram plugin system prompt", () => {
             config: {
                 kind: "connector",
                 modelRole: "user",
-                connectorName: "telegram",
+                connector: { name: "telegram", key: "channel-1/456" },
                 parentAgentId: null,
                 foreground: true,
                 name: null,
@@ -327,7 +327,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorKey: "telegram:channel-1/456",
+            connector: { name: "telegram", key: "channel-1/456" },
             userDownloadsDir: path.join(dataDir, "downloads")
         });
 
@@ -369,7 +369,7 @@ describe("telegram plugin system prompt", () => {
             config: {
                 kind: "connector",
                 modelRole: "user",
-                connectorName: "telegram",
+                connector: { name: "telegram", key: "123" },
                 parentAgentId: null,
                 foreground: true,
                 name: null,
@@ -377,7 +377,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorKey: "telegram:123",
+            connector: { name: "telegram", key: "123" },
             userDownloadsDir
         });
 
@@ -394,7 +394,7 @@ describe("telegram plugin system prompt", () => {
             config: {
                 kind: "connector",
                 modelRole: "user",
-                connectorName: "telegram",
+                connector: { name: "telegram", key: "123" },
                 parentAgentId: null,
                 foreground: true,
                 name: null,
@@ -402,7 +402,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorKey: "telegram:123",
+            connector: { name: "telegram", key: "123" },
             userDownloadsDir
         });
 
@@ -452,7 +452,7 @@ describe("telegram plugin system prompt", () => {
             config: {
                 kind: "connector",
                 modelRole: "user",
-                connectorName: "telegram",
+                connector: { name: "telegram", key: "123" },
                 parentAgentId: null,
                 foreground: true,
                 name: null,
@@ -460,7 +460,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorKey: "telegram:123",
+            connector: { name: "telegram", key: "123" },
             userDownloadsDir: path.join(dataDir, "user-downloads")
         });
 
@@ -477,7 +477,7 @@ describe("telegram plugin system prompt", () => {
                 config: {
                     kind: "connector",
                     modelRole: "user",
-                    connectorName: "telegram",
+                    connector: { name: "telegram", key: "123" },
                     parentAgentId: null,
                     foreground: true,
                     name: null,
@@ -485,7 +485,7 @@ describe("telegram plugin system prompt", () => {
                     systemPrompt: null,
                     workspaceDir: null
                 },
-                connectorKey: "telegram:123",
+                connector: { name: "telegram", key: "123" },
                 userDownloadsDir: path.join(dataDir, "user-downloads")
             });
             expect(systemPromptResultRequire(fresh).text).toContain("Name: Fresh Name");
@@ -544,7 +544,7 @@ describe("telegram plugin system prompt", () => {
             config: {
                 kind: "connector",
                 modelRole: "user",
-                connectorName: "telegram",
+                connector: { name: "telegram", key: "123" },
                 parentAgentId: null,
                 foreground: true,
                 name: null,
@@ -552,7 +552,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorKey: "telegram:123",
+            connector: { name: "telegram", key: "123" },
             userDownloadsDir
         });
         expect(systemPromptResultRequire(stale).images).toEqual([oldDownloadA, oldDownloadB]);
@@ -572,7 +572,7 @@ describe("telegram plugin system prompt", () => {
             config: {
                 kind: "connector",
                 modelRole: "user",
-                connectorName: "telegram",
+                connector: { name: "telegram", key: "123" },
                 parentAgentId: null,
                 foreground: true,
                 name: null,
@@ -580,7 +580,7 @@ describe("telegram plugin system prompt", () => {
                 systemPrompt: null,
                 workspaceDir: null
             },
-            connectorKey: "telegram:123",
+            connector: { name: "telegram", key: "123" },
             userDownloadsDir
         });
         expect(systemPromptResultRequire(fresh).images).toBeUndefined();

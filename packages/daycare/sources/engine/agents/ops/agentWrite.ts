@@ -23,8 +23,7 @@ export async function agentWrite(
     }
     const kind = config.kind ?? "agent";
     const modelRole = config.modelRole === undefined ? modelRoleForKind(kind) : config.modelRole;
-    const connectorName = config.connectorName ?? null;
-    const connectorKey = config.connectorKey ?? null;
+    const connector = config.connector ?? null;
     const parentAgentId = config.parentAgentId ?? null;
     const now = Date.now();
     const nextPermissions = existing?.permissions ?? defaultPermissions;
@@ -34,8 +33,7 @@ export async function agentWrite(
         path,
         kind,
         modelRole,
-        connectorName,
-        connectorKey,
+        connector,
         parentAgentId,
         foreground: config.foreground,
         name: config.name,

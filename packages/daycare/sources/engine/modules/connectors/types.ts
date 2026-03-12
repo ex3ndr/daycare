@@ -3,14 +3,12 @@ import type { AgentPath } from "../../agents/ops/agentPathTypes.js";
 
 export type ConnectorTarget = AgentPath;
 
-export type ConnectorRecipient = {
-    connectorKey: string;
+export type ConnectorIdentity = {
+    name: string;
+    key: string;
 };
 
-export type ConnectorResolvedRecipient = {
-    connector: string;
-    recipient: ConnectorRecipient;
-};
+export type ConnectorRecipient = ConnectorIdentity;
 
 export type ConnectorFileMode = "document" | "photo" | "video" | "voice";
 export type ConnectorFileDisposition = ConnectorFileMode | "auto";
@@ -63,7 +61,7 @@ export type ConnectorMessageButton =
 
 export type MessageContext = {
     messageId?: string;
-    connectorKey?: string;
+    connector?: ConnectorIdentity;
     timezone?: string;
     enrichments?: MessageContextEnrichment[];
 };

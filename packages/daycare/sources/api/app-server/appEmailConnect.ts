@@ -1,5 +1,4 @@
 import type { EmailMessage } from "../../email/emailSend.js";
-import { userConnectorKeyCreate } from "../../storage/userConnectorKeyCreate.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import { jwtSign, jwtVerify } from "../../utils/jwt.js";
 import { appAuthPayloadUrlBuild } from "./appAuthLinkTool.js";
@@ -64,8 +63,8 @@ export class AppEmailConnect {
             throw new Error("User not found.");
         }
 
-        const connectorKey = userConnectorKeyCreate("email", normalizedEmail);
-        const existing = await this.users.findByConnectorKey(connectorKey);
+        const connector = { name: "email", key: normalizedEmail };
+        const existing = await this.users.findByConnector(connector);
         if (existing?.id === normalizedUserId) {
             throw new Error("Email is already connected.");
         }
@@ -109,8 +108,8 @@ export class AppEmailConnect {
             throw new Error("User not found.");
         }
 
-        const connectorKey = userConnectorKeyCreate("email", payload.email);
-        const existing = await this.users.findByConnectorKey(connectorKey);
+        const connector = { name: "email", key: payload.email };
+        const existing = await this.users.findByConnector(connector);
         if (existing?.id === payload.userId) {
             return payload;
         }
@@ -118,7 +117,7 @@ export class AppEmailConnect {
             throw new Error("Email is already connected to another account.");
         }
 
-        await this.users.addConnectorKey(payload.userId, connectorKey);
+        await this.users.addConnector(payload.userId, connector);
         return payload;
     }
 }

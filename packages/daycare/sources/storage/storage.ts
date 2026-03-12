@@ -1,5 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-import type { AgentHistoryRecord } from "@/types";
+import type { AgentHistoryRecord, ConnectorIdentity } from "@/types";
 import { nametagGenerate } from "../engine/friends/nametagGenerate.js";
 import { agentsTable, type DaycareDb, schemaDrizzle, sessionsTable } from "../schema.js";
 import { AsyncLock } from "../utils/lock.js";
@@ -118,27 +118,30 @@ export class Storage {
         return this.userCreateWithGeneratedNametag(input);
     }
 
-    async resolveUserByConnectorKey(connectorKey: string): Promise<UserWithConnectorKeysDbRecord> {
-        const normalized = connectorKey.trim();
-        if (!normalized) {
-            throw new Error("connectorKey is required");
+    async resolveUserByConnector(connector: ConnectorIdentity): Promise<UserWithConnectorKeysDbRecord> {
+        const normalizedName = connector.name.trim();
+        const normalizedKey = connector.key.trim();
+        if (!normalizedName || !normalizedKey) {
+            throw new Error("connector is required");
         }
-
-        const lock = this.connectorKeyLockFor(normalized);
+        const lock = this.connectorKeyLockFor({ name: normalizedName, key: normalizedKey });
         return lock.inLock(async () => {
-            const existing = await this.users.findByConnectorKey(normalized);
+            const existing = await this.users.findByConnector({ name: normalizedName, key: normalizedKey });
             if (existing) {
                 return existing;
             }
             try {
                 return await this.userCreateWithGeneratedNametag({
-                    connectorKey: normalized
+                    connector: {
+                        name: normalizedName,
+                        key: normalizedKey
+                    }
                 });
             } catch (error) {
                 if (!sqliteUniqueConstraintOnConnectorKeyIs(error)) {
                     throw error;
                 }
-                const raced = await this.users.findByConnectorKey(normalized);
+                const raced = await this.users.findByConnector({ name: normalizedName, key: normalizedKey });
                 if (raced) {
                     return raced;
                 }
@@ -174,8 +177,8 @@ export class Storage {
                 path: baseRecord.path,
                 kind: baseRecord.kind,
                 modelRole: baseRecord.modelRole,
-                connectorName: baseRecord.connectorName,
-                connectorKey: baseRecord.connectorKey,
+                connectorName: baseRecord.connector?.name ?? null,
+                connectorKey: baseRecord.connector?.key ?? null,
                 parentAgentId: baseRecord.parentAgentId,
                 foreground: baseRecord.foreground,
                 name: baseRecord.name,
@@ -233,13 +236,14 @@ export class Storage {
         await this.history.append(sessionId, record);
     }
 
-    private connectorKeyLockFor(connectorKey: string): AsyncLock {
-        const existing = this.connectorKeyLocks.get(connectorKey);
+    private connectorKeyLockFor(connector: ConnectorIdentity): AsyncLock {
+        const lockKey = `${connector.name}\u0000${connector.key}`;
+        const existing = this.connectorKeyLocks.get(lockKey);
         if (existing) {
             return existing;
         }
         const lock = new AsyncLock();
-        this.connectorKeyLocks.set(connectorKey, lock);
+        this.connectorKeyLocks.set(lockKey, lock);
         return lock;
     }
 

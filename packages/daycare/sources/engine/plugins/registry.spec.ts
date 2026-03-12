@@ -12,7 +12,7 @@ describe("PluginRegistrar command registration", () => {
         if (!userId || !connector) {
             return null;
         }
-        return { connector, recipient: { connectorKey: `${connector}:${userId}` } };
+        return { name: connector, key: userId };
     };
 
     it("registers and unregisters plugin commands", () => {
@@ -80,7 +80,7 @@ describe("PluginRegistrar command registration", () => {
         await registrar.sendMessage("/123/telegram" as AgentPath, { messageId: "77" }, { text: "Upgrading..." });
 
         expect(sendMessage).toHaveBeenCalledWith(
-            { connectorKey: "telegram:123" },
+            { name: "telegram", key: "123" },
             {
                 text: "Upgrading...",
                 replyToMessageId: "77"

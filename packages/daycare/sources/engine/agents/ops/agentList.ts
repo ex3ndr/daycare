@@ -24,7 +24,7 @@ export async function agentList(storageOrConfig: Storage | Config): Promise<
         config: {
             kind: record.kind,
             modelRole: record.modelRole,
-            connectorName: record.connectorName,
+            connector: record.connector,
             parentAgentId: record.parentAgentId,
             foreground: record.foreground,
             name: record.name,
