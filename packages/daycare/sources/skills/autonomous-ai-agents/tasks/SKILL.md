@@ -1,14 +1,9 @@
 ---
-name: scheduling
-description: Schedule recurring or time-based tasks. Use for alarms, reminders, periodic reviews, automated reports, or any task that should run at specific times or intervals.
+name: tasks
+description: Understand what Daycare tasks are, how cron and webhook triggers work, and when to use each. Use when users ask about tasks, scheduling, triggers, or want to inspect existing tasks.
 tools:
-  - task_create
   - task_read
-  - task_update
-  - task_delete
   - task_run
-  - task_trigger_add
-  - task_trigger_remove
 ---
 
 # Scheduling
@@ -213,3 +208,5 @@ Otherwise, summarize the errors and suggest fixes.
 | One-off | Yes (`deleteAfterRun`) | No |
 | Executable prompts | Yes | Yes |
 | Best for | Time-sensitive recurring tasks | External event callbacks |
+
+For creating or modifying tasks, use the **tasks-creator** skill instead.

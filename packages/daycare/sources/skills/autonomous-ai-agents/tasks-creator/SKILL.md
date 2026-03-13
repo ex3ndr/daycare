@@ -1,6 +1,6 @@
 ---
-name: task-creation
-description: Create and update robust Daycare tasks (task_create/task_update + task_trigger_add) with minimal Python orchestration, explicit parameter schemas, reproducible exec/process usage, and performance-first skip() behavior. Use when users ask for cron/webhook automation, recurring checks, scheduled reports, or resilient background task workflows.
+name: tasks-creator
+description: Create and update robust Daycare tasks (task_create/task_update + task_trigger_add) and permanent agents (create_permanent_agent) with minimal Python orchestration, explicit parameter schemas, reproducible exec/process usage, and performance-first skip() behavior. Use when users ask for cron/webhook automation, recurring checks, scheduled reports, permanent agents, or resilient background task workflows.
 tools:
   - task_create
   - task_read
@@ -9,6 +9,7 @@ tools:
   - task_run
   - task_trigger_add
   - task_trigger_remove
+  - create_permanent_agent
 sandbox: true
 ---
 
@@ -220,3 +221,44 @@ print(compact)
 ```
 
 This keeps the task code minimal, makes the parser independently testable, and avoids fragile inline scraping logic.
+
+## Permanent Agents
+
+Tasks can coordinate with **permanent agents** — background agents with stable identities. Use `create_permanent_agent` to set one up.
+
+### What Permanent Agents Provide
+
+1. **Stable identity** — predictable agent IDs you can reference from tasks
+2. **Dedicated system prompts** — durable instructions for specialized roles
+3. **Optional workspace folders** — focused file scopes inside the main workspace
+4. **Reusable collaboration** — tasks can delegate work via `send_agent_message`
+
+### Creating a Permanent Agent
+
+Gather these inputs:
+- Agent name (short, descriptive, stable)
+- Short description
+- System prompt (narrow and durable — role, constraints, communication style)
+- Optional workspace subfolder
+
+Then call `create_permanent_agent`. Reusing a name updates the existing agent.
+
+### Example: Task + Permanent Agent
+
+```
+// Create a helper agent
+create_permanent_agent({
+  name: "Release Tracker",
+  description: "Tracks release readiness and reports risks.",
+  systemPrompt: "You track release status, summarize risks, and report progress.",
+  workspaceDir: "release-notes"
+})
+
+// Task code that delegates to the agent
+status = exec(command="node ./scripts/check-release.mjs")
+if "NO_CHANGES" in status.output:
+    skip()
+
+send_agent_message(agentId="release-tracker", text=status.output)
+skip()
+```
