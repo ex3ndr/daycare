@@ -86,7 +86,7 @@ export function AgentsView() {
                 <View style={styles.toolbar}>
                     <SegmentedControl options={TAB_OPTIONS} value={activeTab} onChange={setActiveTab} />
                     <Text style={[styles.toolbarHint, { color: theme.colors.onSurfaceVariant }]}>
-                        {activeTab === "list" ? "Card inventory" : "ASCII Mermaid topology"}
+                        {activeTab === "list" ? "Card inventory" : "Rendered Mermaid topology"}
                     </Text>
                 </View>
                 {activeTab === "list" ? (
