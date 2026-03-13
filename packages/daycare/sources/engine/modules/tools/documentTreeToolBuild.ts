@@ -20,7 +20,7 @@ type DocumentTreeArgs = Static<typeof schema>;
 const documentTreeEntrySchema = Type.Object(
     {
         documentId: Type.String(),
-        parentDocumentId: Type.Optional(Type.String()),
+        parentDocumentId: Type.Union([Type.String(), Type.Null()]),
         title: Type.String(),
         slug: Type.String(),
         path: Type.String(),
@@ -162,7 +162,7 @@ async function documentTreeEntriesBuild(
         const path = (await documentPathResolve(ctx, document.id, documents)) ?? "(unknown)";
         result.push({
             documentId: document.id,
-            parentDocumentId,
+            parentDocumentId: parentDocumentId ?? null,
             title: document.title,
             slug: document.slug,
             path,

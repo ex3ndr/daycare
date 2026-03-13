@@ -64,7 +64,7 @@ describe("documentTreeToolBuild", () => {
             expect(result.typedResult.documents).toEqual([
                 {
                     documentId: "memory",
-                    parentDocumentId: undefined,
+                    parentDocumentId: null,
                     title: "Memory",
                     slug: "memory",
                     path: "doc://memory",

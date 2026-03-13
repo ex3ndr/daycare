@@ -32,7 +32,7 @@ flowchart TD
     D --> G[Ensure system:<userId>:memory-compactor cron]
     G --> H[Reserved compactor agent path]
     H --> I[Task runs every 12 hours]
-    I --> J[Inject current_time_ms runtime input]
+    I --> J[now tool resolves current time]
     J --> K[Check recent memory/system-memory changes]
     K --> L[Build maintenance prompt]
     L --> M[step(prompt) on current compactor agent]
@@ -42,7 +42,8 @@ flowchart TD
     M --> Q[Update doc://system/memory/agent when agent policy changes]
 ```
 
-- The cron scheduler injects `current_time_ms` at runtime for system tasks so the Monty task can evaluate the 12-hour window without importing unsupported Python stdlib modules.
+- The memory compactor task reads current time through the `now` tool, which returns structured unix and localized time data using the user's profile timezone when available.
 - The memory compactor task reads `doc://memory` and `doc://system/memory` through the structured `document_tree` tool so it can inspect real `updatedAt` values across the full memory subtree and memory-prompt folder.
+- `document_tree` returns `parentDocumentId: null` for root entries so Monty receives a structured object instead of falling back to summary text.
 - The task also reads `doc://system/memory/agent` and `doc://system/memory/compactor` directly and inlines their current contents into the generated compactor prompt before calling `step(...)`.
 - The package build copies `sources/system-tasks` into `dist/system-tasks`, so built installs can reconcile system tasks on startup.
