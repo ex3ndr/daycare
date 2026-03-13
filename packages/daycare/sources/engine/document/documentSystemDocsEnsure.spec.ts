@@ -20,11 +20,13 @@ describe("documentSystemDocsEnsure", () => {
             const soul = await storage.documents.findBySlugAndParent(ctx, "soul", first.id);
             const user = await storage.documents.findBySlugAndParent(ctx, "user", first.id);
             const agents = await storage.documents.findBySlugAndParent(ctx, "agents", first.id);
+            const memory = await storage.documents.findBySlugAndParent(ctx, "memory", first.id);
             const tools = await storage.documents.findBySlugAndParent(ctx, "tools", first.id);
 
             expect(soul?.body).toBe(await agentPromptBundledRead("SOUL.md"));
             expect(user?.body).toBe(await agentPromptBundledRead("USER.md"));
             expect(agents?.body).toBe(await agentPromptBundledRead("AGENTS.md"));
+            expect(memory?.body).toBe(await agentPromptBundledRead("MEMORY.md"));
             expect(tools?.body).toBe(await agentPromptBundledRead("TOOLS.md"));
         } finally {
             storage.connection.close();

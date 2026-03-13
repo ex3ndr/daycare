@@ -47,6 +47,7 @@ describe("agentSystemPrompt", () => {
 
     it("returns replacement prompt for memory-agent path", async () => {
         const expected = (await agentPromptBundledRead("memory/MEMORY_AGENT.md")).trim();
+        const memoryPolicy = (await agentPromptBundledRead("MEMORY.md")).trim();
 
         const rendered = await agentSystemPrompt({
             ctx: contextForUser({ userId: "user-1" }),
@@ -65,6 +66,8 @@ describe("agentSystemPrompt", () => {
         });
 
         expect(rendered).toContain(expected);
+        expect(rendered).toContain("## Memory Policy");
+        expect(rendered).toContain(memoryPolicy);
         expect(rendered).toContain("## Tool Calling");
         expect(rendered).toContain("## Skills");
     });
@@ -123,6 +126,7 @@ describe("agentSystemPrompt", () => {
                 soul: "Soul prompt text\n",
                 user: "User prompt text\n",
                 agents: "Agents prompt text\n",
+                memory: "Memory prompt text\n",
                 tools: "Tools prompt text\n"
             });
 
@@ -194,6 +198,7 @@ describe("agentSystemPrompt", () => {
             expect(rendered).toContain("## Skills");
             expect(rendered).toContain("Connector: telegram, channel: channel-1, user: user-1.");
             expect(rendered).toContain("Soul prompt text");
+            expect(rendered).toContain("Memory prompt text");
             expect(rendered).toContain("Tools prompt text");
             expect(rendered).toContain("`core:software-development` and `core:plan-verify` are bundled built-in tasks");
             expect(rendered).toContain(
@@ -225,6 +230,7 @@ describe("agentSystemPrompt", () => {
                 soul: "Soul prompt text\n",
                 user: "User prompt text\n",
                 agents: "Agents prompt text\n",
+                memory: "Memory prompt text\n",
                 tools: "Tools prompt text\n"
             });
             await mkdir(path.dirname(configSkillPath), { recursive: true });
@@ -317,7 +323,7 @@ describe("agentSystemPrompt", () => {
 async function systemPromptDocumentsWrite(
     storage: Storage,
     userId: string,
-    input: { soul: string; user: string; agents: string; tools: string }
+    input: { soul: string; user: string; agents: string; memory: string; tools: string }
 ): Promise<void> {
     const ctx = contextForUser({ userId });
     const system = await documentSystemDocsEnsure(ctx, storage);
@@ -325,6 +331,7 @@ async function systemPromptDocumentsWrite(
         { slug: "soul", body: input.soul },
         { slug: "user", body: input.user },
         { slug: "agents", body: input.agents },
+        { slug: "memory", body: input.memory },
         { slug: "tools", body: input.tools }
     ];
 

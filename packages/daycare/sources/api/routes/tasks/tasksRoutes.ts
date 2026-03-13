@@ -7,6 +7,7 @@ import { tasksRead } from "./tasksRead.js";
 import { tasksRun } from "./tasksRun.js";
 import { tasksTriggerAdd } from "./tasksTriggerAdd.js";
 import { tasksTriggerRemove } from "./tasksTriggerRemove.js";
+import { tasksTriggerUpdate } from "./tasksTriggerUpdate.js";
 import { tasksUpdate } from "./tasksUpdate.js";
 
 export type TasksRouteContext = {
@@ -151,6 +152,24 @@ export async function tasksRouteHandle(
             body,
             cronTriggerAdd: context.callbacks.cronTriggerAdd,
             webhookTriggerAdd: context.callbacks.webhookTriggerAdd
+        });
+        context.sendJson(response, result.ok ? 200 : 400, result);
+        return true;
+    }
+
+    const triggerUpdateMatch = pathname.match(/^\/tasks\/([^/]+)\/triggers\/([^/]+)\/update$/);
+    if (triggerUpdateMatch?.[1] && triggerUpdateMatch[2] && request.method === "POST") {
+        if (!context.callbacks?.cronTriggerUpdate) {
+            context.sendJson(response, 503, { ok: false, error: "Task runtime unavailable." });
+            return true;
+        }
+        const body = await context.readJsonBody(request);
+        const result = await tasksTriggerUpdate({
+            ctx: context.ctx,
+            taskId: decodeURIComponent(triggerUpdateMatch[1]),
+            triggerId: decodeURIComponent(triggerUpdateMatch[2]),
+            body,
+            cronTriggerUpdate: context.callbacks.cronTriggerUpdate
         });
         context.sendJson(response, result.ok ? 200 : 400, result);
         return true;

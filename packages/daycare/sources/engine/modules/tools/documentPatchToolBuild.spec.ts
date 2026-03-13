@@ -187,7 +187,7 @@ describe("documentPatchToolBuild", () => {
                     contextBuild(storage, "memory"),
                     toolCall
                 )
-            ).rejects.toThrow("Memory agents can only write inside the doc://memory document tree.");
+            ).rejects.toThrow("Memory agents can only write inside doc://memory or doc://system/memory.");
         } finally {
             storage.connection.close();
         }

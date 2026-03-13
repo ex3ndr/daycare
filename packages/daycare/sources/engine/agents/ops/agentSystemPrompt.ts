@@ -1,4 +1,5 @@
 import { getLogger } from "../../../log.js";
+import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import { agentPromptResolve } from "./agentPromptResolve.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 import { agentSystemPromptSectionAgentsTopologySignalsChannels } from "./agentSystemPromptSectionAgentsTopologySignalsChannels.js";
@@ -32,12 +33,13 @@ export async function agentSystemPrompt(context: AgentSystemPromptContext): Prom
         if (!replaced) {
             throw new Error("System prompt replacement requires a non-empty agent prompt.");
         }
-        const [pluginSection, toolSection, skillsSection] = await Promise.all([
+        const [memoryPolicySection, pluginSection, toolSection, skillsSection] = await Promise.all([
+            memoryAgentPromptPolicyResolve(context),
             agentSystemPromptSectionPlugins(context),
             agentSystemPromptSectionToolCalling(context),
             agentSystemPromptSectionSkills(context)
         ]);
-        return [replaced, pluginSection.trim(), toolSection.trim(), skillsSection.trim()]
+        return [replaced, memoryPolicySection, pluginSection.trim(), toolSection.trim(), skillsSection.trim()]
             .filter((section) => section.length > 0)
             .join(SECTION_SEPARATOR)
             .trim();
@@ -70,6 +72,26 @@ export async function agentSystemPrompt(context: AgentSystemPromptContext): Prom
         .filter((section) => section.length > 0)
         .join(SECTION_SEPARATOR)
         .trim();
+}
+
+async function memoryAgentPromptPolicyResolve(context: AgentSystemPromptContext): Promise<string> {
+    if (context.config?.kind !== "memory") {
+        return "";
+    }
+    const systemRoot = await context.agentSystem?.storage?.documents.findBySlugAndParent(context.ctx, "system", null);
+    if (systemRoot) {
+        const document = await context.agentSystem?.storage?.documents.findBySlugAndParent(
+            context.ctx,
+            "memory",
+            systemRoot.id
+        );
+        const trimmed = document?.body.trim() ?? "";
+        if (trimmed.length > 0) {
+            return ["## Memory Policy", "", trimmed].join("\n");
+        }
+    }
+    const fallback = (await agentPromptBundledRead("MEMORY.md")).trim();
+    return fallback.length > 0 ? ["## Memory Policy", "", fallback].join("\n") : "";
 }
 
 function agentSystemPromptImagesResolve(context: AgentSystemPromptContext): string[] | undefined {

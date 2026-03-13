@@ -25,6 +25,12 @@ const SYSTEM_DOCS = [
         bundledPrompt: "AGENTS.md"
     },
     {
+        slug: "memory",
+        title: "Memory",
+        description: "Memory-agent guidance for organizing and compressing durable memory.",
+        bundledPrompt: "MEMORY.md"
+    },
+    {
         slug: "tools",
         title: "Tools",
         description: "Operational notes about tool behavior.",

@@ -70,6 +70,10 @@ export type CronTriggerAddInput = {
     parameters?: Record<string, unknown>;
 };
 
+export type CronTriggerUpdateInput = {
+    enabled?: boolean;
+};
+
 export type WebhookTriggerAddInput = {
     agentId?: string;
 };
@@ -89,6 +93,12 @@ export type RouteTaskCallbacks = {
     tasksDelete: (ctx: Context, taskId: string) => Promise<boolean>;
     tasksRun: (ctx: Context, taskId: string, input: TaskRunInput) => Promise<TaskRunResult>;
     cronTriggerAdd: (ctx: Context, taskId: string, input: CronTriggerAddInput) => Promise<CronTaskDbRecord>;
+    cronTriggerUpdate?: (
+        ctx: Context,
+        taskId: string,
+        triggerId: string,
+        input: CronTriggerUpdateInput
+    ) => Promise<CronTaskDbRecord | null>;
     cronTriggerRemove: (ctx: Context, taskId: string) => Promise<number>;
     webhookTriggerAdd: (ctx: Context, taskId: string, input: WebhookTriggerAddInput) => Promise<WebhookTaskDbRecord>;
     webhookTriggerRemove: (ctx: Context, taskId: string) => Promise<number>;

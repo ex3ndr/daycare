@@ -121,6 +121,8 @@ import { DelayedSignals } from "./signals/delayedSignals.js";
 import { Signals } from "./signals/signals.js";
 import { Skills } from "./skills/skills.js";
 import { taskCoreIdIs } from "./tasks/core/taskCoreIdIs.js";
+import { taskSystemIdIs } from "./tasks/system/taskSystemIdIs.js";
+import { taskSystemMemoryCleanupEnsure } from "./tasks/system/taskSystemMemoryCleanupEnsure.js";
 import { taskDeleteSuccessResolve } from "./tasks/taskDeleteSuccessResolve.js";
 import { TaskExecutionRunner } from "./tasks/taskExecutionRunner.js";
 import { TaskExecutions } from "./tasks/taskExecutions.js";
@@ -586,6 +588,9 @@ export class Engine {
                     if (taskCoreIdIs(normalizedTaskId)) {
                         throw new Error("Core tasks cannot be updated.");
                     }
+                    if (taskSystemIdIs(normalizedTaskId)) {
+                        throw new Error("System tasks cannot be updated.");
+                    }
                     const existing = await this.storage.tasks.findById(ctx, normalizedTaskId);
                     if (!existing) {
                         return null;
@@ -606,6 +611,9 @@ export class Engine {
                     }
                     if (taskCoreIdIs(normalizedTaskId)) {
                         throw new Error("Core tasks cannot be deleted.");
+                    }
+                    if (taskSystemIdIs(normalizedTaskId)) {
+                        throw new Error("System tasks cannot be deleted.");
                     }
                     const existing = await this.storage.tasks.findById(ctx, normalizedTaskId);
                     if (!existing) {
@@ -681,20 +689,43 @@ export class Engine {
                     return { queued: true };
                 },
                 cronTriggerAdd: (ctx, taskId, input) =>
-                    this.crons.addTrigger(ctx, {
-                        taskId,
-                        schedule: input.schedule,
-                        timezone: input.timezone,
-                        agentId: input.agentId,
-                        parameters: input.parameters
-                    }),
-                cronTriggerRemove: (ctx, taskId) => this.crons.deleteTriggersForTask(ctx, taskId),
+                    taskSystemIdIs(taskId)
+                        ? Promise.reject(new Error("System task triggers cannot be added manually."))
+                        : this.crons.addTrigger(ctx, {
+                              taskId,
+                              schedule: input.schedule,
+                              timezone: input.timezone,
+                              agentId: input.agentId,
+                              parameters: input.parameters
+                          }),
+                cronTriggerUpdate: async (ctx, taskId, triggerId, input) => {
+                    const existing = await this.storage.cronTasks.findById(triggerId);
+                    if (!existing || existing.userId !== ctx.userId || existing.taskId !== taskId) {
+                        return null;
+                    }
+                    if (input.enabled !== undefined) {
+                        await (input.enabled
+                            ? this.crons.enableTask(ctx, triggerId)
+                            : this.crons.disableTask(ctx, triggerId));
+                    }
+                    const updated = await this.storage.cronTasks.findById(triggerId);
+                    return updated?.userId === ctx.userId && updated.taskId === taskId ? updated : null;
+                },
+                cronTriggerRemove: (ctx, taskId) =>
+                    taskSystemIdIs(taskId)
+                        ? Promise.reject(new Error("System task triggers cannot be removed."))
+                        : this.crons.deleteTriggersForTask(ctx, taskId),
                 webhookTriggerAdd: (ctx, taskId, input) =>
-                    this.webhooks.addTrigger(ctx, {
-                        taskId,
-                        agentId: input.agentId
-                    }),
-                webhookTriggerRemove: (ctx, taskId) => this.webhooks.deleteTriggersForTask(ctx, taskId)
+                    taskSystemIdIs(taskId)
+                        ? Promise.reject(new Error("System task triggers cannot be added manually."))
+                        : this.webhooks.addTrigger(ctx, {
+                              taskId,
+                              agentId: input.agentId
+                          }),
+                webhookTriggerRemove: (ctx, taskId) =>
+                    taskSystemIdIs(taskId)
+                        ? Promise.reject(new Error("System task triggers cannot be removed."))
+                        : this.webhooks.deleteTriggersForTask(ctx, taskId)
             },
             tokenStatsFetch: (ctx, options) => this.storage.tokenStats.findMany(ctx, options),
             documents: this.storage.documents,
@@ -755,6 +786,7 @@ export class Engine {
         logger.debug("load: Loading agents");
         await this.agentSystem.load();
         logger.debug("load: Agents loaded");
+        await taskSystemMemoryCleanupEnsure(this.storage, this.agentSystem);
 
         logger.debug("reload: Reloading provider manager with current config");
         await this.providerManager.reload();

@@ -1,7 +1,6 @@
 import type { ToolExecutionContext } from "@/types";
 import { documentChainResolve } from "../../../storage/documentChainResolve.js";
-
-const MEMORY_ROOT_SLUG = "memory";
+import { documentMutationMemoryPathAllowed } from "./documentMutationMemoryPathAllowed.js";
 
 type DocumentMutationMemoryScopeRepo = {
     findById: (
@@ -16,7 +15,7 @@ type DocumentMutationMemoryScopeRepo = {
 };
 
 /**
- * Ensures memory-agents mutate only documents under the `doc://memory` subtree.
+ * Ensures memory-agents mutate only memory documents or the dedicated memory policy document.
  * Expects: callers pass an existing document id resolved in the current user scope.
  */
 export async function documentMutationMemoryScopeAssert(
@@ -33,8 +32,7 @@ export async function documentMutationMemoryScopeAssert(
         throw new Error(`Document not found: ${documentId}`);
     }
 
-    const root = chain[0];
-    if (!root || root.slug !== MEMORY_ROOT_SLUG) {
-        throw new Error("Memory agents can only write inside the doc://memory document tree.");
+    if (!documentMutationMemoryPathAllowed(chain)) {
+        throw new Error("Memory agents can only write inside doc://memory or doc://system/memory.");
     }
 }

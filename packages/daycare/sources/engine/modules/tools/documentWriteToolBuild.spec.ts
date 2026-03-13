@@ -317,7 +317,7 @@ describe("documentWriteToolBuild", () => {
                     contextBuild(storage, readVersions, "memory"),
                     toolCall
                 )
-            ).rejects.toThrow("Memory agents can only write inside the doc://memory document tree.");
+            ).rejects.toThrow("Memory agents can only write inside doc://memory or doc://system/memory.");
         } finally {
             storage.connection.close();
         }
@@ -440,6 +440,58 @@ describe("documentWriteToolBuild", () => {
         }
     });
 
+    it("allows memory-agent updates to doc://system/memory", async () => {
+        const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
+        try {
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+            await storage.documents.create(ctx, {
+                id: "system",
+                slug: "system",
+                title: "System",
+                description: "System root",
+                body: "",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await storage.documents.create(ctx, {
+                id: "system-memory",
+                slug: "memory",
+                title: "Memory",
+                description: "Memory policy",
+                body: "v1",
+                createdAt: 2,
+                updatedAt: 2,
+                parentId: "system"
+            });
+
+            const readTool = documentReadToolBuild();
+            await readTool.execute(
+                { path: "doc://system/memory" },
+                contextBuild(storage, readVersions, "memory"),
+                readToolCall
+            );
+
+            const tool = documentWriteToolBuild();
+            await tool.execute(
+                {
+                    documentId: "system-memory",
+                    slug: "memory",
+                    title: "Memory",
+                    description: "Memory policy",
+                    body: "v2"
+                },
+                contextBuild(storage, readVersions, "memory"),
+                toolCall
+            );
+
+            const updated = await storage.documents.findById(ctx, "system-memory");
+            expect(updated?.body).toBe("v2");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
     it("rejects memory-agent updates for documents outside doc://memory", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
@@ -468,7 +520,7 @@ describe("documentWriteToolBuild", () => {
                     contextBuild(storage, readVersions, "memory"),
                     toolCall
                 )
-            ).rejects.toThrow("Memory agents can only write inside the doc://memory document tree.");
+            ).rejects.toThrow("Memory agents can only write inside doc://memory or doc://system/memory.");
         } finally {
             storage.connection.close();
         }

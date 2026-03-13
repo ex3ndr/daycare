@@ -153,6 +153,8 @@ async function documentSummaryBuild(
         `- **slug**: \`${document.slug}\``,
         `- **path**: \`${path}\``,
         `- **version**: ${document.version ?? 1}`,
+        `- **createdAt**: ${document.createdAt}`,
+        `- **updatedAt**: ${document.updatedAt}`,
         `- **description**: ${document.description || "(none)"}`,
         `- **refs**: ${linkRefs.length > 0 ? linkRefs.map((id) => `\`${id}\``).join(", ") : "(none)"}`,
         "",
@@ -168,6 +170,7 @@ async function documentSummaryBuild(
             if (child.description) {
                 lines.push(`  - ${child.description}`);
             }
+            lines.push(`  - updatedAt=${child.updatedAt}`);
             if (child.body.trim()) {
                 lines.push(`  - preview: ${documentPreviewBuild(child.body)}`);
             }
@@ -215,6 +218,7 @@ async function documentSubtreeSummaryBuild(
         for (const child of children) {
             const indent = "  ".repeat(depth);
             lines.push(`${indent}- **${child.title}** (id: \`${child.id}\`, slug: \`${child.slug}\`)`);
+            lines.push(`${indent}  updatedAt=${child.updatedAt}`);
             if (child.description) {
                 lines.push(`${indent}  ${child.description}`);
             }

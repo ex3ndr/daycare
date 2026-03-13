@@ -54,8 +54,10 @@ describe("documentReadToolBuild", () => {
             expect(result.typedResult.documentId).toBe("memory");
             expect(result.typedResult.summary).toContain("# Memory");
             expect(result.typedResult.summary).toContain("**path**: `doc://memory`");
+            expect(result.typedResult.summary).toContain("**updatedAt**: 1");
             expect(result.typedResult.summary).toContain("## Children");
             expect(result.typedResult.summary).toContain("Daily");
+            expect(result.typedResult.summary).toContain("updatedAt=2");
             expect(result.typedResult.summary).toContain("## Body");
         } finally {
             storage.connection.close();
@@ -93,6 +95,7 @@ describe("documentReadToolBuild", () => {
             expect(result.typedResult.found).toBe(true);
             expect(result.typedResult.summary).toContain("## Memory Tree");
             expect(result.typedResult.summary).toContain("User");
+            expect(result.typedResult.summary).toContain("updatedAt=2");
             expect(result.typedResult.summary).toContain("Prefers concise answers");
         } finally {
             storage.connection.close();

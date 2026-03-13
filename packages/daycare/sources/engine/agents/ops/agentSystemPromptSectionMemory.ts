@@ -10,10 +10,11 @@ import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 export async function agentSystemPromptSectionMemory(context: AgentSystemPromptContext): Promise<string> {
     const isForeground = context.config?.foreground === true;
     const systemRoot = await context.agentSystem?.storage?.documents.findBySlugAndParent(context.ctx, "system", null);
-    const [soul, user, agents, tools] = await Promise.all([
+    const [soul, user, agents, memory, tools] = await Promise.all([
         systemPromptDocumentRead(context, systemRoot?.id ?? null, "soul", "SOUL.md"),
         systemPromptDocumentRead(context, systemRoot?.id ?? null, "user", "USER.md"),
         systemPromptDocumentRead(context, systemRoot?.id ?? null, "agents", "AGENTS.md"),
+        systemPromptDocumentRead(context, systemRoot?.id ?? null, "memory", "MEMORY.md"),
         systemPromptDocumentRead(context, systemRoot?.id ?? null, "tools", "TOOLS.md")
     ]);
 
@@ -25,6 +26,7 @@ export async function agentSystemPromptSectionMemory(context: AgentSystemPromptC
         soul,
         user,
         agents,
+        memory,
         tools
     });
     return section.trim();

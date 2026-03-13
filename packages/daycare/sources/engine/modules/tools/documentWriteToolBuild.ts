@@ -7,6 +7,7 @@ import { documentChainResolve } from "../../../storage/documentChainResolve.js";
 import { documentPathFind } from "../../../storage/documentPathFind.js";
 import { documentSlugNormalize } from "../../../storage/documentSlugNormalize.js";
 import { peopleDocumentFrontmatterAssert } from "../../people/peopleDocumentFrontmatterAssert.js";
+import { documentMutationMemoryPathAllowed } from "./documentMutationMemoryPathAllowed.js";
 
 const schema = Type.Object(
     {
@@ -38,8 +39,6 @@ const returns: ToolResultContract<DocumentWriteResult> = {
     schema: resultSchema,
     toLLMText: (result) => result.summary
 };
-const MEMORY_ROOT_SLUG = "memory";
-
 /**
  * Builds the document_write tool that creates or updates a document row.
  * Expects: storage.documents is available and scoped by ctx.userId.
@@ -237,8 +236,8 @@ async function memoryAgentDocumentTreeWriteAssert(
         parentIdFromArgs
     );
     if (parentId === null) {
-        if (slug !== MEMORY_ROOT_SLUG) {
-            throw new Error("Memory agents can only write inside the doc://memory document tree.");
+        if (slug !== "memory") {
+            throw new Error("Memory agents can only write inside doc://memory or doc://system/memory.");
         }
         return;
     }
@@ -247,10 +246,14 @@ async function memoryAgentDocumentTreeWriteAssert(
     if (!chain || chain.length === 0) {
         throw new Error(`Parent document not found: ${parentId}`);
     }
-    const root = chain[0];
-    if (!root || root.slug !== MEMORY_ROOT_SLUG) {
-        throw new Error("Memory agents can only write inside the doc://memory document tree.");
+    if (documentMutationMemoryPathAllowed(chain)) {
+        return;
     }
+    const root = chain[0];
+    if (root?.slug === "system" && slug === "memory") {
+        return;
+    }
+    throw new Error("Memory agents can only write inside doc://memory or doc://system/memory.");
 }
 
 async function writeParentIdResolve(
