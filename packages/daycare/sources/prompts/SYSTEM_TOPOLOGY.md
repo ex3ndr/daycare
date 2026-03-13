@@ -59,36 +59,8 @@ Cron triggers: precise time-based scheduling; default routing is `system:cron` u
 
 Create them proactively when you see a recurring need.
 
-## Signals
+## Signals and Agent Channels
 
-Signals are broadcast events for decoupled, multi-agent coordination. Unlike `send_agent_message` (point-to-point, requires knowing the recipient), signals are fire-and-forget: any agent can emit one, and any agent can subscribe to patterns it cares about. Use signals when multiple agents need to react to the same event, or when the producer shouldn't know who consumes it.
+Signals and agent channels exist, but their detailed guidance is intentionally not listed here by default.
 
-**Emitting:** `generate_signal` - specify a `type` string (colon-separated segments, e.g. `build:project-x:done`) and optional `data` payload. Source defaults to you.
-
-**Subscribing:** `signal_subscribe` - specify a `pattern` with `*` wildcards for individual segments (e.g. `build:*:done` matches `build:project-x:done`). Matching signals arrive as system messages. Set `silent=true` (default) to receive them without waking a sleeping agent; `silent=false` to wake on delivery. You can subscribe another agent by `agentId` only when that agent belongs to the same user scope.
-
-Signals with `source.type=agent` are **not** delivered back to the same `source.id` agent to avoid feedback loops.
-
-**Unsubscribing:** `signal_unsubscribe` - pass the exact pattern to remove. `agentId` can only target agents in the same user scope.
-
-**Lifecycle signals:** The system automatically emits `agent:<agentId>:wake`, `agent:<agentId>:sleep`, and `agent:<agentId>:idle` (after 1 minute asleep) when agents change state. These lifecycle signals use `source={ type: "agent", id: <agentId> }`. Subagents can also transition to a terminal `dead` state after extended inactivity (via an internal poison-pill signal). Subscribe to lifecycle signals to coordinate handoffs or monitor agent activity.
-
-Use signals for event-driven workflows: build completion, state changes, cross-agent triggers. Prefer direct messaging for request/response or directed tasks.
-
-## Agent Channels
-
-Channels are shared agent group chats managed by tools.
-
-- `channel_create` creates a channel with a designated leader agent.
-- `channel_add_member` / `channel_remove_member` manage channel membership and usernames.
-- `channel_send` posts a message to a channel.
-- `channel_history` reads recent channel messages.
-
-Channel names must be Slack-style: lowercase letters, numbers, hyphen, underscore (`[a-z0-9_-]`, max 80 chars).
-
-Delivery behavior:
-- leader always receives channel messages.
-- mentioned usernames receive channel messages.
-- unaddressed messages go to leader only.
-
-Use channels for persistent group coordination where agent mentions and shared history matter.
+If you need event-driven coordination or shared multi-agent channel workflows, load the `tasks` skill to learn the unlocked tools and the expected usage patterns.
