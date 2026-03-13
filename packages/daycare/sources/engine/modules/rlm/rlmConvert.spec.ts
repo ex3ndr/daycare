@@ -96,8 +96,8 @@ describe("rlmResultConvert", () => {
         });
     });
 
-    it("returns joined text content", () => {
-        const result: ToolExecutionResult = {
+    it("normalizes undefined values to null", () => {
+        const result = {
             toolMessage: {
                 role: "toolResult",
                 toolCallId: "1",
@@ -109,26 +109,34 @@ describe("rlmResultConvert", () => {
                 isError: false,
                 timestamp: Date.now()
             },
-            typedResult: { text: "hello\nworld" }
-        };
+            typedResult: {
+                rows: [{ id: "1", parentId: undefined }]
+            }
+        } as unknown as ToolExecutionResult;
 
-        expect(rlmResultConvert(result)).toEqual({ text: "hello\nworld" });
+        expect(rlmResultConvert(result)).toEqual({
+            rows: [{ id: "1", parentId: null }]
+        });
     });
 
-    it("returns fallback error text for empty error payloads", () => {
-        const result: ToolExecutionResult = {
+    it("throws when typed result cannot be converted to Monty", () => {
+        const result = {
             toolMessage: {
                 role: "toolResult",
                 toolCallId: "1",
-                toolName: "x",
-                content: [],
+                toolName: "broken_tool",
+                content: [{ type: "text", text: "fallback text" }],
                 isError: true,
                 timestamp: Date.now()
             },
-            typedResult: { text: "" }
-        };
+            typedResult: {
+                invalid: BigInt(1)
+            }
+        } as unknown as ToolExecutionResult;
 
-        expect(rlmResultConvert(result)).toEqual({ text: "" });
+        expect(() => rlmResultConvert(result)).toThrow(
+            'Tool "broken_tool" returned a value that cannot be converted for Monty.'
+        );
     });
 
     it("keeps nested typed JSON structures", () => {

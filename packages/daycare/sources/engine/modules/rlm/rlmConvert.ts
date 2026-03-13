@@ -36,34 +36,22 @@ export function rlmArgsConvert(
 }
 
 /**
- * Converts a tool execution result into a Python-friendly string value.
- * Expects: tool result content follows the ToolResultMessage text block convention.
+ * Converts a tool execution result into a Python-friendly structured value.
+ * Expects: typedResult matches the tool schema; undefined values are normalized to null.
  */
 export function rlmResultConvert(toolResult: ToolExecutionResult<ToolResultObject>): JsMontyObject {
-    if (toolResultObjectIs(toolResult.typedResult)) {
-        return toolResult.typedResult;
+    const normalized = toolResultValueNormalize(toolResult.typedResult);
+    if (toolResultObjectIs(normalized)) {
+        return normalized;
     }
-    if (toolResultObjectIs(toolResult.toolMessage.details)) {
-        return toolResult.toolMessage.details;
-    }
-    const text = toolResult.toolMessage.content
-        .filter((part) => part.type === "text")
-        .map((part) => ("text" in part && typeof part.text === "string" ? part.text : ""))
-        .join("\n")
-        .trim();
-
-    if (text.length > 0) {
-        return text;
-    }
-
-    if (toolResult.toolMessage.isError) {
-        return "Tool execution failed.";
-    }
-
-    return "";
+    const toolName = toolResult.toolMessage.toolName ?? "unknown";
+    throw new Error(`Tool "${toolName}" returned a value that cannot be converted for Monty.`);
 }
 
 function montyValueConvert(value: unknown): unknown {
+    if (value === undefined) {
+        return null;
+    }
     if (typeof value === "bigint") {
         if (value <= BigInt(Number.MAX_SAFE_INTEGER) && value >= BigInt(Number.MIN_SAFE_INTEGER)) {
             return Number(value);
@@ -96,6 +84,23 @@ function montyValueConvert(value: unknown): unknown {
 
 function recordIs(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toolResultValueNormalize(value: unknown): unknown {
+    if (value === undefined) {
+        return null;
+    }
+    if (Array.isArray(value)) {
+        return value.map((entry) => toolResultValueNormalize(entry));
+    }
+    if (!recordIs(value)) {
+        return value;
+    }
+    const normalized: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value)) {
+        normalized[key] = toolResultValueNormalize(entry);
+    }
+    return normalized;
 }
 
 function toolResultObjectIs(value: unknown): value is ToolResultObject {
