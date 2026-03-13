@@ -2,8 +2,13 @@
 name: tasks
 description: Understand what Daycare tasks are, how cron and webhook triggers work, and when to use each. Use when users ask about tasks, scheduling, triggers, or want to inspect existing tasks.
 tools:
+  - task_create
   - task_read
+  - task_update
+  - task_delete
   - task_run
+  - task_trigger_add
+  - task_trigger_remove
   - channel_create
   - channel_send
   - channel_history

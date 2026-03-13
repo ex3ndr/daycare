@@ -64,7 +64,7 @@ describe("system prompt skills rendering", () => {
 
         expect(prompt).toContain("## Skills (mandatory)");
         expect(prompt).toContain("Before replying, scan the skill descriptions below:");
-        expect(prompt).toContain("A skill may list unlocked tools.");
+        expect(prompt).toContain("A skill may list related tools.");
         expect(prompt).not.toContain("For local skill authoring:");
     });
 

@@ -89,7 +89,7 @@ Keep it light: one fitting reaction per message.
 
 ## Tools
 
-Skills can unlock extra tools. Read each `SKILL.md` when needed, and use its unlocked tool list when present.
+Skills can document hidden-by-default tools. Read each `SKILL.md` when needed, and use its tool list as guidance for the relevant tool surface.
 Store local operational notes in `doc://system/tools`.
 
 ### Platform Formatting

@@ -53,7 +53,7 @@ describe("skillToolBuild", () => {
         }
     });
 
-    it("prepends unlocked tool stubs declared in skill frontmatter", async () => {
+    it("prepends documented tool stubs declared in skill frontmatter", async () => {
         const dirs = await activeRootCreate();
         try {
             const skill = skillBuild({
@@ -90,8 +90,9 @@ describe("skillToolBuild", () => {
 
             const result = await tool.execute({ name: "scheduling" }, context, toolCall);
             const text = contentText(result.toolMessage.content);
-            expect(text).toContain("Unlocked tools: task_create, task_trigger_add");
-            expect(text).toContain("Unlocked Python tool stubs:");
+            expect(text).toContain("Skill-documented tools: task_create, task_trigger_add");
+            expect(text).toContain("These tools are already callable.");
+            expect(text).toContain("Python tool stubs shown by this skill:");
             expect(text).toContain("def task_create()");
             expect(text).toContain("def task_trigger_add()");
         } finally {

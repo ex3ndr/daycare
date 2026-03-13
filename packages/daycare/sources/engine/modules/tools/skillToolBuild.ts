@@ -320,9 +320,16 @@ function skillBodyDecorate(
 ): string {
     const lines = [`Base directory for this skill: ${baseDirectory}`, `Skill name: ${skillName}`];
     if (unlockedToolNames.length > 0) {
-        lines.push(`Unlocked tools: ${unlockedToolNames.join(", ")}`);
+        lines.push(`Skill-documented tools: ${unlockedToolNames.join(", ")}`);
+        lines.push("These tools are already callable. The stubs below are documentation, not an access gate.");
         if (unlockedTools.length > 0) {
-            lines.push("", "Unlocked Python tool stubs:", "```python", montyPreambleBuild(unlockedTools), "```");
+            lines.push(
+                "",
+                "Python tool stubs shown by this skill:",
+                "```python",
+                montyPreambleBuild(unlockedTools),
+                "```"
+            );
         }
     }
     lines.push("", skillBody.trim());

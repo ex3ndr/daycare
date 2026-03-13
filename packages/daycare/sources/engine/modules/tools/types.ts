@@ -93,7 +93,7 @@ export type ToolDefinition<TParams extends TSchema = TSchema, TResult extends To
     ) => Promise<ToolExecutionResult<TResult>>;
     /** Called after successful script completion for each deferred payload produced by execute. */
     executeDeferred?: DeferredToolHandler;
-    /** Hides this tool from default system prompt rendering until a skill explicitly unlocks it. */
+    /** Hides this tool from default system prompt rendering; skills may still document it explicitly. */
     hiddenByDefault?: boolean;
     visibleByDefault?: (context: ToolVisibilityContext) => boolean;
 };
