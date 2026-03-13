@@ -26,6 +26,7 @@
   },
   "files": [
     "dist",
+    "sources/system-tasks",
     "bin",
     "LICENSE",
     "README.md"

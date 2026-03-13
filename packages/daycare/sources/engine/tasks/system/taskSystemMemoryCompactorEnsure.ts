@@ -1,4 +1,4 @@
-import { promises as fs } from "node:fs";
+import { existsSync, promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -156,7 +156,7 @@ async function taskDefinitionRead(): Promise<{
     code: string;
     parameters: TaskParameter[] | null;
 }> {
-    const taskDir = path.resolve(systemTasksRootResolve(), "memory-compactor");
+    const taskDir = systemTaskDirResolve("memory-compactor");
     const descriptionPath = path.join(taskDir, "description.md");
     const codePath = path.join(taskDir, "task.py");
     const [descriptionSource, code] = await Promise.all([
@@ -179,4 +179,13 @@ async function taskDefinitionRead(): Promise<{
 
 function systemTasksRootResolve(): string {
     return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../system-tasks");
+}
+
+function systemTaskDirResolve(slug: string): string {
+    const bundledRoot = systemTasksRootResolve();
+    const bundledTaskDir = path.resolve(bundledRoot, slug);
+    if (existsSync(bundledTaskDir)) {
+        return bundledTaskDir;
+    }
+    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../sources/system-tasks", slug);
 }
