@@ -9,7 +9,8 @@ def has_recent_changes(documents: list[dict], cutoff: int) -> bool:
     return False
 
 
-now = current_time_ms
+now_info = now()
+now = now_info["unixTimeMs"]
 cutoff = now - TWELVE_HOURS_MS
 
 memory_tree = document_tree(path="doc://memory")

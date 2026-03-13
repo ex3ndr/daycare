@@ -31,6 +31,11 @@ const documentReadTool = {
         { additionalProperties: false }
     )
 };
+const nowToolDefinition = {
+    name: "now",
+    description: "Read current time.",
+    parameters: Type.Object({}, { additionalProperties: false })
+};
 
 async function systemTaskRead(taskName: string): Promise<string> {
     return fs.readFile(path.join(SYSTEM_TASKS_ROOT, taskName, "task.py"), "utf8");
@@ -44,13 +49,41 @@ function systemTaskResolver(
             documents?: Array<{ documentId: string; title: string; path: string; updatedAt: number }>;
             readSummary?: string;
         }
-    >
+    >,
+    currentTimeMs = 43200001
 ) {
     const execute = vi.fn(async (toolCall: ToolCall, _context: ToolExecutionContext): Promise<ToolExecutionResult> => {
         const pathValue =
             typeof toolCall.arguments === "object" && toolCall.arguments !== null && "path" in toolCall.arguments
                 ? String((toolCall.arguments as { path: string }).path)
                 : "";
+        if (toolCall.name === "now") {
+            const summary = `Current time: 1970-01-01 12:00:00 (UTC, UTC); unix=${currentTimeMs}.`;
+            const toolMessage: ToolResultMessage = {
+                role: "toolResult",
+                toolCallId: toolCall.id,
+                toolName: toolCall.name,
+                content: [{ type: "text", text: summary }],
+                isError: false,
+                timestamp: Date.now()
+            };
+            return {
+                toolMessage,
+                typedResult: {
+                    summary,
+                    unixTimeMs: currentTimeMs,
+                    unixTimeSeconds: Math.floor(currentTimeMs / 1000),
+                    isoTimeUtc: "1970-01-01T12:00:00.001Z",
+                    timezone: "UTC",
+                    timezoneAbbr: "UTC",
+                    timezoneSource: "default",
+                    localDate: "1970-01-01",
+                    localTime: "12:00:00",
+                    localDateTime: "1970-01-01 12:00:00"
+                }
+            };
+        }
+
         const entry = documentsByPath[pathValue] ?? { summary: "", documents: [] };
         const summary = toolCall.name === "document_read" ? (entry.readSummary ?? entry.summary) : entry.summary;
         const toolMessage: ToolResultMessage = {
@@ -82,8 +115,8 @@ function systemTaskResolver(
         };
     });
     const resolver: ToolResolverApi = {
-        listTools: () => [documentTreeTool, documentReadTool],
-        listToolsForAgent: () => [documentTreeTool, documentReadTool],
+        listTools: () => [documentTreeTool, documentReadTool, nowToolDefinition],
+        listToolsForAgent: () => [documentTreeTool, documentReadTool, nowToolDefinition],
         execute,
         deferredHandlerFor: () => undefined
     };
@@ -123,121 +156,121 @@ describe("system-tasks VM execution", () => {
     describe("memory-compactor", () => {
         it("skips when memory changed outside the compaction window", async () => {
             const code = await systemTaskRead("memory-compactor");
-            const { resolver, execute } = systemTaskResolver({
-                "doc://memory": {
-                    summary: "memory",
-                    documents: [
-                        {
-                            documentId: "memory",
-                            title: "Memory",
-                            path: "doc://memory",
-                            updatedAt: 1
-                        },
-                        {
-                            documentId: "prefs",
-                            title: "Prefs",
-                            path: "doc://memory/prefs",
-                            updatedAt: 2
-                        }
-                    ]
+            const { resolver, execute } = systemTaskResolver(
+                {
+                    "doc://memory": {
+                        summary: "memory",
+                        documents: [
+                            {
+                                documentId: "memory",
+                                title: "Memory",
+                                path: "doc://memory",
+                                updatedAt: 1
+                            },
+                            {
+                                documentId: "prefs",
+                                title: "Prefs",
+                                path: "doc://memory/prefs",
+                                updatedAt: 2
+                            }
+                        ]
+                    },
+                    "doc://system/memory": {
+                        summary: "system memory",
+                        documents: [
+                            {
+                                documentId: "system-memory",
+                                title: "System Memory",
+                                path: "doc://system/memory",
+                                updatedAt: 2
+                            }
+                        ]
+                    },
+                    "doc://system/memory/agent": {
+                        summary: "agent prompt",
+                        readSummary: "# Memory Agent\n\nKeep memory tidy."
+                    },
+                    "doc://system/memory/compactor": {
+                        summary: "compactor prompt",
+                        readSummary: "# Memory Compactor\n\nReview recent changes."
+                    }
                 },
-                "doc://system/memory": {
-                    summary: "system memory",
-                    documents: [
-                        {
-                            documentId: "system-memory",
-                            title: "System Memory",
-                            path: "doc://system/memory",
-                            updatedAt: 2
-                        }
-                    ]
-                },
-                "doc://system/memory/agent": {
-                    summary: "agent prompt",
-                    readSummary: "# Memory Agent\n\nKeep memory tidy."
-                },
-                "doc://system/memory/compactor": {
-                    summary: "compactor prompt",
-                    readSummary: "# Memory Compactor\n\nReview recent changes."
-                }
-            });
+                12 * 60 * 60 * 1000 + 10
+            );
 
             const context = systemTaskContext();
             const result = await rlmExecute(
                 code,
-                montyPreambleBuild([documentTreeTool, documentReadTool]),
+                montyPreambleBuild([documentTreeTool, documentReadTool, nowToolDefinition]),
                 context,
                 resolver,
                 "system-memory-compactor-noop",
-                undefined,
-                undefined,
-                { current_time_ms: 12 * 60 * 60 * 1000 + 10 },
-                [{ name: "current_time_ms", type: "integer", nullable: false }]
+                undefined
             );
 
             expect(result.skipTurn).toBe(true);
             expect(result.output).toBe("Turn skipped");
-            expect(execute).toHaveBeenCalledTimes(4);
+            expect(execute).toHaveBeenCalledTimes(5);
             expect(context.agentSystem.postAndAwait).not.toHaveBeenCalled();
         });
 
         it("runs step and compaction when memory changed within the window", async () => {
             const code = await systemTaskRead("memory-compactor");
-            const { resolver, execute } = systemTaskResolver({
-                "doc://memory": {
-                    summary: "memory",
-                    documents: [
-                        {
-                            documentId: "memory",
-                            title: "Memory",
-                            path: "doc://memory",
-                            updatedAt: 1
-                        },
-                        {
-                            documentId: "fresh-note",
-                            title: "Fresh Note",
-                            path: "doc://memory/fresh-note",
-                            updatedAt: 43200000
-                        }
-                    ]
+            const { resolver, execute } = systemTaskResolver(
+                {
+                    "doc://memory": {
+                        summary: "memory",
+                        documents: [
+                            {
+                                documentId: "memory",
+                                title: "Memory",
+                                path: "doc://memory",
+                                updatedAt: 1
+                            },
+                            {
+                                documentId: "fresh-note",
+                                title: "Fresh Note",
+                                path: "doc://memory/fresh-note",
+                                updatedAt: 43200000
+                            }
+                        ]
+                    },
+                    "doc://system/memory": {
+                        summary: "system memory",
+                        documents: [
+                            {
+                                documentId: "system-memory",
+                                title: "System Memory",
+                                path: "doc://system/memory",
+                                updatedAt: 1
+                            }
+                        ]
+                    },
+                    "doc://system/memory/agent": {
+                        summary: "agent prompt",
+                        readSummary: "# Memory Agent\n\nKeep memory tidy."
+                    },
+                    "doc://system/memory/compactor": {
+                        summary: "compactor prompt",
+                        readSummary: "# Memory Compactor\n\nReview recent changes."
+                    }
                 },
-                "doc://system/memory": {
-                    summary: "system memory",
-                    documents: [
-                        {
-                            documentId: "system-memory",
-                            title: "System Memory",
-                            path: "doc://system/memory",
-                            updatedAt: 1
-                        }
-                    ]
-                },
-                "doc://system/memory/agent": {
-                    summary: "agent prompt",
-                    readSummary: "# Memory Agent\n\nKeep memory tidy."
-                },
-                "doc://system/memory/compactor": {
-                    summary: "compactor prompt",
-                    readSummary: "# Memory Compactor\n\nReview recent changes."
-                }
-            });
+                43200000 + 1
+            );
 
             const context = systemTaskContext();
             const result = await rlmExecute(
                 code,
-                montyPreambleBuild([documentTreeTool, documentReadTool]),
+                montyPreambleBuild([documentTreeTool, documentReadTool, nowToolDefinition]),
                 context,
                 resolver,
                 "system-memory-compactor-run",
-                undefined,
-                undefined,
-                { current_time_ms: 43200000 + 1 },
-                [{ name: "current_time_ms", type: "integer", nullable: false }]
+                undefined
             );
 
             expect(result.skipTurn).toBe(true);
             expect(result.output).toBe("Turn skipped");
-            expect(execute).toHaveBeenCalledTimes(4);
+            expect(execute).toHaveBeenCalledTimes(5);
             expect(context.agentSystem.postAndAwait).toHaveBeenNthCalledWith(
                 1,
                 expect.objectContaining({ agentId: "test-agent", userId: "test-user" }),
