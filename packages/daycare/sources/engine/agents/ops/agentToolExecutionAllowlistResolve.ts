@@ -13,5 +13,12 @@ export function agentToolExecutionAllowlistResolve(kind: AgentKind): ReadonlySet
         return undefined;
     }
 
-    return new Set<string>(["document_read", "document_tree", "document_append", "document_patch", "document_write"]);
+    return new Set<string>([
+        "now",
+        "document_read",
+        "document_tree",
+        "document_append",
+        "document_patch",
+        "document_write"
+    ]);
 }

@@ -13,6 +13,7 @@ describe("agentToolExecutionAllowlistResolve", () => {
         const allowlist = agentToolExecutionAllowlistResolve("memory");
 
         expect(allowlist ? [...allowlist] : []).toEqual([
+            "now",
             "document_read",
             "document_tree",
             "document_append",
