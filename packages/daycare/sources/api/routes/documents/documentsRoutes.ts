@@ -4,6 +4,7 @@ import type { DocumentsRepository } from "../../../storage/documentsRepository.j
 import { documentsCreate } from "./documentsCreate.js";
 import { documentsDelete } from "./documentsDelete.js";
 import { documentsFindById } from "./documentsFindById.js";
+import { documentsHistory } from "./documentsHistory.js";
 import { documentsTree } from "./documentsTree.js";
 import { documentsUpdate } from "./documentsUpdate.js";
 
@@ -28,6 +29,13 @@ export async function documentsRouteHandle(
 ): Promise<boolean> {
     if (pathname === "/documents/tree" && request.method === "GET") {
         await documentsTree(request, response, context);
+        return true;
+    }
+
+    const historyMatch = pathname.match(/^\/documents\/([^/]+)\/history$/);
+    if (historyMatch?.[1] && request.method === "GET") {
+        const id = decodeURIComponent(historyMatch[1]);
+        await documentsHistory(request, response, id, context);
         return true;
     }
 

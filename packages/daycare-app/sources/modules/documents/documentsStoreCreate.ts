@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { documentCreate } from "./documentCreate";
 import { documentDelete } from "./documentDelete";
+import { documentHistoryFetch } from "./documentHistoryFetch";
 import { documentsFetch } from "./documentsFetch";
-import type { DocumentItem, DocumentTreeNode } from "./documentsTypes";
+import type { DocumentItem, DocumentTreeNode, DocumentVersion } from "./documentsTypes";
 import { documentTreeBuild } from "./documentTreeBuild";
 import { documentUpdate } from "./documentUpdate";
 
@@ -19,8 +20,11 @@ export type DocumentsStore = {
     draftDescription: string | null;
     dragSourceId: string | null;
     dropTargetId: string | null;
+    history: DocumentVersion[];
+    historyLoading: boolean;
 
     fetch: (baseUrl: string, token: string, workspaceId: string | null) => Promise<void>;
+    fetchHistory: (baseUrl: string, token: string, workspaceId: string | null, id: string) => Promise<void>;
     select: (id: string | null) => void;
     toggle: (id: string) => void;
     createDocument: (
@@ -70,6 +74,8 @@ export function documentsStoreCreate() {
         draftDescription: null,
         dragSourceId: null,
         dropTargetId: null,
+        history: [],
+        historyLoading: false,
 
         fetch: async (baseUrl, token, workspaceId) => {
             set({ loading: true, error: null });
@@ -82,6 +88,16 @@ export function documentsStoreCreate() {
             }
         },
 
+        fetchHistory: async (baseUrl, token, workspaceId, id) => {
+            set({ historyLoading: true });
+            try {
+                const history = await documentHistoryFetch(baseUrl, token, workspaceId, id);
+                set({ history, historyLoading: false });
+            } catch {
+                set({ history: [], historyLoading: false });
+            }
+        },
+
         select: (id) => {
             const { items } = get();
             const doc = id ? items.find((d) => d.id === id) : null;
@@ -89,7 +105,9 @@ export function documentsStoreCreate() {
                 selectedId: id,
                 draftBody: doc?.body ?? null,
                 draftTitle: doc?.title ?? null,
-                draftDescription: doc?.description ?? null
+                draftDescription: doc?.description ?? null,
+                history: [],
+                historyLoading: false
             });
         },
 

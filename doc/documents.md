@@ -71,3 +71,34 @@ sequenceDiagram
 - Delete is blocked when an active document has `parent` or `link` reference to the target.
 - Parent links are validated as acyclic before writes; cycle-creating updates are rejected.
 - Concurrent writes to the same `(user, parent, slug)` scope are serialized to preserve sibling slug uniqueness.
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/documents/tree` | All active documents as flat array with parentId |
+| GET | `/documents/:id` | Single document with parentId resolved |
+| GET | `/documents/:id/history` | All versions of a document (newest first) |
+| POST | `/documents` | Create a new document |
+| PUT | `/documents/:id` | Update document fields |
+| DELETE | `/documents/:id` | Soft-delete document (blocked if referenced) |
+
+## Document Viewer
+
+The document viewer (`DocumentsView`) provides three tabs:
+
+- **View** — renders the markdown body as themed HTML
+- **Edit** — WYSIWYG editor using `contenteditable` in an iframe with a formatting toolbar; auto-saves with debounce
+- **History** — shows all document versions with timestamps and inline diffs between consecutive versions
+
+```mermaid
+flowchart LR
+    A[View Tab] -->|read-only| B[DocumentMarkdownView]
+    C[Edit Tab] -->|contenteditable iframe| D[DocumentEditorView]
+    D -->|HTML to Markdown| E[documentHtmlToMarkdown]
+    E -->|auto-save| F[API PUT]
+    G[History Tab] -->|GET /documents/:id/history| H[DocumentHistoryPanel]
+    H -->|line diff| I[documentDiffCompute]
+```
+
+Protected documents (memory/system/people subtrees) hide the Edit tab.

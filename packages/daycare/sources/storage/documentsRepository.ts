@@ -222,6 +222,19 @@ export class DocumentsRepository {
         return rows.map((row) => documentReferenceParse(row));
     }
 
+    async findHistory(ctx: Context, id: string): Promise<DocumentDbRecord[]> {
+        const userId = ctx.userId.trim();
+        if (!userId) {
+            return [];
+        }
+        const rows = await this.db
+            .select()
+            .from(documentsTable)
+            .where(and(eq(documentsTable.userId, userId), eq(documentsTable.id, id)))
+            .orderBy(desc(documentsTable.version));
+        return rows.map((row) => documentParse(row));
+    }
+
     async create(ctx: Context, input: DocumentCreateInput): Promise<DocumentDbRecord> {
         return this.createLock.inLock(async () => {
             const userId = ctx.userId.trim();
