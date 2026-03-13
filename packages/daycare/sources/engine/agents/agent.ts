@@ -880,6 +880,7 @@ export class Agent {
         let inputSchema = item.inputSchemas;
         const rawCode = item.code as unknown;
         const taskReference = item.task;
+        const runtimeTaskExecution = item.taskExecution;
         if (taskReference !== undefined && rawCode !== undefined) {
             const errorText = "Executable system_message must include either code or task reference, not both.";
             logger.warn(
@@ -934,12 +935,16 @@ export class Agent {
                 messageContext: item.context ?? {},
                 inputValues: item.inputs,
                 inputSchema,
-                ...(taskReference
+                ...((taskReference || runtimeTaskExecution)
                     ? {
-                          taskExecution: {
-                              taskId: taskReference.id,
-                              taskVersion: taskReference.version
-                          }
+                          taskExecution:
+                              runtimeTaskExecution ??
+                              (taskReference
+                                  ? {
+                                        taskId: taskReference.id,
+                                        taskVersion: taskReference.version
+                                    }
+                                  : undefined)
                       }
                     : {})
             });

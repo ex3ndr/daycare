@@ -150,6 +150,8 @@ export type AgentInboxItem =
           code?: string;
           /** Optional DB-backed task reference; when provided, the agent resolves code from tasks storage. */
           task?: { id: string; version?: number };
+          /** Optional execution-scoped task metadata for runtime helpers in executable system messages. */
+          taskExecution?: { taskId: string; taskVersion?: number };
           /** Optional task id attached for cross-trigger execution tracking. */
           taskId?: string;
           /** Input variables injected natively into Monty VM for executable system messages. */
