@@ -1,21 +1,21 @@
-# Document Append and Patch Tools
+# Vault Append and Patch Tools
 
-Added two core tools for incremental document updates without rewriting the whole body:
+Added two core tools for incremental vault updates without rewriting the whole body:
 
-- `document_append`: appends raw text to the end of an existing document body.
-- `document_patch`: applies an exact-text patch object `{ search, replace, replaceAll? }`.
+- `vault_append`: appends raw text to the end of an existing vault body.
+- `vault_patch`: applies an exact-text patch object `{ search, replace, replaceAll? }`.
 
 Both tools:
 
-- resolve targets by `documentId` or `path` (`~/...`)
+- resolve targets by `vaultId` or `path` (`vault://...`)
 - run user-scoped document lookup via `ctx`
-- enforce memory-agent write scope (`~/memory` subtree only)
-- validate people document frontmatter rules before saving
-- return `{ summary, documentId, version }` (+ patch counts for `document_patch`)
+- enforce memory-agent write scope (`vault://memory` subtree only)
+- validate people vault frontmatter rules before saving
+- return `{ summary, vaultId, version }` (+ patch counts for `vault_patch`)
 
 ```mermaid
 flowchart TD
-  A[Tool call: document_append or document_patch] --> B[Resolve target by documentId/path]
+  A[Tool call: vault_append or vault_patch] --> B[Resolve target by vaultId/path]
   B --> C{Target exists?}
   C -- no --> D[Throw not found]
   C -- yes --> E[Memory scope assert for memory agents]

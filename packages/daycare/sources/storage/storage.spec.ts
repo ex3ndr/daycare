@@ -89,8 +89,8 @@ describe("Storage", () => {
                 parentId: "daily"
             });
 
-            expect(await documentPathResolve(ctx, "events", storage.documents)).toBe("doc://memory/daily/events");
-            expect(await documentPathFind(ctx, "doc://memory/daily/events", storage.documents)).toBe("events");
+            expect(await documentPathResolve(ctx, "events", storage.documents)).toBe("vault://memory/daily/events");
+            expect(await documentPathFind(ctx, "vault://memory/daily/events", storage.documents)).toBe("events");
         } finally {
             storage.connection.close();
         }

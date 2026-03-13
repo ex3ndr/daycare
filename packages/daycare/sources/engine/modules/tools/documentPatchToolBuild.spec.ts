@@ -4,7 +4,7 @@ import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { contextForAgent } from "../../agents/context.js";
 import { documentPatchToolBuild } from "./documentPatchToolBuild.js";
 
-const toolCall = { id: "tc-patch", name: "document_patch" };
+const toolCall = { id: "tc-patch", name: "vault_patch" };
 
 function contextBuild(storage: Awaited<ReturnType<typeof storageOpenTest>>, agentKind: "agent" | "memory" = "agent") {
     return {
@@ -37,7 +37,7 @@ describe("documentPatchToolBuild", () => {
             const tool = documentPatchToolBuild();
             const result = await tool.execute(
                 {
-                    documentId: "doc-1",
+                    vaultId: "doc-1",
                     patch: {
                         search: "world",
                         replace: "Daycare"
@@ -47,7 +47,7 @@ describe("documentPatchToolBuild", () => {
                 toolCall
             );
 
-            expect(result.typedResult.documentId).toBe("doc-1");
+            expect(result.typedResult.vaultId).toBe("doc-1");
             expect(result.typedResult.version).toBe(2);
             expect(result.typedResult.replacedCount).toBe(1);
             const updated = await storage.documents.findById(ctx, "doc-1");
@@ -74,7 +74,7 @@ describe("documentPatchToolBuild", () => {
             const tool = documentPatchToolBuild();
             const result = await tool.execute(
                 {
-                    path: "doc://notes",
+                    path: "vault://notes",
                     patch: {
                         search: "cat",
                         replace: "dog",
@@ -112,7 +112,7 @@ describe("documentPatchToolBuild", () => {
             await expect(
                 tool.execute(
                     {
-                        documentId: "doc-1",
+                        vaultId: "doc-1",
                         patch: {
                             search: "cat",
                             replace: "dog"
@@ -145,7 +145,7 @@ describe("documentPatchToolBuild", () => {
             await expect(
                 tool.execute(
                     {
-                        documentId: "doc-1",
+                        vaultId: "doc-1",
                         patch: {
                             search: "missing",
                             replace: "x"
@@ -160,7 +160,7 @@ describe("documentPatchToolBuild", () => {
         }
     });
 
-    it("enforces memory-agent scope to doc://memory", async () => {
+    it("enforces memory-agent scope to vault://memory", async () => {
         const storage = await storageOpenTest();
         try {
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
@@ -178,7 +178,7 @@ describe("documentPatchToolBuild", () => {
             await expect(
                 tool.execute(
                     {
-                        documentId: "doc-1",
+                        vaultId: "doc-1",
                         patch: {
                             search: "hello",
                             replace: "world"
@@ -188,7 +188,7 @@ describe("documentPatchToolBuild", () => {
                     toolCall
                 )
             ).rejects.toThrow(
-                "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
+                "Memory agents can only write inside vault://memory. Compactor agents may also update vault://system/memory/agent and vault://system/memory/compactor."
             );
         } finally {
             storage.connection.close();

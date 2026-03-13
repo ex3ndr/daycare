@@ -3,7 +3,7 @@ import { ScrollView, Text, View } from "react-native";
 import { useUnistyles } from "react-native-unistyles";
 import { useDocumentsStore } from "@/modules/documents/documentsContext";
 
-export default function ShareDocumentScreen() {
+export default function ShareVaultScreen() {
     const { theme } = useUnistyles();
     const { id } = useLocalSearchParams<{ id: string }>();
 

@@ -21,7 +21,7 @@ const patchSchema = Type.Object(
 
 const schema = Type.Object(
     {
-        documentId: Type.Optional(Type.String({ minLength: 1 })),
+        vaultId: Type.Optional(Type.String({ minLength: 1 })),
         path: Type.Optional(Type.String({ minLength: 1 })),
         patch: patchSchema
     },
@@ -33,7 +33,7 @@ type DocumentPatchArgs = Static<typeof schema>;
 const resultSchema = Type.Object(
     {
         summary: Type.String(),
-        documentId: Type.String(),
+        vaultId: Type.String(),
         version: Type.Number(),
         replacedCount: Type.Number(),
         matchCount: Type.Number()
@@ -49,15 +49,15 @@ const returns: ToolResultContract<DocumentPatchResult> = {
 };
 
 /**
- * Builds the document_patch tool that applies exact-text patch replacement to body.
- * Expects: one document selector and a patch object with `search` and `replace`.
+ * Builds the vault_patch tool that applies exact-text patch replacement to body.
+ * Expects: one vault selector and a patch object with `search` and `replace`.
  */
 export function documentPatchToolBuild(): ToolDefinition {
     return {
         tool: {
-            name: "document_patch",
+            name: "vault_patch",
             description:
-                "Apply an exact-text patch to a document body. " +
+                "Apply an exact-text patch to a vault entry body. " +
                 "Patch format: { search, replace, replaceAll? }. " +
                 "By default, search must match exactly once.",
             parameters: schema
@@ -86,10 +86,10 @@ export function documentPatchToolBuild(): ToolDefinition {
                 updatedAt: Date.now()
             });
             const version = updated.version ?? 1;
-            const summary = `Patched document: ${document.id} (version ${version}, replaced ${patched.replacedCount} match(es)).`;
+            const summary = `Patched vault entry: ${document.id} (version ${version}, replaced ${patched.replacedCount} match(es)).`;
             return toolResultBuild(toolCall, {
                 summary,
-                documentId: document.id,
+                vaultId: document.id,
                 version,
                 replacedCount: patched.replacedCount,
                 matchCount: patched.matchCount
@@ -108,7 +108,7 @@ function documentPatchApply(
 ): { body: string; matchCount: number; replacedCount: number } {
     const matchCount = documentMatchCount(body, patch.search);
     if (matchCount === 0) {
-        throw new Error("Patch search text was not found in document body.");
+        throw new Error("Patch search text was not found in vault entry body.");
     }
     if (patch.replaceAll === true) {
         return {

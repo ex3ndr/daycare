@@ -3,8 +3,8 @@ import { peopleDocumentFrontmatterAssert } from "../../../engine/people/peopleDo
 import type { DocumentsRouteContext } from "./documentsRoutes.js";
 
 /**
- * Handles POST /documents.
- * Creates a new document with required parentId.
+ * Handles POST /vault/create.
+ * Creates a new vault entry with required parentId.
  *
  * Expects: JSON body with { id, slug, title, parentId, description?, body? }.
  */
@@ -49,7 +49,7 @@ export async function documentsCreate(
 
         context.sendJson(response, 200, {
             ok: true,
-            document: {
+            item: {
                 id: doc.id,
                 slug: doc.slug,
                 title: doc.title,
@@ -61,7 +61,7 @@ export async function documentsCreate(
             }
         });
     } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to create document.";
+        const message = err instanceof Error ? err.message : "Failed to create vault entry.";
         context.sendJson(response, 400, { ok: false, error: message });
     }
 }

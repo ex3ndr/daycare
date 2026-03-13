@@ -30,7 +30,7 @@ export async function documentBodyRefs(body: string, ctx: Context, repo: Documen
         }
 
         let resolvedId: string | null = null;
-        if (target.startsWith("doc://")) {
+        if (target.startsWith("vault://") || target.startsWith("doc://")) {
             resolvedId = await documentPathFind(ctx, target, repo);
         } else {
             const byId = await repo.findById(ctx, target);

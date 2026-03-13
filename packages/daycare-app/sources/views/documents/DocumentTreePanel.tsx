@@ -82,7 +82,7 @@ export const DocumentTreePanel = React.memo<DocumentTreePanelProps>(({ onCreateP
                     paddingVertical: 12
                 }}
             >
-                <Text style={{ fontSize: 13, fontWeight: "600", color: theme.colors.onSurfaceVariant }}>DOCUMENTS</Text>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: theme.colors.onSurfaceVariant }}>VAULT</Text>
                 <Pressable onPress={() => onCreatePress(null)} hitSlop={8}>
                     <Octicons name="plus" size={18} color={theme.colors.onSurfaceVariant} />
                 </Pressable>
@@ -114,7 +114,7 @@ export const DocumentTreePanel = React.memo<DocumentTreePanelProps>(({ onCreateP
                             textAlign: "center"
                         }}
                     >
-                        No documents yet
+                        No vault entries yet
                     </Text>
                 )}
             </ScrollView>

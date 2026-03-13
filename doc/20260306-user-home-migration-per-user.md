@@ -7,7 +7,7 @@ Legacy prompt migration now imports from each user's own filesystem home instead
 ## What Changed
 
 - The historical startup migration loaded all users after resolving the owner record
-- For each user, it ensures that user's `doc://system/*` documents exist
+- For each user, it ensures that user's `vault://system/*` entries exist
 - It imports legacy prompt files from `<usersDir>/<userId>/home/knowledge/{SOUL,USER,AGENTS,TOOLS}.md`
 - The old global `config.dataDir/*.md` files remain only as a fallback for the owner user
 
@@ -23,9 +23,9 @@ flowchart TD
     B --> C[Load all users]
     C --> D{For each user}
     D --> E[Ensure UserHome]
-    E --> F[Ensure doc://system/{soul,user,agents,tools}]
+    E --> F[Ensure vault://system/{soul,user,agents,tools}]
     F --> G[Read that user's home/knowledge/*.md]
     G --> H[Owner only: fall back to config.dataDir/*.md]
-    H --> I[Write imported content into that user's documents]
+    H --> I[Write imported content into that user's vault entries]
     I --> J[Write global migration marker]
 ```

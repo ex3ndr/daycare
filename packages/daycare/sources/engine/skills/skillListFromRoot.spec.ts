@@ -36,4 +36,32 @@ describe("skillListFromRoot", () => {
             await fs.rm(baseDir, { recursive: true, force: true });
         }
     });
+
+    it("stops descending once a skill root has its own SKILL.md", async () => {
+        const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skills-stop-"));
+        try {
+            const skillDir = path.join(baseDir, "parent-skill");
+            const nestedDir = path.join(skillDir, "assets", "nested-skill");
+            await fs.mkdir(nestedDir, { recursive: true });
+
+            await fs.writeFile(
+                path.join(skillDir, "SKILL.md"),
+                "---\nname: parent-skill\ndescription: Parent skill\n---\n\nParent body"
+            );
+            await fs.writeFile(
+                path.join(nestedDir, "SKILL.md"),
+                "---\nname: nested-skill\ndescription: Nested skill\n---\n\nNested body"
+            );
+
+            const skills = await skillListFromRoot(baseDir, {
+                source: "config",
+                root: baseDir
+            });
+
+            expect(skills).toHaveLength(1);
+            expect(skills[0]?.name).toBe("parent-skill");
+        } finally {
+            await fs.rm(baseDir, { recursive: true, force: true });
+        }
+    });
 });

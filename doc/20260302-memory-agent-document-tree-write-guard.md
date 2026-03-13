@@ -2,7 +2,7 @@
 
 ## Summary
 
-`document_write` now blocks memory-agents from creating or updating documents outside `~/memory`.
+`vault_write` now blocks memory-agents from creating or updating entries outside `vault://memory`.
 
 ## Behavior
 
@@ -15,12 +15,12 @@
 
 ```mermaid
 flowchart TD
-    A[document_write request] --> B{Agent kind is memory?}
+    A[vault_write request] --> B{Agent kind is memory?}
     B -- no --> C[Proceed with existing validation + write]
     B -- yes --> D[Resolve effective parent id]
     D --> E{Root-level write?}
     E -- yes --> F{slug == memory?}
-    F -- no --> G[Reject: outside ~/memory tree]
+    F -- no --> G[Reject: outside vault://memory tree]
     F -- yes --> H[Proceed]
     E -- no --> I[Resolve parent chain]
     I --> J{Root slug == memory?}

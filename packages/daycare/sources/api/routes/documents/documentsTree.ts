@@ -14,8 +14,8 @@ type DocumentTreeItem = {
 };
 
 /**
- * Handles GET /documents/tree.
- * Returns all active documents as a flat array with parentId resolved.
+ * Handles GET /vault/tree.
+ * Returns all active vault entries as a flat array with parentId resolved.
  *
  * Expects: authenticated context with documents repository.
  */

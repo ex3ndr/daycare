@@ -13,7 +13,7 @@ Response envelope convention:
 
 Mutation convention:
 - New app mutations use `POST` action paths.
-- Legacy compatibility exceptions remain on prompts/documents routes listed below.
+- Legacy compatibility exceptions remain on prompt routes listed below.
 
 ## API Flow
 ```mermaid
@@ -30,7 +30,7 @@ flowchart TD
     F --> I[/tasks]
     F --> J[/skills]
     F --> O[/swarms]
-    F --> K[/documents]
+    F --> K[/vault]
     F --> L[/prompts]
     F --> M[/costs]
     F --> N[/kv]
@@ -252,14 +252,13 @@ Trigger remove body:
 }
 ```
 
-## Document Routes
-- `GET /documents/tree`
-- `GET /documents/:id`
-- `POST /documents`
-- `PUT /documents/:id`
-- `DELETE /documents/:id`
-
-Note: `PUT`/`DELETE` document mutations are legacy compatibility routes.
+## Vault Routes
+- `GET /vault/tree`
+- `GET /vault/:id`
+- `GET /vault/:id/history`
+- `POST /vault/create`
+- `POST /vault/:id/update`
+- `POST /vault/:id/delete`
 
 ## Prompt Routes
 - `GET /prompts`

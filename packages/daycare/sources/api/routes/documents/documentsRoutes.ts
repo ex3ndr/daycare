@@ -27,36 +27,40 @@ export async function documentsRouteHandle(
     pathname: string,
     context: DocumentsRouteContext
 ): Promise<boolean> {
-    if (pathname === "/documents/tree" && request.method === "GET") {
+    if (pathname === "/vault/tree" && request.method === "GET") {
         await documentsTree(request, response, context);
         return true;
     }
 
-    const historyMatch = pathname.match(/^\/documents\/([^/]+)\/history$/);
+    const historyMatch = pathname.match(/^\/vault\/([^/]+)\/history$/);
     if (historyMatch?.[1] && request.method === "GET") {
         const id = decodeURIComponent(historyMatch[1]);
         await documentsHistory(request, response, id, context);
         return true;
     }
 
-    const idMatch = pathname.match(/^\/documents\/([^/]+)$/);
-    if (idMatch?.[1]) {
-        const id = decodeURIComponent(idMatch[1]);
-        if (request.method === "GET") {
-            await documentsFindById(request, response, id, context);
-            return true;
-        }
-        if (request.method === "PUT") {
-            await documentsUpdate(request, response, id, context);
-            return true;
-        }
-        if (request.method === "DELETE") {
-            await documentsDelete(request, response, id, context);
-            return true;
-        }
+    const updateMatch = pathname.match(/^\/vault\/([^/]+)\/update$/);
+    if (updateMatch?.[1] && request.method === "POST") {
+        const id = decodeURIComponent(updateMatch[1]);
+        await documentsUpdate(request, response, id, context);
+        return true;
     }
 
-    if (pathname === "/documents" && request.method === "POST") {
+    const deleteMatch = pathname.match(/^\/vault\/([^/]+)\/delete$/);
+    if (deleteMatch?.[1] && request.method === "POST") {
+        const id = decodeURIComponent(deleteMatch[1]);
+        await documentsDelete(request, response, id, context);
+        return true;
+    }
+
+    const idMatch = pathname.match(/^\/vault\/([^/]+)$/);
+    if (idMatch?.[1] && request.method === "GET") {
+        const id = decodeURIComponent(idMatch[1]);
+        await documentsFindById(request, response, id, context);
+        return true;
+    }
+
+    if (pathname === "/vault/create" && request.method === "POST") {
         await documentsCreate(request, response, context);
         return true;
     }

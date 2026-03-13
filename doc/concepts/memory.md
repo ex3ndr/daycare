@@ -1,6 +1,6 @@
 # Memory
 
-The memory system processes agent conversations and persists durable knowledge to the document tree for cross-session recall.
+The memory system processes agent conversations and persists durable knowledge to the vault tree for cross-session recall.
 
 ## Architecture
 
@@ -14,11 +14,11 @@ sequenceDiagram
 
     A->>S: Session invalidated (sleep/reset/threshold)
     MW->>S: Poll findInvalidated()
-    MW->>D: Ensure ~/memory root
+    MW->>D: Ensure vault://memory root
     MW->>S: Load history records
     MW->>MA: Post formatted transcript
-    MA->>D: document_read(path=\"~/memory\")
-    MA->>D: document_write(new/updated memory docs)
+    MA->>D: vault_read(path=\"vault://memory\")
+    MA->>D: vault_write(new/updated memory entries)
     MW->>S: markProcessed()
 ```
 
@@ -27,9 +27,9 @@ sequenceDiagram
 | Component | File | Role |
 |-----------|------|------|
 | MemoryWorker | `engine/memory/memoryWorker.ts` | Timer-based poller (30s) that routes invalidated sessions |
-| Memory-Agent | descriptor `{ type: "memory-agent", id }` | Per-source-agent agent that receives transcripts and updates memory documents |
+| Memory-Agent | descriptor `{ type: "memory-agent", id }` | Per-source-agent agent that receives transcripts and updates memory vault entries |
 | formatHistoryMessages | `engine/memory/infer/utils/formatHistoryMessages.ts` | Converts history records to markdown transcript |
-| Documents Store | `storage/documentsRepository.ts` | Versioned document storage with parent/link/body references |
+| Vault Storage | `storage/documentsRepository.ts` | Versioned vault storage with parent/link/body references |
 
 ### Memory-Agent Descriptor
 
@@ -42,7 +42,7 @@ sequenceDiagram
 - **System prompt**: `prompts/memory/MEMORY_AGENT.md` (full replacement, no standard sections)
 - **Sessions never invalidated** — prevents recursive memory processing
 - **Cache key**: `/memory-agent/<sourceAgentId>`
-- **Purpose**: reads transcripts, reads existing memory documents, writes new/updated documents
+- **Purpose**: reads transcripts, reads existing memory vault entries, writes new/updated entries
 
 ### Session Invalidation Flow
 
@@ -69,8 +69,8 @@ Each 30-second tick:
 
 ## Storage Layout
 
-Memory documents are stored in the `documents` and `document_references` tables.
+Memory vault entries are stored in the `documents` and `document_references` tables.
 
-- Root memory node path: `~/memory`
-- Child memory nodes: `~/memory/<slug>/...`
-- Writes go through `document_write`; reads go through `document_read`
+- Root memory node path: `vault://memory`
+- Child memory nodes: `vault://memory/<slug>/...`
+- Writes go through `vault_write`; reads go through `vault_read`

@@ -33,7 +33,7 @@ export const DocumentMarkdownView = React.memo<DocumentMarkdownViewProps>(({ mar
         return (
             <View style={[{ flex: 1, overflow: "hidden" }, style]}>
                 <iframe
-                    title="Document content"
+                    title="Vault entry content"
                     srcDoc={html}
                     sandbox="allow-same-origin"
                     style={{

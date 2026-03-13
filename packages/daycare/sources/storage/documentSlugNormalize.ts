@@ -1,5 +1,5 @@
 /**
- * Normalizes and validates a document slug used in `doc://...` paths.
+ * Normalizes and validates a document slug used in `vault://...` paths.
  * Expects: caller passes raw user input; returns a trimmed, path-safe segment.
  */
 export function documentSlugNormalize(slug: string): string {

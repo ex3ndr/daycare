@@ -21,7 +21,25 @@ describe("documentPathResolve", () => {
         };
 
         const resolved = await documentPathResolve(ctx, "doc-events", repo);
-        expect(resolved).toBe("doc://memory/daily/events");
+        expect(resolved).toBe("vault://memory/daily/events");
+    });
+
+    it("renders the stored root slug `document` as the public vault root", async () => {
+        const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+        const docs = new Map<string, { id: string; slug: string }>([
+            ["doc-root", { id: "doc-root", slug: "document" }],
+            ["doc-mission", { id: "doc-mission", slug: "mission" }]
+        ]);
+        const parents = new Map<string, string | null>([
+            ["doc-root", null],
+            ["doc-mission", "doc-root"]
+        ]);
+        const repo: DocumentPathResolveRepo = {
+            findById: async (_ctx, id) => docs.get(id) ?? null,
+            findParentId: async (_ctx, id) => parents.get(id) ?? null
+        };
+
+        expect(await documentPathResolve(ctx, "doc-mission", repo)).toBe("vault://vault/mission");
     });
 
     it("returns null when document is missing", async () => {

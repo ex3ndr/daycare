@@ -3,10 +3,10 @@ import { peopleDocumentFrontmatterAssert } from "../../../engine/people/peopleDo
 import type { DocumentsRouteContext } from "./documentsRoutes.js";
 
 /**
- * Handles PUT /documents/:id.
- * Updates a document's fields including optional reparenting.
+ * Handles POST /vault/:id/update.
+ * Updates a vault entry's fields including optional reparenting.
  *
- * Expects: id is a valid document identifier; JSON body with optional { slug, title, description, body, parentId }.
+ * Expects: id is a valid vault identifier; JSON body with optional { slug, title, description, body, parentId }.
  */
 export async function documentsUpdate(
     request: http.IncomingMessage,
@@ -49,7 +49,7 @@ export async function documentsUpdate(
 
         context.sendJson(response, 200, {
             ok: true,
-            document: {
+            item: {
                 id: doc.id,
                 slug: doc.slug,
                 title: doc.title,
@@ -61,7 +61,7 @@ export async function documentsUpdate(
             }
         });
     } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to update document.";
+        const message = err instanceof Error ? err.message : "Failed to update vault entry.";
         context.sendJson(response, 400, { ok: false, error: message });
     }
 }

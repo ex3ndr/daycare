@@ -5,7 +5,7 @@ export type AppMode =
     | "fragments"
     | "automations"
     | "costs"
-    | "documents"
+    | "vault"
     | "files"
     | "skills"
     | "tools"
@@ -20,7 +20,7 @@ export const appModes: AppMode[] = [
     "fragments",
     "automations",
     "costs",
-    "documents",
+    "vault",
     "files",
     "skills",
     "tools",

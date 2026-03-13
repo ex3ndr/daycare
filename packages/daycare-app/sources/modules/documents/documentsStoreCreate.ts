@@ -84,7 +84,7 @@ export function documentsStoreCreate() {
                 const tree = documentTreeBuild(items);
                 set({ items, tree, loading: false });
             } catch (err) {
-                set({ loading: false, error: err instanceof Error ? err.message : "Failed to fetch documents." });
+                set({ loading: false, error: err instanceof Error ? err.message : "Failed to fetch vault entries." });
             }
         },
 
@@ -129,7 +129,7 @@ export function documentsStoreCreate() {
                 await get().fetch(baseUrl, token, workspaceId);
                 set({ saving: false });
             } catch (err) {
-                set({ saving: false, error: err instanceof Error ? err.message : "Failed to create document." });
+                set({ saving: false, error: err instanceof Error ? err.message : "Failed to create vault entry." });
             }
         },
 
@@ -142,7 +142,7 @@ export function documentsStoreCreate() {
                 const tree = documentTreeBuild(nextItems);
                 set({ items: nextItems, tree, saving: false });
             } catch (err) {
-                set({ saving: false, error: err instanceof Error ? err.message : "Failed to update document." });
+                set({ saving: false, error: err instanceof Error ? err.message : "Failed to update vault entry." });
             }
         },
 
@@ -157,7 +157,7 @@ export function documentsStoreCreate() {
                 }
                 set({ saving: false });
             } catch (err) {
-                set({ saving: false, error: err instanceof Error ? err.message : "Failed to delete document." });
+                set({ saving: false, error: err instanceof Error ? err.message : "Failed to delete vault entry." });
             }
         },
 
@@ -168,7 +168,7 @@ export function documentsStoreCreate() {
                 await get().fetch(baseUrl, token, workspaceId);
                 set({ saving: false });
             } catch (err) {
-                set({ saving: false, error: err instanceof Error ? err.message : "Failed to move document." });
+                set({ saving: false, error: err instanceof Error ? err.message : "Failed to move vault entry." });
             }
         },
 

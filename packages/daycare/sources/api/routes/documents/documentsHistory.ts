@@ -2,10 +2,10 @@ import type http from "node:http";
 import type { DocumentsRouteContext } from "./documentsRoutes.js";
 
 /**
- * Handles GET /documents/:id/history.
- * Returns all versions of a document ordered by version descending.
+ * Handles GET /vault/:id/history.
+ * Returns all versions of a vault entry ordered by version descending.
  *
- * Expects: id is a valid document identifier.
+ * Expects: id is a valid vault identifier.
  */
 export async function documentsHistory(
     _request: http.IncomingMessage,
@@ -15,7 +15,7 @@ export async function documentsHistory(
 ): Promise<void> {
     const versions = await context.documents.findHistory(context.ctx, id);
     if (versions.length === 0) {
-        context.sendJson(response, 404, { ok: false, error: "Document not found." });
+        context.sendJson(response, 404, { ok: false, error: "Vault entry not found." });
         return;
     }
 

@@ -9,7 +9,7 @@ import { documentPathResolve } from "../../../storage/documentPathResolve.js";
 
 const schema = Type.Object(
     {
-        documentId: Type.Optional(Type.String({ minLength: 1 })),
+        vaultId: Type.Optional(Type.String({ minLength: 1 })),
         path: Type.Optional(Type.String({ minLength: 1 }))
     },
     { additionalProperties: false }
@@ -19,8 +19,8 @@ type DocumentTreeArgs = Static<typeof schema>;
 
 const documentTreeEntrySchema = Type.Object(
     {
-        documentId: Type.String(),
-        parentDocumentId: Type.Union([Type.String(), Type.Null()]),
+        vaultId: Type.String(),
+        parentVaultId: Type.Optional(Type.String()),
         title: Type.String(),
         slug: Type.String(),
         path: Type.String(),
@@ -36,8 +36,8 @@ const resultSchema = Type.Object(
     {
         found: Type.Boolean(),
         summary: Type.String(),
-        rootDocumentId: Type.Optional(Type.String()),
-        documents: Type.Array(documentTreeEntrySchema)
+        rootVaultId: Type.Optional(Type.String()),
+        entries: Type.Array(documentTreeEntrySchema)
     },
     { additionalProperties: false }
 );
@@ -45,8 +45,8 @@ const resultSchema = Type.Object(
 type DocumentTreeResult = {
     found: boolean;
     summary: string;
-    rootDocumentId?: string;
-    documents: DocumentTreeEntry[];
+    rootVaultId?: string;
+    entries: DocumentTreeEntry[];
 };
 
 const returns: ToolResultContract<DocumentTreeResult> = {
@@ -55,16 +55,16 @@ const returns: ToolResultContract<DocumentTreeResult> = {
 };
 
 /**
- * Builds the document_tree tool for structured subtree traversal.
+ * Builds the vault_tree tool for structured vault traversal.
  * Expects: storage.documents is available for ctx.userId.
  */
 export function documentTreeToolBuild(): ToolDefinition {
     return {
         tool: {
-            name: "document_tree",
+            name: "vault_tree",
             description:
-                "Return a structured document tree by documentId or path (doc://a/b). " +
-                "Omit both to return all root document trees.",
+                "Return a structured vault tree by vaultId or path (vault://a/b). " +
+                "Omit both to return all root vault trees.",
             parameters: schema
         },
         returns,
@@ -75,51 +75,51 @@ export function documentTreeToolBuild(): ToolDefinition {
             }
 
             const payload = args as DocumentTreeArgs;
-            const documentId = payload.documentId?.trim();
+            const vaultId = payload.vaultId?.trim();
             const path = payload.path?.trim();
-            if (documentId && path) {
-                throw new Error("Provide either documentId or path, not both.");
+            if (vaultId && path) {
+                throw new Error("Provide either vaultId or path, not both.");
             }
 
-            if (!documentId && !path) {
+            if (!vaultId && !path) {
                 const roots = await storage.documents.findRoots(toolContext.ctx);
-                const documents = await documentTreeEntriesBuild(toolContext.ctx, roots, storage.documents);
+                const entries = await documentTreeEntriesBuild(toolContext.ctx, roots, storage.documents);
                 return toolResultBuild(toolCall, {
                     found: true,
-                    summary: documentTreeSummaryBuild(documents, undefined),
-                    documents
+                    summary: documentTreeSummaryBuild(entries, undefined),
+                    entries
                 });
             }
 
             let targetDocumentId: string | null = null;
-            if (documentId) {
-                targetDocumentId = documentId;
-            } else if (path === "doc://") {
+            if (vaultId) {
+                targetDocumentId = vaultId;
+            } else if (path === "vault://") {
                 const roots = await storage.documents.findRoots(toolContext.ctx);
-                const documents = await documentTreeEntriesBuild(toolContext.ctx, roots, storage.documents);
+                const entries = await documentTreeEntriesBuild(toolContext.ctx, roots, storage.documents);
                 return toolResultBuild(toolCall, {
                     found: true,
-                    summary: documentTreeSummaryBuild(documents, undefined),
-                    documents
+                    summary: documentTreeSummaryBuild(entries, undefined),
+                    entries
                 });
             } else if (path) {
                 targetDocumentId = await documentPathFind(toolContext.ctx, path, storage.documents);
                 if (!targetDocumentId) {
-                    const summary = `Document not found for path: ${path}`;
-                    return toolResultBuild(toolCall, { found: false, summary, documents: [] });
+                    const summary = `Vault entry not found for path: ${path}`;
+                    return toolResultBuild(toolCall, { found: false, summary, entries: [] });
                 }
             }
 
             if (!targetDocumentId) {
-                return toolResultBuild(toolCall, { found: false, summary: "Document not found.", documents: [] });
+                return toolResultBuild(toolCall, { found: false, summary: "Vault entry not found.", entries: [] });
             }
 
             const document = await storage.documents.findById(toolContext.ctx, targetDocumentId);
             if (!document) {
                 return toolResultBuild(toolCall, {
                     found: false,
-                    summary: `Document not found: ${targetDocumentId}`,
-                    documents: []
+                    summary: `Vault entry not found: ${targetDocumentId}`,
+                    entries: []
                 });
             }
 
@@ -130,12 +130,12 @@ export function documentTreeToolBuild(): ToolDefinition {
                 );
             }
 
-            const documents = await documentTreeEntriesBuild(toolContext.ctx, [document], storage.documents);
+            const entries = await documentTreeEntriesBuild(toolContext.ctx, [document], storage.documents);
             return toolResultBuild(toolCall, {
                 found: true,
-                summary: documentTreeSummaryBuild(documents, document.id),
-                rootDocumentId: document.id,
-                documents
+                summary: documentTreeSummaryBuild(entries, document.id),
+                rootVaultId: document.id,
+                entries
             });
         }
     };
@@ -154,15 +154,15 @@ async function documentTreeEntriesBuild(
     const result: DocumentTreeEntry[] = [];
     const visited = new Set<string>();
 
-    const walk = async (document: DocumentDbRecord, depth: number, parentDocumentId?: string): Promise<void> => {
+    const walk = async (document: DocumentDbRecord, depth: number, parentVaultId?: string): Promise<void> => {
         if (visited.has(document.id)) {
             return;
         }
         visited.add(document.id);
         const path = (await documentPathResolve(ctx, document.id, documents)) ?? "(unknown)";
         result.push({
-            documentId: document.id,
-            parentDocumentId: parentDocumentId ?? null,
+            vaultId: document.id,
+            parentVaultId,
             title: document.title,
             slug: document.slug,
             path,
@@ -183,26 +183,26 @@ async function documentTreeEntriesBuild(
     return result;
 }
 
-function documentTreeSummaryBuild(documents: DocumentTreeEntry[], rootDocumentId?: string): string {
+function documentTreeSummaryBuild(entries: DocumentTreeEntry[], rootVaultId?: string): string {
     const lines = [
-        rootDocumentId ? "# Document Tree" : "# Root Document Trees",
+        rootVaultId ? "# Vault Tree" : "# Root Vault Trees",
         "",
-        `- documents: ${documents.length}`,
-        ...(rootDocumentId ? [`- rootDocumentId: \`${rootDocumentId}\``] : []),
+        `- entries: ${entries.length}`,
+        ...(rootVaultId ? [`- rootVaultId: \`${rootVaultId}\``] : []),
         "",
         "## Entries",
         ""
     ];
 
-    if (documents.length === 0) {
+    if (entries.length === 0) {
         lines.push("(empty)");
         return lines.join("\n");
     }
 
-    for (const document of documents) {
+    for (const document of entries) {
         const indent = "  ".repeat(document.depth);
         lines.push(
-            `${indent}- **${document.title}** (id: \`${document.documentId}\`, slug: \`${document.slug}\`, updatedAt=${document.updatedAt})`
+            `${indent}- **${document.title}** (id: \`${document.vaultId}\`, slug: \`${document.slug}\`, updatedAt=${document.updatedAt})`
         );
         lines.push(`${indent}  path: \`${document.path}\``);
     }

@@ -22,8 +22,8 @@ type PeopleDocumentFrontmatterAssertOptions = {
 };
 
 /**
- * Validates YAML frontmatter for writes inside the `doc://people` tree.
- * Expects: slug/body represent the next persisted state for the target document.
+ * Validates YAML frontmatter for writes inside the `vault://people` tree.
+ * Expects: slug/body represent the next persisted state for the target vault entry.
  */
 export async function peopleDocumentFrontmatterAssert(options: PeopleDocumentFrontmatterAssertOptions): Promise<void> {
     if (!(await peopleDocumentInTreeIs(options.ctx, options.documents, options.parentId))) {
@@ -33,13 +33,13 @@ export async function peopleDocumentFrontmatterAssert(options: PeopleDocumentFro
     const parsed = matter(options.body);
     const firstName = frontmatterTextResolve(parsed.data, "firstName");
     if (!firstName) {
-        throw new Error("People documents require YAML frontmatter with a non-empty `firstName` field.");
+        throw new Error("People vault entries require YAML frontmatter with a non-empty `firstName` field.");
     }
 
     if ("lastName" in parsed.data) {
         const lastName = frontmatterTextResolve(parsed.data, "lastName");
         if (!lastName) {
-            throw new Error("People document `lastName` frontmatter must be a non-empty string when provided.");
+            throw new Error("People vault entry `lastName` frontmatter must be a non-empty string when provided.");
         }
     }
 }

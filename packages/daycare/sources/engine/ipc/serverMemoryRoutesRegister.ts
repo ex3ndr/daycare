@@ -57,9 +57,9 @@ type GraphTreeRuntime = {
     children: Map<string, GraphNode[]>;
 };
 
-type MemoryGraphScope = "memory" | "documents";
+type MemoryGraphScope = "memory" | "vault";
 
-const DOCUMENTS_ROOT_NODE_ID = "__documents_root__";
+const VAULT_ROOT_NODE_ID = "__vault_root__";
 
 /**
  * Registers engine API routes for memory graph read access backed by documents.
@@ -74,13 +74,13 @@ export function serverMemoryRoutesRegister(app: FastifyInstance, runtime: Memory
 
         const scope = memoryGraphScopeResolve((request.query as { scope?: string }).scope);
         if (!scope) {
-            return reply.status(400).send({ ok: false, error: "scope must be either 'memory' or 'documents'" });
+            return reply.status(400).send({ ok: false, error: "scope must be either 'memory' or 'vault'" });
         }
 
         try {
             const ctx = contextForUser({ userId });
             const tree =
-                scope === "documents"
+                scope === "vault"
                     ? await documentsTreeBuild(ctx, runtime.storage.documents)
                     : await memoryGraphTreeBuild(ctx, runtime.storage.documents);
             return reply.send({ ok: true, graph: graphTreeJsonBuild(tree) });
@@ -103,13 +103,13 @@ export function serverMemoryRoutesRegister(app: FastifyInstance, runtime: Memory
 
         const scope = memoryGraphScopeResolve((request.query as { scope?: string }).scope);
         if (!scope) {
-            return reply.status(400).send({ ok: false, error: "scope must be either 'memory' or 'documents'" });
+            return reply.status(400).send({ ok: false, error: "scope must be either 'memory' or 'vault'" });
         }
 
         try {
             const ctx = contextForUser({ userId });
-            if (scope === "documents") {
-                if (nodeId === DOCUMENTS_ROOT_NODE_ID) {
+            if (scope === "vault") {
+                if (nodeId === VAULT_ROOT_NODE_ID) {
                     return reply.send({ ok: true, node: documentsRootNodeBuild() });
                 }
                 const node = await graphNodeBuild(ctx, nodeId, runtime.storage.documents);
@@ -321,10 +321,10 @@ async function memoryNodeInTreeIs(
 
 function documentsRootNodeBuild(): GraphNode {
     return {
-        id: DOCUMENTS_ROOT_NODE_ID,
+        id: VAULT_ROOT_NODE_ID,
         frontmatter: {
-            title: "Documents",
-            description: "Virtual root that groups top-level documents.",
+            title: "Vault",
+            description: "Virtual root that groups top-level vault entries.",
             parents: [],
             version: 1,
             createdAt: 0,
@@ -339,8 +339,8 @@ function memoryGraphScopeResolve(scope: string | undefined): MemoryGraphScope | 
     if (!scope || scope === "memory") {
         return "memory";
     }
-    if (scope === "documents") {
-        return "documents";
+    if (scope === "vault") {
+        return "vault";
     }
     return null;
 }

@@ -25,10 +25,10 @@ This module provides per-user filesystem isolation under `config.usersDir`:
     tmp/
 ```
 
-Versioned system prompts now live in the document store:
+Versioned system prompts now live in the vault:
 
 ```text
-doc://system/
+vault://system/
   soul
   user
   agents
@@ -51,5 +51,5 @@ flowchart TD
     F --> G[Agent session permissions + skills active read access]
     B --> H[Agent files facade: home/downloads, home/desktop, home/tmp]
     A --> I[documentSystemDocsEnsure]
-    I --> J[doc://system/{soul,user,agents,tools}]
+    I --> J[vault://system/{soul,user,agents,tools}]
 ```

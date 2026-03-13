@@ -36,15 +36,15 @@ const searchReturns: ToolResultContract<SearchResult> = {
 };
 
 /**
- * Builds the document_search tool that delegates retrieval to memory-search agents.
+ * Builds the vault_search tool that delegates retrieval to memory-search agents.
  * Default mode is async; sync mode waits for the answer before returning.
  */
 export function documentSearchToolBuild(): ToolDefinition {
     return {
         tool: {
-            name: "document_search",
+            name: "vault_search",
             description:
-                "Search persistent documents to answer a question. By default, returns a query ID immediately and " +
+                "Search persistent vault entries to answer a question. By default, returns a query ID immediately and " +
                 "delivers results asynchronously. Set sync=true to wait for the answer before continuing " +
                 "(recommended for background agents).",
             parameters: searchSchema
@@ -78,14 +78,14 @@ export function documentSearchToolBuild(): ToolDefinition {
                 // Background agents often need retrieved context before continuing.
                 const result = await toolContext.agentSystem.postAndAwait(toolContext.ctx, { agentId }, message);
                 const responseText = "responseText" in result ? (result.responseText?.trim() ?? "") : "";
-                const summaryPrefix = `Document query completed in sync mode. Query ID: ${agentId}.`;
+                const summaryPrefix = `Vault query completed in sync mode. Query ID: ${agentId}.`;
                 summary =
                     responseText.length > 0
                         ? `${summaryPrefix}\n\n${responseText}`
                         : `${summaryPrefix} No response text returned.`;
             } else {
                 await toolContext.agentSystem.post(toolContext.ctx, { agentId }, message);
-                summary = `Document query submitted. Query ID: ${agentId}. Results will arrive asynchronously.`;
+                summary = `Vault query submitted. Query ID: ${agentId}. Results will arrive asynchronously.`;
             }
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",

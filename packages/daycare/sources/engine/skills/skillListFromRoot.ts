@@ -44,6 +44,13 @@ async function collectSkillFiles(root: string): Promise<string[]> {
         throw error;
     }
 
+    const directSkillFile = entries.find(
+        (entry) => entry.isFile() && entry.name.toLowerCase() === SKILL_FILENAME_NORMALIZED
+    );
+    if (directSkillFile) {
+        return [path.join(root, directSkillFile.name)];
+    }
+
     const results: string[] = [];
     for (const entry of entries) {
         const fullPath = path.join(root, entry.name);

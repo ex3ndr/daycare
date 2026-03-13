@@ -4,8 +4,8 @@ import { contextForAgent } from "../../agents/context.js";
 import { documentReadToolBuild } from "./documentReadToolBuild.js";
 import { documentWriteToolBuild } from "./documentWriteToolBuild.js";
 
-const toolCall = { id: "tc1", name: "document_write" };
-const readToolCall = { id: "tc-read", name: "document_read" };
+const toolCall = { id: "tc1", name: "vault_write" };
+const readToolCall = { id: "tc-read", name: "vault_read" };
 
 function contextBuild(
     storage: Awaited<ReturnType<typeof storageOpenTest>>,
@@ -28,13 +28,13 @@ function contextBuild(
                     readVersions.set(entry.id, entry.version);
                 }
             },
-            documentVersionLastRead: (documentId: string) => readVersions.get(documentId) ?? null
+            documentVersionLastRead: (vaultId: string) => readVersions.get(vaultId) ?? null
         }
     } as never;
 }
 
 describe("documentWriteToolBuild", () => {
-    it("creates a document when documentId is omitted", async () => {
+    it("creates a vault entry when vaultId is omitted", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -51,7 +51,7 @@ describe("documentWriteToolBuild", () => {
             );
 
             expect(result.typedResult.version).toBe(1);
-            const createdId = String(result.typedResult.documentId ?? "");
+            const createdId = String(result.typedResult.vaultId ?? "");
             const created = await storage.documents.findById(
                 contextForAgent({ userId: "user-1", agentId: "agent-1" }),
                 createdId
@@ -63,7 +63,7 @@ describe("documentWriteToolBuild", () => {
         }
     });
 
-    it("updates a document when documentId is provided", async () => {
+    it("updates a vault entry when vaultId is provided", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -81,7 +81,7 @@ describe("documentWriteToolBuild", () => {
             const tool = documentWriteToolBuild();
             const result = await tool.execute(
                 {
-                    documentId: "doc-1",
+                    vaultId: "doc-1",
                     slug: "memory",
                     title: "Memory Updated",
                     description: "Memory root updated",
@@ -91,7 +91,7 @@ describe("documentWriteToolBuild", () => {
                 toolCall
             );
 
-            expect(result.typedResult.documentId).toBe("doc-1");
+            expect(result.typedResult.vaultId).toBe("doc-1");
             expect(result.typedResult.version).toBe(2);
             const updated = await storage.documents.findById(ctx, "doc-1");
             expect(updated?.title).toBe("Memory Updated");
@@ -117,7 +117,7 @@ describe("documentWriteToolBuild", () => {
             });
 
             const readTool = documentReadToolBuild();
-            await readTool.execute({ path: "doc://memory" }, contextBuild(storage, readVersions), readToolCall);
+            await readTool.execute({ path: "vault://memory" }, contextBuild(storage, readVersions), readToolCall);
 
             const tool = documentWriteToolBuild();
             const result = await tool.execute(
@@ -126,13 +126,13 @@ describe("documentWriteToolBuild", () => {
                     title: "User",
                     description: "User facts",
                     body: "Prefers concise answers.",
-                    parentPath: "doc://memory"
+                    parentPath: "vault://memory"
                 },
                 contextBuild(storage, readVersions),
                 toolCall
             );
 
-            const parentId = await storage.documents.findParentId(ctx, String(result.typedResult.documentId ?? ""));
+            const parentId = await storage.documents.findParentId(ctx, String(result.typedResult.vaultId ?? ""));
             expect(parentId).toBe("memory");
         } finally {
             storage.connection.close();
@@ -162,7 +162,7 @@ describe("documentWriteToolBuild", () => {
                         title: "User",
                         description: "User facts",
                         body: "x",
-                        parentPath: "doc://missing"
+                        parentPath: "vault://missing"
                     },
                     contextBuild(storage, readVersions),
                     toolCall
@@ -177,12 +177,12 @@ describe("documentWriteToolBuild", () => {
                         description: "User facts",
                         body: "x",
                         parentId: "different-parent",
-                        parentPath: "doc://memory"
+                        parentPath: "vault://memory"
                     },
                     contextBuild(storage, readVersions),
                     toolCall
                 )
-            ).rejects.toThrow("different parent documents");
+            ).rejects.toThrow("different vault entries");
         } finally {
             storage.connection.close();
         }
@@ -245,12 +245,12 @@ describe("documentWriteToolBuild", () => {
                         title: "Prefs",
                         description: "Prefs",
                         body: "",
-                        parentPath: "doc://memory/user"
+                        parentPath: "vault://memory/user"
                     },
                     contextBuild(storage, readVersions),
                     toolCall
                 )
-            ).rejects.toThrow("Parent chain must be read before attach");
+            ).rejects.toThrow("Parent vault chain must be read before attach");
         } finally {
             storage.connection.close();
         }
@@ -282,7 +282,7 @@ describe("documentWriteToolBuild", () => {
             });
 
             const readTool = documentReadToolBuild();
-            await readTool.execute({ path: "doc://memory/user" }, contextBuild(storage, readVersions), readToolCall);
+            await readTool.execute({ path: "vault://memory/user" }, contextBuild(storage, readVersions), readToolCall);
             await storage.documents.update(ctx, "user", { body: "changed", updatedAt: 3 });
 
             const tool = documentWriteToolBuild();
@@ -293,12 +293,12 @@ describe("documentWriteToolBuild", () => {
                         title: "Prefs",
                         description: "Prefs",
                         body: "",
-                        parentPath: "doc://memory/user"
+                        parentPath: "vault://memory/user"
                     },
                     contextBuild(storage, readVersions),
                     toolCall
                 )
-            ).rejects.toThrow("Parent chain changed since last read");
+            ).rejects.toThrow("Parent vault chain changed since last read");
         } finally {
             storage.connection.close();
         }
@@ -321,14 +321,14 @@ describe("documentWriteToolBuild", () => {
                     toolCall
                 )
             ).rejects.toThrow(
-                "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
+                "Memory agents can only write inside vault://memory. Compactor agents may also update vault://system/memory/agent and vault://system/memory/compactor."
             );
         } finally {
             storage.connection.close();
         }
     });
 
-    it("requires firstName frontmatter for documents under doc://people", async () => {
+    it("requires firstName frontmatter for documents under vault://people", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -344,7 +344,7 @@ describe("documentWriteToolBuild", () => {
             });
 
             const readTool = documentReadToolBuild();
-            await readTool.execute({ path: "doc://people" }, contextBuild(storage, readVersions), readToolCall);
+            await readTool.execute({ path: "vault://people" }, contextBuild(storage, readVersions), readToolCall);
 
             const tool = documentWriteToolBuild();
             await expect(
@@ -354,7 +354,7 @@ describe("documentWriteToolBuild", () => {
                         title: "Ada",
                         description: "Person profile",
                         body: "# Ada",
-                        parentPath: "doc://people"
+                        parentPath: "vault://people"
                     },
                     contextBuild(storage, readVersions),
                     toolCall
@@ -365,7 +365,7 @@ describe("documentWriteToolBuild", () => {
         }
     });
 
-    it("accepts valid frontmatter for documents under doc://people", async () => {
+    it("accepts valid frontmatter for documents under vault://people", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -381,7 +381,7 @@ describe("documentWriteToolBuild", () => {
             });
 
             const readTool = documentReadToolBuild();
-            await readTool.execute({ path: "doc://people" }, contextBuild(storage, readVersions), readToolCall);
+            await readTool.execute({ path: "vault://people" }, contextBuild(storage, readVersions), readToolCall);
 
             const tool = documentWriteToolBuild();
             const result = await tool.execute(
@@ -390,20 +390,20 @@ describe("documentWriteToolBuild", () => {
                     title: "Ada",
                     description: "Person profile",
                     body: "---\nfirstName: Ada\nlastName: Lovelace\n---\nMathematician.",
-                    parentPath: "doc://people"
+                    parentPath: "vault://people"
                 },
                 contextBuild(storage, readVersions),
                 toolCall
             );
 
-            const parentId = await storage.documents.findParentId(ctx, String(result.typedResult.documentId ?? ""));
+            const parentId = await storage.documents.findParentId(ctx, String(result.typedResult.vaultId ?? ""));
             expect(parentId).toBe("people");
         } finally {
             storage.connection.close();
         }
     });
 
-    it("allows memory-agent writes under doc://memory", async () => {
+    it("allows memory-agent writes under vault://memory", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -420,7 +420,7 @@ describe("documentWriteToolBuild", () => {
 
             const readTool = documentReadToolBuild();
             await readTool.execute(
-                { path: "doc://memory" },
+                { path: "vault://memory" },
                 contextBuild(storage, readVersions, "memory"),
                 readToolCall
             );
@@ -432,20 +432,20 @@ describe("documentWriteToolBuild", () => {
                     title: "User",
                     description: "User facts",
                     body: "Prefers concise answers.",
-                    parentPath: "doc://memory"
+                    parentPath: "vault://memory"
                 },
                 contextBuild(storage, readVersions, "memory"),
                 toolCall
             );
 
-            const parentId = await storage.documents.findParentId(ctx, String(result.typedResult.documentId ?? ""));
+            const parentId = await storage.documents.findParentId(ctx, String(result.typedResult.vaultId ?? ""));
             expect(parentId).toBe("memory");
         } finally {
             storage.connection.close();
         }
     });
 
-    it("allows compactor-agent updates to doc://system/memory/agent", async () => {
+    it("allows compactor-agent updates to vault://system/memory/agent", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -482,7 +482,7 @@ describe("documentWriteToolBuild", () => {
 
             const readTool = documentReadToolBuild();
             await readTool.execute(
-                { path: "doc://system/memory/agent" },
+                { path: "vault://system/memory/agent" },
                 contextBuild(storage, readVersions, "compactor", {
                     path: "/user-1/compactor/agent-1",
                     name: "memory-compactor"
@@ -493,7 +493,7 @@ describe("documentWriteToolBuild", () => {
             const tool = documentWriteToolBuild();
             await tool.execute(
                 {
-                    documentId: "system-memory-agent",
+                    vaultId: "system-memory-agent",
                     slug: "agent",
                     title: "Memory Agent",
                     description: "Agent prompt",
@@ -513,7 +513,7 @@ describe("documentWriteToolBuild", () => {
         }
     });
 
-    it("rejects regular memory-agent updates to doc://system/memory prompts", async () => {
+    it("rejects regular memory-agent updates to vault://system/memory prompts", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -552,7 +552,7 @@ describe("documentWriteToolBuild", () => {
             await expect(
                 tool.execute(
                     {
-                        documentId: "system-memory-agent",
+                        vaultId: "system-memory-agent",
                         slug: "agent",
                         title: "Memory Agent",
                         description: "Agent prompt",
@@ -562,14 +562,14 @@ describe("documentWriteToolBuild", () => {
                     toolCall
                 )
             ).rejects.toThrow(
-                "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
+                "Memory agents can only write inside vault://memory. Compactor agents may also update vault://system/memory/agent and vault://system/memory/compactor."
             );
         } finally {
             storage.connection.close();
         }
     });
 
-    it("rejects memory-agent updates for documents outside doc://memory", async () => {
+    it("rejects memory-agent updates for documents outside vault://memory", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -588,7 +588,7 @@ describe("documentWriteToolBuild", () => {
             await expect(
                 tool.execute(
                     {
-                        documentId: "notes",
+                        vaultId: "notes",
                         slug: "notes",
                         title: "Notes Updated",
                         description: "General notes",
@@ -598,7 +598,7 @@ describe("documentWriteToolBuild", () => {
                     toolCall
                 )
             ).rejects.toThrow(
-                "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
+                "Memory agents can only write inside vault://memory. Compactor agents may also update vault://system/memory/agent and vault://system/memory/compactor."
             );
         } finally {
             storage.connection.close();

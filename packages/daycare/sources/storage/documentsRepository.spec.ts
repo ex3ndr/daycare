@@ -36,7 +36,7 @@ describe("DocumentsRepository", () => {
                 slug: "events",
                 title: "Events",
                 description: "Event notes",
-                body: "[[doc://memory]]",
+                body: "[[vault://memory]]",
                 createdAt: 3,
                 updatedAt: 3,
                 parentId: "daily"
@@ -52,9 +52,9 @@ describe("DocumentsRepository", () => {
             expect(bySlug?.id).toBe("daily");
 
             const path = await documentPathResolve(ctx, "events", repo);
-            expect(path).toBe("doc://memory/daily/events");
+            expect(path).toBe("vault://memory/daily/events");
 
-            const byPath = await documentPathFind(ctx, "doc://memory/daily/events", repo);
+            const byPath = await documentPathFind(ctx, "vault://memory/daily/events", repo);
             expect(byPath).toBe("events");
 
             await expect(repo.delete(ctx, "daily")).rejects.toThrow("active references");
@@ -373,7 +373,7 @@ describe("DocumentsRepository", () => {
             });
 
             const path = await documentPathResolve(ctx, "user-doc", repo);
-            expect(path).toBe("doc://memory/user_profile-1.2");
+            expect(path).toBe("vault://memory/user_profile-1.2");
             expect(await documentPathFind(ctx, String(path ?? ""), repo)).toBe("user-doc");
         } finally {
             storage.connection.close();

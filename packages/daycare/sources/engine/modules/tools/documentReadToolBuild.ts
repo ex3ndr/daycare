@@ -9,7 +9,7 @@ import { documentPathResolve } from "../../../storage/documentPathResolve.js";
 
 const schema = Type.Object(
     {
-        documentId: Type.Optional(Type.String({ minLength: 1 })),
+        vaultId: Type.Optional(Type.String({ minLength: 1 })),
         path: Type.Optional(Type.String({ minLength: 1 }))
     },
     { additionalProperties: false }
@@ -21,12 +21,12 @@ const resultSchema = Type.Object(
     {
         found: Type.Boolean(),
         summary: Type.String(),
-        documentId: Type.Optional(Type.String())
+        vaultId: Type.Optional(Type.String())
     },
     { additionalProperties: false }
 );
 
-type DocumentReadResult = { found: boolean; summary: string; documentId?: string };
+type DocumentReadResult = { found: boolean; summary: string; vaultId?: string };
 
 const returns: ToolResultContract<DocumentReadResult> = {
     schema: resultSchema,
@@ -34,16 +34,16 @@ const returns: ToolResultContract<DocumentReadResult> = {
 };
 
 /**
- * Builds the document_read tool for reading a document by id/path or listing roots.
+ * Builds the vault_read tool for reading a vault entry by id/path or listing roots.
  * Expects: storage.documents is available for ctx.userId.
  */
 export function documentReadToolBuild(): ToolDefinition {
     return {
         tool: {
-            name: "document_read",
+            name: "vault_read",
             description:
-                "Read a document by documentId or path (doc://a/b). Omit both to list root documents. " +
-                "When reading doc://memory, includes a full subtree overview.",
+                "Read a vault entry by vaultId or path (vault://a/b). Omit both to list root vault entries. " +
+                "When reading vault://memory, includes a full subtree overview.",
             parameters: schema
         },
         returns,
@@ -54,39 +54,39 @@ export function documentReadToolBuild(): ToolDefinition {
             }
 
             const payload = args as DocumentReadArgs;
-            const documentId = payload.documentId?.trim();
+            const vaultId = payload.vaultId?.trim();
             const path = payload.path?.trim();
-            if (documentId && path) {
-                throw new Error("Provide either documentId or path, not both.");
+            if (vaultId && path) {
+                throw new Error("Provide either vaultId or path, not both.");
             }
 
-            if (!documentId && !path) {
+            if (!vaultId && !path) {
                 const summary = await documentRootsSummaryBuild(toolContext.ctx, storage.documents);
                 return toolResultBuild(toolCall, { found: true, summary });
             }
 
             let targetDocumentId: string | null = null;
-            if (documentId) {
-                targetDocumentId = documentId;
-            } else if (path === "doc://") {
+            if (vaultId) {
+                targetDocumentId = vaultId;
+            } else if (path === "vault://") {
                 const summary = await documentRootsSummaryBuild(toolContext.ctx, storage.documents);
                 return toolResultBuild(toolCall, { found: true, summary });
             } else if (path) {
                 targetDocumentId = await documentPathFind(toolContext.ctx, path, storage.documents);
                 if (!targetDocumentId) {
-                    const summary = `Document not found for path: ${path}`;
+                    const summary = `Vault entry not found for path: ${path}`;
                     return toolResultBuild(toolCall, { found: false, summary });
                 }
             }
 
             if (!targetDocumentId) {
-                const summary = "Document not found.";
+                const summary = "Vault entry not found.";
                 return toolResultBuild(toolCall, { found: false, summary });
             }
 
             const document = await storage.documents.findById(toolContext.ctx, targetDocumentId);
             if (!document) {
-                const summary = `Document not found: ${targetDocumentId}`;
+                const summary = `Vault entry not found: ${targetDocumentId}`;
                 return toolResultBuild(toolCall, { found: false, summary });
             }
             const chain = await documentChainResolve(toolContext.ctx, document.id, storage.documents);
@@ -97,7 +97,7 @@ export function documentReadToolBuild(): ToolDefinition {
             }
 
             const summary = await documentSummaryBuild(toolContext.ctx, storage.documents, document);
-            return toolResultBuild(toolCall, { found: true, summary, documentId: document.id });
+            return toolResultBuild(toolCall, { found: true, summary, vaultId: document.id });
         }
     };
 }
@@ -109,9 +109,9 @@ async function documentRootsSummaryBuild(
     } & Parameters<typeof documentPathResolve>[2]
 ): Promise<string> {
     const roots = await documents.findRoots(ctx);
-    const lines = ["# Root Documents", ""];
+    const lines = ["# Root Vault", ""];
     if (roots.length === 0) {
-        lines.push("(no root documents)");
+        lines.push("(no root vault entries)");
         return lines.join("\n");
     }
 
@@ -179,7 +179,7 @@ async function documentSummaryBuild(
 
     lines.push("", "## Body", "", document.body);
 
-    if (path === "doc://memory") {
+    if (path === "vault://memory") {
         const subtreeLines = await documentSubtreeSummaryBuild(ctx, document.id, documents);
         lines.push("", "## Memory Tree", "", ...subtreeLines);
     }

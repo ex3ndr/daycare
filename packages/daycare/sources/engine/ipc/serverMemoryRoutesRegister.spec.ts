@@ -107,7 +107,7 @@ describe("serverMemoryRoutesRegister", () => {
         }
     });
 
-    it("returns document-scope graph including root-level documents", async () => {
+    it("returns vault-scope graph including root-level vault entries", async () => {
         const storage = await storageOpenTest();
         try {
             const ctx = contextForUser({ userId: "usr_1" });
@@ -144,7 +144,7 @@ describe("serverMemoryRoutesRegister", () => {
 
             const graphResponse = await app.inject({
                 method: "GET",
-                url: "/v1/engine/memory/usr_1/graph?scope=documents"
+                url: "/v1/engine/memory/usr_1/graph?scope=vault"
             });
             expect(graphResponse.statusCode).toBe(200);
             const graphPayload = graphResponse.json() as {
@@ -152,25 +152,22 @@ describe("serverMemoryRoutesRegister", () => {
                 graph: { root: { id: string }; children: Record<string, Array<{ id: string }>> };
             };
             expect(graphPayload.ok).toBe(true);
-            expect(graphPayload.graph.root.id).toBe("__documents_root__");
-            expect(graphPayload.graph.children.__documents_root__?.map((entry) => entry.id)).toEqual([
-                "memory",
-                "orphan"
-            ]);
+            expect(graphPayload.graph.root.id).toBe("__vault_root__");
+            expect(graphPayload.graph.children.__vault_root__?.map((entry) => entry.id)).toEqual(["memory", "orphan"]);
             expect(graphPayload.graph.children.orphan?.map((entry) => entry.id)).toEqual(["child"]);
 
             const rootNode = await app.inject({
                 method: "GET",
-                url: "/v1/engine/memory/usr_1/node/__documents_root__?scope=documents"
+                url: "/v1/engine/memory/usr_1/node/__vault_root__?scope=vault"
             });
             expect(rootNode.statusCode).toBe(200);
             const rootPayload = rootNode.json() as { ok: boolean; node: { id: string } };
             expect(rootPayload.ok).toBe(true);
-            expect(rootPayload.node.id).toBe("__documents_root__");
+            expect(rootPayload.node.id).toBe("__vault_root__");
 
             const orphanNode = await app.inject({
                 method: "GET",
-                url: "/v1/engine/memory/usr_1/node/orphan?scope=documents"
+                url: "/v1/engine/memory/usr_1/node/orphan?scope=vault"
             });
             expect(orphanNode.statusCode).toBe(200);
             const orphanPayload = orphanNode.json() as { ok: boolean; node: { id: string } };

@@ -27,7 +27,7 @@ describe("documentsCreate", () => {
         expect(repository.create).not.toHaveBeenCalled();
     });
 
-    it("creates a document when parentId is provided", async () => {
+    it("creates a vault entry when parentId is provided", async () => {
         const repository = {
             create: vi.fn(async () => ({
                 id: "doc-1",
@@ -59,7 +59,7 @@ describe("documentsCreate", () => {
         expect(response.statusCode).toBe(200);
         expect(response.payload).toEqual({
             ok: true,
-            document: {
+            item: {
                 id: "doc-1",
                 slug: "child",
                 title: "Child",

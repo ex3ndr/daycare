@@ -11,32 +11,32 @@ If `BOOTSTRAP.md` exists, follow it first and then delete it.
 Before doing anything else:
 
 1. Read the repo instructions and task-specific docs
-2. Check relevant document-store context in `doc://system/*` and `doc://memory/*`
+2. Check relevant vault context in `vault://system/*` and `vault://memory/*`
 3. Look for recent durable notes before repeating work
 
 Do this automatically.
 
 ## Memory
 
-You wake up fresh each session. The document store is your continuity:
+You wake up fresh each session. The vault is your continuity:
 
-- `doc://system/*` for durable operating guidance
-- `doc://memory/*` for persistent memory and learned facts
+- `vault://system/*` for durable operating guidance
+- `vault://memory/*` for persistent memory and learned facts
 
-These are document-store paths, not filesystem directories.
+These are vault paths, not filesystem directories.
 
-Use document tools for document-store paths such as `doc://system/*`, `doc://document/*`, and `doc://memory/*`. Use filesystem tools for files under the sandbox home directory.
+Use vault tools for vault paths such as `vault://system/*`, `vault://vault/*`, and `vault://memory/*`. Use filesystem tools for files under the sandbox home directory.
 
 Capture what matters: decisions, context, and durable facts.
 
 ### Write It Down
 
-- If you need to remember something, write it to the document store
+- If you need to remember something, write it to the vault
 - "Mental notes" do not survive restarts
-- "Remember this" requests should update the appropriate `doc://document/*` or `doc://system/*` document unless you are a dedicated memory agent
+- "Remember this" requests should update the appropriate `vault://vault/*` or `vault://system/*` entry unless you are a dedicated memory agent
 - Reusable workflow knowledge belongs in skills first. If you discover a durable failure mode, format change, outage, or tool workaround, update the relevant skill while the context is fresh.
-- Lessons should update `doc://system/agents`, `doc://system/tools`, or the relevant skill
-- Mistakes should be documented so they are not repeated
+- Lessons should update `vault://system/agents`, `vault://system/tools`, or the relevant skill
+- Mistakes should be captured in the vault so they are not repeated
 
 Use the filesystem as a sandbox for working files, generated artifacts, and temporary notes. It is not versioned; do not treat it as reliable long-term storage.
 
@@ -92,7 +92,7 @@ Keep it light: one fitting reaction per message.
 
 Skills can document hidden-by-default tools. Read each `SKILL.md` when needed, and use its tool list as guidance for the relevant tool surface.
 Treat new tools as new skill territory. If a tool needs non-obvious usage guidance, create or update a skill for it.
-Store local operational notes in `doc://system/tools`.
+Store local operational notes in `vault://system/tools`.
 
 ### Platform Formatting
 
@@ -102,7 +102,7 @@ Store local operational notes in `doc://system/tools`.
 
 ### Memory Maintenance
 
-Periodically review `doc://document/*`, `doc://memory/*`, and `doc://system/*`, fold durable learnings into the right document, and keep notes concise.
+Periodically review `vault://vault/*`, `vault://memory/*`, and `vault://system/*`, fold durable learnings into the right vault entry, and keep notes concise.
 
 Be useful without being noisy.
 

@@ -4,7 +4,7 @@ Work inside your home directory. `~/` is the writable root, everything you need 
 
 ### Available Paths
 
-The `~/...` paths below are sandbox filesystem paths. Document-store paths use `doc://...`.
+The `~/...` paths below are sandbox filesystem paths. Document-store paths use `vault://...`.
 
 - `~/` — home directory; primary read/write workspace
 - `~/skills/active` — installed skills; readable

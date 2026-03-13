@@ -170,7 +170,7 @@ export async function apiRouteHandle(
             tokenStatsFetch: context.tokenStatsFetch
         });
     }
-    if (pathname.startsWith("/documents") && context.documents) {
+    if (pathname.startsWith("/vault") && context.documents) {
         return documentsRouteHandle(request, response, pathname, {
             ctx: context.ctx,
             sendJson: context.sendJson,

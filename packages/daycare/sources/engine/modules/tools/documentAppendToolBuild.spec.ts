@@ -4,7 +4,7 @@ import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { contextForAgent } from "../../agents/context.js";
 import { documentAppendToolBuild } from "./documentAppendToolBuild.js";
 
-const toolCall = { id: "tc-append", name: "document_append" };
+const toolCall = { id: "tc-append", name: "vault_append" };
 
 function contextBuild(storage: Awaited<ReturnType<typeof storageOpenTest>>, agentKind: "agent" | "memory" = "agent") {
     return {
@@ -35,13 +35,9 @@ describe("documentAppendToolBuild", () => {
             });
 
             const tool = documentAppendToolBuild();
-            const result = await tool.execute(
-                { documentId: "doc-1", text: "\nline 2" },
-                contextBuild(storage),
-                toolCall
-            );
+            const result = await tool.execute({ vaultId: "doc-1", text: "\nline 2" }, contextBuild(storage), toolCall);
 
-            expect(result.typedResult.documentId).toBe("doc-1");
+            expect(result.typedResult.vaultId).toBe("doc-1");
             expect(result.typedResult.version).toBe(2);
             const updated = await storage.documents.findById(ctx, "doc-1");
             expect(updated?.body).toBe("line 1\nline 2");
@@ -65,7 +61,7 @@ describe("documentAppendToolBuild", () => {
             });
 
             const tool = documentAppendToolBuild();
-            await tool.execute({ path: "doc://notes", text: " world" }, contextBuild(storage), toolCall);
+            await tool.execute({ path: "vault://notes", text: " world" }, contextBuild(storage), toolCall);
 
             const updated = await storage.documents.findById(ctx, "doc-1");
             expect(updated?.body).toBe("hello world");
@@ -79,18 +75,18 @@ describe("documentAppendToolBuild", () => {
         try {
             const tool = documentAppendToolBuild();
             await expect(
-                tool.execute({ documentId: "doc-1", path: "doc://notes", text: "x" }, contextBuild(storage), toolCall)
-            ).rejects.toThrow("Provide either documentId or path, not both.");
+                tool.execute({ vaultId: "doc-1", path: "vault://notes", text: "x" }, contextBuild(storage), toolCall)
+            ).rejects.toThrow("Provide either vaultId or path, not both.");
 
             await expect(tool.execute({ text: "x" }, contextBuild(storage), toolCall)).rejects.toThrow(
-                "Provide either documentId or path."
+                "Provide either vaultId or path."
             );
         } finally {
             storage.connection.close();
         }
     });
 
-    it("enforces memory-agent scope to doc://memory", async () => {
+    it("enforces memory-agent scope to vault://memory", async () => {
         const storage = await storageOpenTest();
         try {
             const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
@@ -106,9 +102,9 @@ describe("documentAppendToolBuild", () => {
 
             const tool = documentAppendToolBuild();
             await expect(
-                tool.execute({ documentId: "doc-1", text: " world" }, contextBuild(storage, "memory"), toolCall)
+                tool.execute({ vaultId: "doc-1", text: " world" }, contextBuild(storage, "memory"), toolCall)
             ).rejects.toThrow(
-                "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
+                "Memory agents can only write inside vault://memory. Compactor agents may also update vault://system/memory/agent and vault://system/memory/compactor."
             );
         } finally {
             storage.connection.close();

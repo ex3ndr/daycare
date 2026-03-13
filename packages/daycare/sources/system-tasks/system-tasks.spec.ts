@@ -12,8 +12,8 @@ import type { ToolResolverApi } from "../engine/modules/toolResolver.js";
 const SYSTEM_TASKS_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), ".");
 
 const documentTreeTool = {
-    name: "document_tree",
-    description: "Read a document tree.",
+    name: "vault_tree",
+    description: "Read a vault tree.",
     parameters: Type.Object(
         {
             path: Type.String()
@@ -22,8 +22,8 @@ const documentTreeTool = {
     )
 };
 const documentReadTool = {
-    name: "document_read",
-    description: "Read a document.",
+    name: "vault_read",
+    description: "Read a vault entry.",
     parameters: Type.Object(
         {
             path: Type.String()
@@ -42,11 +42,11 @@ async function systemTaskRead(taskName: string): Promise<string> {
 }
 
 function systemTaskResolver(
-    documentsByPath: Record<
+    entriesByPath: Record<
         string,
         {
             summary: string;
-            documents?: Array<{ documentId: string; title: string; path: string; updatedAt: number }>;
+            entries?: Array<{ vaultId: string; title: string; path: string; updatedAt: number }>;
             readSummary?: string;
         }
     >,
@@ -84,8 +84,8 @@ function systemTaskResolver(
             };
         }
 
-        const entry = documentsByPath[pathValue] ?? { summary: "", documents: [] };
-        const summary = toolCall.name === "document_read" ? (entry.readSummary ?? entry.summary) : entry.summary;
+        const entry = entriesByPath[pathValue] ?? { summary: "", entries: [] };
+        const summary = toolCall.name === "vault_read" ? (entry.readSummary ?? entry.summary) : entry.summary;
         const toolMessage: ToolResultMessage = {
             role: "toolResult",
             toolCallId: toolCall.id,
@@ -104,13 +104,13 @@ function systemTaskResolver(
             bytes: summary.length,
             size: summary.length,
             found: true,
-            documents: entry.documents ?? []
+            entries: entry.entries ?? []
         };
         return {
             toolMessage,
             typedResult:
-                entry.documents?.[0]?.documentId !== undefined
-                    ? { ...typedResult, rootDocumentId: entry.documents[0].documentId }
+                entry.entries?.[0]?.vaultId !== undefined
+                    ? { ...typedResult, rootVaultId: entry.entries[0].vaultId }
                     : typedResult
         };
     });
@@ -158,42 +158,42 @@ describe("system-tasks VM execution", () => {
             const code = await systemTaskRead("memory-compactor");
             const { resolver, execute } = systemTaskResolver(
                 {
-                    "doc://memory": {
-                        summary: "memory",
-                        documents: [
-                            {
-                                documentId: "memory",
-                                title: "Memory",
-                                path: "doc://memory",
-                                updatedAt: 1
-                            },
-                            {
-                                documentId: "prefs",
-                                title: "Prefs",
-                                path: "doc://memory/prefs",
-                                updatedAt: 2
-                            }
-                        ]
-                    },
-                    "doc://system/memory": {
-                        summary: "system memory",
-                        documents: [
-                            {
-                                documentId: "system-memory",
-                                title: "System Memory",
-                                path: "doc://system/memory",
-                                updatedAt: 2
-                            }
-                        ]
-                    },
-                    "doc://system/memory/agent": {
-                        summary: "agent prompt",
-                        readSummary: "# Memory Agent\n\nKeep memory tidy."
-                    },
-                    "doc://system/memory/compactor": {
-                        summary: "compactor prompt",
-                        readSummary: "# Memory Compactor\n\nReview recent changes."
-                    }
+                "vault://memory": {
+                    summary: "memory",
+                    entries: [
+                        {
+                            vaultId: "memory",
+                            title: "Memory",
+                            path: "vault://memory",
+                            updatedAt: 1
+                        },
+                        {
+                            vaultId: "prefs",
+                            title: "Prefs",
+                            path: "vault://memory/prefs",
+                            updatedAt: 2
+                        }
+                    ]
+                },
+                "vault://system/memory": {
+                    summary: "system memory",
+                    entries: [
+                        {
+                            vaultId: "system-memory",
+                            title: "System Memory",
+                            path: "vault://system/memory",
+                            updatedAt: 2
+                        }
+                    ]
+                },
+                "vault://system/memory/agent": {
+                    summary: "agent prompt",
+                    readSummary: "# Memory Agent\n\nKeep memory tidy."
+                },
+                "vault://system/memory/compactor": {
+                    summary: "compactor prompt",
+                    readSummary: "# Memory Compactor\n\nReview recent changes."
+                }
                 },
                 12 * 60 * 60 * 1000 + 10
             );
@@ -218,42 +218,42 @@ describe("system-tasks VM execution", () => {
             const code = await systemTaskRead("memory-compactor");
             const { resolver, execute } = systemTaskResolver(
                 {
-                    "doc://memory": {
-                        summary: "memory",
-                        documents: [
-                            {
-                                documentId: "memory",
-                                title: "Memory",
-                                path: "doc://memory",
-                                updatedAt: 1
-                            },
-                            {
-                                documentId: "fresh-note",
-                                title: "Fresh Note",
-                                path: "doc://memory/fresh-note",
-                                updatedAt: 43200000
-                            }
-                        ]
-                    },
-                    "doc://system/memory": {
-                        summary: "system memory",
-                        documents: [
-                            {
-                                documentId: "system-memory",
-                                title: "System Memory",
-                                path: "doc://system/memory",
-                                updatedAt: 1
-                            }
-                        ]
-                    },
-                    "doc://system/memory/agent": {
-                        summary: "agent prompt",
-                        readSummary: "# Memory Agent\n\nKeep memory tidy."
-                    },
-                    "doc://system/memory/compactor": {
-                        summary: "compactor prompt",
-                        readSummary: "# Memory Compactor\n\nReview recent changes."
-                    }
+                "vault://memory": {
+                    summary: "memory",
+                    entries: [
+                        {
+                            vaultId: "memory",
+                            title: "Memory",
+                            path: "vault://memory",
+                            updatedAt: 1
+                        },
+                        {
+                            vaultId: "fresh-note",
+                            title: "Fresh Note",
+                            path: "vault://memory/fresh-note",
+                            updatedAt: 43200000
+                        }
+                    ]
+                },
+                "vault://system/memory": {
+                    summary: "system memory",
+                    entries: [
+                        {
+                            vaultId: "system-memory",
+                            title: "System Memory",
+                            path: "vault://system/memory",
+                            updatedAt: 1
+                        }
+                    ]
+                },
+                "vault://system/memory/agent": {
+                    summary: "agent prompt",
+                    readSummary: "# Memory Agent\n\nKeep memory tidy."
+                },
+                "vault://system/memory/compactor": {
+                    summary: "compactor prompt",
+                    readSummary: "# Memory Compactor\n\nReview recent changes."
+                }
                 },
                 43200000 + 1
             );

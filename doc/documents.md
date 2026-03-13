@@ -1,6 +1,6 @@
-# Daycare Document Store
+# Daycare Vault
 
-The document store provides versioned, user-scoped markdown documents with hierarchical paths and explicit references.
+The vault provides versioned, user-scoped markdown entries with hierarchical paths and explicit references.
 
 ## Tables
 
@@ -35,20 +35,21 @@ erDiagram
 - `documents` uses temporal versioning: `(user_id, id, version)`.
 - `document_references` rows are immutable per source version.
 - `kind` values are `parent`, `link`, `body`.
+- Public vault paths use `vault://...`, but storage still stays in the `documents` tables.
 
 ## Path Resolution
 
 ```mermaid
 flowchart TD
-    A[doc id] --> B[load active document]
+    A[vault id] --> B[load active entry]
     B --> C{parent ref exists?}
     C -->|yes| D[prepend slug and load parent]
     D --> C
-    C -->|no| E[build ~/slug/slug path]
+    C -->|no| E[build vault://slug/slug path]
 ```
 
 - Paths are computed from active `parent` references.
-- Roots have no `parent` reference and resolve to `~/slug`.
+- Roots have no `parent` reference and resolve to `vault://slug`.
 
 ## Version + Reference Lifecycle
 
@@ -58,17 +59,17 @@ sequenceDiagram
     participant Repo as DocumentsRepository
     participant DB as Database
 
-    Client->>Repo: create/update document
+    Client->>Repo: create/update vault entry
     Repo->>Repo: validate parent + link targets
     Repo->>Repo: extract body refs ([[...]] -> ids)
     Repo->>DB: close current version (update only)
-    Repo->>DB: insert next document version
+    Repo->>DB: insert next vault entry version
     Repo->>DB: insert parent/link/body refs for that version
 ```
 
-- Updating a document creates a new version and a new set of refs.
+- Updating a vault entry creates a new version and a new set of refs.
 - Old reference rows remain tied to old versions.
-- Delete is blocked when an active document has `parent` or `link` reference to the target.
+- Delete is blocked when an active vault entry has `parent` or `link` reference to the target.
 - Parent links are validated as acyclic before writes; cycle-creating updates are rejected.
 - Concurrent writes to the same `(user, parent, slug)` scope are serialized to preserve sibling slug uniqueness.
 
@@ -76,29 +77,29 @@ sequenceDiagram
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/documents/tree` | All active documents as flat array with parentId |
-| GET | `/documents/:id` | Single document with parentId resolved |
-| GET | `/documents/:id/history` | All versions of a document (newest first) |
-| POST | `/documents` | Create a new document |
-| PUT | `/documents/:id` | Update document fields |
-| DELETE | `/documents/:id` | Soft-delete document (blocked if referenced) |
+| GET | `/vault/tree` | All active vault entries as a flat array with parentId |
+| GET | `/vault/:id` | Single vault entry with parentId resolved |
+| GET | `/vault/:id/history` | All versions of a vault entry (newest first) |
+| POST | `/vault/create` | Create a new vault entry |
+| POST | `/vault/:id/update` | Update vault entry fields |
+| POST | `/vault/:id/delete` | Soft-delete a vault entry (blocked if referenced) |
 
-## Document Viewer
+## Vault Viewer
 
-The document viewer (`DocumentsView`) provides three tabs:
+The vault viewer (`DocumentsView`) provides three tabs:
 
 - **View** — renders the markdown body as themed HTML
 - **Edit** — WYSIWYG editor using `contenteditable` in an iframe with a formatting toolbar; auto-saves with debounce
-- **History** — shows all document versions with timestamps and inline diffs between consecutive versions
+- **History** — shows all vault entry versions with timestamps and inline diffs between consecutive versions
 
 ```mermaid
 flowchart LR
     A[View Tab] -->|read-only| B[DocumentMarkdownView]
     C[Edit Tab] -->|contenteditable iframe| D[DocumentEditorView]
     D -->|HTML to Markdown| E[documentHtmlToMarkdown]
-    E -->|auto-save| F[API PUT]
-    G[History Tab] -->|GET /documents/:id/history| H[DocumentHistoryPanel]
+    E -->|auto-save| F[POST /vault/:id/update]
+    G[History Tab] -->|GET /vault/:id/history| H[DocumentHistoryPanel]
     H -->|line diff| I[documentDiffCompute]
 ```
 
-Protected documents (memory/system/people subtrees) hide the Edit tab.
+Protected vault entries (memory/system/people subtrees) hide the Edit tab.

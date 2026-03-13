@@ -5,7 +5,7 @@ import { agentPromptBundledRead } from "../agents/ops/agentPromptBundledRead.js"
 import { documentSystemDocsEnsure } from "./documentSystemDocsEnsure.js";
 
 describe("documentSystemDocsEnsure", () => {
-    it("creates doc://system with bundled child prompt documents", async () => {
+    it("creates vault://system with bundled child prompt documents", async () => {
         const storage = await storageOpenTest();
         try {
             const ctx = contextForUser({ userId: "user-1" });

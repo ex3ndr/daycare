@@ -2,8 +2,8 @@ import { apiUrl } from "../api/apiUrl";
 import type { DocumentItem } from "./documentsTypes";
 
 /**
- * Updates a document via the API.
- * Expects: baseUrl and token are valid; id is a valid document identifier.
+ * Updates a vault entry via the API.
+ * Expects: baseUrl and token are valid; id is a valid vault identifier.
  */
 export async function documentUpdate(
     baseUrl: string,
@@ -12,17 +12,17 @@ export async function documentUpdate(
     id: string,
     input: { slug?: string; title?: string; description?: string; body?: string; parentId?: string | null }
 ): Promise<DocumentItem> {
-    const response = await fetch(apiUrl(baseUrl, `/documents/${encodeURIComponent(id)}`, workspaceId), {
-        method: "PUT",
+    const response = await fetch(apiUrl(baseUrl, `/vault/${encodeURIComponent(id)}/update`, workspaceId), {
+        method: "POST",
         headers: {
             authorization: `Bearer ${token}`,
             "content-type": "application/json"
         },
         body: JSON.stringify(input)
     });
-    const data = (await response.json()) as { ok?: boolean; document?: DocumentItem; error?: string };
-    if (data.ok !== true || !data.document) {
-        throw new Error(data.error ?? "Failed to update document.");
+    const data = (await response.json()) as { ok?: boolean; item?: DocumentItem; error?: string };
+    if (data.ok !== true || !data.item) {
+        throw new Error(data.error ?? "Failed to update vault entry.");
     }
-    return data.document;
+    return data.item;
 }

@@ -22,7 +22,7 @@ type ToolbarButton = {
  * WYSIWYG markdown editor using contenteditable in an iframe (web) or WebView (native).
  * Provides a formatting toolbar and converts HTML changes back to markdown.
  *
- * Expects: markdown is the current document body; onChange is called with updated markdown.
+ * Expects: markdown is the current vault entry body; onChange is called with updated markdown.
  */
 export const DocumentEditorView = React.memo<DocumentEditorViewProps>(({ markdown, onChange }) => {
     const { theme } = useUnistyles();
@@ -141,7 +141,7 @@ export const DocumentEditorView = React.memo<DocumentEditorViewProps>(({ markdow
                 <View style={{ flex: 1, overflow: "hidden" }}>
                     <iframe
                         ref={iframeRef}
-                        title="Document editor"
+                        title="Vault entry editor"
                         srcDoc={editorHtml}
                         style={{
                             width: "100%",

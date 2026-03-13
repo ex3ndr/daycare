@@ -6,7 +6,9 @@ import { agentPromptBundledRead } from "../agents/ops/agentPromptBundledRead.js"
 const DOCUMENT_ROOT_SLUG = "document";
 
 /**
- * Ensures the app root `doc://document` exists for the provided user context.
+ * Ensures the app root `vault://vault` exists for the provided user context.
+ * Storage still uses the root slug `document` for compatibility with existing rows.
+ *
  * Expects: storage migrations are applied and ctx.userId is valid.
  */
 export async function documentRootDocumentEnsure(
@@ -24,8 +26,8 @@ export async function documentRootDocumentEnsure(
         const created = await storage.documents.create(ctx, {
             id: createId(),
             slug: DOCUMENT_ROOT_SLUG,
-            title: "Documents",
-            description: "Root folder for user-created documents in the app.",
+            title: "Vault",
+            description: "Root folder for user-created vault entries in the app.",
             body,
             createdAt: now,
             updatedAt: now,

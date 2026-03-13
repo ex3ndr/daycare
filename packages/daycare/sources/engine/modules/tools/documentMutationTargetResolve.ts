@@ -3,7 +3,7 @@ import type { DocumentDbRecord } from "../../../storage/databaseTypes.js";
 import { documentPathFind } from "../../../storage/documentPathFind.js";
 
 type DocumentMutationTargetResolveInput = {
-    documentId?: string;
+    vaultId?: string;
     path?: string;
 };
 
@@ -13,40 +13,40 @@ type DocumentMutationTargetResolveRepo = {
 };
 
 /**
- * Resolves a mutation target document from an explicit id or `doc://...` path.
- * Expects: exactly one selector is provided and points to an existing document.
+ * Resolves a mutation target vault entry from an explicit id or `vault://...` path.
+ * Expects: exactly one selector is provided and points to an existing vault entry.
  */
 export async function documentMutationTargetResolve(
     ctx: Context,
     input: DocumentMutationTargetResolveInput,
     documents: DocumentMutationTargetResolveRepo
 ): Promise<DocumentDbRecord> {
-    const documentId = input.documentId?.trim();
+    const vaultId = input.vaultId?.trim();
     const path = input.path?.trim();
-    if (documentId && path) {
-        throw new Error("Provide either documentId or path, not both.");
+    if (vaultId && path) {
+        throw new Error("Provide either vaultId or path, not both.");
     }
-    if (!documentId && !path) {
-        throw new Error("Provide either documentId or path.");
+    if (!vaultId && !path) {
+        throw new Error("Provide either vaultId or path.");
     }
 
-    let targetDocumentId = documentId ?? null;
+    let targetDocumentId = vaultId ?? null;
     if (!targetDocumentId && path) {
-        if (path === "doc://") {
-            throw new Error("Path must point to a document, not the root listing.");
+        if (path === "vault://") {
+            throw new Error("Path must point to a vault entry, not the root listing.");
         }
         targetDocumentId = await documentPathFind(ctx, path, documents);
         if (!targetDocumentId) {
-            throw new Error(`Document not found for path: ${path}`);
+            throw new Error(`Vault entry not found for path: ${path}`);
         }
     }
     if (!targetDocumentId) {
-        throw new Error("Document target is required.");
+        throw new Error("Vault target is required.");
     }
 
     const document = await documents.findById(ctx, targetDocumentId);
     if (!document) {
-        throw new Error(`Document not found: ${targetDocumentId}`);
+        throw new Error(`Vault entry not found: ${targetDocumentId}`);
     }
 
     return document;

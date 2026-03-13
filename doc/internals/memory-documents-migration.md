@@ -1,6 +1,6 @@
-# Memory to Documents Migration
+# Memory to Vault Migration
 
-Memory storage is now backed by `documents` instead of markdown graph files.
+Memory storage is now backed by the `documents` tables instead of markdown graph files, while the public surface is exposed as the vault.
 
 ## Runtime Flow
 
@@ -12,24 +12,24 @@ sequenceDiagram
     participant MA as Memory-Agent
 
     A->>MW: Session invalidated
-    MW->>DR: ensure ~/memory root document
+    MW->>DR: ensure vault://memory root entry
     MW->>MA: Post transcript system_message
-    MA->>DR: document_read(path="~/memory")
-    MA->>DR: document_write(...) for new/updated facts
+    MA->>DR: vault_read(path="vault://memory")
+    MA->>DR: vault_write(...) for new/updated facts
 ```
 
 ## Tool Surface
 
 ```mermaid
 graph TD
-    AllAgents[All agents] --> document_read
-    AllAgents --> document_write
-    AllAgents --> document_search
+    AllAgents[All agents] --> vault_read
+    AllAgents --> vault_write
+    AllAgents --> vault_search
 
-    MemoryAgent[memory-agent] -->|allowlist| document_read
-    MemoryAgent -->|allowlist| document_write
+    MemoryAgent[memory-agent] -->|allowlist| vault_read
+    MemoryAgent -->|allowlist| vault_write
 
-    MemorySearch[memory-search] -->|allowlist| document_read
+    MemorySearch[memory-search] -->|allowlist| vault_read
     MemorySearch -->|allowlist| send_agent_message
 ```
 
@@ -44,8 +44,7 @@ graph TD
 
 ## Added Components
 
-- `document_read`
-- `document_write`
-- `document_search`
-- `memoryRootDocumentEnsure()` for `~/memory` bootstrap
-
+- `vault_read`
+- `vault_write`
+- `vault_search`
+- `memoryRootDocumentEnsure()` for `vault://memory` bootstrap

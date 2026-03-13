@@ -16,8 +16,8 @@ type DocumentMutationMemoryScopeRepo = {
 };
 
 /**
- * Ensures memory-agents mutate only memory documents or the dedicated memory policy document.
- * Expects: callers pass an existing document id resolved in the current user scope.
+ * Ensures memory-agents mutate only memory vault entries or the dedicated memory policy entry.
+ * Expects: callers pass an existing vault id resolved in the current user scope.
  */
 export async function documentMutationMemoryScopeAssert(
     toolContext: ToolExecutionContext,
@@ -30,12 +30,12 @@ export async function documentMutationMemoryScopeAssert(
 
     const chain = await documentChainResolve(toolContext.ctx, documentId, documents);
     if (!chain || chain.length === 0) {
-        throw new Error(`Document not found: ${documentId}`);
+        throw new Error(`Vault entry not found: ${documentId}`);
     }
 
     if (!documentMutationMemoryPathAllowed(chain, documentMutationMemoryPromptSlugsResolve(toolContext))) {
         throw new Error(
-            "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
+            "Memory agents can only write inside vault://memory. Compactor agents may also update vault://system/memory/agent and vault://system/memory/compactor."
         );
     }
 }

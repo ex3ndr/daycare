@@ -19,8 +19,8 @@ describe("documentBodyRefs", () => {
         };
 
         const body = [
-            "See [[doc-id]] and [[doc://memory/daily]].",
-            "Also [[doc://memory/daily|daily notes]] and [[missing]].",
+            "See [[doc-id]] and [[vault://memory/daily]].",
+            "Also [[vault://memory/daily|daily notes]] and [[missing]].",
             "Duplicate [[doc-id]] should be ignored."
         ].join(" ");
 
@@ -28,7 +28,7 @@ describe("documentBodyRefs", () => {
         expect(refs).toEqual(["doc-id", "doc-daily"]);
     });
 
-    it("requires doc:// for wiki-link path targets", async () => {
+    it("requires vault:// for wiki-link path targets", async () => {
         const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
         const pathToId = new Map<string, string>([
             ["null:memory", "doc-memory"],
@@ -42,8 +42,26 @@ describe("documentBodyRefs", () => {
             }
         };
 
-        const refs = await documentBodyRefs("[[memory/daily]] [[~/memory/daily]] [[doc://memory/daily]]", ctx, repo);
+        const refs = await documentBodyRefs("[[memory/daily]] [[~/memory/daily]] [[vault://memory/daily]]", ctx, repo);
         expect(refs).toEqual(["doc-daily"]);
+    });
+
+    it("still resolves legacy doc:// wiki-link targets from stored content", async () => {
+        const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+        const pathToId = new Map<string, string>([
+            ["null:document", "doc-root"],
+            ["doc-root:mission", "doc-mission"]
+        ]);
+        const repo: DocumentBodyRefsRepo = {
+            findById: async () => null,
+            findBySlugAndParent: async (_ctx, slug, parentId) => {
+                const id = pathToId.get(`${parentId ?? "null"}:${slug}`);
+                return id ? { id } : null;
+            }
+        };
+
+        const refs = await documentBodyRefs("[[doc://document/mission]]", ctx, repo);
+        expect(refs).toEqual(["doc-mission"]);
     });
 
     it("returns empty list when no links resolve", async () => {

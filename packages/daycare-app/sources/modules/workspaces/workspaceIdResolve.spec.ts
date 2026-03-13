@@ -22,7 +22,7 @@ const teamWorkspace: WorkspaceListItem = {
 
 describe("workspaceRouteIdResolve", () => {
     it("returns the workspace id for workspace-scoped routes", () => {
-        expect(workspaceRouteIdResolve("/team/documents")).toBe("team");
+        expect(workspaceRouteIdResolve("/team/vault")).toBe("team");
         expect(workspaceRouteIdResolve("/self/agents/agent-1")).toBe("self");
         expect(workspaceRouteIdResolve("/team/fragment/frag-1")).toBe("team");
         expect(workspaceRouteIdResolve("/team/automation/task-1")).toBe("team");

@@ -5,8 +5,13 @@ export type DocumentPathResolveRepo = {
     findParentId: (ctx: Context, id: string) => Promise<string | null>;
 };
 
+const VAULT_ROOT_SEGMENT = "vault";
+const DOCUMENT_ROOT_STORAGE_SLUG = "document";
+
 /**
- * Builds a `doc://a/b/c` path for a document by walking the active parent chain.
+ * Builds a public `vault://a/b/c` path for a document by walking the active parent chain.
+ * The stored root slug `document` is rendered as `vault` without changing persisted data.
+ *
  * Expects: parent links form an acyclic chain for each active document version.
  */
 export async function documentPathResolve(
@@ -38,5 +43,8 @@ export async function documentPathResolve(
         currentId = await repo.findParentId(ctx, current.id);
     }
 
-    return `doc://${segments.join("/")}`;
+    const publicSegments = segments.map((segment, index) =>
+        index === 0 && segment === DOCUMENT_ROOT_STORAGE_SLUG ? VAULT_ROOT_SEGMENT : segment
+    );
+    return `vault://${publicSegments.join("/")}`;
 }

@@ -5,6 +5,7 @@ import { type Static, Type } from "@sinclair/typebox";
 import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
 import { documentChainResolve } from "../../../storage/documentChainResolve.js";
 import { documentPathFind } from "../../../storage/documentPathFind.js";
+import { documentPathResolve } from "../../../storage/documentPathResolve.js";
 import { documentSlugNormalize } from "../../../storage/documentSlugNormalize.js";
 import { peopleDocumentFrontmatterAssert } from "../../people/peopleDocumentFrontmatterAssert.js";
 import { documentMutationMemoryPathAllowed } from "./documentMutationMemoryPathAllowed.js";
@@ -12,7 +13,7 @@ import { documentMutationMemoryPromptSlugsResolve } from "./documentMutationMemo
 
 const schema = Type.Object(
     {
-        documentId: Type.Optional(Type.String({ minLength: 1 })),
+        vaultId: Type.Optional(Type.String({ minLength: 1 })),
         slug: Type.String({ minLength: 1 }),
         title: Type.String({ minLength: 1 }),
         description: Type.String({ minLength: 1 }),
@@ -28,30 +29,30 @@ type DocumentWriteArgs = Static<typeof schema>;
 const resultSchema = Type.Object(
     {
         summary: Type.String(),
-        documentId: Type.String(),
+        vaultId: Type.String(),
         version: Type.Number()
     },
     { additionalProperties: false }
 );
 
-type DocumentWriteResult = { summary: string; documentId: string; version: number };
+type DocumentWriteResult = { summary: string; vaultId: string; version: number };
 
 const returns: ToolResultContract<DocumentWriteResult> = {
     schema: resultSchema,
     toLLMText: (result) => result.summary
 };
 /**
- * Builds the document_write tool that creates or updates a document row.
+ * Builds the vault_write tool that creates or updates a vault entry.
  * Expects: storage.documents is available and scoped by ctx.userId.
  */
 export function documentWriteToolBuild(): ToolDefinition {
     return {
         tool: {
-            name: "document_write",
+            name: "vault_write",
             description:
-                "Create or update a document. Omit documentId to create. " +
-                "Provide parentId or parentPath (doc://a/b) to place the document in the tree. " +
-                "When setting a parent, first call document_read for the full parent chain in this session.",
+                "Create or update a vault entry. Omit vaultId to create. " +
+                "Provide parentId or parentPath (vault://a/b) to place the vault entry in the tree. " +
+                "When setting a parent, first call vault_read for the full parent chain in this session.",
             parameters: schema
         },
         returns,
@@ -65,11 +66,11 @@ export function documentWriteToolBuild(): ToolDefinition {
             const slug = documentSlugNormalize(payload.slug);
             const title = payload.title.trim();
             if (!title) {
-                throw new Error("Document title is required.");
+                throw new Error("Vault entry title is required.");
             }
             const description = payload.description.trim();
             if (!description) {
-                throw new Error("Document description is required.");
+                throw new Error("Vault entry description is required.");
             }
 
             const parentIdFromPath = await parentIdFromPathResolve(
@@ -79,16 +80,16 @@ export function documentWriteToolBuild(): ToolDefinition {
             );
             const parentIdFromArgs = payload.parentId?.trim();
             if (parentIdFromArgs && parentIdFromPath !== undefined && parentIdFromPath !== parentIdFromArgs) {
-                throw new Error("parentId and parentPath resolved to different parent documents.");
+                throw new Error("parentId and parentPath resolved to different vault entries.");
             }
 
             const parentId = parentIdFromPath !== undefined ? parentIdFromPath : parentIdFromArgs;
-            const documentId = payload.documentId?.trim();
+            const vaultId = payload.vaultId?.trim();
             if (toolContext.agent.config.kind === "memory" || toolContext.agent.config.kind === "compactor") {
                 await memoryAgentDocumentTreeWriteAssert(
                     toolContext,
                     storage.documents,
-                    documentId,
+                    vaultId,
                     slug,
                     parentIdFromPath,
                     parentIdFromArgs
@@ -105,8 +106,8 @@ export function documentWriteToolBuild(): ToolDefinition {
             });
             const now = Date.now();
 
-            if (documentId) {
-                const updated = await storage.documents.update(toolContext.ctx, documentId, {
+            if (vaultId) {
+                const updated = await storage.documents.update(toolContext.ctx, vaultId, {
                     slug,
                     title,
                     description,
@@ -116,10 +117,10 @@ export function documentWriteToolBuild(): ToolDefinition {
                         ? { parentId: parentId ?? null }
                         : {})
                 });
-                const summary = `Updated document: ${documentId} (version ${updated.version ?? 1}).`;
+                const summary = `Updated vault entry: ${vaultId} (version ${updated.version ?? 1}).`;
                 return toolResultBuild(toolCall, {
                     summary,
-                    documentId,
+                    vaultId,
                     version: updated.version ?? 1
                 });
             }
@@ -135,10 +136,10 @@ export function documentWriteToolBuild(): ToolDefinition {
                 updatedAt: now,
                 parentId: parentId ?? null
             });
-            const summary = `Created document: ${created.id} (version ${created.version ?? 1}).`;
+            const summary = `Created vault entry: ${created.id} (version ${created.version ?? 1}).`;
             return toolResultBuild(toolCall, {
                 summary,
-                documentId: created.id,
+                vaultId: created.id,
                 version: created.version ?? 1
             });
         }
@@ -160,7 +161,7 @@ async function parentIdFromPathResolve(
     if (normalized === undefined) {
         return undefined;
     }
-    if (!normalized || normalized === "doc://") {
+    if (!normalized || normalized === "vault://" || normalized === "doc://") {
         return null;
     }
 
@@ -188,24 +189,21 @@ async function parentChainReadAssert(
 ): Promise<void> {
     const chain = await documentChainResolve(toolContext.ctx, parentId, documents);
     if (!chain || chain.length === 0) {
-        throw new Error(`Parent document not found: ${parentId}`);
+        throw new Error(`Parent vault entry not found: ${parentId}`);
     }
     for (let index = 0; index < chain.length; index++) {
         const entry = chain[index];
         if (!entry) {
             continue;
         }
-        const path = `doc://${chain
-            .slice(0, index + 1)
-            .map((item) => item.slug)
-            .join("/")}`;
+        const path = (await documentPathResolve(toolContext.ctx, entry.id, documents)) ?? `vault-id:${entry.id}`;
         const readVersion = toolContext.agent.documentVersionLastRead(entry.id);
         if (readVersion == null) {
-            throw new Error(`Parent chain must be read before attach. Missing read: ${path}`);
+            throw new Error(`Parent vault chain must be read before attach. Missing read: ${path}`);
         }
         if (readVersion !== entry.version) {
             throw new Error(
-                `Parent chain changed since last read: ${path} was version ${readVersion}, current is version ${entry.version}.`
+                `Parent vault chain changed since last read: ${path} was version ${readVersion}, current is version ${entry.version}.`
             );
         }
     }
@@ -239,7 +237,7 @@ async function memoryAgentDocumentTreeWriteAssert(
     if (parentId === null) {
         if (slug !== "memory") {
             throw new Error(
-                "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
+                "Memory agents can only write inside vault://memory. Compactor agents may also update vault://system/memory/agent and vault://system/memory/compactor."
             );
         }
         return;
@@ -247,7 +245,7 @@ async function memoryAgentDocumentTreeWriteAssert(
 
     const chain = await documentChainResolve(toolContext.ctx, parentId, documents);
     if (!chain || chain.length === 0) {
-        throw new Error(`Parent document not found: ${parentId}`);
+        throw new Error(`Parent vault entry not found: ${parentId}`);
     }
     if (documentMutationMemoryPathAllowed(chain, documentMutationMemoryPromptSlugsResolve(toolContext))) {
         return;
@@ -262,7 +260,7 @@ async function memoryAgentDocumentTreeWriteAssert(
         return;
     }
     throw new Error(
-        "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
+        "Memory agents can only write inside vault://memory. Compactor agents may also update vault://system/memory/agent and vault://system/memory/compactor."
     );
 }
 
@@ -271,7 +269,7 @@ async function writeParentIdResolve(
     documents: {
         findParentId: (ctx: ToolExecutionContext["ctx"], id: string) => Promise<string | null>;
     },
-    documentId: string | undefined,
+    vaultId: string | undefined,
     parentIdFromPath: string | null | undefined,
     parentIdFromArgs: string | undefined
 ): Promise<string | null> {
@@ -281,10 +279,10 @@ async function writeParentIdResolve(
     if (parentIdFromArgs !== undefined) {
         return parentIdFromArgs;
     }
-    if (!documentId) {
+    if (!vaultId) {
         return null;
     }
-    return documents.findParentId(ctx, documentId);
+    return documents.findParentId(ctx, vaultId);
 }
 
 function toolResultBuild(

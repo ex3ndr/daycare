@@ -21,10 +21,10 @@ describe("documentRootIdResolve", () => {
         expect(documentRootIdResolve([doc({ id: "a", slug: "memory", title: "Memory" })])).toBeNull();
     });
 
-    it("returns the root `document` id", () => {
+    it("returns the root vault id from the stored `document` slug", () => {
         const items = [
             doc({ id: "memory", slug: "memory", title: "Memory" }),
-            doc({ id: "root-document", slug: "document", title: "Documents" }),
+            doc({ id: "root-document", slug: "document", title: "Vault" }),
             doc({ id: "child", slug: "note", title: "Note", parentId: "root-document" })
         ];
 

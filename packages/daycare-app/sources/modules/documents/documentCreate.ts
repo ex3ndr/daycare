@@ -2,7 +2,7 @@ import { apiUrl } from "../api/apiUrl";
 import type { DocumentItem } from "./documentsTypes";
 
 /**
- * Creates a new document via the API.
+ * Creates a new vault entry via the API.
  * Expects: baseUrl and token are valid; input has required fields.
  */
 export async function documentCreate(
@@ -11,7 +11,7 @@ export async function documentCreate(
     workspaceId: string | null,
     input: { id: string; slug: string; title: string; description?: string; body?: string; parentId: string }
 ): Promise<DocumentItem> {
-    const response = await fetch(apiUrl(baseUrl, "/documents", workspaceId), {
+    const response = await fetch(apiUrl(baseUrl, "/vault/create", workspaceId), {
         method: "POST",
         headers: {
             authorization: `Bearer ${token}`,
@@ -19,9 +19,9 @@ export async function documentCreate(
         },
         body: JSON.stringify(input)
     });
-    const data = (await response.json()) as { ok?: boolean; document?: DocumentItem; error?: string };
-    if (data.ok !== true || !data.document) {
-        throw new Error(data.error ?? "Failed to create document.");
+    const data = (await response.json()) as { ok?: boolean; item?: DocumentItem; error?: string };
+    if (data.ok !== true || !data.item) {
+        throw new Error(data.error ?? "Failed to create vault entry.");
     }
-    return data.document;
+    return data.item;
 }

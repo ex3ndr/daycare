@@ -4,7 +4,7 @@ import { contextForUser } from "../agents/context.js";
 import { documentRootDocumentEnsure } from "./documentRootDocumentEnsure.js";
 
 describe("documentRootDocumentEnsure", () => {
-    it("creates doc://document when missing and is idempotent", async () => {
+    it("creates vault://vault when missing and is idempotent", async () => {
         const storage = await storageOpenTest();
         try {
             const ctx = contextForUser({ userId: "user-1" });
@@ -14,7 +14,7 @@ describe("documentRootDocumentEnsure", () => {
 
             const created = await storage.documents.findById(ctx, first.id);
             expect(created?.slug).toBe("document");
-            expect(created?.title).toBe("Documents");
+            expect(created?.title).toBe("Vault");
             expect(created?.body.length).toBeGreaterThan(0);
 
             const second = await documentRootDocumentEnsure(ctx, storage);

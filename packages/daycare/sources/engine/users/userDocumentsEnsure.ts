@@ -7,7 +7,7 @@ import { peopleRootDocumentEnsure } from "../people/peopleRootDocumentEnsure.js"
 
 /**
  * Ensures the full base document tree exists for a user or workspace without overwriting existing documents.
- * Expects: ctx.userId is valid; optional soulBody is only used when doc://system/soul is missing.
+ * Expects: ctx.userId is valid; optional soulBody is only used when vault://system/soul is missing.
  */
 export async function userDocumentsEnsure(
     ctx: Context,

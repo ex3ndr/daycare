@@ -8,22 +8,22 @@ import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 import { DocumentCreateDialog } from "@/views/documents/DocumentCreateDialog";
 import { DocumentsView } from "@/views/documents/DocumentsView";
 
-export default function DocumentsRoute() {
+export default function VaultRoute() {
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
     const { workspaceId } = useWorkspace();
     const documentItems = useDocumentsStore((s) => s.items);
-    const fetchDocuments = useDocumentsStore((s) => s.fetch);
-    const createDocument = useDocumentsStore((s) => s.createDocument);
+    const fetchVault = useDocumentsStore((s) => s.fetch);
+    const createVaultEntry = useDocumentsStore((s) => s.createDocument);
     const [createDialogVisible, setCreateDialogVisible] = React.useState(false);
     const [createParentId, setCreateParentId] = React.useState<string | null>(null);
     const documentRootId = React.useMemo(() => documentRootIdResolve(documentItems), [documentItems]);
 
     React.useEffect(() => {
         if (baseUrl && token) {
-            void fetchDocuments(baseUrl, token, workspaceId);
+            void fetchVault(baseUrl, token, workspaceId);
         }
-    }, [baseUrl, token, workspaceId, fetchDocuments]);
+    }, [baseUrl, token, workspaceId, fetchVault]);
 
     const _handleCreatePress = React.useCallback((parentId?: string | null) => {
         setCreateParentId(parentId ?? null);
@@ -35,14 +35,14 @@ export default function DocumentsRoute() {
             if (!baseUrl || !token) return;
             const parentId = input.parentId ?? documentRootId;
             if (!parentId) return;
-            void createDocument(baseUrl, token, workspaceId, {
+            void createVaultEntry(baseUrl, token, workspaceId, {
                 id: createId(),
                 title: input.title,
                 slug: input.slug,
                 parentId
             });
         },
-        [baseUrl, token, workspaceId, createDocument, documentRootId]
+        [baseUrl, token, workspaceId, createVaultEntry, documentRootId]
     );
 
     return (

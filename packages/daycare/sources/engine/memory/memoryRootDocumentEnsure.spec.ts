@@ -4,7 +4,7 @@ import { contextForUser } from "../agents/context.js";
 import { memoryRootDocumentEnsure } from "./memoryRootDocumentEnsure.js";
 
 describe("memoryRootDocumentEnsure", () => {
-    it("creates doc://memory when missing and is idempotent", async () => {
+    it("creates vault://memory when missing and is idempotent", async () => {
         const storage = await storageOpenTest();
         try {
             const ctx = contextForUser({ userId: "user-1" });

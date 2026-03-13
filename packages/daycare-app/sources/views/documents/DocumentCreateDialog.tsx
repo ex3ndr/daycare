@@ -11,7 +11,7 @@ type DocumentCreateDialogProps = {
 };
 
 /**
- * Modal dialog for creating a new document.
+ * Modal dialog for creating a new vault entry.
  * Auto-generates slug from title.
  */
 export const DocumentCreateDialog = React.memo<DocumentCreateDialogProps>((props) => {
@@ -89,14 +89,14 @@ export const DocumentCreateDialog = React.memo<DocumentCreateDialogProps>((props
                 }}
             >
                 <Text style={{ fontSize: 18, fontWeight: "600", color: theme.colors.onSurface, marginBottom: 20 }}>
-                    New Document
+                    New Vault Entry
                 </Text>
 
                 <Text style={labelStyle}>Title</Text>
                 <TextInput
                     value={title}
                     onChangeText={handleTitleChange}
-                    placeholder="Document title"
+                    placeholder="Vault entry title"
                     placeholderTextColor={theme.colors.onSurfaceVariant}
                     style={inputStyle}
                     autoFocus
@@ -113,7 +113,7 @@ export const DocumentCreateDialog = React.memo<DocumentCreateDialogProps>((props
 
                 {parentId && (
                     <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant, marginBottom: 16 }}>
-                        Creating under parent: {parentId}
+                        Creating inside parent: {parentId}
                     </Text>
                 )}
 

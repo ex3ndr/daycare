@@ -13,8 +13,8 @@ type DocumentMetadataModalProps = {
 };
 
 /**
- * Modal for viewing and editing document metadata.
- * Protected documents (memory/system/people subtrees) are read-only.
+ * Modal for viewing and editing vault entry metadata.
+ * Protected vault entries (memory/system/people subtrees) are read-only.
  */
 export const DocumentMetadataModal = React.memo<DocumentMetadataModalProps>(({ visible, onClose }) => {
     const { theme } = useUnistyles();
@@ -56,12 +56,12 @@ export const DocumentMetadataModal = React.memo<DocumentMetadataModalProps>(({ v
     const handleDelete = React.useCallback(() => {
         if (!selectedId || !baseUrl || !token) return;
         if (Platform.OS === "web") {
-            if (window.confirm("Are you sure you want to delete this document?")) {
+            if (window.confirm("Are you sure you want to delete this vault entry?")) {
                 void deleteDocument(baseUrl, token, workspaceId, selectedId);
                 onClose();
             }
         } else {
-            Alert.alert("Delete Document", "Are you sure you want to delete this document?", [
+            Alert.alert("Delete Vault Entry", "Are you sure you want to delete this vault entry?", [
                 { text: "Cancel", style: "cancel" },
                 {
                     text: "Delete",
@@ -212,7 +212,7 @@ export const DocumentMetadataModal = React.memo<DocumentMetadataModalProps>(({ v
                                 >
                                     <Octicons name="trash" size={14} color={theme.colors.onErrorContainer} />
                                     <Text style={{ fontSize: 14, color: theme.colors.onErrorContainer }}>
-                                        Delete Document
+                                        Delete Vault Entry
                                     </Text>
                                 </Pressable>
                             </View>

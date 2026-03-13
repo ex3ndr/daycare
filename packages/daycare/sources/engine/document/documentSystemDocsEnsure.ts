@@ -4,7 +4,7 @@ import type { Storage } from "../../storage/storage.js";
 import { agentPromptBundledRead } from "../agents/ops/agentPromptBundledRead.js";
 
 const SYSTEM_ROOT_SLUG = "system";
-const SYSTEM_ROOT_BODY = "# System\n\nVersioned system prompt documents for this user.\n";
+const SYSTEM_ROOT_BODY = "# System\n\nVersioned system prompt vault entries for this user.\n";
 const SYSTEM_DOCS = [
     {
         slug: "soul",
@@ -59,7 +59,7 @@ const SYSTEM_DOCS = [
 ] as const;
 
 /**
- * Ensures the root `doc://system` document and core child prompt documents exist.
+ * Ensures the root `vault://system` entry and core child prompt entries exist.
  * Expects: storage migrations are applied and ctx.userId is valid.
  */
 export async function documentSystemDocsEnsure(
@@ -70,7 +70,7 @@ export async function documentSystemDocsEnsure(
     const root = await documentEnsure(ctx, storage, {
         slug: SYSTEM_ROOT_SLUG,
         title: "System",
-        description: "Root folder for versioned system prompt documents.",
+        description: "Root folder for versioned system prompt vault entries.",
         body: SYSTEM_ROOT_BODY,
         parentId: null
     });

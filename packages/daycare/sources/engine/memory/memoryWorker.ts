@@ -148,8 +148,8 @@ export class MemoryWorker {
                 // Prepend memory update instruction so each batch reminds the
                 // memory agent to persist any new knowledge found in the transcript.
                 const preamble = isForeground
-                    ? "> Review the following transcript and update memory documents with any new facts, relationships, or events. Do NOT reply with summaries — only use tools to update memory."
-                    : "> Source: This transcript is from an automated agent performing background work. There is no human participant.\n> Review the following transcript and update memory documents with any new facts about what was done, what succeeded/failed, and what was learned about systems and processes. Do NOT reply with summaries — only use tools to update memory.";
+                    ? "> Review the following transcript and update memory vault entries with any new facts, relationships, or events. Do NOT reply with summaries — only use tools to update memory."
+                    : "> Source: This transcript is from an automated agent performing background work. There is no human participant.\n> Review the following transcript and update memory vault entries with any new facts about what was done, what succeeded/failed, and what was learned about systems and processes. Do NOT reply with summaries — only use tools to update memory.";
                 const text = `${preamble}\n\n${transcript}`;
 
                 const path = agentPathMemory(sourcePath);

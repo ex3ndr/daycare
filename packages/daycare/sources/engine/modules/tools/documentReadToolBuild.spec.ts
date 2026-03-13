@@ -3,7 +3,7 @@ import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { contextForAgent } from "../../agents/context.js";
 import { documentReadToolBuild } from "./documentReadToolBuild.js";
 
-const toolCall = { id: "tc1", name: "document_read" };
+const toolCall = { id: "tc1", name: "vault_read" };
 
 function contextBuild(storage: Awaited<ReturnType<typeof storageOpenTest>>, readVersions: Map<string, number>) {
     return {
@@ -16,7 +16,7 @@ function contextBuild(storage: Awaited<ReturnType<typeof storageOpenTest>>, read
                     readVersions.set(entry.id, entry.version);
                 }
             },
-            documentVersionLastRead: (documentId: string) => readVersions.get(documentId) ?? null
+            documentVersionLastRead: (vaultId: string) => readVersions.get(vaultId) ?? null
         }
     } as never;
 }
@@ -48,12 +48,12 @@ describe("documentReadToolBuild", () => {
             });
 
             const tool = documentReadToolBuild();
-            const result = await tool.execute({ documentId: "memory" }, contextBuild(storage, readVersions), toolCall);
+            const result = await tool.execute({ vaultId: "memory" }, contextBuild(storage, readVersions), toolCall);
 
             expect(result.typedResult.found).toBe(true);
-            expect(result.typedResult.documentId).toBe("memory");
+            expect(result.typedResult.vaultId).toBe("memory");
             expect(result.typedResult.summary).toContain("# Memory");
-            expect(result.typedResult.summary).toContain("**path**: `doc://memory`");
+            expect(result.typedResult.summary).toContain("**path**: `vault://memory`");
             expect(result.typedResult.summary).toContain("**updatedAt**: 1");
             expect(result.typedResult.summary).toContain("## Children");
             expect(result.typedResult.summary).toContain("Daily");
@@ -64,7 +64,7 @@ describe("documentReadToolBuild", () => {
         }
     });
 
-    it("reads by path and includes full tree for doc://memory", async () => {
+    it("reads by path and includes full tree for vault://memory", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -90,7 +90,11 @@ describe("documentReadToolBuild", () => {
             });
 
             const tool = documentReadToolBuild();
-            const result = await tool.execute({ path: "doc://memory" }, contextBuild(storage, readVersions), toolCall);
+            const result = await tool.execute(
+                { path: "vault://memory" },
+                contextBuild(storage, readVersions),
+                toolCall
+            );
 
             expect(result.typedResult.found).toBe(true);
             expect(result.typedResult.summary).toContain("## Memory Tree");
@@ -130,7 +134,7 @@ describe("documentReadToolBuild", () => {
             const result = await tool.execute({}, contextBuild(storage, readVersions), toolCall);
 
             expect(result.typedResult.found).toBe(true);
-            expect(result.typedResult.summary).toContain("# Root Documents");
+            expect(result.typedResult.summary).toContain("# Root Vault");
             expect(result.typedResult.summary).toContain("Memory");
             expect(result.typedResult.summary).toContain("Work");
         } finally {
@@ -143,7 +147,11 @@ describe("documentReadToolBuild", () => {
         const readVersions = new Map<string, number>();
         try {
             const tool = documentReadToolBuild();
-            const result = await tool.execute({ path: "doc://missing" }, contextBuild(storage, readVersions), toolCall);
+            const result = await tool.execute(
+                { path: "vault://missing" },
+                contextBuild(storage, readVersions),
+                toolCall
+            );
 
             expect(result.typedResult.found).toBe(false);
             expect(result.typedResult.summary).toContain("not found");
@@ -189,7 +197,7 @@ describe("documentReadToolBuild", () => {
 
             const tool = documentReadToolBuild();
             const result = await tool.execute(
-                { path: "doc://memory/user/prefs" },
+                { path: "vault://memory/user/prefs" },
                 contextBuild(storage, readVersions),
                 toolCall
             );

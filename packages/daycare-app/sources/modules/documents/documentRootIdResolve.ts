@@ -1,7 +1,7 @@
 import type { DocumentItem } from "./documentsTypes";
 
 /**
- * Resolves the root `~/document` id from the loaded document list.
+ * Resolves the root `vault://vault` id from the loaded document list.
  * Expects: items contains all documents for the current user.
  */
 export function documentRootIdResolve(items: DocumentItem[]): string | null {

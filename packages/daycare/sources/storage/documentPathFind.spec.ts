@@ -6,9 +6,11 @@ describe("documentPathFind", () => {
     it("resolves nested paths", async () => {
         const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
         const ids = new Map<string, string>([
+            ["null:document", "doc-root"],
             ["null:memory", "doc-memory"],
             ["doc-memory:daily", "doc-daily"],
-            ["doc-daily:events", "doc-events"]
+            ["doc-daily:events", "doc-events"],
+            ["doc-root:mission", "doc-mission"]
         ]);
         const repo: DocumentPathFindRepo = {
             findBySlugAndParent: async (_ctx, slug, parentId) => {
@@ -18,8 +20,10 @@ describe("documentPathFind", () => {
             }
         };
 
-        const resolved = await documentPathFind(ctx, "doc://memory/daily/events", repo);
+        const resolved = await documentPathFind(ctx, "vault://memory/daily/events", repo);
         expect(resolved).toBe("doc-events");
+        expect(await documentPathFind(ctx, "vault://vault/mission", repo)).toBe("doc-mission");
+        expect(await documentPathFind(ctx, "doc://document/mission", repo)).toBe("doc-mission");
         expect(await documentPathFind(ctx, "~/memory/daily/events", repo)).toBeNull();
     });
 
@@ -30,7 +34,7 @@ describe("documentPathFind", () => {
         };
 
         expect(await documentPathFind(ctx, "memory/daily", repo)).toBeNull();
-        expect(await documentPathFind(ctx, "doc://", repo)).toBeNull();
-        expect(await documentPathFind(ctx, "doc://memory", repo)).toBeNull();
+        expect(await documentPathFind(ctx, "vault://", repo)).toBeNull();
+        expect(await documentPathFind(ctx, "vault://memory", repo)).toBeNull();
     });
 });

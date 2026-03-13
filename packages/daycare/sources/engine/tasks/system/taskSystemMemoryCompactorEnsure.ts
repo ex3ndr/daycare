@@ -52,7 +52,7 @@ export async function taskSystemMemoryCompactorEnsure(storage: Storage, agentSys
                 kind: "compactor",
                 foreground: false,
                 name: "memory-compactor",
-                description: "Compacts memory documents and updates memory role prompts."
+                description: "Compacts memory vault entries and updates memory role prompts."
             }
         );
 

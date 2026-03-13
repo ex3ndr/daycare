@@ -6,19 +6,12 @@ import type { AgentKind } from "@/types";
  */
 export function agentToolExecutionAllowlistResolve(kind: AgentKind): ReadonlySet<string> | undefined {
     if (kind === "search") {
-        return new Set<string>(["document_read", "send_agent_message"]);
+        return new Set<string>(["vault_read", "send_agent_message"]);
     }
 
     if (kind !== "memory" && kind !== "compactor") {
         return undefined;
     }
 
-    return new Set<string>([
-        "now",
-        "document_read",
-        "document_tree",
-        "document_append",
-        "document_patch",
-        "document_write"
-    ]);
+    return new Set<string>(["now", "vault_read", "vault_tree", "vault_append", "vault_patch", "vault_write"]);
 }

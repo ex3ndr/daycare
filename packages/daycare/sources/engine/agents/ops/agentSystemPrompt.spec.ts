@@ -393,7 +393,7 @@ async function systemPromptDocumentsWrite(
     for (const doc of docs) {
         const existing = await storage.documents.findBySlugAndParent(ctx, doc.slug, system.id);
         if (!existing) {
-            throw new Error(`Missing doc://system/${doc.slug} in test.`);
+            throw new Error(`Missing vault://system/${doc.slug} in test.`);
         }
         await storage.documents.update(ctx, existing.id, {
             body: doc.body,
@@ -403,7 +403,7 @@ async function systemPromptDocumentsWrite(
 
     const memory = await storage.documents.findBySlugAndParent(ctx, "memory", system.id);
     if (!memory) {
-        throw new Error("Missing doc://system/memory in test.");
+        throw new Error("Missing vault://system/memory in test.");
     }
 
     const memoryDocs = [
@@ -418,7 +418,7 @@ async function systemPromptDocumentsWrite(
         }
         const existing = await storage.documents.findBySlugAndParent(ctx, doc.slug, memory.id);
         if (!existing) {
-            throw new Error(`Missing doc://system/memory/${doc.slug} in test.`);
+            throw new Error(`Missing vault://system/memory/${doc.slug} in test.`);
         }
         await storage.documents.update(ctx, existing.id, {
             body: doc.body,

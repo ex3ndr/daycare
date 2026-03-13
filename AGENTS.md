@@ -27,8 +27,6 @@
 - Examples: `POST /tasks/create`, `POST /tasks/:id/update`, `POST /tasks/:id/delete`, `POST /profile/update`
 - Legacy compatibility exceptions currently remain for:
   - `PUT /prompts/:filename`
-  - `PUT /documents/:id`
-  - `DELETE /documents/:id`
 
 ## Build, Test, and Development Commands
 - Runtime baseline: Node **22+**.

@@ -14,17 +14,17 @@ describe("agentToolExecutionAllowlistResolve", () => {
 
         expect(allowlist ? [...allowlist] : []).toEqual([
             "now",
-            "document_read",
-            "document_tree",
-            "document_append",
-            "document_patch",
-            "document_write"
+            "vault_read",
+            "vault_tree",
+            "vault_append",
+            "vault_patch",
+            "vault_write"
         ]);
     });
 
     it("returns read+report tools for memory-search agents", () => {
         const allowlist = agentToolExecutionAllowlistResolve("search");
 
-        expect(allowlist ? [...allowlist] : []).toEqual(["document_read", "send_agent_message"]);
+        expect(allowlist ? [...allowlist] : []).toEqual(["vault_read", "send_agent_message"]);
     });
 });

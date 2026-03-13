@@ -19,7 +19,7 @@ type DocumentsViewProps = {
 type ViewTab = "view" | "edit" | "history";
 
 /**
- * Document workspace with a left tree navigator and right content panel.
+ * Vault workspace with a left tree navigator and right content panel.
  * Supports three tabs: view (rendered markdown), edit (WYSIWYG), and history (version diffs).
  */
 export const DocumentsView = React.memo<DocumentsViewProps>(({ onCreatePress }) => {
@@ -182,7 +182,7 @@ export const DocumentsView = React.memo<DocumentsViewProps>(({ onCreatePress }) 
                 ) : (
                     <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
                         <Text style={{ fontSize: 16, color: theme.colors.onSurfaceVariant }}>
-                            Select a document to view
+                            Select a vault entry to view
                         </Text>
                     </View>
                 )}

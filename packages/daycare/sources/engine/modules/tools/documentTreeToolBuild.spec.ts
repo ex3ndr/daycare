@@ -3,7 +3,7 @@ import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { contextForAgent } from "../../agents/context.js";
 import { documentTreeToolBuild } from "./documentTreeToolBuild.js";
 
-const toolCall = { id: "tc-tree", name: "document_tree" };
+const toolCall = { id: "tc-tree", name: "vault_tree" };
 
 function contextBuild(storage: Awaited<ReturnType<typeof storageOpenTest>>, readVersions: Map<string, number>) {
     return {
@@ -57,35 +57,39 @@ describe("documentTreeToolBuild", () => {
             });
 
             const tool = documentTreeToolBuild();
-            const result = await tool.execute({ path: "doc://memory" }, contextBuild(storage, readVersions), toolCall);
+            const result = await tool.execute(
+                { path: "vault://memory" },
+                contextBuild(storage, readVersions),
+                toolCall
+            );
 
             expect(result.typedResult.found).toBe(true);
-            expect(result.typedResult.rootDocumentId).toBe("memory");
-            expect(result.typedResult.documents).toEqual([
+            expect(result.typedResult.rootVaultId).toBe("memory");
+            expect(result.typedResult.entries).toEqual([
                 {
-                    documentId: "memory",
-                    parentDocumentId: null,
+                    vaultId: "memory",
+                    parentVaultId: undefined,
                     title: "Memory",
                     slug: "memory",
-                    path: "doc://memory",
+                    path: "vault://memory",
                     updatedAt: 1,
                     depth: 0
                 },
                 {
-                    documentId: "user",
-                    parentDocumentId: "memory",
+                    vaultId: "user",
+                    parentVaultId: "memory",
                     title: "User",
                     slug: "user",
-                    path: "doc://memory/user",
+                    path: "vault://memory/user",
                     updatedAt: 2,
                     depth: 1
                 },
                 {
-                    documentId: "prefs",
-                    parentDocumentId: "user",
+                    vaultId: "prefs",
+                    parentVaultId: "user",
                     title: "Prefs",
                     slug: "prefs",
-                    path: "doc://memory/user/prefs",
+                    path: "vault://memory/user/prefs",
                     updatedAt: 3,
                     depth: 2
                 }
@@ -124,8 +128,8 @@ describe("documentTreeToolBuild", () => {
             const result = await tool.execute({}, contextBuild(storage, readVersions), toolCall);
 
             expect(result.typedResult.found).toBe(true);
-            expect(result.typedResult.documents).toHaveLength(2);
-            expect(result.typedResult.summary).toContain("# Root Document Trees");
+            expect(result.typedResult.entries).toHaveLength(2);
+            expect(result.typedResult.summary).toContain("# Root Vault Trees");
         } finally {
             storage.connection.close();
         }
