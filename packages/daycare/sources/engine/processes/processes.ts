@@ -4,8 +4,12 @@ import { createId } from "@paralleldrive/cuid2";
 import type { Logger } from "pino";
 
 import type { Context, SessionPermissions } from "@/types";
+import { dockerContainersShared } from "../../sandbox/docker/dockerContainersShared.js";
+import type { DockerContainerConfig } from "../../sandbox/docker/dockerTypes.js";
 import { Sandbox } from "../../sandbox/sandbox.js";
 import { sandboxCanWrite } from "../../sandbox/sandboxCanWrite.js";
+import { sandboxExecRuntimeArgsBuild } from "../../sandbox/sandboxExecRuntimeArgsBuild.js";
+import { sandboxHomeRedefine } from "../../sandbox/sandboxHomeRedefine.js";
 import { sandboxResourceLimitsResolve } from "../../sandbox/sandboxResourceLimitsResolve.js";
 import type { SandboxDockerConfig } from "../../sandbox/sandboxTypes.js";
 import type { ResolvedDockerSettings } from "../../settings.js";
@@ -30,6 +34,8 @@ const RESTART_BACKOFF_BASE_MS = 2_000;
 const RESTART_BACKOFF_MAX_MS = 60_000;
 const RESTART_STABLE_UPTIME_MS = 30_000;
 const DOCKER_STOP_TIMEOUT_MS = 8_000;
+const PROCESS_START_TIMEOUT_MS = 30_000;
+const PROCESS_START_MAX_BUFFER_BYTES = 1_000_000;
 const PROCESS_CONTROL_PATH = "/process/control.fifo";
 const PROCESS_LOG_PATH = "/process/process.log";
 
@@ -927,16 +933,46 @@ function processRuntimeBuild(
 ): ProcessRuntime {
     return {
         start: async (record) => {
-            const sandbox = processSandboxBuild(record, dockerSettings, sandboxResourceLimits);
+            const processDir = path.dirname(record.logPath);
+            const homeDir = record.home ?? path.join(processDir, "home");
+            const processUserId = processSandboxUserIdBuild(record.id);
+            const allowLocalNetworkingForUsers = record.allowLocalBinding
+                ? Array.from(new Set([...(dockerSettings.allowLocalNetworkingForUsers ?? []), processUserId]))
+                : [...(dockerSettings.allowLocalNetworkingForUsers ?? [])];
+            const resourceLimits = sandboxResourceLimitsResolve(sandboxResourceLimits);
+            const mounts = processMountsResolve(record, processDir);
+            const dockerConfig: DockerContainerConfig = {
+                ...dockerSettings,
+                allowLocalNetworkingForUsers,
+                resourceLimits: {
+                    cpu: resourceLimits.cpu,
+                    memory: resourceLimits.memory
+                },
+                userId: processUserId,
+                hostHomeDir: homeDir,
+                mounts
+            };
+            const baseEnv = { ...process.env, ...record.env };
+            const sandboxEnv = (await sandboxHomeRedefine({ env: baseEnv, home: homeDir })).env;
+            const runtimeArgs = sandboxExecRuntimeArgsBuild({
+                env: sandboxEnv,
+                cwd: record.cwd,
+                mounts
+            });
             const settings = processSandboxSettingsBuild(record);
             await processSandboxSettingsWrite(record, settings);
 
-            const result = await sandbox.execBuffered({
-                command: processStartCommandBuild(record.command),
-                cwd: record.cwd,
-                env: record.env
+            // Durable processes must outlive the startup shell. The generic sandbox exec path
+            // wraps commands in a supervisor that cleans up the shell's process tree on exit,
+            // which would immediately kill this backgrounded process.
+            const result = await dockerContainersShared.exec(dockerConfig, {
+                command: ["bash", "-lc", processStartCommandBuild(record.command)],
+                cwd: runtimeArgs.cwd,
+                env: runtimeArgs.env,
+                timeoutMs: PROCESS_START_TIMEOUT_MS,
+                maxBufferBytes: PROCESS_START_MAX_BUFFER_BYTES
             });
-            if (result.failed) {
+            if (result.exitCode !== 0 || result.signal !== null) {
                 throw new Error(result.stderr || result.stdout || "Failed to start managed process.");
             }
 

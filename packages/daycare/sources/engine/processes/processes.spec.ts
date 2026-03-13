@@ -61,8 +61,7 @@ describe("Processes", () => {
                 permissions
             );
 
-            await sleep(1_000);
-            const content = await fs.readFile(created.logPath, "utf8");
+            const content = await logReadUntilContains(created.logPath, "started-directly");
             expect(content).toContain("started-directly");
         },
         TEST_TIMEOUT_MS
@@ -82,8 +81,7 @@ describe("Processes", () => {
                 permissions
             );
 
-            await sleep(1_500);
-            const content = await fs.readFile(created.logPath, "utf8");
+            const content = await logReadUntilContains(created.logPath, "started-from-sandbox-runtime");
             const settingsRaw = await fs.readFile(path.join(baseDir, "processes", created.id, "sandbox.json"), "utf8");
 
             expect(content).toContain("started-from-sandbox-runtime");
@@ -115,8 +113,7 @@ describe("Processes", () => {
                 permissions
             );
 
-            await sleep(1_000);
-            const content = await fs.readFile(created.logPath, "utf8");
+            const content = await logReadUntilContains(created.logPath, homeDir);
             expect(content).toContain(homeDir);
         },
         TEST_TIMEOUT_MS
@@ -134,8 +131,10 @@ describe("Processes", () => {
             permissions
         );
 
-        await sleep(1_000);
-        const content = await fs.readFile(created.logPath, "utf8");
+        const content = await logReadUntilContains(
+            created.logPath,
+            path.join(baseDir, "processes", created.id, "home")
+        );
         expect(created.home).toBe(path.join(baseDir, "processes", created.id, "home"));
         expect(content).toContain(path.join(baseDir, "processes", created.id, "home"));
     });
@@ -241,12 +240,11 @@ describe("Processes", () => {
                 permissions
             );
 
-            await sleep(1_500);
             const item = await manager.get(created.id);
             expect(path.isAbsolute(item.logPath)).toBe(true);
             expect(item.logPath.endsWith(path.join(created.id, "process.log"))).toBe(true);
 
-            const content = await fs.readFile(item.logPath, "utf8");
+            const content = await logReadUntilContains(item.logPath, "hello-durable-log");
             expect(content).toContain("hello-durable-log");
         },
         TEST_TIMEOUT_MS
@@ -421,6 +419,37 @@ function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);
     });
+}
+
+async function logReadUntilContains(logPath: string, expected: string, timeoutMs = 10_000): Promise<string> {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+        try {
+            const content = await fs.readFile(logPath, "utf8");
+            if (content.includes(expected)) {
+                return content;
+            }
+        } catch (error) {
+            const code = (error as NodeJS.ErrnoException).code;
+            if (code !== "ENOENT") {
+                throw error;
+            }
+        }
+        await sleep(100);
+    }
+
+    let lastContent = "";
+    try {
+        lastContent = await fs.readFile(logPath, "utf8");
+    } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code !== "ENOENT") {
+            throw error;
+        }
+    }
+    throw new Error(
+        `Timed out waiting for ${JSON.stringify(expected)} in ${logPath}. Last content: ${JSON.stringify(lastContent)}`
+    );
 }
 
 function escapeForNodeString(value: string): string {
