@@ -13,7 +13,7 @@ type DocumentEditorViewProps = {
 };
 
 type ToolbarButton = {
-    icon: string;
+    icon: React.ComponentProps<typeof Octicons>["name"];
     label: string;
     action: () => void;
 };
@@ -131,7 +131,7 @@ export const DocumentEditorView = React.memo<DocumentEditorViewProps>(({ markdow
                             backgroundColor: pressed ? theme.colors.outlineVariant : "transparent"
                         })}
                     >
-                        <Octicons name={btn.icon as any} size={16} color={theme.colors.onSurface} />
+                        <Octicons name={btn.icon} size={16} color={theme.colors.onSurface} />
                     </Pressable>
                 ))}
             </View>
