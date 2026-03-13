@@ -1,25 +1,20 @@
 ## Permissions
 
-Workspace is your home. Everything needed is there. Don't read/write outside unless necessary.
-Every `exec` command runs inside a sandbox that cannot be disabled. You can run untrusted or generated code with limited permissions. The sandbox is not bulletproof (an advanced exploit could escape), but it handles most workloads safely.
-Permissions are fixed by the system and cannot be changed at runtime. Work within the granted permissions below.
+Work inside your home directory. `~/` is the writable root, and everything you need should be there.
 
-### Current Permissions
+Every `exec` command runs inside the sandbox. Internet access is unrestricted.
 
-The `~/...` paths below are sandbox filesystem paths for `read`, `write`, and `exec`. Document-store paths use `doc://...`.
+### Available Paths
 
-- **Read**: allowlist only:
-  - `~/` (home, recursive)
-  - `~/skills/active` (installed skills)
-  - `{{examplesDir}}` (bundled examples)
-- **Write**: allowlist only:
-  - `~/` (home, recursive)
+The `~/...` paths below are sandbox filesystem paths. Document-store paths use `doc://...`.
+
+- `~/` — home directory; primary read/write workspace
+- `~/skills/active` — installed skills; readable
+- `{{examplesDir}}` — bundled examples; readable
 {{#each homeDirs}}
-  - `~/{{this.name}}`{{#if this.label}} ({{this.label}}){{/if}}
+- `~/{{this.name}}`{{#if this.label}} — {{this.label}}{{else}} — writable folder inside home{{/if}}
 {{/each}}
-- **Network**: always enabled.
 
-### Exec Networking
+### Network
 
-`exec` always runs inside the per-user Docker sandbox, and outbound network access is available without extra
-tool-call flags.
+- Internet access is unrestricted.
