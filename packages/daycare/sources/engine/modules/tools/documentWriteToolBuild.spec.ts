@@ -10,15 +10,18 @@ const readToolCall = { id: "tc-read", name: "document_read" };
 function contextBuild(
     storage: Awaited<ReturnType<typeof storageOpenTest>>,
     readVersions: Map<string, number>,
-    agentKind: "agent" | "memory" = "agent"
+    agentKind: "agent" | "memory" = "agent",
+    input?: { path?: string; name?: string }
 ) {
     return {
         ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
         storage,
         agentSystem: { storage },
         agent: {
+            path: input?.path ?? "/user-1/agent/helper",
             config: {
-                kind: agentKind
+                kind: agentKind,
+                name: input?.name ?? null
             },
             documentChainReadMark: (entries: Array<{ id: string; version: number }>) => {
                 for (const entry of entries) {
@@ -317,7 +320,9 @@ describe("documentWriteToolBuild", () => {
                     contextBuild(storage, readVersions, "memory"),
                     toolCall
                 )
-            ).rejects.toThrow("Memory agents can only write inside doc://memory or doc://system/memory.");
+            ).rejects.toThrow(
+                "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+            );
         } finally {
             storage.connection.close();
         }
@@ -440,7 +445,7 @@ describe("documentWriteToolBuild", () => {
         }
     });
 
-    it("allows memory-agent updates to doc://system/memory", async () => {
+    it("allows cleanup-agent updates to doc://system/memory/agent", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -464,29 +469,101 @@ describe("documentWriteToolBuild", () => {
                 updatedAt: 2,
                 parentId: "system"
             });
+            await storage.documents.create(ctx, {
+                id: "system-memory-agent",
+                slug: "agent",
+                title: "Memory Agent",
+                description: "Agent prompt",
+                body: "v1",
+                createdAt: 3,
+                updatedAt: 3,
+                parentId: "system-memory"
+            });
 
             const readTool = documentReadToolBuild();
             await readTool.execute(
-                { path: "doc://system/memory" },
-                contextBuild(storage, readVersions, "memory"),
+                { path: "doc://system/memory/agent" },
+                contextBuild(storage, readVersions, "memory", {
+                    path: "/user-1/cron/memory-cleanup/memory",
+                    name: "memory-cleanup-agent"
+                }),
                 readToolCall
             );
 
             const tool = documentWriteToolBuild();
             await tool.execute(
                 {
-                    documentId: "system-memory",
-                    slug: "memory",
-                    title: "Memory",
-                    description: "Memory policy",
+                    documentId: "system-memory-agent",
+                    slug: "agent",
+                    title: "Memory Agent",
+                    description: "Agent prompt",
                     body: "v2"
                 },
-                contextBuild(storage, readVersions, "memory"),
+                contextBuild(storage, readVersions, "memory", {
+                    path: "/user-1/cron/memory-cleanup/memory",
+                    name: "memory-cleanup-agent"
+                }),
                 toolCall
             );
 
-            const updated = await storage.documents.findById(ctx, "system-memory");
+            const updated = await storage.documents.findById(ctx, "system-memory-agent");
             expect(updated?.body).toBe("v2");
+        } finally {
+            storage.connection.close();
+        }
+    });
+
+    it("rejects regular memory-agent updates to doc://system/memory prompts", async () => {
+        const storage = await storageOpenTest();
+        const readVersions = new Map<string, number>();
+        try {
+            const ctx = contextForAgent({ userId: "user-1", agentId: "agent-1" });
+            await storage.documents.create(ctx, {
+                id: "system",
+                slug: "system",
+                title: "System",
+                description: "System root",
+                body: "",
+                createdAt: 1,
+                updatedAt: 1
+            });
+            await storage.documents.create(ctx, {
+                id: "system-memory",
+                slug: "memory",
+                title: "Memory",
+                description: "Memory policy",
+                body: "v1",
+                createdAt: 2,
+                updatedAt: 2,
+                parentId: "system"
+            });
+            await storage.documents.create(ctx, {
+                id: "system-memory-agent",
+                slug: "agent",
+                title: "Memory Agent",
+                description: "Agent prompt",
+                body: "v1",
+                createdAt: 3,
+                updatedAt: 3,
+                parentId: "system-memory"
+            });
+
+            const tool = documentWriteToolBuild();
+            await expect(
+                tool.execute(
+                    {
+                        documentId: "system-memory-agent",
+                        slug: "agent",
+                        title: "Memory Agent",
+                        description: "Agent prompt",
+                        body: "v2"
+                    },
+                    contextBuild(storage, readVersions, "memory"),
+                    toolCall
+                )
+            ).rejects.toThrow(
+                "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+            );
         } finally {
             storage.connection.close();
         }
@@ -520,7 +597,9 @@ describe("documentWriteToolBuild", () => {
                     contextBuild(storage, readVersions, "memory"),
                     toolCall
                 )
-            ).rejects.toThrow("Memory agents can only write inside doc://memory or doc://system/memory.");
+            ).rejects.toThrow(
+                "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+            );
         } finally {
             storage.connection.close();
         }

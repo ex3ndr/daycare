@@ -27,8 +27,28 @@ const SYSTEM_DOCS = [
     {
         slug: "memory",
         title: "Memory",
-        description: "Memory-agent guidance for organizing and compressing durable memory.",
-        bundledPrompt: "MEMORY.md"
+        description: "Shared guidance for memory-related agents and prompts.",
+        bundledPrompt: "MEMORY.md",
+        children: [
+            {
+                slug: "agent",
+                title: "Memory Agent",
+                description: "Prompt for the primary memory agent.",
+                bundledPrompt: "MEMORY_AGENT.md"
+            },
+            {
+                slug: "search",
+                title: "Memory Search",
+                description: "Prompt for memory-search agents.",
+                bundledPrompt: "MEMORY_SEARCH.md"
+            },
+            {
+                slug: "cleanup",
+                title: "Memory Cleanup",
+                description: "Prompt for the scheduled memory-cleanup agent.",
+                bundledPrompt: "MEMORY_CLEANUP.md"
+            }
+        ]
     },
     {
         slug: "tools",
@@ -60,13 +80,23 @@ export async function documentSystemDocsEnsure(
             doc.slug === "soul" && options?.soulBody !== undefined
                 ? options.soulBody
                 : await agentPromptBundledRead(doc.bundledPrompt);
-        await documentEnsure(ctx, storage, {
+        const ensured = await documentEnsure(ctx, storage, {
             slug: doc.slug,
             title: doc.title,
             description: doc.description,
             body,
             parentId: root.id
         });
+        const children = "children" in doc ? doc.children : [];
+        for (const child of children) {
+            await documentEnsure(ctx, storage, {
+                slug: child.slug,
+                title: child.title,
+                description: child.description,
+                body: await agentPromptBundledRead(child.bundledPrompt),
+                parentId: ensured.id
+            });
+        }
     }
 
     return root;

@@ -8,6 +8,7 @@ import { documentPathFind } from "../../../storage/documentPathFind.js";
 import { documentSlugNormalize } from "../../../storage/documentSlugNormalize.js";
 import { peopleDocumentFrontmatterAssert } from "../../people/peopleDocumentFrontmatterAssert.js";
 import { documentMutationMemoryPathAllowed } from "./documentMutationMemoryPathAllowed.js";
+import { documentMutationMemoryPromptSlugsResolve } from "./documentMutationMemoryPromptSlugsResolve.js";
 
 const schema = Type.Object(
     {
@@ -237,7 +238,9 @@ async function memoryAgentDocumentTreeWriteAssert(
     );
     if (parentId === null) {
         if (slug !== "memory") {
-            throw new Error("Memory agents can only write inside doc://memory or doc://system/memory.");
+            throw new Error(
+                "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+            );
         }
         return;
     }
@@ -246,14 +249,21 @@ async function memoryAgentDocumentTreeWriteAssert(
     if (!chain || chain.length === 0) {
         throw new Error(`Parent document not found: ${parentId}`);
     }
-    if (documentMutationMemoryPathAllowed(chain)) {
+    if (documentMutationMemoryPathAllowed(chain, documentMutationMemoryPromptSlugsResolve(toolContext))) {
         return;
     }
     const root = chain[0];
-    if (root?.slug === "system" && slug === "memory") {
+    const memory = chain[1];
+    if (
+        root?.slug === "system" &&
+        memory?.slug === "memory" &&
+        documentMutationMemoryPromptSlugsResolve(toolContext).has(slug)
+    ) {
         return;
     }
-    throw new Error("Memory agents can only write inside doc://memory or doc://system/memory.");
+    throw new Error(
+        "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+    );
 }
 
 async function writeParentIdResolve(

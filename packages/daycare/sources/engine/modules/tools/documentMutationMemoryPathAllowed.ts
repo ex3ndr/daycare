@@ -4,7 +4,10 @@ import type { DocumentChainEntry } from "../../../storage/documentChainResolve.j
  * Returns whether a memory agent may mutate the resolved document chain.
  * Expects: chain is ordered from root to target.
  */
-export function documentMutationMemoryPathAllowed(chain: DocumentChainEntry[]): boolean {
+export function documentMutationMemoryPathAllowed(
+    chain: DocumentChainEntry[],
+    writableSystemPromptSlugs: ReadonlySet<string> = new Set<string>()
+): boolean {
     const root = chain[0];
     if (!root) {
         return false;
@@ -13,5 +16,6 @@ export function documentMutationMemoryPathAllowed(chain: DocumentChainEntry[]): 
         return true;
     }
     const child = chain[1];
-    return root.slug === "system" && child?.slug === "memory";
+    const prompt = chain[2];
+    return root.slug === "system" && child?.slug === "memory" && writableSystemPromptSlugs.has(prompt?.slug ?? "");
 }

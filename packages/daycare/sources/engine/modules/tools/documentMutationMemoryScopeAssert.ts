@@ -1,6 +1,7 @@
 import type { ToolExecutionContext } from "@/types";
 import { documentChainResolve } from "../../../storage/documentChainResolve.js";
 import { documentMutationMemoryPathAllowed } from "./documentMutationMemoryPathAllowed.js";
+import { documentMutationMemoryPromptSlugsResolve } from "./documentMutationMemoryPromptSlugsResolve.js";
 
 type DocumentMutationMemoryScopeRepo = {
     findById: (
@@ -32,7 +33,9 @@ export async function documentMutationMemoryScopeAssert(
         throw new Error(`Document not found: ${documentId}`);
     }
 
-    if (!documentMutationMemoryPathAllowed(chain)) {
-        throw new Error("Memory agents can only write inside doc://memory or doc://system/memory.");
+    if (!documentMutationMemoryPathAllowed(chain, documentMutationMemoryPromptSlugsResolve(toolContext))) {
+        throw new Error(
+            "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+        );
     }
 }

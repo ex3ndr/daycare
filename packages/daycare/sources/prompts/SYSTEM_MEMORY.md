@@ -5,13 +5,16 @@ Versioned system documents:
 - USER `doc://system/user`
 - AGENTS `doc://system/agents`
 - MEMORY `doc://system/memory`
+- MEMORY_AGENT `doc://system/memory/agent`
+- MEMORY_SEARCH `doc://system/memory/search`
+- MEMORY_CLEANUP `doc://system/memory/cleanup`
 - TOOLS `doc://system/tools`
 
 These `doc://...` references are document-store paths, not filesystem paths. Use document tools such as `document_read`, `document_write`, `document_patch`, `document_append`, and `document_search` for them.
 
 Do not treat `doc://system/*` or `doc://memory/*` as files inside the sandbox home directory.
 
-For general durable notes and user-facing working documents, write under `doc://document/*`. Update `doc://system/user` for stable user facts/preferences. Update `doc://system/soul` for behavioral refinements. Update `doc://system/agents` for workspace operating rules and recurring routines. Update `doc://system/memory` for durable memory-maintenance policy. Update `doc://system/tools` when you learn non-obvious tool behavior. Reserve `doc://memory/*` for dedicated memory-agent writes.
+For general durable notes and user-facing working documents, write under `doc://document/*`. Update `doc://system/user` for stable user facts/preferences. Update `doc://system/soul` for behavioral refinements. Update `doc://system/agents` for workspace operating rules and recurring routines. Update `doc://system/memory` for shared memory guidance. Update `doc://system/memory/agent`, `doc://system/memory/search`, and `doc://system/memory/cleanup` for role-specific memory prompts. Update `doc://system/tools` when you learn non-obvious tool behavior. Reserve `doc://memory/*` for dedicated memory-agent writes.
 
 Prefer the document store for valuable information. Documents are versioned and durable. The filesystem is useful for working files, but it is not versioned and can be overwritten.
 

@@ -75,23 +75,45 @@ export async function agentSystemPrompt(context: AgentSystemPromptContext): Prom
 }
 
 async function memoryAgentPromptPolicyResolve(context: AgentSystemPromptContext): Promise<string> {
-    if (context.config?.kind !== "memory") {
+    const selection = memoryPromptSelectionResolve(context);
+    if (!selection) {
         return "";
     }
     const systemRoot = await context.agentSystem?.storage?.documents.findBySlugAndParent(context.ctx, "system", null);
     if (systemRoot) {
-        const document = await context.agentSystem?.storage?.documents.findBySlugAndParent(
+        const memoryRoot = await context.agentSystem?.storage?.documents.findBySlugAndParent(
             context.ctx,
             "memory",
             systemRoot.id
         );
+        const document = await context.agentSystem?.storage?.documents.findBySlugAndParent(
+            context.ctx,
+            selection.slug,
+            memoryRoot?.id ?? ""
+        );
         const trimmed = document?.body.trim() ?? "";
         if (trimmed.length > 0) {
-            return ["## Memory Policy", "", trimmed].join("\n");
+            return ["## Memory Role Prompt", "", trimmed].join("\n");
         }
     }
-    const fallback = (await agentPromptBundledRead("MEMORY.md")).trim();
-    return fallback.length > 0 ? ["## Memory Policy", "", fallback].join("\n") : "";
+    const fallback = (await agentPromptBundledRead(selection.fallbackPrompt)).trim();
+    return fallback.length > 0 ? ["## Memory Role Prompt", "", fallback].join("\n") : "";
+}
+
+function memoryPromptSelectionResolve(
+    context: AgentSystemPromptContext
+): { slug: "agent" | "search" | "cleanup"; fallbackPrompt: string } | null {
+    if (context.config?.kind === "search") {
+        return { slug: "search", fallbackPrompt: "MEMORY_SEARCH.md" };
+    }
+    if (context.config?.kind !== "memory") {
+        return null;
+    }
+    const path = context.path?.trim() ?? "";
+    if (path.includes("/cron/memory-cleanup/") || context.config.name === "memory-cleanup-agent") {
+        return { slug: "cleanup", fallbackPrompt: "MEMORY_CLEANUP.md" };
+    }
+    return { slug: "agent", fallbackPrompt: "MEMORY_AGENT.md" };
 }
 
 function agentSystemPromptImagesResolve(context: AgentSystemPromptContext): string[] | undefined {

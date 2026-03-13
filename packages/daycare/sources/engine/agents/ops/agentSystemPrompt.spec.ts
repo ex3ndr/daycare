@@ -47,7 +47,7 @@ describe("agentSystemPrompt", () => {
 
     it("returns replacement prompt for memory-agent path", async () => {
         const expected = (await agentPromptBundledRead("memory/MEMORY_AGENT.md")).trim();
-        const memoryPolicy = (await agentPromptBundledRead("MEMORY.md")).trim();
+        const memoryPolicy = (await agentPromptBundledRead("MEMORY_AGENT.md")).trim();
 
         const rendered = await agentSystemPrompt({
             ctx: contextForUser({ userId: "user-1" }),
@@ -66,10 +66,56 @@ describe("agentSystemPrompt", () => {
         });
 
         expect(rendered).toContain(expected);
-        expect(rendered).toContain("## Memory Policy");
+        expect(rendered).toContain("## Memory Role Prompt");
         expect(rendered).toContain(memoryPolicy);
         expect(rendered).toContain("## Tool Calling");
         expect(rendered).toContain("## Skills");
+    });
+
+    it("uses the search-specific memory prompt for search agents", async () => {
+        const memoryPolicy = (await agentPromptBundledRead("MEMORY_SEARCH.md")).trim();
+
+        const rendered = await agentSystemPrompt({
+            ctx: contextForUser({ userId: "user-1" }),
+            path: "/user-1/cron/search-run/memory/search/0",
+            config: {
+                kind: "search",
+                modelRole: null,
+                connector: null,
+                parentAgentId: null,
+                foreground: false,
+                name: "memory-search",
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            }
+        });
+
+        expect(rendered).toContain("## Memory Role Prompt");
+        expect(rendered).toContain(memoryPolicy);
+    });
+
+    it("uses the cleanup-specific memory prompt for the cleanup worker", async () => {
+        const memoryPolicy = (await agentPromptBundledRead("MEMORY_CLEANUP.md")).trim();
+
+        const rendered = await agentSystemPrompt({
+            ctx: contextForUser({ userId: "user-1" }),
+            path: "/user-1/cron/memory-cleanup/memory",
+            config: {
+                kind: "memory",
+                modelRole: null,
+                connector: null,
+                parentAgentId: null,
+                foreground: false,
+                name: "memory-cleanup-agent",
+                description: null,
+                systemPrompt: null,
+                workspaceDir: null
+            }
+        });
+
+        expect(rendered).toContain("## Memory Role Prompt");
+        expect(rendered).toContain(memoryPolicy);
     });
 
     it("returns replacement prompt for architect system agent", async () => {
@@ -323,7 +369,16 @@ describe("agentSystemPrompt", () => {
 async function systemPromptDocumentsWrite(
     storage: Storage,
     userId: string,
-    input: { soul: string; user: string; agents: string; memory: string; tools: string }
+    input: {
+        soul: string;
+        user: string;
+        agents: string;
+        memory: string;
+        tools: string;
+        memoryAgent?: string;
+        memorySearch?: string;
+        memoryCleanup?: string;
+    }
 ): Promise<void> {
     const ctx = contextForUser({ userId });
     const system = await documentSystemDocsEnsure(ctx, storage);
@@ -339,6 +394,31 @@ async function systemPromptDocumentsWrite(
         const existing = await storage.documents.findBySlugAndParent(ctx, doc.slug, system.id);
         if (!existing) {
             throw new Error(`Missing doc://system/${doc.slug} in test.`);
+        }
+        await storage.documents.update(ctx, existing.id, {
+            body: doc.body,
+            updatedAt: Date.now()
+        });
+    }
+
+    const memory = await storage.documents.findBySlugAndParent(ctx, "memory", system.id);
+    if (!memory) {
+        throw new Error("Missing doc://system/memory in test.");
+    }
+
+    const memoryDocs = [
+        { slug: "agent", body: input.memoryAgent },
+        { slug: "search", body: input.memorySearch },
+        { slug: "cleanup", body: input.memoryCleanup }
+    ];
+
+    for (const doc of memoryDocs) {
+        if (doc.body === undefined) {
+            continue;
+        }
+        const existing = await storage.documents.findBySlugAndParent(ctx, doc.slug, memory.id);
+        if (!existing) {
+            throw new Error(`Missing doc://system/memory/${doc.slug} in test.`);
         }
         await storage.documents.update(ctx, existing.id, {
             body: doc.body,

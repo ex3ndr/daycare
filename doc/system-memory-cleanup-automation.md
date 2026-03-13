@@ -4,10 +4,10 @@ Daycare now provisions memory maintenance as a reserved persisted automation ins
 
 ## What Exists
 
-- `doc://system/memory` stores durable policy for memory cleanup and compression.
+- `doc://system/memory` is the shared memory-guidance folder, with `agent`, `search`, and `cleanup` child prompt documents.
 - `system:memory-cleanup` is a reserved persisted task that prepares the maintenance prompt.
 - `system:<userId>:memory-cleanup` is a reserved cron trigger that runs every 12 hours.
-- The trigger targets a reserved memory agent path so the run can maintain `doc://memory/*` and update `doc://system/memory`.
+- The trigger targets a reserved memory agent path so the run can maintain `doc://memory/*` and update `doc://system/memory/agent` plus `doc://system/memory/cleanup`.
 
 ## Startup Reconciliation
 
@@ -27,7 +27,7 @@ flowchart TD
     A[Engine.start] --> B[userDocumentsEnsure]
     A --> C[agentSystem.load]
     C --> D[taskSystemMemoryCleanupEnsure]
-    D --> E[Ensure doc://system/memory exists]
+    D --> E[Ensure doc://system/memory folder and child prompts exist]
     D --> F[Ensure system:memory-cleanup task]
     D --> G[Ensure system:<userId>:memory-cleanup cron]
     G --> H[Reserved memory agent path]
@@ -35,9 +35,10 @@ flowchart TD
     I --> J[Inject current_time_ms runtime input]
     J --> K[Check recent memory/system-memory changes]
     K --> L[Organize doc://memory]
-    K --> M[Update doc://system/memory when policy changes]
+    K --> M[Update doc://system/memory/cleanup when cleanup policy changes]
+    K --> N[Update doc://system/memory/agent when agent policy changes]
 ```
 
 - The cron scheduler injects `current_time_ms` at runtime for system tasks so the Monty task can evaluate the 12-hour window without importing unsupported Python stdlib modules.
-- The memory cleanup task reads `doc://memory` and `doc://system/memory` through the structured `document_tree` tool so it can inspect real `updatedAt` values across the full memory subtree.
+- The memory cleanup task reads `doc://memory` and `doc://system/memory` through the structured `document_tree` tool so it can inspect real `updatedAt` values across the full memory subtree and memory-prompt folder.
 - The package build copies `sources/system-tasks` into `dist/system-tasks`, so built installs can reconcile system tasks on startup.

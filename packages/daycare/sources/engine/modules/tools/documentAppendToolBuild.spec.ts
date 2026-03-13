@@ -107,7 +107,9 @@ describe("documentAppendToolBuild", () => {
             const tool = documentAppendToolBuild();
             await expect(
                 tool.execute({ documentId: "doc-1", text: " world" }, contextBuild(storage, "memory"), toolCall)
-            ).rejects.toThrow("Memory agents can only write inside doc://memory or doc://system/memory.");
+            ).rejects.toThrow(
+                "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+            );
         } finally {
             storage.connection.close();
         }

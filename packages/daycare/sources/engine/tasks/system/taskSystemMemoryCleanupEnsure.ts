@@ -52,7 +52,7 @@ export async function taskSystemMemoryCleanupEnsure(storage: Storage, agentSyste
                 kind: "memory",
                 foreground: false,
                 name: "memory-cleanup-agent",
-                description: "Organizes memory documents and updates the memory prompt."
+                description: "Organizes memory documents and updates memory role prompts."
             }
         );
 
