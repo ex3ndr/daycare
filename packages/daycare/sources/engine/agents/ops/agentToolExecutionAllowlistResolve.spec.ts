@@ -14,6 +14,7 @@ describe("agentToolExecutionAllowlistResolve", () => {
 
         expect(allowlist ? [...allowlist] : []).toEqual([
             "document_read",
+            "document_tree",
             "document_append",
             "document_patch",
             "document_write"

@@ -1,29 +1,23 @@
-import re
-
-
 TWELVE_HOURS_MS = 12 * 60 * 60 * 1000
 
 
-def updated_times(text: str) -> list[int]:
-    values: list[int] = []
-    for match in re.finditer(r"\*\*updatedAt\*\*: (\d+)", text):
-        values.append(int(match.group(1)))
-    for match in re.finditer(r"updatedAt=(\d+)", text):
-        values.append(int(match.group(1)))
-    return values
-
-
-def has_recent_changes(text: str, cutoff: int) -> bool:
-    return any(value >= cutoff for value in updated_times(text))
+def has_recent_changes(documents: list[dict], cutoff: int) -> bool:
+    for document in documents:
+        updated_at = document.get("updatedAt")
+        if isinstance(updated_at, int) and updated_at >= cutoff:
+            return True
+    return False
 
 
 now = current_time_ms
 cutoff = now - TWELVE_HOURS_MS
 
-memory_tree = document_read(path="doc://memory")["summary"]
-memory_prompt = document_read(path="doc://system/memory")["summary"]
+memory_tree = document_tree(path="doc://memory")
+memory_prompt = document_tree(path="doc://system/memory")
+memory_documents = memory_tree["documents"]
+prompt_documents = memory_prompt["documents"]
 
-if not has_recent_changes(memory_tree, cutoff) and not has_recent_changes(memory_prompt, cutoff):
+if not has_recent_changes(memory_documents, cutoff) and not has_recent_changes(prompt_documents, cutoff):
     result = "No recent memory changes to organize."
 else:
     lines: list[str] = []
