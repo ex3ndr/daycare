@@ -2,6 +2,7 @@ import Handlebars from "handlebars";
 import type { ResolvedTool } from "@/types";
 
 import { rlmNoToolsPromptBuild } from "../../modules/rlm/rlmNoToolsPromptBuild.js";
+import { toolResolvedFromTool } from "../../modules/tools/toolResolvedFromTool.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
 import type { AgentSystemPromptContext } from "./agentSystemPromptContext.js";
 import { agentToolExecutionAllowlistResolve } from "./agentToolExecutionAllowlistResolve.js";
@@ -33,13 +34,20 @@ function toolListVisibleResolve(context: AgentSystemPromptContext) {
         return [];
     }
     if (context.path && context.config) {
-        return toolResolver.listResolvedToolsForAgent({
-            ctx: context.ctx,
-            path: context.path,
-            config: context.config
-        });
+        return (
+            toolResolver.listResolvedToolsForAgent?.({
+                ctx: context.ctx,
+                path: context.path,
+                config: context.config
+            }) ??
+            toolResolver.listToolsForAgent({
+                ctx: context.ctx,
+                path: context.path,
+                config: context.config
+            }).map(toolResolvedFromTool)
+        );
     }
-    return toolResolver.listResolvedTools();
+    return toolResolver.listResolvedTools?.() ?? toolResolver.listTools().map(toolResolvedFromTool);
 }
 
 /**
