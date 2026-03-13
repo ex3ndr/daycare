@@ -24,7 +24,7 @@ export class UserHome {
         this.skills = path.join(this.root, "skills");
         this.skillsActive = path.join(this.skills, "active");
         this.skillsPersonal = path.join(this.skills, "personal");
-        this.skillsHistory = path.join(this.root, "skill-history");
+        this.skillsHistory = path.join(this.root, "skills-history");
         this.apps = path.join(this.root, "apps");
         this.home = path.join(this.root, "home");
         this.databases = path.join(this.root, "databases");

@@ -98,7 +98,7 @@ async function testDirsCreate(): Promise<{
     const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "skill-eject-"));
     const homeDir = path.join(baseDir, "home");
     const personalRoot = path.join(baseDir, "personal");
-    const historyRoot = path.join(baseDir, "skill-history");
+    const historyRoot = path.join(baseDir, "skills-history");
     await fs.mkdir(homeDir, { recursive: true });
     return {
         baseDir,
@@ -138,7 +138,7 @@ function contextBuild(input: { skillsPersonalRoot?: string; homeDir: string }): 
         skillsPersonalRoot: input.skillsPersonalRoot,
         agentSystem: {
             userHomeForUserId: () => ({
-                skillsHistory: path.join(path.dirname(input.homeDir), "skill-history")
+                skillsHistory: path.join(path.dirname(input.homeDir), "skills-history")
             })
         } as unknown as ToolExecutionContext["agentSystem"]
     };

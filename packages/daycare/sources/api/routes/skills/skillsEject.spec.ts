@@ -17,7 +17,7 @@ describe("skillsEject", () => {
         const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "skills-eject-"));
         tmpPaths.push(tmpDir);
         const personalRoot = path.join(tmpDir, "personal");
-        const historyRoot = path.join(tmpDir, "skill-history");
+        const historyRoot = path.join(tmpDir, "skills-history");
         const destination = path.join(tmpDir, "exports");
         const sourceDir = path.join(personalRoot, "my-skill-folder");
         await fs.mkdir(sourceDir, { recursive: true });
@@ -45,7 +45,7 @@ describe("skillsEject", () => {
         const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "skills-eject-version-"));
         tmpPaths.push(tmpDir);
         const personalRoot = path.join(tmpDir, "personal");
-        const historyRoot = path.join(tmpDir, "skill-history");
+        const historyRoot = path.join(tmpDir, "skills-history");
         const destination = path.join(tmpDir, "exports");
         await fs.mkdir(path.join(personalRoot, "my-skill-folder"), { recursive: true });
         await fs.writeFile(path.join(personalRoot, "my-skill-folder", "SKILL.md"), "---\nname: my-skill\n---\nCurrent");
@@ -82,7 +82,7 @@ describe("skillsEject", () => {
         tmpPaths.push(tmpDir);
         const result = await skillsEject({
             personalRoot: path.join(tmpDir, "personal"),
-            historyRoot: path.join(tmpDir, "skill-history"),
+            historyRoot: path.join(tmpDir, "skills-history"),
             skillName: "missing",
             destinationPath: path.join(tmpDir, "exports")
         });

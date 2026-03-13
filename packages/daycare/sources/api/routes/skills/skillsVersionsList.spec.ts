@@ -17,7 +17,7 @@ describe("skillsVersionsList", () => {
         const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "skills-versions-"));
         tmpPaths.push(tmpDir);
         const personalRoot = path.join(tmpDir, "personal");
-        const historyRoot = path.join(tmpDir, "skill-history");
+        const historyRoot = path.join(tmpDir, "skills-history");
         const skillDir = path.join(personalRoot, "my-skill");
         await fs.mkdir(skillDir, { recursive: true });
         await fs.writeFile(path.join(skillDir, "SKILL.md"), "---\nname: my-skill\n---\nCurrent");
