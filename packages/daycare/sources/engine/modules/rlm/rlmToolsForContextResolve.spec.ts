@@ -7,10 +7,11 @@ import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmToolsForContextResolve } from "./rlmToolsForContextResolve.js";
 
 describe("rlmToolsForContextResolve", () => {
-    it("uses contextual tool listing when ctx and agent path/config are present", () => {
+    it("uses executable contextual tool listing when available", () => {
         const listTools = vi.fn(() => [toolBuild("global_only")]);
         const listToolsForAgent = vi.fn(() => [toolBuild("memory_node_read"), toolBuild("memory_node_write")]);
-        const resolver = resolverBuild({ listTools, listToolsForAgent });
+        const listExecutableToolsForAgent = vi.fn(() => [toolBuild("memory_node_read"), toolBuild("hidden_task_tool")]);
+        const resolver = resolverBuild({ listTools, listToolsForAgent, listExecutableToolsForAgent });
         const path = "/u1/memory/agent-1";
         const config = configBuild();
         const ctx = contextForAgent({ userId: "u1", agentId: "a1" });
@@ -21,9 +22,10 @@ describe("rlmToolsForContextResolve", () => {
 
         const resolved = rlmToolsForContextResolve(resolver, context);
 
-        expect(resolved.map((tool) => tool.name)).toEqual(["memory_node_read", "memory_node_write"]);
-        expect(listToolsForAgent).toHaveBeenCalledWith({ ctx, path, config });
+        expect(resolved.map((tool) => tool.name)).toEqual(["memory_node_read", "hidden_task_tool"]);
+        expect(listExecutableToolsForAgent).toHaveBeenCalledWith({ ctx, path, config });
         expect(listTools).not.toHaveBeenCalled();
+        expect(listToolsForAgent).not.toHaveBeenCalled();
     });
 
     it("falls back to global tool listing when execution context is incomplete", () => {
@@ -97,10 +99,12 @@ function contextBuild(
 function resolverBuild(functions: {
     listTools: ToolResolverApi["listTools"];
     listToolsForAgent: ToolResolverApi["listToolsForAgent"];
+    listExecutableToolsForAgent?: ToolResolverApi["listExecutableToolsForAgent"];
 }): ToolResolverApi {
     return {
         listTools: functions.listTools,
         listToolsForAgent: functions.listToolsForAgent,
+        listExecutableToolsForAgent: functions.listExecutableToolsForAgent,
         execute: vi.fn(),
         deferredHandlerFor: () => undefined
     };

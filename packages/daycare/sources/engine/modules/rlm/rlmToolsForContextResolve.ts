@@ -14,7 +14,10 @@ export function rlmToolsForContextResolve(
     const path = context.agent?.path;
     const config = context.agent?.config;
     const visibleTools =
-        path && config ? toolResolver.listToolsForAgent({ ctx: context.ctx, path, config }) : toolResolver.listTools();
+        path && config
+            ? (toolResolver.listExecutableToolsForAgent?.({ ctx: context.ctx, path, config }) ??
+              toolResolver.listToolsForAgent({ ctx: context.ctx, path, config }))
+            : toolResolver.listTools();
 
     const allowedToolNames = context.allowedToolNames;
     if (!allowedToolNames) {

@@ -2,7 +2,7 @@ import type { Context as InferenceContext, Tool, ToolCall } from "@mariozechner/
 import { createId } from "@paralleldrive/cuid2";
 import { Type } from "@sinclair/typebox";
 import type { Logger } from "pino";
-import type { AgentSkill, Connector, ConnectorDraft, ToolExecutionContext } from "@/types";
+import type { AgentSkill, Connector, ConnectorDraft, ToolExecutionContext, ToolVisibilityContext } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
 import type { AssistantSettings, ProviderSettings } from "../../../settings.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
@@ -323,6 +323,9 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         const trackingToolResolver: ToolResolverApi = {
             listTools: () => toolResolver.listTools(),
             listToolsForAgent: (resolverContext) => toolResolver.listToolsForAgent(resolverContext),
+            listExecutableToolsForAgent: (resolverContext) =>
+                toolResolver.listExecutableToolsForAgent?.(resolverContext) ??
+                toolResolver.listToolsForAgent(resolverContext),
             deferredHandlerFor: (toolName) => toolResolver.deferredHandlerFor(toolName),
             execute: async (toolCall, toolContext) => {
                 if (isChildAgent && !childAgentMessageSent && toolCall.name === "send_agent_message") {
@@ -454,7 +457,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
             }
 
             if (initialPhase.type === "vm_start") {
-                const availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
+                const availableTools = toolListExecutableResolve(toolResolver, toolVisibilityContext);
                 const initialToolCallId =
                     initialPhase.blockToolCallIds[initialPhase.blockIndex] ??
                     initialPhase.blockToolCallIds[0] ??
@@ -576,12 +579,12 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         break;
                     }
 
-                    let availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
+                    let availableTools = toolListExecutableResolve(toolResolver, toolVisibilityContext);
                     context.tools = toolListInferenceResolve();
                     try {
                         activeSkills = await skills.list();
                         await skills.syncToActive(options.skillsActiveRoot, activeSkills);
-                        availableTools = toolResolver.listToolsForAgent(toolVisibilityContext);
+                        availableTools = toolListExecutableResolve(toolResolver, toolVisibilityContext);
                         context.tools = toolListInferenceResolve();
                         logger.debug(
                             `load: Read skills before inference call iteration=${iteration} count=${activeSkills.length}`
@@ -1412,6 +1415,10 @@ const runPythonInferenceTool: Tool = {
 
 function toolListInferenceResolve(): Tool[] {
     return [runPythonInferenceTool];
+}
+
+function toolListExecutableResolve(toolResolver: ToolResolverApi, context: ToolVisibilityContext): Tool[] {
+    return toolResolver.listExecutableToolsForAgent?.(context) ?? toolResolver.listToolsForAgent(context);
 }
 
 type RunPythonToolCall = {

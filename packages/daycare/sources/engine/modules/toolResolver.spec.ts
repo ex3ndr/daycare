@@ -335,6 +335,9 @@ describe("ToolResolver", () => {
 
         expect(resolver.listToolsForAgent(toolVisibilityContextCreate())).toEqual([]);
         expect(resolver.listTools().map((tool) => tool.name)).toEqual(["task_create"]);
+        expect(resolver.listExecutableToolsForAgent(toolVisibilityContextCreate()).map((tool) => tool.name)).toEqual([
+            "task_create"
+        ]);
     });
 
     it("supports path-aware visibility callbacks", () => {
@@ -366,6 +369,47 @@ describe("ToolResolver", () => {
 
         expect(memoryTools.map((tool) => tool.name)).toEqual(["memory_node_read"]);
         expect(userTools).toEqual([]);
+    });
+
+    it("keeps visibleByDefault restrictions for executable contextual listings", () => {
+        const resolver = new ToolResolver();
+        resolver.register("test", {
+            tool: {
+                name: "foreground_only",
+                description: "Foreground tool.",
+                parameters: Type.Object({}, { additionalProperties: false })
+            },
+            returns: textReturns,
+            hiddenByDefault: true,
+            visibleByDefault: (context) => context.config.foreground === true,
+            execute: async () => okResult("foreground_only", "ok")
+        });
+
+        const foregroundTools = resolver.listExecutableToolsForAgent(
+            toolVisibilityContextCreate({
+                config: {
+                    foreground: true,
+                    name: null,
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
+                }
+            })
+        );
+        const backgroundTools = resolver.listExecutableToolsForAgent(
+            toolVisibilityContextCreate({
+                config: {
+                    foreground: false,
+                    name: null,
+                    description: null,
+                    systemPrompt: null,
+                    workspaceDir: null
+                }
+            })
+        );
+
+        expect(foregroundTools.map((tool) => tool.name)).toEqual(["foreground_only"]);
+        expect(backgroundTools).toEqual([]);
     });
 
     it("keeps hidden tools executable when no execution allowlist is configured", async () => {

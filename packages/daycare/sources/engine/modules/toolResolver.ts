@@ -54,6 +54,12 @@ export class ToolResolver {
             .map((entry) => toolExpose(entry));
     }
 
+    listExecutableToolsForAgent(context: ToolVisibilityContext): Tool[] {
+        return Array.from(this.tools.values())
+            .filter((entry) => toolExecutableForAgent(entry, context))
+            .map((entry) => toolExpose(entry));
+    }
+
     async execute(toolCall: ToolCall, context: ToolExecutionContext): Promise<ToolExecutionResult> {
         const argsPreview = JSON.stringify(toolCall.arguments).slice(0, 100);
         logger.debug(
@@ -119,7 +125,12 @@ export class ToolResolver {
     }
 }
 
-export type ToolResolverApi = Pick<ToolResolver, "listTools" | "listToolsForAgent" | "execute" | "deferredHandlerFor">;
+export type ToolResolverApi = Pick<
+    ToolResolver,
+    "listTools" | "listToolsForAgent" | "execute" | "deferredHandlerFor"
+> & {
+    listExecutableToolsForAgent?: (context: ToolVisibilityContext) => Tool[];
+};
 
 function buildToolError(toolCall: ToolCall, text: string): ToolExecutionResult {
     const toolMessage: ToolResultMessage = {
@@ -147,6 +158,10 @@ function toolVisibleByDefault(entry: RegisteredTool, context: ToolVisibilityCont
     if (entry.hiddenByDefault === true) {
         return false;
     }
+    return toolExecutableForAgent(entry, context);
+}
+
+function toolExecutableForAgent(entry: RegisteredTool, context: ToolVisibilityContext): boolean {
     if (!entry.visibleByDefault) {
         return true;
     }
