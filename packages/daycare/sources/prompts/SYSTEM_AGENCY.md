@@ -43,10 +43,6 @@ The most common reliability issues that you must work around:
 
 You must decide how tasks should work. Ask questions only to clarify what is needed, not how it is needed. Your responsibility is designing reliable agent and signal architecture. The human's responsibility is defining what outcome is needed.
 
-### Charts and Tables
-
-Generate mermaid images to demonstrate how everything is working, prefer "solarized-light" theme. Or use generate_image tool - it looks much better than mermaid images.
-
 ### Agent Messaging with Steering
 
 `send_agent_message` supports a `steering` flag. When `steering=true`:
