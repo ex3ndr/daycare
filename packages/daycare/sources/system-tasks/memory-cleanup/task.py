@@ -1,5 +1,4 @@
 import re
-import time
 
 
 TWELVE_HOURS_MS = 12 * 60 * 60 * 1000
@@ -18,14 +17,14 @@ def has_recent_changes(text: str, cutoff: int) -> bool:
     return any(value >= cutoff for value in updated_times(text))
 
 
-now = int(time.time() * 1000)
+now = current_time_ms
 cutoff = now - TWELVE_HOURS_MS
 
 memory_tree = document_read(path="doc://memory")["summary"]
 memory_prompt = document_read(path="doc://system/memory")["summary"]
 
 if not has_recent_changes(memory_tree, cutoff) and not has_recent_changes(memory_prompt, cutoff):
-    "No recent memory changes to organize."
+    result = "No recent memory changes to organize."
 else:
     lines: list[str] = []
     lines.append("Run scheduled memory maintenance now.")
@@ -39,4 +38,6 @@ else:
     lines.append("")
     lines.append(f"Cleanup window start: {cutoff}")
     lines.append(f"Current time: {now}")
-    "\n".join(lines).strip()
+    result = "\n".join(lines).strip()
+
+result

@@ -32,7 +32,11 @@ flowchart TD
     D --> G[Ensure system:<userId>:memory-cleanup cron]
     G --> H[Reserved memory agent path]
     H --> I[Task runs every 12 hours]
-    I --> J[Check recent memory/system-memory changes]
-    J --> K[Organize doc://memory]
-    J --> L[Update doc://system/memory when policy changes]
+    I --> J[Inject current_time_ms runtime input]
+    J --> K[Check recent memory/system-memory changes]
+    K --> L[Organize doc://memory]
+    K --> M[Update doc://system/memory when policy changes]
 ```
+
+- The cron scheduler injects `current_time_ms` at runtime for system tasks so the Monty task can evaluate the 12-hour window without importing unsupported Python stdlib modules.
+- The package build copies `sources/system-tasks` into `dist/system-tasks`, so built installs can reconcile system tasks on startup.

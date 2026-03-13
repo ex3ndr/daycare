@@ -10,11 +10,13 @@ import type { ConfigModule } from "../../config/configModule.js";
 import { taskParameterInputsNormalize } from "../../modules/tasks/taskParameterInputsNormalize.js";
 import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
 import { taskParameterValidate } from "../../modules/tasks/taskParameterValidate.js";
+import { taskSystemIdIs } from "../../tasks/system/taskSystemIdIs.js";
 import type { CronTaskContext, CronTaskDefinition, CronTaskInfo, ScheduledTask } from "../cronTypes.js";
 import { cronTimeGetNext } from "./cronTimeGetNext.js";
 import { cronTimezoneResolve } from "./cronTimezoneResolve.js";
 
 const logger = getLogger("cron.scheduler");
+const CRON_SYSTEM_INPUT_CURRENT_TIME_MS = "current_time_ms";
 
 export type CronSchedulerOptions = {
     config: ConfigModule;
@@ -291,6 +293,12 @@ export class CronScheduler {
                 }
                 inputValues = taskParameterInputsNormalize(runtimeTask.parameterSchema, values);
                 inputSchema = runtimeTask.parameterSchema;
+            }
+            if (taskSystemIdIs(runtimeTask.taskId)) {
+                inputValues = {
+                    ...(inputValues ?? {}),
+                    [CRON_SYSTEM_INPUT_CURRENT_TIME_MS]: runAtMs
+                };
             }
 
             const taskContext: CronTaskContext = {

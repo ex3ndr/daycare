@@ -122,6 +122,42 @@ describe("CronScheduler", () => {
         scheduler.stop();
     });
 
+    it("injects current_time_ms for system tasks", async () => {
+        vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
+
+        await cronTaskInsert(storage, {
+            id: "system-memory-cleanup-trigger",
+            taskId: "system:memory-cleanup",
+            name: "Memory Cleanup",
+            schedule: "0 0 1 1 *",
+            code: "Run now"
+        });
+
+        const onTask = vi.fn();
+        const scheduler = new CronScheduler({
+            config: configModule(tempDir),
+            repository: storage.cronTasks,
+            tasksRepository: storage.tasks,
+            usersRepository: storage.users,
+            onTask
+        });
+
+        await scheduler.start();
+        await scheduler.triggerTaskNow("system-memory-cleanup-trigger");
+
+        expect(onTask).toHaveBeenCalledWith(
+            expect.objectContaining({
+                taskId: "system:memory-cleanup",
+                inputs: expect.objectContaining({
+                    current_time_ms: new Date("2024-01-15T10:30:00Z").getTime()
+                })
+            }),
+            expect.any(Object)
+        );
+
+        scheduler.stop();
+    });
+
     it("acquires read lock only for task execution", async () => {
         vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
 
