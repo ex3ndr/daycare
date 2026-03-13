@@ -8,14 +8,14 @@ import { SegmentedControl, type SegmentedControlOption } from "@/components/Segm
 import { useAgentsStore } from "@/modules/agents/agentsContext";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
-import { AgentsGraphTab } from "@/views/agents/AgentsGraphTab";
 import { AgentsListTab } from "@/views/agents/AgentsListTab";
+import { AgentsTreeTab } from "@/views/agents/AgentsTreeTab";
 
-type AgentsTab = "list" | "graph";
+type AgentsTab = "list" | "tree";
 
 const TAB_OPTIONS: SegmentedControlOption<AgentsTab>[] = [
     { value: "list", label: "List" },
-    { value: "graph", label: "Graph" }
+    { value: "tree", label: "Tree" }
 ];
 
 export function AgentsView() {
@@ -86,13 +86,13 @@ export function AgentsView() {
                 <View style={styles.toolbar}>
                     <SegmentedControl options={TAB_OPTIONS} value={activeTab} onChange={setActiveTab} />
                     <Text style={[styles.toolbarHint, { color: theme.colors.onSurfaceVariant }]}>
-                        {activeTab === "list" ? "Card inventory" : "Rendered Mermaid topology"}
+                        {activeTab === "list" ? "Card inventory" : "Path-derived file tree"}
                     </Text>
                 </View>
                 {activeTab === "list" ? (
                     <AgentsListTab agents={agents} onAgentPress={handleAgentPress} workspaceId={workspaceId} />
                 ) : (
-                    <AgentsGraphTab agents={agents} />
+                    <AgentsTreeTab agents={agents} />
                 )}
             </ItemList>
         </View>

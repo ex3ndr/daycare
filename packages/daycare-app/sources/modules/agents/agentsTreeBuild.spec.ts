@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agentsGraphBuild } from "./agentsGraphBuild";
+import { agentsTreeBuild } from "./agentsTreeBuild";
 import type { AgentListItem } from "./agentsTypes";
 
 function agentCreate(overrides: Partial<AgentListItem> & { agentId: string }): AgentListItem {
@@ -20,9 +20,9 @@ function agentCreate(overrides: Partial<AgentListItem> & { agentId: string }): A
     };
 }
 
-describe("agentsGraphBuild", () => {
-    it("links memory, search, and sub agents to their parent path", () => {
-        const graph = agentsGraphBuild([
+describe("agentsTreeBuild", () => {
+    it("renders connector children as a file tree", () => {
+        const tree = agentsTreeBuild([
             agentCreate({
                 agentId: "root-1",
                 kind: "connector",
@@ -46,17 +46,17 @@ describe("agentsGraphBuild", () => {
             })
         ]);
 
-        expect(graph.nodeCount).toBe(4);
-        expect(graph.edgeCount).toBe(3);
-        expect(graph.rootCount).toBe(1);
-        expect(graph.orphanCount).toBe(0);
-        expect(graph.mermaid).toContain("graph TD");
-        expect(graph.mermaid).toContain("Telegram | connector | active");
-        expect(graph.mermaid).toContain("-->");
+        expect(tree.nodeCount).toBe(4);
+        expect(tree.linkCount).toBe(3);
+        expect(tree.rootCount).toBe(1);
+        expect(tree.orphanCount).toBe(0);
+        expect(tree.text).toContain("agents/");
+        expect(tree.text).toContain("Telegram [connector, active]");
+        expect(tree.text).toContain("\\- Subagent [sub, active]");
     });
 
-    it("marks nodes as orphaned when the parent path is missing", () => {
-        const graph = agentsGraphBuild([
+    it("marks detached children as orphan nodes", () => {
+        const tree = agentsTreeBuild([
             agentCreate({
                 agentId: "orphan-1",
                 kind: "memory",
@@ -64,9 +64,9 @@ describe("agentsGraphBuild", () => {
             })
         ]);
 
-        expect(graph.edgeCount).toBe(0);
-        expect(graph.rootCount).toBe(1);
-        expect(graph.orphanCount).toBe(1);
-        expect(graph.mermaid).toContain("%% Missing parent path for Memory Worker: /user-1/agent/missing");
+        expect(tree.linkCount).toBe(0);
+        expect(tree.rootCount).toBe(1);
+        expect(tree.orphanCount).toBe(1);
+        expect(tree.text).toContain("Memory Worker [memory, active, orphan]");
     });
 });
