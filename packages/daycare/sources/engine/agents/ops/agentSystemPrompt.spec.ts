@@ -95,19 +95,19 @@ describe("agentSystemPrompt", () => {
         expect(rendered).toContain(memoryPolicy);
     });
 
-    it("uses the cleanup-specific memory prompt for the cleanup worker", async () => {
-        const memoryPolicy = (await agentPromptBundledRead("MEMORY_CLEANUP.md")).trim();
+    it("uses the compactor-specific memory prompt for compactor agents", async () => {
+        const memoryPolicy = (await agentPromptBundledRead("MEMORY_COMPACTOR.md")).trim();
 
         const rendered = await agentSystemPrompt({
             ctx: contextForUser({ userId: "user-1" }),
-            path: "/user-1/cron/memory-cleanup/memory",
+            path: "/user-1/compactor/agent-1",
             config: {
-                kind: "memory",
+                kind: "compactor",
                 modelRole: null,
                 connector: null,
                 parentAgentId: null,
                 foreground: false,
-                name: "memory-cleanup-agent",
+                name: "memory-compactor",
                 description: null,
                 systemPrompt: null,
                 workspaceDir: null
@@ -377,7 +377,7 @@ async function systemPromptDocumentsWrite(
         tools: string;
         memoryAgent?: string;
         memorySearch?: string;
-        memoryCleanup?: string;
+        memoryCompactor?: string;
     }
 ): Promise<void> {
     const ctx = contextForUser({ userId });
@@ -409,7 +409,7 @@ async function systemPromptDocumentsWrite(
     const memoryDocs = [
         { slug: "agent", body: input.memoryAgent },
         { slug: "search", body: input.memorySearch },
-        { slug: "cleanup", body: input.memoryCleanup }
+        { slug: "compactor", body: input.memoryCompactor }
     ];
 
     for (const doc of memoryDocs) {

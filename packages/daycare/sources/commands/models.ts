@@ -49,11 +49,12 @@ const ROLE_LABELS: Record<ModelRoleKey, string> = {
     user: "User-facing agents",
     memory: "Memory agent",
     memorySearch: "Memory search agent",
+    memoryCompactor: "Memory compactor agent",
     subagent: "Subagents",
     task: "Task agents"
 };
 
-const ROLE_KEYS: ModelRoleKey[] = ["user", "memory", "memorySearch", "subagent", "task"];
+const ROLE_KEYS: ModelRoleKey[] = ["user", "memory", "memorySearch", "memoryCompactor", "subagent", "task"];
 const BUILTIN_FLAVOR_KEYS: BuiltinModelFlavor[] = ["small", "normal", "large"];
 
 const ADD_CUSTOM_FLAVOR_CHOICE = "__add_custom_flavor__";
@@ -67,6 +68,7 @@ const RULE_ROLE_CHOICES = [
     { value: "user", name: "User", description: "User-facing agents" },
     { value: "memory", name: "Memory", description: "Memory agents" },
     { value: "memorySearch", name: "Memory Search", description: "Memory search agents" },
+    { value: "memoryCompactor", name: "Memory Compactor", description: "Memory compactor agents" },
     { value: "subagent", name: "Subagent", description: "Subagents" },
     { value: "task", name: "Task", description: "Task agents" }
 ];
@@ -81,6 +83,7 @@ const RULE_KIND_CHOICES = [
     { value: "subuser", name: "Subuser", description: "Sub-user agents" },
     { value: "sub", name: "Sub", description: "Subagents" },
     { value: "memory", name: "Memory", description: "Memory agents" },
+    { value: "compactor", name: "Compactor", description: "Memory compactor agents" },
     { value: "search", name: "Search", description: "Search agents" },
     { value: "supervisor", name: "Supervisor", description: "Singleton supervisor agents" }
 ];

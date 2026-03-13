@@ -328,9 +328,9 @@ export class Agent {
         if (this.endTurnCount <= 5) {
             return;
         }
-        // Memory-agents and memory-search agents must never trigger the memory worker
+        // Memory subsystem agents must never trigger the memory worker.
         const kind = this.agentKindResolve();
-        if (kind === "memory" || kind === "search") {
+        if (kind === "memory" || kind === "compactor" || kind === "search") {
             return;
         }
         const sessionId = this.state.activeSessionId;

@@ -6,15 +6,15 @@ import matter from "gray-matter";
 import type { Storage } from "../../../storage/storage.js";
 import type { AgentSystem } from "../../agents/agentSystem.js";
 import { contextForUser } from "../../agents/context.js";
-import { agentPathCron, agentPathMemory } from "../../agents/ops/agentPathBuild.js";
+import { agentPathCompactor, agentPathCron } from "../../agents/ops/agentPathBuild.js";
 import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
 import { taskSystemIdIs } from "./taskSystemIdIs.js";
 
-const MEMORY_CLEANUP_TASK_ID = "system:memory-cleanup";
-const MEMORY_CLEANUP_CRON_SUFFIX = "memory-cleanup";
-const MEMORY_CLEANUP_CRON_SLUG = "memory-cleanup";
-const MEMORY_CLEANUP_SCHEDULE = "0 */12 * * *";
-const MEMORY_CLEANUP_TIMEZONE = "UTC";
+const MEMORY_COMPACTOR_TASK_ID = "system:memory-compactor";
+const MEMORY_COMPACTOR_CRON_SUFFIX = "memory-compactor";
+const MEMORY_COMPACTOR_CRON_SLUG = "memory-compactor";
+const MEMORY_COMPACTOR_SCHEDULE = "0 */12 * * *";
+const MEMORY_COMPACTOR_TIMEZONE = "UTC";
 
 type SystemTaskFrontmatter = {
     title?: string;
@@ -23,16 +23,16 @@ type SystemTaskFrontmatter = {
 };
 
 /**
- * Ensures the persisted memory-cleanup system task and its cron trigger exist for users with memory enabled.
+ * Ensures the persisted memory-compactor system task and its cron trigger exist for users with memory enabled.
  * Expects: migrations are applied and agentSystem.load() already completed.
  */
-export async function taskSystemMemoryCleanupEnsure(storage: Storage, agentSystem: AgentSystem): Promise<void> {
+export async function taskSystemMemoryCompactorEnsure(storage: Storage, agentSystem: AgentSystem): Promise<void> {
     const users = await storage.users.findMany();
     const taskDefinition = await taskDefinitionRead();
 
     for (const user of users) {
         const ctx = contextForUser({ userId: user.id });
-        const triggerId = memoryCleanupTriggerIdBuild(user.id);
+        const triggerId = memoryCompactorTriggerIdBuild(user.id);
         const existingTrigger = await storage.cronTasks.findById(triggerId);
 
         if (!userMemoryEnabled(user)) {
@@ -45,22 +45,22 @@ export async function taskSystemMemoryCleanupEnsure(storage: Storage, agentSyste
             continue;
         }
 
-        const memoryAgentId = await agentSystem.agentIdForTarget(
+        const compactorAgentId = await agentSystem.agentIdForTarget(
             ctx,
-            { path: agentPathMemory(agentPathCron(user.id, MEMORY_CLEANUP_CRON_SLUG)) },
+            { path: agentPathCompactor(agentPathCron(user.id, MEMORY_COMPACTOR_CRON_SLUG)) },
             {
-                kind: "memory",
+                kind: "compactor",
                 foreground: false,
-                name: "memory-cleanup-agent",
-                description: "Organizes memory documents and updates memory role prompts."
+                name: "memory-compactor",
+                description: "Compacts memory documents and updates memory role prompts."
             }
         );
 
-        const existingTask = await storage.tasks.findById(ctx, MEMORY_CLEANUP_TASK_ID);
+        const existingTask = await storage.tasks.findById(ctx, MEMORY_COMPACTOR_TASK_ID);
         if (!existingTask) {
             const now = Date.now();
             await storage.tasks.create({
-                id: MEMORY_CLEANUP_TASK_ID,
+                id: MEMORY_COMPACTOR_TASK_ID,
                 userId: user.id,
                 title: taskDefinition.title,
                 description: taskDefinition.description,
@@ -70,7 +70,7 @@ export async function taskSystemMemoryCleanupEnsure(storage: Storage, agentSyste
                 updatedAt: now
             });
         } else if (taskNeedsUpdate(existingTask, taskDefinition)) {
-            await storage.tasks.update(ctx, MEMORY_CLEANUP_TASK_ID, {
+            await storage.tasks.update(ctx, MEMORY_COMPACTOR_TASK_ID, {
                 title: taskDefinition.title,
                 description: taskDefinition.description,
                 code: taskDefinition.code,
@@ -83,11 +83,11 @@ export async function taskSystemMemoryCleanupEnsure(storage: Storage, agentSyste
             const now = Date.now();
             await storage.cronTasks.create({
                 id: triggerId,
-                taskId: MEMORY_CLEANUP_TASK_ID,
+                taskId: MEMORY_COMPACTOR_TASK_ID,
                 userId: user.id,
-                schedule: MEMORY_CLEANUP_SCHEDULE,
-                timezone: MEMORY_CLEANUP_TIMEZONE,
-                agentId: memoryAgentId,
+                schedule: MEMORY_COMPACTOR_SCHEDULE,
+                timezone: MEMORY_COMPACTOR_TIMEZONE,
+                agentId: compactorAgentId,
                 enabled: true,
                 deleteAfterRun: false,
                 parameters: null,
@@ -100,18 +100,18 @@ export async function taskSystemMemoryCleanupEnsure(storage: Storage, agentSyste
 
         const nextEnabled = existingTrigger.enabled;
         if (
-            existingTrigger.taskId !== MEMORY_CLEANUP_TASK_ID ||
-            existingTrigger.schedule !== MEMORY_CLEANUP_SCHEDULE ||
-            existingTrigger.timezone !== MEMORY_CLEANUP_TIMEZONE ||
-            existingTrigger.agentId !== memoryAgentId
+            existingTrigger.taskId !== MEMORY_COMPACTOR_TASK_ID ||
+            existingTrigger.schedule !== MEMORY_COMPACTOR_SCHEDULE ||
+            existingTrigger.timezone !== MEMORY_COMPACTOR_TIMEZONE ||
+            existingTrigger.agentId !== compactorAgentId
         ) {
             await storage.cronTasks.create({
                 ...existingTrigger,
-                taskId: MEMORY_CLEANUP_TASK_ID,
+                taskId: MEMORY_COMPACTOR_TASK_ID,
                 userId: user.id,
-                schedule: MEMORY_CLEANUP_SCHEDULE,
-                timezone: MEMORY_CLEANUP_TIMEZONE,
-                agentId: memoryAgentId,
+                schedule: MEMORY_COMPACTOR_SCHEDULE,
+                timezone: MEMORY_COMPACTOR_TIMEZONE,
+                agentId: compactorAgentId,
                 enabled: nextEnabled,
                 deleteAfterRun: false,
                 parameters: null,
@@ -146,8 +146,8 @@ function userMemoryEnabled(user: { isWorkspace: boolean; memory: boolean }): boo
     return !user.isWorkspace || user.memory;
 }
 
-function memoryCleanupTriggerIdBuild(userId: string): string {
-    return `system:${userId}:${MEMORY_CLEANUP_CRON_SUFFIX}`;
+function memoryCompactorTriggerIdBuild(userId: string): string {
+    return `system:${userId}:${MEMORY_COMPACTOR_CRON_SUFFIX}`;
 }
 
 async function taskDefinitionRead(): Promise<{
@@ -156,7 +156,7 @@ async function taskDefinitionRead(): Promise<{
     code: string;
     parameters: TaskParameter[] | null;
 }> {
-    const taskDir = path.resolve(systemTasksRootResolve(), "memory-cleanup");
+    const taskDir = path.resolve(systemTasksRootResolve(), "memory-compactor");
     const descriptionPath = path.join(taskDir, "description.md");
     const codePath = path.join(taskDir, "task.py");
     const [descriptionSource, code] = await Promise.all([
@@ -167,7 +167,7 @@ async function taskDefinitionRead(): Promise<{
     const metadata = parsed.data as SystemTaskFrontmatter;
     const title = metadata.title?.trim();
     if (!title) {
-        throw new Error("System task title is required for memory cleanup.");
+        throw new Error("System task title is required for memory compactor.");
     }
     return {
         title,

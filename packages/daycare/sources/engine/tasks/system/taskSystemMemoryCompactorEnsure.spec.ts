@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
 import { contextForUser } from "../../agents/context.js";
-import { taskSystemMemoryCleanupEnsure } from "./taskSystemMemoryCleanupEnsure.js";
+import { taskSystemMemoryCompactorEnsure } from "./taskSystemMemoryCompactorEnsure.js";
 
-const SYSTEM_TASK_ID = "system:memory-cleanup";
+const SYSTEM_TASK_ID = "system:memory-compactor";
 
-describe("taskSystemMemoryCleanupEnsure", () => {
-    it("creates the reserved memory cleanup task and cron for memory-enabled users", async () => {
+describe("taskSystemMemoryCompactorEnsure", () => {
+    it("creates the reserved memory compactor task and cron for memory-enabled users", async () => {
         const storage = await storageOpenTest();
         try {
             await storage.users.create({
@@ -17,22 +17,22 @@ describe("taskSystemMemoryCleanupEnsure", () => {
             });
 
             const agentSystem = {
-                agentIdForTarget: vi.fn(async () => "memory-agent-1")
+                agentIdForTarget: vi.fn(async () => "memory-compactor-1")
             } as never;
 
-            await taskSystemMemoryCleanupEnsure(storage, agentSystem);
+            await taskSystemMemoryCompactorEnsure(storage, agentSystem);
 
             const ctx = contextForUser({ userId: "user-1" });
             const task = await storage.tasks.findById(ctx, SYSTEM_TASK_ID);
-            const trigger = await storage.cronTasks.findById("system:user-1:memory-cleanup");
+            const trigger = await storage.cronTasks.findById("system:user-1:memory-compactor");
 
-            expect(task?.title).toBe("Memory Cleanup");
+            expect(task?.title).toBe("Memory Compactor");
             expect(trigger).toMatchObject({
-                id: "system:user-1:memory-cleanup",
+                id: "system:user-1:memory-compactor",
                 taskId: SYSTEM_TASK_ID,
                 schedule: "0 */12 * * *",
                 timezone: "UTC",
-                agentId: "memory-agent-1",
+                agentId: "memory-compactor-1",
                 enabled: true
             });
         } finally {
@@ -63,7 +63,7 @@ describe("taskSystemMemoryCleanupEnsure", () => {
                 updatedAt: 2
             });
             await storage.cronTasks.create({
-                id: "system:workspace-1:memory-cleanup",
+                id: "system:workspace-1:memory-compactor",
                 taskId: SYSTEM_TASK_ID,
                 userId: "workspace-1",
                 schedule: "0 0 * * *",
@@ -78,22 +78,22 @@ describe("taskSystemMemoryCleanupEnsure", () => {
             });
 
             const agentSystem = {
-                agentIdForTarget: vi.fn(async () => "memory-agent-2")
+                agentIdForTarget: vi.fn(async () => "memory-compactor-2")
             } as never;
 
-            await taskSystemMemoryCleanupEnsure(storage, agentSystem);
+            await taskSystemMemoryCompactorEnsure(storage, agentSystem);
 
             const ctx = contextForUser({ userId: "workspace-1" });
             const task = await storage.tasks.findById(ctx, SYSTEM_TASK_ID);
-            const trigger = await storage.cronTasks.findById("system:workspace-1:memory-cleanup");
+            const trigger = await storage.cronTasks.findById("system:workspace-1:memory-compactor");
 
-            expect(task?.title).toBe("Memory Cleanup");
-            expect(task?.code).toContain("Run scheduled memory maintenance now.");
+            expect(task?.title).toBe("Memory Compactor");
+            expect(task?.code).toContain('step("\\n".join(lines).strip())');
             expect(trigger).toMatchObject({
-                id: "system:workspace-1:memory-cleanup",
+                id: "system:workspace-1:memory-compactor",
                 schedule: "0 */12 * * *",
                 timezone: "UTC",
-                agentId: "memory-agent-2",
+                agentId: "memory-compactor-2",
                 enabled: false
             });
         } finally {
@@ -113,7 +113,7 @@ describe("taskSystemMemoryCleanupEnsure", () => {
                 updatedAt: 1
             });
             await storage.cronTasks.create({
-                id: "system:workspace-2:memory-cleanup",
+                id: "system:workspace-2:memory-compactor",
                 taskId: SYSTEM_TASK_ID,
                 userId: "workspace-2",
                 schedule: "0 */12 * * *",
@@ -128,12 +128,12 @@ describe("taskSystemMemoryCleanupEnsure", () => {
             });
 
             const agentSystem = {
-                agentIdForTarget: vi.fn(async () => "memory-agent-3")
+                agentIdForTarget: vi.fn(async () => "memory-compactor-3")
             } as never;
 
-            await taskSystemMemoryCleanupEnsure(storage, agentSystem);
+            await taskSystemMemoryCompactorEnsure(storage, agentSystem);
 
-            const trigger = await storage.cronTasks.findById("system:workspace-2:memory-cleanup");
+            const trigger = await storage.cronTasks.findById("system:workspace-2:memory-compactor");
             expect(trigger?.enabled).toBe(false);
         } finally {
             storage.connection.close();

@@ -564,6 +564,9 @@ function agentPathDefaultResolve(input: {
     if (input.kind === "memory") {
         return `/${userId}/memory/${id}`;
     }
+    if (input.kind === "compactor") {
+        return `/${userId}/compactor/${id}`;
+    }
     if (input.kind === "search") {
         return `/${userId}/search/${id}`;
     }
@@ -579,6 +582,9 @@ function agentModelRoleFromKind(kind: AgentDbRecord["kind"]): AgentDbRecord["mod
     }
     if (kind === "memory") {
         return "memory";
+    }
+    if (kind === "compactor") {
+        return "memoryCompactor";
     }
     if (kind === "search") {
         return "memorySearch";

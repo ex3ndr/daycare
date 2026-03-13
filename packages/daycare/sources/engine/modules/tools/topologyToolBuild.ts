@@ -731,7 +731,7 @@ function topologyAgentVisibleByDefault(record: { kind?: string | null; path: str
         return false;
     }
     const kind = topologyAgentKindResolve(record);
-    return kind !== "memory" && kind !== "search";
+    return kind !== "memory" && kind !== "compactor" && kind !== "search";
 }
 
 function topologyAgentLabelResolve(kind: string, name: string | null): string {
@@ -744,6 +744,9 @@ function topologyAgentLabelResolve(kind: string, name: string | null): string {
     }
     if (kind === "memory") {
         return "memory-agent";
+    }
+    if (kind === "compactor") {
+        return normalizedName || "memory-compactor";
     }
     if (kind === "search") {
         return normalizedName || "memory-search";

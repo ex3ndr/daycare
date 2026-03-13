@@ -120,8 +120,8 @@ export class MemoryWorker {
                 const sourcePath = agent.path;
                 const kind = agent.kind;
 
-                // Skip sessions belonging to memory-agents and memory-search agents
-                if (kind === "memory" || kind === "search") {
+                // Skip sessions belonging to memory subsystem agents.
+                if (kind === "memory" || kind === "compactor" || kind === "search") {
                     await this.storage.sessions.markProcessed(session.id, invalidatedAt, invalidatedAt);
                     continue;
                 }

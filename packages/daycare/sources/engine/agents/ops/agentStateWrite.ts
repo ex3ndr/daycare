@@ -74,6 +74,9 @@ function agentLabelResolve(config: Pick<AgentConfig, "kind" | "name">): string {
     if (config.kind === "memory") {
         return "memory-agent";
     }
+    if (config.kind === "compactor") {
+        return config.name?.trim() || "memory-compactor";
+    }
     if (config.kind === "search") {
         return config.name?.trim() || "memory-search";
     }

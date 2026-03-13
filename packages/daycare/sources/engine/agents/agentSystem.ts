@@ -1439,6 +1439,9 @@ function modelRoleForKind(kind: NonNullable<AgentConfig["kind"]>): AgentConfig["
     if (kind === "memory") {
         return "memory";
     }
+    if (kind === "compactor") {
+        return "memoryCompactor";
+    }
     if (kind === "search") {
         return "memorySearch";
     }

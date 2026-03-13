@@ -123,7 +123,7 @@ import { Signals } from "./signals/signals.js";
 import { Skills } from "./skills/skills.js";
 import { taskCoreIdIs } from "./tasks/core/taskCoreIdIs.js";
 import { taskSystemIdIs } from "./tasks/system/taskSystemIdIs.js";
-import { taskSystemMemoryCleanupEnsure } from "./tasks/system/taskSystemMemoryCleanupEnsure.js";
+import { taskSystemMemoryCompactorEnsure } from "./tasks/system/taskSystemMemoryCompactorEnsure.js";
 import { taskDeleteSuccessResolve } from "./tasks/taskDeleteSuccessResolve.js";
 import { TaskExecutionRunner } from "./tasks/taskExecutionRunner.js";
 import { TaskExecutions } from "./tasks/taskExecutions.js";
@@ -787,7 +787,7 @@ export class Engine {
         logger.debug("load: Loading agents");
         await this.agentSystem.load();
         logger.debug("load: Agents loaded");
-        await taskSystemMemoryCleanupEnsure(this.storage, this.agentSystem);
+        await taskSystemMemoryCompactorEnsure(this.storage, this.agentSystem);
 
         logger.debug("reload: Reloading provider manager with current config");
         await this.providerManager.reload();

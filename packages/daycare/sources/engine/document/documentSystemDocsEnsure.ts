@@ -43,10 +43,10 @@ const SYSTEM_DOCS = [
                 bundledPrompt: "MEMORY_SEARCH.md"
             },
             {
-                slug: "cleanup",
-                title: "Memory Cleanup",
-                description: "Prompt for the scheduled memory-cleanup agent.",
-                bundledPrompt: "MEMORY_CLEANUP.md"
+                slug: "compactor",
+                title: "Memory Compactor",
+                description: "Prompt for the scheduled memory-compactor agent.",
+                bundledPrompt: "MEMORY_COMPACTOR.md"
             }
         ]
     },

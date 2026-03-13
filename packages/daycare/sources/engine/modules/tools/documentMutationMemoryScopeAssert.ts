@@ -24,7 +24,7 @@ export async function documentMutationMemoryScopeAssert(
     documents: DocumentMutationMemoryScopeRepo,
     documentId: string
 ): Promise<void> {
-    if (toolContext.agent.config.kind !== "memory") {
+    if (toolContext.agent.config.kind !== "memory" && toolContext.agent.config.kind !== "compactor") {
         return;
     }
 
@@ -35,7 +35,7 @@ export async function documentMutationMemoryScopeAssert(
 
     if (!documentMutationMemoryPathAllowed(chain, documentMutationMemoryPromptSlugsResolve(toolContext))) {
         throw new Error(
-            "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+            "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
         );
     }
 }

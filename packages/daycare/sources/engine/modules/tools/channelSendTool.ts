@@ -101,6 +101,9 @@ function senderUsernameResolve(context: ToolExecutionContext): string {
     if (kind === "memory") {
         return usernameNormalize("memory-agent");
     }
+    if (kind === "compactor") {
+        return usernameNormalize(config.name ?? "memory-compactor");
+    }
     if (kind === "search") {
         return usernameNormalize(config.name ?? "memory-search");
     }

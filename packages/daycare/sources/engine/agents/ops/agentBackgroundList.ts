@@ -41,6 +41,9 @@ function agentNameResolve(kind: AgentKind, name: string | null): string | null {
     if (kind === "memory") {
         return "memory-agent";
     }
+    if (kind === "compactor") {
+        return "memory-compactor";
+    }
     if (kind === "search") {
         return "memory-search";
     }

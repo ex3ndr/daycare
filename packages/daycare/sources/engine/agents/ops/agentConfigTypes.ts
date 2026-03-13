@@ -10,6 +10,7 @@ export type AgentKind =
     | "subuser"
     | "sub"
     | "memory"
+    | "compactor"
     | "search"
     | "supervisor";
 

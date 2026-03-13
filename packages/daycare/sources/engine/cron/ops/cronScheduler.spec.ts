@@ -126,9 +126,9 @@ describe("CronScheduler", () => {
         vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
 
         await cronTaskInsert(storage, {
-            id: "system-memory-cleanup-trigger",
-            taskId: "system:memory-cleanup",
-            name: "Memory Cleanup",
+            id: "system-memory-compactor-trigger",
+            taskId: "system:memory-compactor",
+            name: "Memory Compactor",
             schedule: "0 0 1 1 *",
             code: "Run now"
         });
@@ -143,11 +143,11 @@ describe("CronScheduler", () => {
         });
 
         await scheduler.start();
-        await scheduler.triggerTaskNow("system-memory-cleanup-trigger");
+        await scheduler.triggerTaskNow("system-memory-compactor-trigger");
 
         expect(onTask).toHaveBeenCalledWith(
             expect.objectContaining({
-                taskId: "system:memory-cleanup",
+                taskId: "system:memory-compactor",
                 inputs: expect.objectContaining({
                     current_time_ms: new Date("2024-01-15T10:30:00Z").getTime()
                 })

@@ -124,9 +124,21 @@ const systemPromptUpdateSchema = z.object({
 });
 const modelRoleRuleSetSchema = z.object({
     id: z.string().min(1).optional(),
-    role: z.enum(["user", "memory", "memorySearch", "subagent", "task"]).nullable().optional(),
+    role: z.enum(["user", "memory", "memorySearch", "memoryCompactor", "subagent", "task"]).nullable().optional(),
     kind: z
-        .enum(["connector", "agent", "app", "cron", "task", "subuser", "sub", "memory", "search", "supervisor"])
+        .enum([
+            "connector",
+            "agent",
+            "app",
+            "cron",
+            "task",
+            "subuser",
+            "sub",
+            "memory",
+            "compactor",
+            "search",
+            "supervisor"
+        ])
         .nullable()
         .optional(),
     userId: z.string().min(1).nullable().optional(),
@@ -156,8 +168,20 @@ const messageContextSchema = z.object({
         .optional()
 });
 const agentCreationConfigSchema = z.object({
-    kind: z.enum(["connector", "agent", "app", "cron", "task", "subuser", "sub", "memory", "search", "supervisor"]),
-    modelRole: z.enum(["user", "memory", "memorySearch", "subagent", "task"]).nullable().optional(),
+    kind: z.enum([
+        "connector",
+        "agent",
+        "app",
+        "cron",
+        "task",
+        "subuser",
+        "sub",
+        "memory",
+        "compactor",
+        "search",
+        "supervisor"
+    ]),
+    modelRole: z.enum(["user", "memory", "memorySearch", "memoryCompactor", "subagent", "task"]).nullable().optional(),
     connector: connectorSchema.nullable().optional(),
     parentAgentId: z.string().nullable().optional(),
     foreground: z.boolean().optional(),

@@ -81,6 +81,14 @@ export function agentPathMemory(agentPathValue: AgentPath): AgentPath {
 }
 
 /**
+ * Builds a memory-compactor path from a parent path.
+ * Expects: agentPathValue is valid.
+ */
+export function agentPathCompactor(agentPathValue: AgentPath): AgentPath {
+    return agentPath(`${agentPathValue}/compactor`);
+}
+
+/**
  * Builds a memory-search child path.
  * Expects: agentPathValue is valid and index is a non-negative integer.
  */

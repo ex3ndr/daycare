@@ -102,16 +102,15 @@ async function memoryAgentPromptPolicyResolve(context: AgentSystemPromptContext)
 
 function memoryPromptSelectionResolve(
     context: AgentSystemPromptContext
-): { slug: "agent" | "search" | "cleanup"; fallbackPrompt: string } | null {
+): { slug: "agent" | "search" | "compactor"; fallbackPrompt: string } | null {
     if (context.config?.kind === "search") {
         return { slug: "search", fallbackPrompt: "MEMORY_SEARCH.md" };
     }
+    if (context.config?.kind === "compactor") {
+        return { slug: "compactor", fallbackPrompt: "MEMORY_COMPACTOR.md" };
+    }
     if (context.config?.kind !== "memory") {
         return null;
-    }
-    const path = context.path?.trim() ?? "";
-    if (path.includes("/cron/memory-cleanup/") || context.config.name === "memory-cleanup-agent") {
-        return { slug: "cleanup", fallbackPrompt: "MEMORY_CLEANUP.md" };
     }
     return { slug: "agent", fallbackPrompt: "MEMORY_AGENT.md" };
 }

@@ -36,6 +36,13 @@ export async function agentPromptResolve(
             replaceSystemPrompt: true
         };
     }
+    if (kind === "compactor") {
+        const prompt = (await agentPromptBundledRead("memory/MEMORY_COMPACTOR.md")).trim();
+        return {
+            agentPrompt: prompt,
+            replaceSystemPrompt: true
+        };
+    }
     if (kind === "supervisor") {
         const prompt = (await agentPromptBundledRead("supervisor/SUPERVISOR.md")).trim();
         return {

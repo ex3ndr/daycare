@@ -104,6 +104,9 @@ function agentLabelResolve(config: AgentConfig): string {
     if (config.kind === "memory") {
         return "memory-agent";
     }
+    if (config.kind === "compactor") {
+        return config.name?.trim() || "memory-compactor";
+    }
     if (config.kind === "search") {
         return config.name?.trim() || "memory-search";
     }
@@ -122,6 +125,9 @@ function modelRoleForKind(kind: NonNullable<AgentConfig["kind"]>): AgentConfig["
     }
     if (kind === "memory") {
         return "memory";
+    }
+    if (kind === "compactor") {
+        return "memoryCompactor";
     }
     if (kind === "search") {
         return "memorySearch";

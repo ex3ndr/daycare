@@ -188,7 +188,7 @@ describe("documentPatchToolBuild", () => {
                     toolCall
                 )
             ).rejects.toThrow(
-                "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+                "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
             );
         } finally {
             storage.connection.close();

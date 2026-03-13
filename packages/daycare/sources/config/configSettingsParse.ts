@@ -169,6 +169,7 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                     user: legacyOrStructuredModelSelection.optional(),
                     memory: legacyOrStructuredModelSelection.optional(),
                     memorySearch: legacyOrStructuredModelSelection.optional(),
+                    memoryCompactor: legacyOrStructuredModelSelection.optional(),
                     subagent: legacyOrStructuredModelSelection.optional(),
                     task: legacyOrStructuredModelSelection.optional()
                 })

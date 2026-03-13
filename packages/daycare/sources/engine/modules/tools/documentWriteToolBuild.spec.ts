@@ -10,7 +10,7 @@ const readToolCall = { id: "tc-read", name: "document_read" };
 function contextBuild(
     storage: Awaited<ReturnType<typeof storageOpenTest>>,
     readVersions: Map<string, number>,
-    agentKind: "agent" | "memory" = "agent",
+    agentKind: "agent" | "memory" | "compactor" = "agent",
     input?: { path?: string; name?: string }
 ) {
     return {
@@ -321,7 +321,7 @@ describe("documentWriteToolBuild", () => {
                     toolCall
                 )
             ).rejects.toThrow(
-                "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+                "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
             );
         } finally {
             storage.connection.close();
@@ -445,7 +445,7 @@ describe("documentWriteToolBuild", () => {
         }
     });
 
-    it("allows cleanup-agent updates to doc://system/memory/agent", async () => {
+    it("allows compactor-agent updates to doc://system/memory/agent", async () => {
         const storage = await storageOpenTest();
         const readVersions = new Map<string, number>();
         try {
@@ -483,9 +483,9 @@ describe("documentWriteToolBuild", () => {
             const readTool = documentReadToolBuild();
             await readTool.execute(
                 { path: "doc://system/memory/agent" },
-                contextBuild(storage, readVersions, "memory", {
-                    path: "/user-1/cron/memory-cleanup/memory",
-                    name: "memory-cleanup-agent"
+                contextBuild(storage, readVersions, "compactor", {
+                    path: "/user-1/compactor/agent-1",
+                    name: "memory-compactor"
                 }),
                 readToolCall
             );
@@ -499,9 +499,9 @@ describe("documentWriteToolBuild", () => {
                     description: "Agent prompt",
                     body: "v2"
                 },
-                contextBuild(storage, readVersions, "memory", {
-                    path: "/user-1/cron/memory-cleanup/memory",
-                    name: "memory-cleanup-agent"
+                contextBuild(storage, readVersions, "compactor", {
+                    path: "/user-1/compactor/agent-1",
+                    name: "memory-compactor"
                 }),
                 toolCall
             );
@@ -562,7 +562,7 @@ describe("documentWriteToolBuild", () => {
                     toolCall
                 )
             ).rejects.toThrow(
-                "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+                "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
             );
         } finally {
             storage.connection.close();
@@ -598,7 +598,7 @@ describe("documentWriteToolBuild", () => {
                     toolCall
                 )
             ).rejects.toThrow(
-                "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+                "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
             );
         } finally {
             storage.connection.close();

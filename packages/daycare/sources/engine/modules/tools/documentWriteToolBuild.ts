@@ -84,7 +84,7 @@ export function documentWriteToolBuild(): ToolDefinition {
 
             const parentId = parentIdFromPath !== undefined ? parentIdFromPath : parentIdFromArgs;
             const documentId = payload.documentId?.trim();
-            if (toolContext.agent.config.kind === "memory") {
+            if (toolContext.agent.config.kind === "memory" || toolContext.agent.config.kind === "compactor") {
                 await memoryAgentDocumentTreeWriteAssert(
                     toolContext,
                     storage.documents,
@@ -239,7 +239,7 @@ async function memoryAgentDocumentTreeWriteAssert(
     if (parentId === null) {
         if (slug !== "memory") {
             throw new Error(
-                "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+                "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
             );
         }
         return;
@@ -262,7 +262,7 @@ async function memoryAgentDocumentTreeWriteAssert(
         return;
     }
     throw new Error(
-        "Memory agents can only write inside doc://memory. Cleanup agents may also update doc://system/memory/agent and doc://system/memory/cleanup."
+        "Memory agents can only write inside doc://memory. Compactor agents may also update doc://system/memory/agent and doc://system/memory/compactor."
     );
 }
 

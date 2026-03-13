@@ -9,7 +9,7 @@ export function agentToolExecutionAllowlistResolve(kind: AgentKind): ReadonlySet
         return new Set<string>(["document_read", "send_agent_message"]);
     }
 
-    if (kind !== "memory") {
+    if (kind !== "memory" && kind !== "compactor") {
         return undefined;
     }
 

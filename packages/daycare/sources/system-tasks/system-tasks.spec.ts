@@ -91,6 +91,15 @@ function systemTaskResolver(
 }
 
 function systemTaskContext(): ToolExecutionContext {
+    const postAndAwait = vi.fn(async (_ctx, _target, item) => {
+        if (item.type === "system_message") {
+            return { type: "system_message" as const, responseText: "ok" };
+        }
+        if (item.type === "compact") {
+            return { type: "compact" as const, ok: true };
+        }
+        throw new Error(`Unexpected inbox item type: ${item.type}`);
+    });
     return {
         connectorRegistry: null as unknown as ToolExecutionContext["connectorRegistry"],
         sandbox: null as unknown as ToolExecutionContext["sandbox"],
@@ -99,19 +108,21 @@ function systemTaskContext(): ToolExecutionContext {
         assistant: null,
         agent: null as unknown as ToolExecutionContext["agent"],
         ctx: { userId: "test-user", agentId: "test-agent" } as ToolExecutionContext["ctx"],
-        source: "test",
+        source: "task",
         messageContext: {},
         agentSystem: {
             config: { current: { agentsDir: "/tmp/daycare-system-task-test", path: ":memory:" } },
-            storage: {}
-        } as unknown as ToolExecutionContext["agentSystem"]
+            storage: {},
+            postAndAwait
+        } as unknown as ToolExecutionContext["agentSystem"],
+        taskExecution: { taskId: "system:memory-compactor", taskVersion: 1 }
     };
 }
 
 describe("system-tasks VM execution", () => {
-    describe("memory-cleanup", () => {
-        it("returns a no-op message when memory changed outside the cleanup window", async () => {
-            const code = await systemTaskRead("memory-cleanup");
+    describe("memory-compactor", () => {
+        it("skips when memory changed outside the compaction window", async () => {
+            const code = await systemTaskRead("memory-compactor");
             const { resolver, execute } = systemTaskResolver({
                 "doc://memory": {
                     summary: "memory",
@@ -145,30 +156,33 @@ describe("system-tasks VM execution", () => {
                     summary: "agent prompt",
                     readSummary: "# Memory Agent\n\nKeep memory tidy."
                 },
-                "doc://system/memory/cleanup": {
-                    summary: "cleanup prompt",
-                    readSummary: "# Memory Cleanup\n\nReview recent changes."
+                "doc://system/memory/compactor": {
+                    summary: "compactor prompt",
+                    readSummary: "# Memory Compactor\n\nReview recent changes."
                 }
             });
 
+            const context = systemTaskContext();
             const result = await rlmExecute(
                 code,
                 montyPreambleBuild([documentTreeTool, documentReadTool]),
-                systemTaskContext(),
+                context,
                 resolver,
-                "system-memory-cleanup-noop",
+                "system-memory-compactor-noop",
                 undefined,
                 undefined,
                 { current_time_ms: 12 * 60 * 60 * 1000 + 10 },
                 [{ name: "current_time_ms", type: "integer", nullable: false }]
             );
 
-            expect(result.output).toBe("No recent memory changes to organize.");
+            expect(result.skipTurn).toBe(true);
+            expect(result.output).toBe("Turn skipped");
             expect(execute).toHaveBeenCalledTimes(4);
+            expect(context.agentSystem.postAndAwait).not.toHaveBeenCalled();
         });
 
-        it("returns cleanup instructions when memory changed within the window", async () => {
-            const code = await systemTaskRead("memory-cleanup");
+        it("runs step and compaction when memory changed within the window", async () => {
+            const code = await systemTaskRead("memory-compactor");
             const { resolver, execute } = systemTaskResolver({
                 "doc://memory": {
                     summary: "memory",
@@ -202,31 +216,43 @@ describe("system-tasks VM execution", () => {
                     summary: "agent prompt",
                     readSummary: "# Memory Agent\n\nKeep memory tidy."
                 },
-                "doc://system/memory/cleanup": {
-                    summary: "cleanup prompt",
-                    readSummary: "# Memory Cleanup\n\nReview recent changes."
+                "doc://system/memory/compactor": {
+                    summary: "compactor prompt",
+                    readSummary: "# Memory Compactor\n\nReview recent changes."
                 }
             });
 
+            const context = systemTaskContext();
             const result = await rlmExecute(
                 code,
                 montyPreambleBuild([documentTreeTool, documentReadTool]),
-                systemTaskContext(),
+                context,
                 resolver,
-                "system-memory-cleanup-run",
+                "system-memory-compactor-run",
                 undefined,
                 undefined,
                 { current_time_ms: 43200000 + 1 },
                 [{ name: "current_time_ms", type: "integer", nullable: false }]
             );
 
-            expect(result.output).toContain("Run scheduled memory maintenance now.");
-            expect(result.output).toContain("Current memory-agent prompt document:");
-            expect(result.output).toContain("# Memory Agent");
-            expect(result.output).toContain("Current cleanup prompt document:");
-            expect(result.output).toContain("# Memory Cleanup");
-            expect(result.output).toContain("Current time: 43200001");
+            expect(result.skipTurn).toBe(true);
+            expect(result.output).toBe("Turn skipped");
             expect(execute).toHaveBeenCalledTimes(4);
+            expect(context.agentSystem.postAndAwait).toHaveBeenNthCalledWith(
+                1,
+                expect.objectContaining({ agentId: "test-agent", userId: "test-user" }),
+                { agentId: "test-agent" },
+                expect.objectContaining({
+                    type: "system_message",
+                    text: expect.stringContaining("Run scheduled memory compaction now.")
+                })
+            );
+            expect(context.agentSystem.postAndAwait).toHaveBeenNthCalledWith(
+                2,
+                expect.objectContaining({ agentId: "test-agent", userId: "test-user" }),
+                { agentId: "test-agent" },
+                { type: "compact" }
+            );
         });
     });
 });

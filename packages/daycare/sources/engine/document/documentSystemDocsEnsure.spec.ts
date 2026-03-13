@@ -24,7 +24,7 @@ describe("documentSystemDocsEnsure", () => {
             const tools = await storage.documents.findBySlugAndParent(ctx, "tools", first.id);
             const memoryAgent = await storage.documents.findBySlugAndParent(ctx, "agent", memory?.id ?? "");
             const memorySearch = await storage.documents.findBySlugAndParent(ctx, "search", memory?.id ?? "");
-            const memoryCleanup = await storage.documents.findBySlugAndParent(ctx, "cleanup", memory?.id ?? "");
+            const memoryCompactor = await storage.documents.findBySlugAndParent(ctx, "compactor", memory?.id ?? "");
 
             expect(soul?.body).toBe(await agentPromptBundledRead("SOUL.md"));
             expect(user?.body).toBe(await agentPromptBundledRead("USER.md"));
@@ -32,7 +32,7 @@ describe("documentSystemDocsEnsure", () => {
             expect(memory?.body).toBe(await agentPromptBundledRead("MEMORY.md"));
             expect(memoryAgent?.body).toBe(await agentPromptBundledRead("MEMORY_AGENT.md"));
             expect(memorySearch?.body).toBe(await agentPromptBundledRead("MEMORY_SEARCH.md"));
-            expect(memoryCleanup?.body).toBe(await agentPromptBundledRead("MEMORY_CLEANUP.md"));
+            expect(memoryCompactor?.body).toBe(await agentPromptBundledRead("MEMORY_COMPACTOR.md"));
             expect(tools?.body).toBe(await agentPromptBundledRead("TOOLS.md"));
         } finally {
             storage.connection.close();
