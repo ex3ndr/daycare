@@ -1,6 +1,12 @@
 ---
 name: psql
 description: Work with user-scoped PostgreSQL databases (PGlite). Use when the user asks to store structured data, create tables, query rows, track records, build a database, or manage any tabular/relational information. Covers database creation, additive schema design, CRUD operations, and SQL queries.
+tools:
+  - psql_db_create
+  - psql_db_list
+  - psql_schema
+  - psql_data
+  - psql_query
 ---
 
 # PSQL Databases

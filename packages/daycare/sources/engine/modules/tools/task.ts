@@ -181,6 +181,7 @@ export function buildTaskCreateTool(): ToolDefinition {
             parameters: taskCreateSchema
         },
         returns: taskReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as TaskCreateArgs;
             const storage = toolContext.agentSystem.storage;
@@ -257,6 +258,7 @@ export function buildTaskReadTool(): ToolDefinition {
             parameters: taskReadSchema
         },
         returns: taskReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as TaskReadArgs;
             const task = await taskResolveForUser(toolContext, payload.taskId);
@@ -314,6 +316,7 @@ export function buildTaskUpdateTool(): ToolDefinition {
             parameters: taskUpdateSchema
         },
         returns: taskReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as TaskUpdateArgs;
             const task = await taskResolveForUser(toolContext, payload.taskId);
@@ -423,6 +426,7 @@ export function buildTaskDeleteTool(): ToolDefinition {
             parameters: taskDeleteSchema
         },
         returns: taskReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as TaskDeleteArgs;
             const task = await taskResolveForUser(toolContext, payload.taskId);
@@ -482,6 +486,7 @@ export function buildTaskRunTool(): ToolDefinition {
             parameters: taskRunSchema
         },
         returns: taskReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as TaskRunArgs;
             const task = await taskResolveForUser(toolContext, payload.taskId);
@@ -584,6 +589,7 @@ export function buildTaskTriggerAddTool(): ToolDefinition {
             parameters: taskTriggerAddSchema
         },
         returns: taskReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as TaskTriggerAddArgs;
             const task = await taskResolveForUser(toolContext, payload.taskId);
@@ -667,6 +673,7 @@ export function buildTaskTriggerRemoveTool(): ToolDefinition {
             parameters: taskTriggerRemoveSchema
         },
         returns: taskReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as TaskTriggerRemoveArgs;
             const task = await taskResolveForUser(toolContext, payload.taskId);

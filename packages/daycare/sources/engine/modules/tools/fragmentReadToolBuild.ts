@@ -70,6 +70,7 @@ export function fragmentReadToolBuild(): ToolDefinition<typeof schema, FragmentR
             parameters: schema
         },
         returns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const storage = toolContext.storage ?? toolContext.agentSystem.storage;
             if (!storage) {

@@ -9,6 +9,7 @@ import type { AgentSkill, SkillSource } from "./skillTypes.js";
 type SkillFrontmatter = {
     name?: string;
     description?: string;
+    tools?: string[];
     sandbox?: boolean;
     permissions?: string[];
 };
@@ -48,6 +49,7 @@ export async function skillResolve(filePath: string, source: SkillSource, root?:
         name,
         category,
         description,
+        tools: metadata.tools,
         sandbox: metadata.sandbox,
         permissions: metadata.permissions,
         sourcePath: resolvedPath,
@@ -89,6 +91,20 @@ function skillFrontmatterNormalize(data: Record<string, unknown>): SkillFrontmat
     }
     if (typeof data.description === "string") {
         result.description = data.description;
+    }
+    if (Array.isArray(data.tools)) {
+        const tools = data.tools
+            .filter((value): value is string => typeof value === "string")
+            .map((value) => value.trim())
+            .filter((value) => value.length > 0);
+        if (tools.length > 0) {
+            result.tools = Array.from(new Set(tools));
+        }
+    } else if (typeof data.tools === "string") {
+        const tool = data.tools.trim();
+        if (tool.length > 0) {
+            result.tools = [tool];
+        }
     }
 
     if (typeof data.sandbox === "boolean") {

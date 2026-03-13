@@ -320,6 +320,23 @@ describe("ToolResolver", () => {
         expect(tools).toEqual([]);
     });
 
+    it("omits tools from contextual list when hiddenByDefault is true", () => {
+        const resolver = new ToolResolver();
+        resolver.register("test", {
+            tool: {
+                name: "task_create",
+                description: "Create task.",
+                parameters: Type.Object({}, { additionalProperties: false })
+            },
+            returns: textReturns,
+            hiddenByDefault: true,
+            execute: async () => okResult("task_create", "ok")
+        });
+
+        expect(resolver.listToolsForAgent(toolVisibilityContextCreate())).toEqual([]);
+        expect(resolver.listTools().map((tool) => tool.name)).toEqual(["task_create"]);
+    });
+
     it("supports path-aware visibility callbacks", () => {
         const resolver = new ToolResolver();
         resolver.register("test", {
@@ -371,6 +388,35 @@ describe("ToolResolver", () => {
                 type: "toolCall",
                 id: "call-1",
                 name: "hidden_tool",
+                arguments: {}
+            },
+            toolExecutionContextCreate()
+        );
+
+        expect(result.toolMessage.isError).toBe(false);
+        expect(messageText(result)).toContain("ok");
+    });
+
+    it("keeps hiddenByDefault tools executable when no execution allowlist is configured", async () => {
+        const resolver = new ToolResolver();
+        resolver.register("test", {
+            tool: {
+                name: "psql_query",
+                description: "Query database.",
+                parameters: Type.Object({}, { additionalProperties: false })
+            },
+            returns: textReturns,
+            hiddenByDefault: true,
+            execute: async () => okResult("psql_query", "ok")
+        });
+
+        expect(resolver.listToolsForAgent(toolVisibilityContextCreate())).toEqual([]);
+
+        const result = await resolver.execute(
+            {
+                type: "toolCall",
+                id: "call-2",
+                name: "psql_query",
                 arguments: {}
             },
             toolExecutionContextCreate()

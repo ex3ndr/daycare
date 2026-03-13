@@ -31,6 +31,13 @@ export function skillPromptFormat(skills: AgentSkill[]): string {
         if (description.length > 0) {
             lines.push(`    <description>${description}</description>`);
         }
+        if (skill.tools && skill.tools.length > 0) {
+            lines.push("    <tools>");
+            for (const tool of skill.tools) {
+                lines.push(`      <tool>${xmlEscape(tool)}</tool>`);
+            }
+            lines.push("    </tools>");
+        }
         lines.push(`    <source>${xmlEscape(sourceLabel)}</source>`);
         if (skill.sandbox === true) {
             lines.push("    <sandbox>true</sandbox>");

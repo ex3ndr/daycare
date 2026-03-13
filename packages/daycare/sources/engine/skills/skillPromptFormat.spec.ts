@@ -11,6 +11,7 @@ describe("skillPromptFormat", () => {
                 name: "deploy",
                 category: "software-development",
                 description: "Use <cron> & webhook",
+                tools: ["task_create", "task_trigger_add"],
                 sourcePath: "/tmp/deploy/SKILL.md",
                 source: "core",
                 sandbox: true
@@ -39,6 +40,9 @@ describe("skillPromptFormat", () => {
         expect(prompt).toContain("<category>software-development</category>");
         expect(prompt).toContain("<name>deploy</name>");
         expect(prompt).toContain("Use &lt;cron&gt; &amp; webhook");
+        expect(prompt).toContain("<tools>");
+        expect(prompt).toContain("<tool>task_create</tool>");
+        expect(prompt).toContain("<tool>task_trigger_add</tool>");
         expect(prompt).toContain("<source>plugin:alpha</source>");
         expect(prompt).toContain("<sandbox>true</sandbox>");
         expect(prompt).not.toContain("/tmp/deploy/SKILL.md");

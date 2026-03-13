@@ -1,6 +1,10 @@
 ---
 name: daycare-friendship
 description: Friendship mechanics for daycare agents. Use when the user wants to add friends, manage friend requests, send messages to friends, share or unshare subusers with friends, or understand what nametags are.
+tools:
+  - friend_add
+  - friend_remove
+  - friend_send
 ---
 
 # Friendship

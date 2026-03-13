@@ -38,3 +38,4 @@ The `skill` tool loads named skills from `skills/active/<activationKey>/SKILL.md
 
 - host mode prepends `Base directory for this skill: <host-active-path>/<activationKey>`
 - Docker mode prepends `Base directory for this skill: /shared/skills/<activationKey>`
+- if frontmatter declares `tools`, the loaded skill also prepends Python tool stubs for those tool names

@@ -39,7 +39,7 @@ def validate_skill(skill_path):
         return False, f"Invalid YAML in frontmatter: {e}"
 
     # Define allowed properties
-    ALLOWED_PROPERTIES = {'name', 'description', 'license', 'allowed-tools', 'metadata'}
+    ALLOWED_PROPERTIES = {'name', 'description', 'license', 'metadata', 'tools', 'sandbox', 'permissions'}
 
     # Check for unexpected properties (excluding nested keys under metadata)
     unexpected_keys = set(frontmatter.keys()) - ALLOWED_PROPERTIES
@@ -82,6 +82,14 @@ def validate_skill(skill_path):
         # Check description length (max 1024 characters per spec)
         if len(description) > 1024:
             return False, f"Description is too long ({len(description)} characters). Maximum is 1024 characters."
+
+    tools = frontmatter.get('tools')
+    if tools is not None:
+        if not isinstance(tools, list):
+            return False, "tools must be a YAML list of tool names"
+        for tool in tools:
+            if not isinstance(tool, str) or not tool.strip():
+                return False, "each tools entry must be a non-empty string"
 
     return True, "Skill is valid!"
 

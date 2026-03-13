@@ -1,4 +1,5 @@
 This is a minimal Python runtime with strict typing. The supported built-in modules are `typing` (`Any`, `TypedDict`), `os`, `pathlib`, `sys`, `math`, and `re`. Many familiar stdlib modules still do not exist (`json`, `datetime`, `collections`, `itertools`, `random`, etc.). `os.environ` is intentionally unavailable in normal execution, so do not rely on process environment variables from Python. Use builtins, string methods, list/dict comprehensions, type annotations, and the tool functions listed below.
+Some tools are intentionally hidden from the default system prompt. When a skill lists unlocked tools and you load that skill, the returned skill content may prepend extra Python stubs for those hidden tools. Use those unlocked functions when present.
 Call tool functions directly (no `await`). Use `try/except ToolError` for tool failures.
 Many tools return typed dicts (see `TypedDict` signatures above). Access fields directly: `result["field"]`. Some tools return plain strings when no schema is defined.
 Use `print()` for debug output. The value of the final expression is returned.

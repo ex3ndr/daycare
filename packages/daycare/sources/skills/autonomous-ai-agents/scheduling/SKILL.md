@@ -1,6 +1,14 @@
 ---
 name: scheduling
 description: Schedule recurring or time-based tasks. Use for alarms, reminders, periodic reviews, automated reports, or any task that should run at specific times or intervals.
+tools:
+  - task_create
+  - task_read
+  - task_update
+  - task_delete
+  - task_run
+  - task_trigger_add
+  - task_trigger_remove
 ---
 
 # Scheduling

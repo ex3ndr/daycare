@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import type { Tool, ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import matter from "gray-matter";
 import type { ToolDefinition, ToolResultContract } from "@/types";
@@ -8,6 +8,7 @@ import { agentPathChildAllocate } from "../../agents/ops/agentPathChildAllocate.
 import { agentRecipientResolve } from "../../agents/ops/agentRecipientResolve.js";
 import { skillActivationKeyBuild } from "../../skills/skillActivationKeyBuild.js";
 import type { AgentSkill } from "../../skills/skillTypes.js";
+import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
 import { toolMessageTextExtract } from "./toolReturnOutcome.js";
 import type { ToolExecutionContext } from "./types.js";
 
@@ -77,7 +78,14 @@ export function skillToolBuild(): ToolDefinition {
             void skillNotifyConnector(skill.name, toolContext);
 
             const loaded = await skillContentRead(target, toolContext);
-            const skillBodyDecorated = skillBodyDecorate(loaded.body, skill.name, loaded.baseDir);
+            const unlockedTools = skillUnlockedToolsResolve(skill.tools, toolContext);
+            const skillBodyDecorated = skillBodyDecorate(
+                loaded.body,
+                skill.name,
+                loaded.baseDir,
+                skill.tools ?? [],
+                unlockedTools
+            );
             if (skill.sandbox === true) {
                 const prompt = payload.prompt?.trim() ?? "";
                 if (!prompt) {
@@ -189,6 +197,7 @@ async function skillTargetFromPathResolve(
         id: `path:${requested}`,
         name: parsed.name,
         description: parsed.description,
+        tools: parsed.tools,
         sandbox: parsed.sandbox,
         permissions: parsed.permissions,
         sourcePath: requested,
@@ -253,6 +262,7 @@ function skillByNameResolve(requested: string, skills: AgentSkill[]): AgentSkill
 function skillFrontmatterParse(content: string): {
     name: string | null;
     description: string | null;
+    tools?: string[];
     sandbox?: boolean;
     permissions?: string[];
     body: string;
@@ -263,6 +273,7 @@ function skillFrontmatterParse(content: string): {
         const name = typeof data.name === "string" && data.name.trim().length > 0 ? data.name.trim() : null;
         const description =
             typeof data.description === "string" && data.description.trim().length > 0 ? data.description.trim() : null;
+        const tools = stringListNormalize(data.tools);
         let sandbox: boolean | undefined;
         if (data.sandbox === true) {
             sandbox = true;
@@ -286,7 +297,7 @@ function skillFrontmatterParse(content: string): {
         } else if (typeof data.permissions === "string" && data.permissions.trim().length > 0) {
             permissions = [data.permissions.trim()];
         }
-        return { name, description, sandbox, permissions, body: parsed.content.trim() };
+        return { name, description, tools, sandbox, permissions, body: parsed.content.trim() };
     } catch {
         return { name: null, description: null, body: content.trim() };
     }
@@ -300,10 +311,22 @@ function skillFrontmatterStrip(content: string): string {
     }
 }
 
-function skillBodyDecorate(skillBody: string, skillName: string, baseDirectory: string): string {
-    return [`Base directory for this skill: ${baseDirectory}`, `Skill name: ${skillName}`, "", skillBody.trim()].join(
-        "\n"
-    );
+function skillBodyDecorate(
+    skillBody: string,
+    skillName: string,
+    baseDirectory: string,
+    unlockedToolNames: string[],
+    unlockedTools: Tool[]
+): string {
+    const lines = [`Base directory for this skill: ${baseDirectory}`, `Skill name: ${skillName}`];
+    if (unlockedToolNames.length > 0) {
+        lines.push(`Unlocked tools: ${unlockedToolNames.join(", ")}`);
+        if (unlockedTools.length > 0) {
+            lines.push("", "Unlocked Python tool stubs:", "```python", montyPreambleBuild(unlockedTools), "```");
+        }
+    }
+    lines.push("", skillBody.trim());
+    return lines.join("\n");
 }
 
 function skillSandboxPromptBuild(skillBody: string, prompt: string): string {
@@ -316,6 +339,30 @@ function skillSandboxPromptBuild(skillBody: string, prompt: string): string {
         "## Task",
         prompt
     ].join("\n");
+}
+
+function skillUnlockedToolsResolve(toolNames: string[] | undefined, toolContext: ToolExecutionContext): Tool[] {
+    if (!toolNames || toolNames.length === 0 || !toolContext.toolResolver) {
+        return [];
+    }
+    const availableTools = toolContext.toolResolver.listTools();
+    const toolsByName = new Map(availableTools.map((tool) => [tool.name, tool]));
+    return toolNames.map((name) => toolsByName.get(name)).filter((tool): tool is Tool => tool !== undefined);
+}
+
+function stringListNormalize(value: unknown): string[] | undefined {
+    if (Array.isArray(value)) {
+        const items = value
+            .filter((entry): entry is string => typeof entry === "string")
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.length > 0);
+        return items.length > 0 ? Array.from(new Set(items)) : undefined;
+    }
+    if (typeof value === "string") {
+        const item = value.trim();
+        return item.length > 0 ? [item] : undefined;
+    }
+    return undefined;
 }
 
 function toolMessageBuild(toolCallId: string, toolName: string, text: string): ToolResultMessage {

@@ -199,6 +199,7 @@ export function psqlToolsBuild(service: PsqlService): ToolDefinition[] {
             parameters: createParametersSchema
         },
         returns: createReturns,
+        hiddenByDefault: true,
         execute: async (args, context, toolCall) => {
             const payload = args as PsqlDbCreateArgs;
             const database = await service.createDatabase(context.ctx, payload.name);
@@ -218,6 +219,7 @@ export function psqlToolsBuild(service: PsqlService): ToolDefinition[] {
             parameters: listParametersSchema
         },
         returns: listReturns,
+        hiddenByDefault: true,
         execute: async (_args, context, toolCall) => {
             const payload = _args as PsqlDbListArgs;
             void payload;
@@ -241,6 +243,7 @@ export function psqlToolsBuild(service: PsqlService): ToolDefinition[] {
             parameters: schemaParametersSchema
         },
         returns: schemaReturns,
+        hiddenByDefault: true,
         execute: async (args, context, toolCall) => {
             const payload = args as PsqlSchemaArgs;
             const result = await service.applySchema(context.ctx, payload.dbId, {
@@ -268,6 +271,7 @@ export function psqlToolsBuild(service: PsqlService): ToolDefinition[] {
             parameters: dataParametersSchema
         },
         returns: dataReturns,
+        hiddenByDefault: true,
         execute: async (args, context, toolCall) => {
             const payload = args as PsqlDataArgs;
             let row: unknown;
@@ -295,6 +299,7 @@ export function psqlToolsBuild(service: PsqlService): ToolDefinition[] {
             parameters: queryParametersSchema
         },
         returns: queryReturns,
+        hiddenByDefault: true,
         execute: async (args, context, toolCall) => {
             const payload = args as PsqlQueryArgs;
             const rows = await service.query(context.ctx, payload.dbId, payload.sql, payload.params ?? []);

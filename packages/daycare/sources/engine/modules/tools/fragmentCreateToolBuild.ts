@@ -45,6 +45,7 @@ export function fragmentCreateToolBuild(): ToolDefinition {
             parameters: schema
         },
         returns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const storage = toolContext.storage ?? toolContext.agentSystem.storage;
             if (!storage) {

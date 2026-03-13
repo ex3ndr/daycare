@@ -1,6 +1,12 @@
 ---
 name: create-fragment
 description: Create or update UI fragments using the json-render widget catalog. Use when users ask to build a widget, card, panel, modal, or any reusable UI component.
+tools:
+  - fragment_create
+  - fragment_list
+  - fragment_read
+  - fragment_update
+  - fragment_archive
 sandbox: true
 ---
 

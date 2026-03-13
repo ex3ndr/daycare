@@ -71,6 +71,7 @@ Every SKILL.md consists of:
 Frontmatter fields used by Daycare:
 - `name` (required): skill selector shown in prompt metadata.
 - `description` (required): when/why to use the skill.
+- `tools` (optional string array): tool names this skill unlocks. Keep it to a flat list of exact tool ids.
 - `sandbox` (optional boolean): when `true`, runs the skill in a forked subagent.
 - `permissions` (optional string array): permission tags (for example `@read:/workspace`, `@write:/workspace`, `@network`) granted to sandbox subagent; must be a subset of caller permissions.
 
@@ -281,6 +282,8 @@ Then create the SKILL.md with proper frontmatter:
 ---
 name: <skill-name>
 description: <clear description of what the skill does and when to use it>
+tools:
+  - <optional_tool_name>
 ---
 
 # <Skill Name>
@@ -341,6 +344,7 @@ Write YAML frontmatter with required and execution fields:
   - Include both what the Skill does and specific triggers/contexts for when to use it.
   - Include all "when to use" information here - Not in the body. The body is only loaded after triggering, so "When to Use This Skill" sections in the body are not helpful to Daycare.
   - Example description for a `docx` skill: "Comprehensive document creation, editing, and analysis with support for tracked changes, comments, formatting preservation, and text extraction. Use when Daycare needs to work with professional documents (.docx files) for: (1) Creating new documents, (2) Modifying or editing content, (3) Working with tracked changes, (4) Adding comments, or any other document tasks"
+- `tools` (optional): exact tool names unlocked by this skill. Use this only when the skill is meant to reveal a hidden tool surface.
 - `sandbox` (recommended): default to `true` unless the skill must be collaborative in-context.
 - `permissions` (required for sandboxed skills that need extra access): minimal list of permission tags.
 

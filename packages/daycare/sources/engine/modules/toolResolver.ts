@@ -144,6 +144,9 @@ function toolExpose(entry: RegisteredTool): Tool {
 }
 
 function toolVisibleByDefault(entry: RegisteredTool, context: ToolVisibilityContext): boolean {
+    if (entry.hiddenByDefault === true) {
+        return false;
+    }
     if (!entry.visibleByDefault) {
         return true;
     }

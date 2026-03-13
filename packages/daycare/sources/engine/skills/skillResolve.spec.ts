@@ -22,7 +22,7 @@ describe("skillResolve", () => {
         }
     });
 
-    it("parses sandbox true and permissions from frontmatter", async () => {
+    it("parses tools, sandbox true, and permissions from frontmatter", async () => {
         const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skill-resolve-"));
         try {
             const skillDir = path.join(baseDir, "deploy");
@@ -34,6 +34,9 @@ describe("skillResolve", () => {
                     "---",
                     "name: deploy",
                     "description: Deploy project",
+                    "tools:",
+                    '  - "task_create"',
+                    '  - "task_trigger_add"',
                     "sandbox: true",
                     "permissions:",
                     '  - "@read:/workspace"',
@@ -45,6 +48,7 @@ describe("skillResolve", () => {
             );
 
             const skill = await skillResolve(skillPath, { source: "config", root: baseDir }, baseDir);
+            expect(skill?.tools).toEqual(["task_create", "task_trigger_add"]);
             expect(skill?.sandbox).toBe(true);
             expect(skill?.permissions).toEqual(["@read:/workspace", "@network"]);
             expect(skill?.sourcePath).toBe(path.resolve(skillPath));

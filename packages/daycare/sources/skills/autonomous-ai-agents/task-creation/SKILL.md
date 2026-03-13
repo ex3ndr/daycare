@@ -1,6 +1,14 @@
 ---
 name: task-creation
 description: Create and update robust Daycare tasks (task_create/task_update + task_trigger_add) with minimal Python orchestration, explicit parameter schemas, reproducible exec/process usage, and performance-first skip() behavior. Use when users ask for cron/webhook automation, recurring checks, scheduled reports, or resilient background task workflows.
+tools:
+  - task_create
+  - task_read
+  - task_update
+  - task_delete
+  - task_run
+  - task_trigger_add
+  - task_trigger_remove
 sandbox: true
 ---
 

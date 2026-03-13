@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AgentSkill, SessionPermissions, ToolExecutionContext } from "@/types";
@@ -47,6 +48,52 @@ describe("skillToolBuild", () => {
             expect(text).toContain(`Base directory for this skill: /shared/skills/${activationKey}`);
             expect(text).toContain("Skill name: scheduling");
             expect(text).toContain("# active");
+        } finally {
+            await dirs.cleanup();
+        }
+    });
+
+    it("prepends unlocked tool stubs declared in skill frontmatter", async () => {
+        const dirs = await activeRootCreate();
+        try {
+            const skill = skillBuild({
+                name: "scheduling",
+                id: "core:scheduling",
+                source: "core",
+                tools: ["task_create", "task_trigger_add"]
+            });
+            await activeSkillWrite(dirs.activeRoot, skill.id, "# active\nUse active copy.");
+
+            const tool = skillToolBuild();
+            const context = contextBuild({
+                skills: [skill],
+                activeRoot: dirs.activeRoot,
+                homeDir: dirs.homeDir,
+                toolResolver: {
+                    listTools: () => [
+                        {
+                            name: "task_create",
+                            description: "Create tasks.",
+                            parameters: Type.Object({}, { additionalProperties: false })
+                        },
+                        {
+                            name: "task_trigger_add",
+                            description: "Attach triggers.",
+                            parameters: Type.Object({}, { additionalProperties: false })
+                        }
+                    ],
+                    listToolsForAgent: () => [],
+                    deferredHandlerFor: () => undefined,
+                    execute: vi.fn()
+                }
+            });
+
+            const result = await tool.execute({ name: "scheduling" }, context, toolCall);
+            const text = contentText(result.toolMessage.content);
+            expect(text).toContain("Unlocked tools: task_create, task_trigger_add");
+            expect(text).toContain("Unlocked Python tool stubs:");
+            expect(text).toContain("def task_create()");
+            expect(text).toContain("def task_trigger_add()");
         } finally {
             await dirs.cleanup();
         }
@@ -383,6 +430,7 @@ function contextBuild(input?: {
     path?: string;
     config?: ToolExecutionContext["agent"]["config"];
     connectorRegistry?: { get: (id: string) => unknown };
+    toolResolver?: ToolExecutionContext["toolResolver"];
     agentSystem?: {
         agentIdForTarget?: (ctx: unknown, target: unknown) => Promise<string>;
         postAndAwait?: (
@@ -443,6 +491,7 @@ function contextBuild(input?: {
         source: "test",
         messageContext: {},
         skills: input?.skills ?? [],
+        toolResolver: input?.toolResolver,
         agentSystem: {
             storage: {
                 users: {
@@ -475,6 +524,7 @@ function skillBuild(overrides: Partial<AgentSkill> & Pick<AgentSkill, "name">): 
         description: null,
         sourcePath: "/unused",
         source,
+        tools: overrides.tools,
         sandbox: overrides.sandbox,
         permissions: overrides.permissions
     };

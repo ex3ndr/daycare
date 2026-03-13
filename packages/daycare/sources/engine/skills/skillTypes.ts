@@ -6,6 +6,7 @@ export type AgentSkill = {
     name: string;
     category?: string | null;
     description?: string | null;
+    tools?: string[];
     sandbox?: boolean;
     permissions?: string[];
     sourcePath: string;

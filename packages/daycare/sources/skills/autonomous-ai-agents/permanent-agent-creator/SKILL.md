@@ -1,6 +1,8 @@
 ---
 name: permanent-agent-creator
 description: Guide for creating and updating permanent agents with stable names, dedicated system prompts, and optional workspace folders.
+tools:
+  - create_permanent_agent
 license: Complete terms in LICENSE.txt
 ---
 

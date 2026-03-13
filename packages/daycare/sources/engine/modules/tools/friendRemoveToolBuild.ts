@@ -40,6 +40,7 @@ export function friendRemoveToolBuild(friends: Pick<Friends, "remove">): ToolDef
             parameters: schema
         },
         returns,
+        hiddenByDefault: true,
         visibleByDefault: (context) => context.config.foreground === true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as FriendRemoveArgs;

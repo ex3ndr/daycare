@@ -21,6 +21,7 @@ const skills: AgentSkill[] = [
         id: "core:scheduling",
         name: "scheduling",
         description: "Set up recurring tasks",
+        tools: ["task_create", "task_trigger_add"],
         source: "core",
         sourcePath: "/tmp/skills/scheduling/SKILL.md",
         sandbox: true
@@ -41,6 +42,7 @@ describe("system prompt skills rendering", () => {
         });
 
         expect(occurrences(prompt, "<name>scheduling</name>")).toBe(1);
+        expect(prompt).toContain("<tool>task_create</tool>");
     });
 
     it("includes the skill list once in no-tools mode", async () => {
@@ -62,6 +64,7 @@ describe("system prompt skills rendering", () => {
 
         expect(prompt).toContain("## Skills (mandatory)");
         expect(prompt).toContain("Before replying, scan the skill descriptions below:");
+        expect(prompt).toContain("A skill may list unlocked tools.");
         expect(prompt).not.toContain("For local skill authoring:");
     });
 

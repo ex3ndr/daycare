@@ -57,6 +57,7 @@ export function permanentAgentToolBuild(): ToolDefinition {
             parameters: schema
         },
         returns: permanentAgentReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as PermanentAgentArgs;
             const name = payload.name.trim();

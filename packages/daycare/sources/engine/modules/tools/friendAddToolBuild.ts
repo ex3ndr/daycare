@@ -40,6 +40,7 @@ export function friendAddToolBuild(friends: Pick<Friends, "add">): ToolDefinitio
             parameters: schema
         },
         returns,
+        hiddenByDefault: true,
         visibleByDefault: (context) => context.config.foreground === true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as FriendAddArgs;
