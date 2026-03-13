@@ -41,4 +41,5 @@ flowchart TD
 
 - The cron scheduler injects `current_time_ms` at runtime for system tasks so the Monty task can evaluate the 12-hour window without importing unsupported Python stdlib modules.
 - The memory cleanup task reads `doc://memory` and `doc://system/memory` through the structured `document_tree` tool so it can inspect real `updatedAt` values across the full memory subtree and memory-prompt folder.
+- The task also reads `doc://system/memory/agent` and `doc://system/memory/cleanup` directly and inlines their current contents into the generated cleanup prompt, instead of telling the model to fetch them later.
 - The package build copies `sources/system-tasks` into `dist/system-tasks`, so built installs can reconcile system tasks on startup.

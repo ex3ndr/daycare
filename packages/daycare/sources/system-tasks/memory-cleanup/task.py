@@ -14,6 +14,8 @@ cutoff = now - TWELVE_HOURS_MS
 
 memory_tree = document_tree(path="doc://memory")
 memory_prompt = document_tree(path="doc://system/memory")
+memory_agent_prompt = document_read(path="doc://system/memory/agent")["summary"]
+memory_cleanup_prompt = document_read(path="doc://system/memory/cleanup")["summary"]
 memory_documents = memory_tree["documents"]
 prompt_documents = memory_prompt["documents"]
 
@@ -24,13 +26,23 @@ else:
     lines.append("Run scheduled memory maintenance now.")
     lines.append("")
     lines.append("Required workflow:")
-    lines.append("- read `doc://memory` and `doc://system/memory` before editing")
+    lines.append("- read relevant `doc://memory/*` documents before editing")
     lines.append("- organize and compress `doc://memory` without losing important facts")
     lines.append("- merge duplicates, collapse stale low-signal detail, and tighten descriptions")
     lines.append("- update `doc://system/memory/cleanup` when cleanup behavior should change")
     lines.append("- update `doc://system/memory/agent` when the main memory-agent prompt should change")
     lines.append("- do not edit `doc://system/memory/search`")
     lines.append("- do not touch unrelated `doc://system/*` documents")
+    lines.append("")
+    lines.append("Current memory-agent prompt document:")
+    lines.append("```md")
+    lines.append(memory_agent_prompt)
+    lines.append("```")
+    lines.append("")
+    lines.append("Current cleanup prompt document:")
+    lines.append("```md")
+    lines.append(memory_cleanup_prompt)
+    lines.append("```")
     lines.append("")
     lines.append(f"Cleanup window start: {cutoff}")
     lines.append(f"Current time: {now}")

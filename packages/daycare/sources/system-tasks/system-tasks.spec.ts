@@ -21,6 +21,16 @@ const documentTreeTool = {
         { additionalProperties: false }
     )
 };
+const documentReadTool = {
+    name: "document_read",
+    description: "Read a document.",
+    parameters: Type.Object(
+        {
+            path: Type.String()
+        },
+        { additionalProperties: false }
+    )
+};
 
 async function systemTaskRead(taskName: string): Promise<string> {
     return fs.readFile(path.join(SYSTEM_TASKS_ROOT, taskName, "task.py"), "utf8");
@@ -29,7 +39,11 @@ async function systemTaskRead(taskName: string): Promise<string> {
 function systemTaskResolver(
     documentsByPath: Record<
         string,
-        { summary: string; documents?: Array<{ documentId: string; title: string; path: string; updatedAt: number }> }
+        {
+            summary: string;
+            documents?: Array<{ documentId: string; title: string; path: string; updatedAt: number }>;
+            readSummary?: string;
+        }
     >
 ) {
     const execute = vi.fn(async (toolCall: ToolCall, _context: ToolExecutionContext): Promise<ToolExecutionResult> => {
@@ -38,11 +52,11 @@ function systemTaskResolver(
                 ? String((toolCall.arguments as { path: string }).path)
                 : "";
         const entry = documentsByPath[pathValue] ?? { summary: "", documents: [] };
-        const summary = entry.summary;
+        const summary = toolCall.name === "document_read" ? (entry.readSummary ?? entry.summary) : entry.summary;
         const toolMessage: ToolResultMessage = {
             role: "toolResult",
             toolCallId: toolCall.id,
-            toolName: "document_tree",
+            toolName: toolCall.name,
             content: [{ type: "text", text: summary }],
             isError: false,
             timestamp: Date.now(),
@@ -68,8 +82,8 @@ function systemTaskResolver(
         };
     });
     const resolver: ToolResolverApi = {
-        listTools: () => [documentTreeTool],
-        listToolsForAgent: () => [documentTreeTool],
+        listTools: () => [documentTreeTool, documentReadTool],
+        listToolsForAgent: () => [documentTreeTool, documentReadTool],
         execute,
         deferredHandlerFor: () => undefined
     };
@@ -126,12 +140,20 @@ describe("system-tasks VM execution", () => {
                             updatedAt: 2
                         }
                     ]
+                },
+                "doc://system/memory/agent": {
+                    summary: "agent prompt",
+                    readSummary: "# Memory Agent\n\nKeep memory tidy."
+                },
+                "doc://system/memory/cleanup": {
+                    summary: "cleanup prompt",
+                    readSummary: "# Memory Cleanup\n\nReview recent changes."
                 }
             });
 
             const result = await rlmExecute(
                 code,
-                montyPreambleBuild([documentTreeTool]),
+                montyPreambleBuild([documentTreeTool, documentReadTool]),
                 systemTaskContext(),
                 resolver,
                 "system-memory-cleanup-noop",
@@ -142,7 +164,7 @@ describe("system-tasks VM execution", () => {
             );
 
             expect(result.output).toBe("No recent memory changes to organize.");
-            expect(execute).toHaveBeenCalledTimes(2);
+            expect(execute).toHaveBeenCalledTimes(4);
         });
 
         it("returns cleanup instructions when memory changed within the window", async () => {
@@ -175,12 +197,20 @@ describe("system-tasks VM execution", () => {
                             updatedAt: 1
                         }
                     ]
+                },
+                "doc://system/memory/agent": {
+                    summary: "agent prompt",
+                    readSummary: "# Memory Agent\n\nKeep memory tidy."
+                },
+                "doc://system/memory/cleanup": {
+                    summary: "cleanup prompt",
+                    readSummary: "# Memory Cleanup\n\nReview recent changes."
                 }
             });
 
             const result = await rlmExecute(
                 code,
-                montyPreambleBuild([documentTreeTool]),
+                montyPreambleBuild([documentTreeTool, documentReadTool]),
                 systemTaskContext(),
                 resolver,
                 "system-memory-cleanup-run",
@@ -191,8 +221,12 @@ describe("system-tasks VM execution", () => {
             );
 
             expect(result.output).toContain("Run scheduled memory maintenance now.");
+            expect(result.output).toContain("Current memory-agent prompt document:");
+            expect(result.output).toContain("# Memory Agent");
+            expect(result.output).toContain("Current cleanup prompt document:");
+            expect(result.output).toContain("# Memory Cleanup");
             expect(result.output).toContain("Current time: 43200001");
-            expect(execute).toHaveBeenCalledTimes(2);
+            expect(execute).toHaveBeenCalledTimes(4);
         });
     });
 });
