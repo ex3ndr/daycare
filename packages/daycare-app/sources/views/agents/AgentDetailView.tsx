@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { PageHeader } from "@/components/PageHeader";
-import { Chat } from "@/modules/chat/Chat";
+import { AgentTurnsView } from "@/modules/turns/AgentTurnsView";
 
 /** Derives a display name from an agent id. */
 function agentDisplayName(agentId: string): string {
@@ -13,14 +13,14 @@ export type AgentDetailViewProps = {
 };
 
 /**
- * Full-screen agent detail view: header + embedded chat session.
+ * Full-screen agent detail view: header + turn-based history.
  */
 export function AgentDetailView({ agentId }: AgentDetailViewProps) {
     return (
         <View style={styles.root}>
             <PageHeader title={agentDisplayName(agentId)} icon="terminal" />
-            <View style={styles.chatContainer}>
-                <Chat agentId={agentId} />
+            <View style={styles.turnsContainer}>
+                <AgentTurnsView agentId={agentId} />
             </View>
         </View>
     );
@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     root: {
         flex: 1
     },
-    chatContainer: {
+    turnsContainer: {
         flex: 1
     }
 });

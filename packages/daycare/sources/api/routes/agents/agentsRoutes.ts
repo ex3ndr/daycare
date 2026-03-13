@@ -13,6 +13,7 @@ import { agentsMessage } from "./agentsMessage.js";
 import { agentsMessagesRead } from "./agentsMessagesRead.js";
 import { agentsSupervisor } from "./agentsSupervisor.js";
 import { agentsSupervisorBootstrap } from "./agentsSupervisorBootstrap.js";
+import { agentsTurns } from "./agentsTurns.js";
 
 export type AgentsRouteContext = {
     ctx: Context;
@@ -105,6 +106,17 @@ export async function agentsRouteHandle(
             ctx: context.ctx,
             body,
             agentCreate: context.callbacks.agentCreate
+        });
+        context.sendJson(response, result.ok ? 200 : 400, result);
+        return true;
+    }
+
+    const turnsMatch = pathname.match(/^\/agents\/([^/]+)\/turns$/);
+    if (turnsMatch?.[1] && request.method === "GET") {
+        const result = await agentsTurns({
+            ctx: context.ctx,
+            agentId: decodeURIComponent(turnsMatch[1]),
+            agentHistoryLoad: context.callbacks.agentHistoryLoad
         });
         context.sendJson(response, result.ok ? 200 : 400, result);
         return true;
