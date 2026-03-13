@@ -19,6 +19,11 @@ function sourceLabel(source: string): string {
     return source;
 }
 
+/** Whether a skill source is user-created (shown first) vs system (shown last). */
+function sourceIsUser(source: string): boolean {
+    return source === "user" || source === "agents" || source === "plugin";
+}
+
 function categoryLabel(category: string | null): string {
     if (!category) {
         return "Uncategorized";
@@ -77,50 +82,54 @@ export function SkillsView() {
         );
     }
 
-    const groups = new Map<string | null, typeof skills>();
-    for (const skill of skills) {
-        const key = skill.category ?? null;
-        const current = groups.get(key) ?? [];
-        current.push(skill);
-        groups.set(key, current);
-    }
-    const orderedGroups = Array.from(groups.entries()).sort(([a], [b]) => {
-        if (a && b) {
-            return a.localeCompare(b);
+    // Split skills into user-created (top) and system (bottom)
+    const userSkills = skills.filter((s) => sourceIsUser(s.source));
+    const systemSkills = skills.filter((s) => !sourceIsUser(s.source));
+
+    const groupByCategory = (items: typeof skills) => {
+        const map = new Map<string | null, typeof skills>();
+        for (const skill of items) {
+            const key = skill.category ?? null;
+            const current = map.get(key) ?? [];
+            current.push(skill);
+            map.set(key, current);
         }
-        if (a) {
-            return -1;
-        }
-        if (b) {
-            return 1;
-        }
-        return 0;
-    });
+        return Array.from(map.entries()).sort(([a], [b]) => {
+            if (a && b) return a.localeCompare(b);
+            if (a) return -1;
+            if (b) return 1;
+            return 0;
+        });
+    };
+
+    const userGroups = groupByCategory(userSkills);
+    const systemGroups = groupByCategory(systemSkills);
+
+    const renderGroups = (groups: Array<[string | null, typeof skills]>) =>
+        groups.map(([category, group]) => {
+            const sorted = [...group].sort((a, b) => a.name.localeCompare(b.name));
+            return (
+                <ItemGroup key={category ?? "uncategorized"} title={`${categoryLabel(category)} (${sorted.length})`}>
+                    {sorted.map((skill, index) => (
+                        <Item
+                            key={skill.id}
+                            title={skill.name}
+                            subtitle={skill.description ?? undefined}
+                            detail={sourceLabel(skill.source)}
+                            showChevron={false}
+                            showDivider={index < sorted.length - 1}
+                        />
+                    ))}
+                </ItemGroup>
+            );
+        });
 
     return (
         <View style={{ flex: 1 }}>
             <PageHeader title="Skills" icon="zap" />
             <ItemList>
-                {orderedGroups.map(([category, group]) => {
-                    const sorted = [...group].sort((a, b) => a.name.localeCompare(b.name));
-                    return (
-                        <ItemGroup
-                            key={category ?? "uncategorized"}
-                            title={`${categoryLabel(category)} (${sorted.length})`}
-                        >
-                            {sorted.map((skill, index) => (
-                                <Item
-                                    key={skill.id}
-                                    title={skill.name}
-                                    subtitle={skill.description ?? undefined}
-                                    detail={sourceLabel(skill.source)}
-                                    showChevron={false}
-                                    showDivider={index < sorted.length - 1}
-                                />
-                            ))}
-                        </ItemGroup>
-                    );
-                })}
+                {renderGroups(userGroups)}
+                {renderGroups(systemGroups)}
             </ItemList>
         </View>
     );

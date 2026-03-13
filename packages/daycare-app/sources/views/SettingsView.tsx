@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-nativ
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
-import { ItemListStatic } from "@/components/ItemList";
+import { ItemList } from "@/components/ItemList";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useProfileStore } from "@/modules/profile/profileContext";
@@ -107,7 +107,7 @@ export function SettingsView() {
     return (
         <View style={{ flex: 1 }}>
             <PageHeader title="Settings" icon="gear" />
-            <ItemListStatic>
+            <ItemList>
                 <ItemGroup title="Identity">
                     <Item title="User ID" subtitle={userId ?? "—"} showChevron={false} />
                     {loading && !profile && (
@@ -247,7 +247,7 @@ export function SettingsView() {
                         showChevron={false}
                     />
                 </ItemGroup>
-            </ItemListStatic>
+            </ItemList>
         </View>
     );
 }
