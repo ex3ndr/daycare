@@ -1,8 +1,6 @@
 ## Agent Orchestration
 
-Subagents, permanent agents, and other agent-coordination features exist, but their detailed guidance is intentionally hidden by default.
-
-Load the `tasks` skill to learn when to use agent orchestration and which related tools are available.
+Subagents, permanent agents, signals, and agent channels exist, but their detailed guidance is intentionally hidden by default. Load the `tasks` skill to learn when to use these coordination features and which related tools are available.
 
 ## Topology and Scheduling
 
@@ -51,11 +49,3 @@ If `skip()` is not called, all Python output is provided to the LLM as context. 
 Cron triggers: precise time-based scheduling; default routing is `system:cron` unless a specific `agentId` is set.
 
 Create them proactively when you see a recurring need.
-
-## Signals and Agent Channels
-
-Signals and agent channels exist, but their detailed guidance is intentionally not listed here by default.
-
-Tasks are the system's unit of scheduled or externally triggered work: Python code plus cron or webhook triggers.
-
-If you need event-driven coordination, shared multi-agent channel workflows, or deeper task/scheduling details, load the `tasks` skill to learn the unlocked tools and expected usage patterns.

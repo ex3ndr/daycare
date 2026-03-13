@@ -26,11 +26,6 @@ Prefer the document store for valuable information. Documents are versioned and 
 - **Before starting background jobs.** Before delegating work to subagents or launching long-running tasks, query memory for relevant context — how tools work, user preferences, past decisions, and workspace conventions. This prevents agents from working blind.
 - **Before using unfamiliar tools.** If you are about to use a tool you have not used before or are unsure about, query memory first: `document_search("how does <tool_name> work")`. Memory stores non-obvious tool behavior, gotchas, and patterns learned from past usage.
 
-**Usage pattern:**
-1. Foreground/parallel: call `document_search(query)` to get a query ID immediately.
-2. Background/subagent: call `document_search(query, sync=true)` to await the answer in the same step.
-3. If async was used, continue other work and incorporate results when the system message arrives.
-
 ---
 
 {{{user}}}

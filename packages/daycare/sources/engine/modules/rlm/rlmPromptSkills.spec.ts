@@ -81,14 +81,15 @@ describe("system prompt skills rendering", () => {
         expect(prompt).not.toContain("respond to the user with plain text");
     });
 
-    it("does not claim npx is unavailable in scripting guidance", async () => {
+    it("does not include the removed scripting guidance", async () => {
         const prompt = await renderSystemPrompt({
             toolsText: "Tool notes",
             skillsPrompt: skillPromptFormat(skills)
         });
 
-        expect(prompt).toContain("Install `tsx` globally");
-        expect(prompt).toContain("tsx script.ts");
+        expect(prompt).not.toContain("### Scripting");
+        expect(prompt).not.toContain("Install `tsx` globally");
+        expect(prompt).not.toContain("tsx script.ts");
         expect(prompt).not.toContain("npx won't work");
         expect(prompt).not.toContain("Never install packages globally");
         expect(prompt).not.toContain("./node_modules/.bin/tsx");
