@@ -1,9 +1,10 @@
-import type { ToolCall } from "@mariozechner/pi-ai";
+import type { Tool, ToolCall } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AgentHistoryRecord, ToolExecutionContext, ToolExecutionResult } from "@/types";
 import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
+import { MONTY_RESPONSE_SCHEMA_KEY } from "../monty/montyResponseSchemaKey.js";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmExecute } from "./rlmExecute.js";
 
@@ -64,17 +65,17 @@ describe("rlmExecute", () => {
         const code = [
             "first = echo('one')",
             "try:",
-            "    fail_tool()",
+            '    echo(json_parse(\'{"nested":{"count":1}}\')["value"])',
             "except ToolError:",
             "    pass",
-            "second = echo(first)",
+            "second = echo(first['text'])",
             "second"
         ].join("\n");
 
         const result = await rlmExecute(code, montyPreambleBuild(baseTools), createContext(), resolver, "tool-call-1");
 
-        expect(result.output).toBe('{"text":"echo:[object Object]"}');
-        expect(result.toolCallCount).toBe(3);
+        expect(result.output).toBe('{"text":"echo:echo:one"}');
+        expect(result.toolCallCount).toBe(4);
     });
 
     it("captures print output", async () => {
@@ -318,6 +319,75 @@ describe("rlmExecute", () => {
             rlmExecute("echo(1)", montyPreambleBuild(baseTools), createContext(), resolver, "tool-call-typing")
         ).rejects.toThrow("Python type check failed.");
     });
+
+    it("round-trips nested values between Python and JS tool execution", async () => {
+        const echoTool = toolWithResponseSchemaBuild(
+            {
+                name: "echo",
+                description: "Echo nested payload.",
+                parameters: Type.Object(
+                    {
+                        payload: Type.Unknown(),
+                        note: Type.Optional(Type.String())
+                    },
+                    { additionalProperties: false }
+                )
+            },
+            Type.Object(
+                {
+                    payload: Type.Unknown(),
+                    notePresent: Type.Boolean()
+                },
+                { additionalProperties: false }
+            )
+        );
+        const execute = vi.fn(async (toolCall) => {
+            const payload = toolCall.arguments as {
+                payload: { items: Array<number | boolean | string | null | { ok: boolean }> };
+                note?: string;
+            };
+            return {
+                toolMessage: {
+                    role: "toolResult",
+                    toolCallId: "1",
+                    toolName: "echo",
+                    content: [{ type: "text", text: "ok" }],
+                    isError: false,
+                    timestamp: Date.now()
+                },
+                typedResult: {
+                    payload: payload.payload,
+                    notePresent: Object.hasOwn(payload, "note")
+                }
+            } satisfies ToolExecutionResult;
+        });
+        const resolver: ToolResolverApi = {
+            listTools: () => [echoTool],
+            listToolsForAgent: () => [echoTool],
+            execute,
+            deferredHandlerFor: () => undefined
+        };
+
+        const result = await rlmExecute(
+            "value = echo({'items': [1, None, {'ok': True}]}, note=None)\nvalue",
+            montyPreambleBuild([echoTool]),
+            createContext(),
+            resolver,
+            "tool-call-round-trip"
+        );
+
+        expect(result.output).toBe('{"payload":{"items":[1,null,{"ok":true}]},"notePresent":false}');
+        expect(execute).toHaveBeenCalledWith(
+            expect.objectContaining({
+                arguments: {
+                    payload: {
+                        items: [1, null, { ok: true }]
+                    }
+                }
+            }),
+            expect.any(Object)
+        );
+    });
 });
 
 function createResolver(handler: (name: string, args: unknown) => Promise<ToolExecutionResult>): ToolResolverApi {
@@ -381,4 +451,14 @@ function errorResult(name: string, text: string): ToolExecutionResult {
         },
         typedResult: { text }
     };
+}
+
+function toolWithResponseSchemaBuild(tool: Tool, schema: unknown): Tool {
+    const result = { ...tool } as Tool;
+    Object.defineProperty(result, MONTY_RESPONSE_SCHEMA_KEY, {
+        value: schema,
+        enumerable: false,
+        configurable: false
+    });
+    return result;
 }

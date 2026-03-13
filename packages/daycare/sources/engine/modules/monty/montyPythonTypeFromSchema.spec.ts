@@ -1,3 +1,4 @@
+import { Type } from "@sinclair/typebox";
 import { describe, expect, it } from "vitest";
 
 import { montyPythonTypeFromSchema } from "./montyPythonTypeFromSchema.js";
@@ -14,6 +15,7 @@ describe("montyPythonTypeFromSchema", () => {
     it("converts array and object schemas exactly", () => {
         expect(montyPythonTypeFromSchema({ type: "array", items: { type: "string" } })).toBe("list[str]");
         expect(montyPythonTypeFromSchema({ type: "object", additionalProperties: false })).toBe("dict[str, Any]");
+        expect(montyPythonTypeFromSchema(Type.Record(Type.String(), Type.Integer()))).toBe("dict[str, int]");
     });
 
     it("converts union schemas exactly", () => {
@@ -22,9 +24,16 @@ describe("montyPythonTypeFromSchema", () => {
         expect(montyPythonTypeFromSchema({ oneOf: [{ type: "string" }, { type: "number" }] })).toBe("str | float");
     });
 
-    it("falls back to Any for unsupported schema shapes", () => {
-        expect(montyPythonTypeFromSchema({})).toBe("Any");
-        expect(montyPythonTypeFromSchema("x")).toBe("Any");
-        expect(montyPythonTypeFromSchema(null)).toBe("Any");
+    it("treats explicit Any and Unknown schemas as Any", () => {
+        expect(montyPythonTypeFromSchema(Type.Any())).toBe("Any");
+        expect(montyPythonTypeFromSchema(Type.Unknown())).toBe("Any");
+    });
+
+    it("throws for unsupported schema shapes instead of falling back", () => {
+        expect(() => montyPythonTypeFromSchema("x")).toThrow("Unsupported Monty schema at schema");
+        expect(() => montyPythonTypeFromSchema(null)).toThrow("Unsupported Monty schema at schema");
+        expect(() => montyPythonTypeFromSchema({ allOf: [{ type: "string" }, { type: "null" }] })).toThrow(
+            "Unsupported Monty schema at schema.allOf"
+        );
     });
 });

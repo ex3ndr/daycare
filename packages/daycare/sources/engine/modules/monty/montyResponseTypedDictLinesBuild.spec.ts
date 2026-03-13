@@ -15,7 +15,9 @@ describe("montyResponseTypedDictLinesBuild", () => {
         });
 
         expect(lines.join("\n")).toBe(
-            ['ReadFileResponse = TypedDict("ReadFileResponse", { "summary": str, "size": int })'].join("\n")
+            ['ReadFileResponse = TypedDict("ReadFileResponse", { "summary": str, "size": NotRequired[int] })'].join(
+                "\n"
+            )
         );
     });
 
@@ -41,7 +43,7 @@ describe("montyResponseTypedDictLinesBuild", () => {
 
         expect(lines.join("\n")).toBe(
             [
-                'QueryResponseRowsItem = TypedDict("QueryResponseRowsItem", { "id": int, "name": str })',
+                'QueryResponseRowsItem = TypedDict("QueryResponseRowsItem", { "id": int, "name": NotRequired[str] })',
                 "",
                 'QueryResponse = TypedDict("QueryResponse", { "rows": list[QueryResponseRowsItem] })'
             ].join("\n")
@@ -67,7 +69,7 @@ describe("montyResponseTypedDictLinesBuild", () => {
 
         expect(lines.join("\n")).toBe(
             [
-                'TopologyResponseTriggers = TypedDict("TopologyResponseTriggers", { "cron": list[str], "enabled": bool })',
+                'TopologyResponseTriggers = TypedDict("TopologyResponseTriggers", { "cron": list[str], "enabled": NotRequired[bool] })',
                 "",
                 'TopologyResponse = TypedDict("TopologyResponse", { "triggers": TopologyResponseTriggers })'
             ].join("\n")
@@ -95,11 +97,11 @@ describe("montyResponseTypedDictLinesBuild", () => {
 
         expect(lines.join("\n")).toBe(
             [
-                'DeepResponsePayloadMeta = TypedDict("DeepResponsePayloadMeta", { "score": float })',
+                'DeepResponsePayloadMeta = TypedDict("DeepResponsePayloadMeta", { "score": NotRequired[float] })',
                 "",
-                'DeepResponsePayload = TypedDict("DeepResponsePayload", { "meta": DeepResponsePayloadMeta })',
+                'DeepResponsePayload = TypedDict("DeepResponsePayload", { "meta": NotRequired[DeepResponsePayloadMeta] })',
                 "",
-                'DeepResponse = TypedDict("DeepResponse", { "payload": DeepResponsePayload })'
+                'DeepResponse = TypedDict("DeepResponse", { "payload": NotRequired[DeepResponsePayload] })'
             ].join("\n")
         );
     });
@@ -135,13 +137,13 @@ describe("montyResponseTypedDictLinesBuild", () => {
 
         expect(lines.join("\n")).toBe(
             [
-                'MixedResponseStats = TypedDict("MixedResponseStats", { "totals": list[int] })',
+                'MixedResponseStats = TypedDict("MixedResponseStats", { "totals": NotRequired[list[int]] })',
                 "",
-                'MixedResponseRowsItemProfile = TypedDict("MixedResponseRowsItemProfile", { "active": bool })',
+                'MixedResponseRowsItemProfile = TypedDict("MixedResponseRowsItemProfile", { "active": NotRequired[bool] })',
                 "",
-                'MixedResponseRowsItem = TypedDict("MixedResponseRowsItem", { "id": str, "profile": MixedResponseRowsItemProfile })',
+                'MixedResponseRowsItem = TypedDict("MixedResponseRowsItem", { "id": NotRequired[str], "profile": NotRequired[MixedResponseRowsItemProfile] })',
                 "",
-                'MixedResponse = TypedDict("MixedResponse", { "stats": MixedResponseStats, "rows": list[MixedResponseRowsItem] })'
+                'MixedResponse = TypedDict("MixedResponse", { "stats": NotRequired[MixedResponseStats], "rows": NotRequired[list[MixedResponseRowsItem]] })'
             ].join("\n")
         );
     });
@@ -167,10 +169,26 @@ describe("montyResponseTypedDictLinesBuild", () => {
 
         expect(lines.join("\n")).toBe(
             [
-                'SecretResponseSecret = TypedDict("SecretResponseSecret", { "variableNames": list[str] })',
+                'SecretResponseSecret = TypedDict("SecretResponseSecret", { "variableNames": NotRequired[list[str]] })',
                 "",
-                'SecretResponse = TypedDict("SecretResponse", { "secret": SecretResponseSecret })'
+                'SecretResponse = TypedDict("SecretResponse", { "secret": NotRequired[SecretResponseSecret] })'
             ].join("\n")
+        );
+    });
+
+    it("marks explicitly optional top-level fields as NotRequired", () => {
+        const lines = montyResponseTypedDictLinesBuild("OptionalResponse", {
+            type: "object",
+            properties: {
+                summary: { type: "string" },
+                details: { type: "string" }
+            },
+            required: ["summary"],
+            additionalProperties: false
+        });
+
+        expect(lines.join("\n")).toBe(
+            'OptionalResponse = TypedDict("OptionalResponse", { "summary": str, "details": NotRequired[str] })'
         );
     });
 });

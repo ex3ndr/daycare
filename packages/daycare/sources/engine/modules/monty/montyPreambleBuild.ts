@@ -1,5 +1,4 @@
 import type { Tool } from "@mariozechner/pi-ai";
-import type { TSchema } from "@sinclair/typebox";
 
 import {
     CONTEXT_COMPACT_TOOL_NAME,
@@ -12,7 +11,7 @@ import { rlmSkipTool } from "../rlm/rlmSkipTool.js";
 import { montyPythonDocstringEscape } from "./montyPythonDocstringEscape.js";
 import { montyPythonIdentifierIs } from "./montyPythonIdentifierIs.js";
 import { montyPythonSignatureBuild } from "./montyPythonSignatureBuild.js";
-import { MONTY_RESPONSE_SCHEMA_KEY } from "./montyResponseSchemaKey.js";
+import { montyResponseSchemaResolve } from "./montyResponseSchemaResolve.js";
 import { montyResponseTypedDictLinesBuild } from "./montyResponseTypedDictLinesBuild.js";
 import { montyResponseTypeNameFromFunction } from "./montyResponseTypeNameFromFunction.js";
 
@@ -41,7 +40,7 @@ export function montyPreambleBuild(tools: Tool[]): string {
         "# Tool failures raise ToolError (alias of RuntimeError).",
         "# Use print() for debug logs; the last expression is returned.",
         "",
-        "from typing import Any, TypedDict",
+        "from typing import Any, NotRequired, TypedDict",
         "",
         "ToolError = RuntimeError",
         "",
@@ -56,7 +55,7 @@ export function montyPreambleBuild(tools: Tool[]): string {
         if (runtimeVoidToolIs(tool.name)) {
             continue;
         }
-        const responseSchema = responseSchemaResolve(tool);
+        const responseSchema = montyResponseSchemaResolve(tool) ?? undefined;
         const typedDictLines = montyResponseTypedDictLinesBuild(responseTypeName, responseSchema);
         for (const typedDictLine of typedDictLines) {
             lines.push(typedDictLine);
@@ -103,17 +102,4 @@ function responseTypeNameByToolBuild(tools: Tool[]): Map<string, string> {
     }
 
     return map;
-}
-
-function responseSchemaResolve(tool: Tool): TSchema | undefined {
-    const metadata = tool as Tool & { [MONTY_RESPONSE_SCHEMA_KEY]?: unknown };
-    const schema = metadata[MONTY_RESPONSE_SCHEMA_KEY];
-    if (!schemaObjectIs(schema)) {
-        return undefined;
-    }
-    return schema as TSchema;
-}
-
-function schemaObjectIs(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
 }

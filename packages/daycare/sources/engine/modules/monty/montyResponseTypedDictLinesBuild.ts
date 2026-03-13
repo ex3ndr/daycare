@@ -5,6 +5,7 @@ import { montyResponseTypeNameFromFunction } from "./montyResponseTypeNameFromFu
 type TypedDictField = {
     name: string;
     typeHint: string;
+    required: boolean;
 };
 
 /**
@@ -32,7 +33,8 @@ function typedDictFieldsExpressionBuild(fields: TypedDictField[]): string {
         return "{}";
     }
     const entries = fields.map((field) => {
-        return `"${field.name}": ${field.typeHint}`;
+        const typeHint = field.required ? field.typeHint : `NotRequired[${field.typeHint}]`;
+        return `"${field.name}": ${typeHint}`;
     });
     return `{ ${entries.join(", ")} }`;
 }
@@ -46,12 +48,14 @@ function typedDictFieldsBuild(
         return [];
     }
     const properties = propertyRecordResolve(schema.properties);
+    const required = requiredSetResolve(schema.required);
     const fields: TypedDictField[] = [];
 
     for (const [name, propertySchema] of Object.entries(properties)) {
         if (!montyPythonIdentifierIs(name)) {
             continue;
         }
+        const fieldRequired = required.has(name);
         const objectSchema = objectSchemaResolve(propertySchema);
         if (objectSchema) {
             const objectTypeName = `${responseTypeName}${montyResponseTypeNameFromFunction(name).replace(/Response$/, "")}`;
@@ -59,7 +63,8 @@ function typedDictFieldsBuild(
             definitions.push({ name: objectTypeName, fields: objectFields });
             fields.push({
                 name,
-                typeHint: objectTypeName
+                typeHint: objectTypeName,
+                required: fieldRequired
             });
             continue;
         }
@@ -71,14 +76,16 @@ function typedDictFieldsBuild(
             definitions.push({ name: rowTypeName, fields: rowFields });
             fields.push({
                 name,
-                typeHint: `list[${rowTypeName}]`
+                typeHint: `list[${rowTypeName}]`,
+                required: fieldRequired
             });
             continue;
         }
 
         fields.push({
             name,
-            typeHint: montyPythonTypeFromSchema(propertySchema)
+            typeHint: montyPythonTypeFromSchema(propertySchema),
+            required: fieldRequired
         });
     }
     return fields;
@@ -109,6 +116,13 @@ function propertyRecordResolve(value: unknown): Record<string, unknown> {
         return {};
     }
     return value;
+}
+
+function requiredSetResolve(value: unknown): Set<string> {
+    if (!Array.isArray(value)) {
+        return new Set<string>();
+    }
+    return new Set(value.filter((entry): entry is string => typeof entry === "string"));
 }
 
 function recordIs(value: unknown): value is Record<string, unknown> {

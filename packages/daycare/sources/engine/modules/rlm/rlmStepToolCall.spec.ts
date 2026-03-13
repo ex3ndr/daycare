@@ -99,6 +99,34 @@ describe("rlmStepToolCall", () => {
             })
         ).rejects.toMatchObject({ name: "AbortError" });
     });
+
+    it("converts uncastable tool responses into tool errors instead of summary text", async () => {
+        const resolver = resolverBuild(async () => ({
+            toolMessage: {
+                role: "toolResult",
+                toolCallId: "1",
+                toolName: "echo",
+                content: [{ type: "text", text: "summary fallback text" }],
+                isError: false,
+                timestamp: Date.now()
+            },
+            typedResult: {
+                text: new Date("2020-01-01T00:00:00Z")
+            } as unknown as { text: string }
+        }));
+        const step = await startSnapshotBuild("echo('hello')");
+
+        const result = await rlmStepToolCall({
+            snapshot: step,
+            toolByName: new Map(tools.map((tool) => [tool.name, tool])),
+            toolResolver: resolver,
+            context: contextBuild()
+        });
+
+        expect(result.toolIsError).toBe(true);
+        expect(result.toolResult).toContain('Tool "echo" response.text cannot be converted from Date.');
+        expect(result.toolResult).not.toContain("summary fallback text");
+    });
 });
 
 async function startSnapshotBuild(code: string) {

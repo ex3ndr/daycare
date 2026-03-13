@@ -2,8 +2,9 @@ import type { Tool } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 
 import type { DeferredToolHandler, ToolExecutionContext } from "@/types";
+import { montyResponseSchemaResolve } from "../monty/montyResponseSchemaResolve.js";
 import type { ToolResolverApi } from "../toolResolver.js";
-import { rlmArgsConvert, rlmResultConvert } from "./rlmConvert.js";
+import { rlmArgsConvert, rlmResultConvert, rlmRuntimeResultConvert } from "./rlmConvert.js";
 import { rlmRuntimeToolExecute } from "./rlmRuntimeToolExecute.js";
 import { rlmValueFormat } from "./rlmValueFormat.js";
 import type { RlmVmSnapshot } from "./rlmVmProgress.js";
@@ -84,9 +85,11 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
         }
         const runtimeResult = await rlmRuntimeToolExecute(tool.name, parsedArgs, options.context);
         if (runtimeResult.handled) {
-            toolResultText = rlmValueFormat(runtimeResult.value);
+            const value =
+                montyResponseSchemaResolve(tool) !== null ? rlmRuntimeResultConvert(runtimeResult.value, tool) : null;
+            toolResultText = rlmValueFormat(value);
             resumeOptions = {
-                returnValue: runtimeResult.value
+                returnValue: value
             };
         } else {
             const toolResult = await options.toolResolver.execute(
@@ -98,7 +101,7 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
                 },
                 { ...options.context, pythonExecution: true }
             );
-            const value = rlmResultConvert(toolResult);
+            const value = rlmResultConvert(toolResult, tool);
             toolResultText = rlmValueFormat(value);
 
             if (toolResult.toolMessage.isError) {

@@ -1,8 +1,14 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import type { JsMontyObject } from "@pydantic/monty";
+import { Type } from "@sinclair/typebox";
 
 import type { ToolExecutionResult, ToolResultObject, ToolResultPrimitive, ToolResultValue } from "@/types";
 import { montyParameterEntriesBuild } from "../monty/montyParameterEntriesBuild.js";
+import { montyResponseSchemaResolve } from "../monty/montyResponseSchemaResolve.js";
+import { montyValueToJs } from "../monty/montyValueToJs.js";
+import { montyValueToPython } from "../monty/montyValueToPython.js";
+
+const genericObjectSchema = Type.Object({}, { additionalProperties: Type.Unknown() });
 
 /**
  * Converts Monty positional/keyword arguments into the JSON object expected by tool execution.
@@ -14,93 +20,62 @@ export function rlmArgsConvert(
     toolSchema: Tool
 ): unknown {
     const propertyNames = montyParameterEntriesBuild(toolSchema).map((entry) => entry.name);
-    const output: Record<string, unknown> = {};
+    const rawArgs: Record<string, unknown> = {};
 
     for (let index = 0; index < args.length; index += 1) {
         const name = propertyNames[index];
         if (!name) {
             throw new Error(`Too many positional arguments for tool ${toolSchema.name}.`);
         }
-        output[name] = montyValueConvert(args[index]);
+        rawArgs[name] = args[index];
     }
 
-    const convertedKwargs = montyValueConvert(kwargs);
-    if (!recordIs(convertedKwargs)) {
-        throw new Error("Tool kwargs must convert to an object.");
-    }
-    for (const [name, value] of Object.entries(convertedKwargs)) {
-        output[name] = value;
+    for (const [name, value] of Object.entries(kwargs)) {
+        rawArgs[name] = value;
     }
 
-    return output;
+    return montyValueToJs(rawArgs, toolSchema.parameters, `Tool "${toolSchema.name}" arguments`);
 }
 
 /**
  * Converts a tool execution result into a Python-friendly structured value.
- * Expects: typedResult matches the tool schema; undefined values are normalized to null.
+ * Expects: typedResult matches the tool schema; missing response schema falls back to generic object checks.
  */
-export function rlmResultConvert(toolResult: ToolExecutionResult<ToolResultObject>): JsMontyObject {
-    const normalized = toolResultValueNormalize(toolResult.typedResult);
+export function rlmResultConvert(toolResult: ToolExecutionResult<ToolResultObject>, tool?: Tool): JsMontyObject {
+    const toolName = tool?.name ?? toolResult.toolMessage.toolName ?? "unknown";
+    const schema = tool ? montyResponseSchemaResolve(tool) : null;
+    const normalized =
+        schema !== null
+            ? montyValueToPython(toolResult.typedResult, schema, `Tool "${toolName}" response`)
+            : montyValueToPython(toolResult.typedResult, genericObjectSchema, `Tool "${toolName}" response`);
+
     if (toolResultObjectIs(normalized)) {
         return normalized;
     }
-    const toolName = toolResult.toolMessage.toolName ?? "unknown";
+
     throw new Error(`Tool "${toolName}" returned a value that cannot be converted for Monty.`);
 }
 
-function montyValueConvert(value: unknown): unknown {
-    if (value === undefined) {
-        return null;
-    }
-    if (typeof value === "bigint") {
-        if (value <= BigInt(Number.MAX_SAFE_INTEGER) && value >= BigInt(Number.MIN_SAFE_INTEGER)) {
-            return Number(value);
-        }
-        return value.toString();
-    }
-
-    if (value instanceof Map) {
-        const result: Record<string, unknown> = {};
-        for (const [key, item] of value.entries()) {
-            result[String(key)] = montyValueConvert(item);
-        }
-        return result;
+/**
+ * Converts a runtime/helper return value into a Python-safe value using the tool response schema.
+ * Expects: tool carries a hidden Monty response schema via ToolResolver or runtime tool construction.
+ */
+export function rlmRuntimeResultConvert(value: unknown, tool: Tool): JsMontyObject {
+    const schema = montyResponseSchemaResolve(tool);
+    if (!schema) {
+        throw new Error(`Tool "${tool.name}" response schema is unavailable for Python conversion.`);
     }
 
-    if (Array.isArray(value)) {
-        return value.map((entry) => montyValueConvert(entry));
+    const normalized = montyValueToPython(value, schema, `Tool "${tool.name}" response`);
+    if (toolResultObjectIs(normalized)) {
+        return normalized;
     }
 
-    if (!recordIs(value)) {
-        return value;
-    }
-
-    const result: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(value)) {
-        result[key] = montyValueConvert(entry);
-    }
-    return result;
+    throw new Error(`Tool "${tool.name}" returned a value that cannot be converted for Monty.`);
 }
 
 function recordIs(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function toolResultValueNormalize(value: unknown): unknown {
-    if (value === undefined) {
-        return null;
-    }
-    if (Array.isArray(value)) {
-        return value.map((entry) => toolResultValueNormalize(entry));
-    }
-    if (!recordIs(value)) {
-        return value;
-    }
-    const normalized: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(value)) {
-        normalized[key] = toolResultValueNormalize(entry);
-    }
-    return normalized;
 }
 
 function toolResultObjectIs(value: unknown): value is ToolResultObject {

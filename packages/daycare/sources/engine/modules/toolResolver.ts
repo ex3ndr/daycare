@@ -4,7 +4,10 @@ import type { TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import type { ToolDefinition, ToolExecutionContext, ToolExecutionResult, ToolVisibilityContext } from "@/types";
 import { getLogger } from "../../log.js";
+import { montyPythonSignatureBuild } from "./monty/montyPythonSignatureBuild.js";
 import { MONTY_RESPONSE_SCHEMA_KEY } from "./monty/montyResponseSchemaKey.js";
+import { montyResponseTypedDictLinesBuild } from "./monty/montyResponseTypedDictLinesBuild.js";
+import { montyResponseTypeNameFromFunction } from "./monty/montyResponseTypeNameFromFunction.js";
 import { toolResultTruncate } from "./tools/toolResultTruncate.js";
 import { toolExecutionResultOutcome } from "./tools/toolReturnOutcome.js";
 
@@ -16,7 +19,9 @@ export class ToolResolver {
     private tools = new Map<string, RegisteredTool>();
 
     register(pluginId: string, definition: ToolDefinition): void {
+        toolParameterSchemaValidate(definition.tool.name, definition.tool.parameters);
         toolResultSchemaValidate(definition.tool.name, definition.returns.schema);
+        toolMontySchemaValidate(definition.tool.name, definition);
         logger.debug(`register: Registering tool pluginId=${pluginId} toolName=${definition.tool.name}`);
         this.tools.set(definition.tool.name, { ...definition, pluginId });
         logger.debug(`register: Tool registered totalTools=${this.tools.size}`);
@@ -185,6 +190,42 @@ function toolResultSchemaValidate(toolName: string, schema: TSchema): void {
             `Tool "${toolName}" return schema supports primitives, any, nested objects, arrays, and unions only; additionalProperties must not be true.`
         );
     }
+}
+
+function toolParameterSchemaValidate(toolName: string, schema: TSchema): void {
+    if (schemaZodIs(schema)) {
+        return;
+    }
+    if (!schemaObjectIs(schema) || schema.type !== "object") {
+        throw new Error(`Tool "${toolName}" parameter schema must be an object schema.`);
+    }
+}
+
+function toolMontySchemaValidate(toolName: string, definition: ToolDefinition): void {
+    if (!schemaZodIs(definition.tool.parameters)) {
+        try {
+            montyPythonSignatureBuild(definition.tool);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            throw new Error(`Tool "${toolName}" parameter schema is not representable in Monty: ${message}`);
+        }
+    }
+
+    try {
+        const responseTypeName = montyResponseTypeNameFromFunction(toolName);
+        montyResponseTypedDictLinesBuild(responseTypeName, definition.returns.schema);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Tool "${toolName}" return schema is not representable in Monty: ${message}`);
+    }
+}
+
+function schemaZodIs(value: unknown): boolean {
+    return (
+        typeof value === "object" &&
+        value !== null &&
+        typeof (value as { safeParse?: unknown }).safeParse === "function"
+    );
 }
 
 /**
