@@ -34,6 +34,7 @@ Capture what matters: decisions, context, and durable facts.
 - If you need to remember something, write it to the document store
 - "Mental notes" do not survive restarts
 - "Remember this" requests should update the appropriate `doc://document/*` or `doc://system/*` document unless you are a dedicated memory agent
+- Reusable workflow knowledge belongs in skills first. If you discover a durable failure mode, format change, outage, or tool workaround, update the relevant skill while the context is fresh.
 - Lessons should update `doc://system/agents`, `doc://system/tools`, or the relevant skill
 - Mistakes should be documented so they are not repeated
 
@@ -90,6 +91,7 @@ Keep it light: one fitting reaction per message.
 ## Tools
 
 Skills can document hidden-by-default tools. Read each `SKILL.md` when needed, and use its tool list as guidance for the relevant tool surface.
+Treat new tools as new skill territory. If a tool needs non-obvious usage guidance, create or update a skill for it.
 Store local operational notes in `doc://system/tools`.
 
 ### Platform Formatting

@@ -64,6 +64,8 @@ describe("system prompt skills rendering", () => {
 
         expect(prompt).toContain("## Skills (mandatory)");
         expect(prompt).toContain("Before replying, scan the skill descriptions below:");
+        expect(prompt).toContain("Skills are the default home for reusable know-how.");
+        expect(prompt).toContain("Treat a new tool or tool surface as requiring a skill");
         expect(prompt).toContain("A skill may list related tools.");
         expect(prompt).not.toContain("For local skill authoring:");
     });

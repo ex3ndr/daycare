@@ -15,6 +15,10 @@ specialized knowledge, workflows, and tools. Think of them as "onboarding guides
 domains or tasks—they transform Daycare from a general-purpose agent into a specialized agent
 equipped with procedural knowledge that no model can fully possess.
 
+Skills are also the default place to capture reusable operational learning. If a real run reveals
+that a server is down, a response format changed, a tool has a non-obvious quirk, or a workaround
+is reliably needed, fold that learning back into the relevant skill immediately.
+
 ### What Skills Provide
 
 1. Specialized workflows - Multi-step procedures for specific domains
@@ -23,6 +27,19 @@ equipped with procedural knowledge that no model can fully possess.
 4. Bundled resources - Scripts, references, and assets for complex and repetitive tasks
 
 ## Core Principles
+
+### Skill-First Maintenance
+
+Default to creating or updating a skill whenever knowledge is likely to be reused. Do not leave
+durable lessons stranded in chat history.
+
+- Repeated workflow = skill
+- Durable troubleshooting note = skill update
+- Non-trivial new tool or tool surface = companion skill
+- Invalidated instructions because reality changed = skill refresh
+
+If you are unsure whether something belongs in a skill, ask whether another Daycare instance would
+work better next time if it started with that knowledge. If yes, it belongs in the skill.
 
 ### Concise is Key
 
@@ -388,3 +405,10 @@ After testing the skill, users may request improvements. Often this happens righ
 3. Test the changes
 4. Deploy atomically: `rm -rf config/skills/<skill-name> && cp -r workspace/skills/<skill-name> config/skills/`
 5. Repeat as needed
+
+Treat production usage as continuous skill maintenance, not as a one-time authoring step:
+
+- If a dependency is down, record the failure mode and fallback behavior in the skill.
+- If an API, page, schema, or file format changes, update the skill with the new reality.
+- If tool usage was confusing, flaky, or required a workaround, document the reliable pattern.
+- If a new tool appears, create or expand a skill that teaches that tool deliberately.
