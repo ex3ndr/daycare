@@ -12,7 +12,7 @@ Multi-vendor model access via Vercel's AI Gateway.
 Vercel AI Gateway provides access to models from many vendors. Highlights:
 
 ### OpenAI
-`openai/gpt-5.2`, `openai/gpt-5.2-codex`, `openai/gpt-5.2-pro`, `openai/o3`, `openai/o4-mini`
+`openai/gpt-5.4`, `openai/gpt-5.4-pro`, `openai/gpt-5.3-codex`, `openai/o3`, `openai/o4-mini`
 
 ### Anthropic
 `anthropic/claude-opus-4.5`, `anthropic/claude-sonnet-4.5`, `anthropic/claude-haiku-4.5`

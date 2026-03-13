@@ -1,5 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { getOAuthApiKey, type OAuthCredentials, type OAuthProviderId } from "@mariozechner/pi-ai";
+import { getOAuthApiKey, type OAuthCredentials, type OAuthProviderId } from "@mariozechner/pi-ai/oauth";
 import { type Static, Type } from "@sinclair/typebox";
 import { z } from "zod";
 import type { ToolResultContract } from "@/types";

@@ -3025,20 +3025,20 @@
   dependencies:
     "@mariozechner/pi-ai" "^0.52.9"
 
-"@mariozechner/pi-ai@0.55.3":
-  version "0.55.3"
-  resolved "https://registry.yarnpkg.com/@mariozechner/pi-ai/-/pi-ai-0.55.3.tgz#7b1e1cc827c29c08cf1ed6d07bbd927ad0daf4c6"
-  integrity sha512-f9jWoDzJR9Wy/H8JPMbjoM4WvVUeFZ65QdYA9UHIfoOopDfwWE8F8JHQOj5mmmILMacXuzsqA3J7MYqNWZRvvQ==
+"@mariozechner/pi-ai@0.57.1":
+  version "0.57.1"
+  resolved "https://registry.yarnpkg.com/@mariozechner/pi-ai/-/pi-ai-0.57.1.tgz#a3bd7428157a6b61534dfe5959d506c553bed2b0"
+  integrity sha512-Bd/J4a3YpdzJVyHLih0vDSdB0QPL4ti0XsAwtHOK/8eVhB0fHM1CpcgIrcBFJ23TMcKXMi0qamz18ERfp8tmgg==
   dependencies:
     "@anthropic-ai/sdk" "^0.73.0"
     "@aws-sdk/client-bedrock-runtime" "^3.983.0"
     "@google/genai" "^1.40.0"
-    "@mistralai/mistralai" "1.10.0"
+    "@mistralai/mistralai" "1.14.1"
     "@sinclair/typebox" "^0.34.41"
     ajv "^8.17.1"
     ajv-formats "^3.0.1"
     chalk "^5.6.2"
-    openai "6.10.0"
+    openai "6.26.0"
     partial-json "^0.1.7"
     proxy-agent "^6.5.0"
     undici "^7.19.1"
@@ -3104,6 +3104,15 @@
   integrity sha512-tdIgWs4Le8vpvPiUEWne6tK0qbVc+jMenujnvTqOjogrJUsCSQhus0tHTU1avDDh5//Rq2dFgP9mWRAdIEoBqg==
   dependencies:
     zod "^3.20.0"
+    zod-to-json-schema "^3.24.1"
+
+"@mistralai/mistralai@1.14.1":
+  version "1.14.1"
+  resolved "https://registry.yarnpkg.com/@mistralai/mistralai/-/mistralai-1.14.1.tgz#fd69009f3a84b062472e0454836867cde2ecdfa5"
+  integrity sha512-IiLmmZFCCTReQgPAT33r7KQ1nYo5JPdvGkrkZqA8qQ2qB1GHgs5LoP5K2ICyrjnpw2n8oSxMM/VP+liiKcGNlQ==
+  dependencies:
+    ws "^8.18.0"
+    zod "^3.25.0 || ^4.0.0"
     zod-to-json-schema "^3.24.1"
 
 "@napi-rs/canvas-android-arm64@0.1.94":
@@ -10047,6 +10056,11 @@ openai@6.10.0:
   resolved "https://registry.yarnpkg.com/openai/-/openai-6.10.0.tgz#3f52d2ad7b6b2288124d064b0eb737c914d1f3ea"
   integrity sha512-ITxOGo7rO3XRMiKA5l7tQ43iNNu+iXGFAcf2t+aWVzzqRaS0i7m1K2BhxNdaveB+5eENhO0VY1FkiZzhBk4v3A==
 
+openai@6.26.0:
+  version "6.26.0"
+  resolved "https://registry.yarnpkg.com/openai/-/openai-6.26.0.tgz#e31b81040606050c47e77d83d5df2f6fcdcebab9"
+  integrity sha512-zd23dbWTjiJ6sSAX6s0HrCZi41JwTA1bQVs0wLQPZ2/5o2gxOJA5wh7yOAUgwYybfhDXyhwlpeQf7Mlgx8EOCA==
+
 openapi-fetch@^0.14.1:
   version "0.14.1"
   resolved "https://registry.yarnpkg.com/openapi-fetch/-/openapi-fetch-0.14.1.tgz#6ae3e8a6f6398f457e22fec4197c7fa402e6ba06"
@@ -13064,7 +13078,7 @@ zod@3.25.76, zod@^3.20.0, zod@^3.25.0, zod@^3.25.76:
   resolved "https://registry.yarnpkg.com/zod/-/zod-3.25.76.tgz#26841c3f6fd22a6a2760e7ccb719179768471e34"
   integrity sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==
 
-zod@^4.1.0, zod@^4.3.6:
+"zod@^3.25.0 || ^4.0.0", zod@^4.1.0, zod@^4.3.6:
   version "4.3.6"
   resolved "https://registry.yarnpkg.com/zod/-/zod-4.3.6.tgz#89c56e0aa7d2b05107d894412227087885ab112a"
   integrity sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==

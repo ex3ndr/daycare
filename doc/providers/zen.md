@@ -35,6 +35,8 @@ Source of truth: `packages/daycare/sources/providers/zen.ts`.
 - `gemini-3.1-pro`
 - `gemini-3-pro`
 - `gemini-3-flash`
+- `gpt-5.4`
+- `gpt-5.4-pro`
 - `gpt-5.3-codex`
 - `gpt-5.2`
 - `gpt-5.2-codex`

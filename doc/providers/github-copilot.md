@@ -13,6 +13,8 @@ Authenticated via GitHub OAuth flow.
 
 | Model ID | Name | Size |
 |----------|------|------|
+| `gpt-5.4` | GPT-5.4 | normal |
+| `gpt-5.3-codex` | GPT-5.3-Codex | normal |
 | `gpt-5.2` | GPT-5.2 | normal |
 | `gpt-5.2-codex` | GPT-5.2-Codex | normal |
 | `gpt-5.1-codex-max` | GPT-5.1-Codex-max | normal |

@@ -1,14 +1,10 @@
+import { type Api, complete, getModel, type Model, stream } from "@mariozechner/pi-ai";
 import {
-    type Api,
-    complete,
-    getModel,
     getOAuthApiKey,
     getOAuthProvider,
-    type Model,
     type OAuthCredentials,
-    type OAuthProviderId,
-    stream
-} from "@mariozechner/pi-ai";
+    type OAuthProviderId
+} from "@mariozechner/pi-ai/oauth";
 import type { ImageGenerationProvider } from "@/types";
 import type { AuthStore } from "../auth/store.js";
 import type { ProviderSettings } from "../settings.js";

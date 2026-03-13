@@ -19,7 +19,7 @@ OpenRouter offers the broadest model selection. Highlights by vendor:
 `anthropic/claude-opus-4.5`, `anthropic/claude-sonnet-4.5`, `anthropic/claude-haiku-4.5`
 
 ### OpenAI
-`openai/gpt-5.2`, `openai/gpt-5.2-codex`, `openai/gpt-5-mini`, `openai/o3`, `openai/o4-mini`, `openai/gpt-4o`
+`openai/gpt-5.4`, `openai/gpt-5.4-pro`, `openai/gpt-5.3-codex`, `openai/gpt-5-mini`, `openai/o3`, `openai/o4-mini`
 
 ### Google
 `google/gemini-3-pro-preview`, `google/gemini-3-flash-preview`, `google/gemini-2.5-pro`, `google/gemini-2.5-flash`

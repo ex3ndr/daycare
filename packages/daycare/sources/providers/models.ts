@@ -161,6 +161,8 @@ export const PROVIDER_MODELS = {
         { id: "claude-3-sonnet-20240229", name: "Claude Sonnet 3", size: "normal", deprecated: true }
     ],
     "azure-openai-responses": [
+        { id: "gpt-5.4", name: "GPT-5.4", size: "normal" },
+        { id: "gpt-5.4-pro", name: "GPT-5.4 Pro", size: "normal" },
         { id: "gpt-5.3-codex", name: "GPT-5.3 Codex", size: "normal" },
         { id: "gpt-5.3-codex-spark", name: "GPT-5.3 Codex Spark", size: "normal" },
         { id: "gpt-5.2-chat-latest", name: "GPT-5.2 Chat", size: "normal" },
@@ -208,6 +210,8 @@ export const PROVIDER_MODELS = {
         { id: "claude-opus-4.6", name: "Claude Opus 4.6", size: "large" },
         { id: "claude-sonnet-4.6", name: "Claude Sonnet 4.6", size: "normal" },
         { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview", size: "normal" },
+        { id: "gpt-5.4", name: "GPT-5.4", size: "normal" },
+        { id: "gpt-5.3-codex", name: "GPT-5.3-Codex", size: "normal" },
         { id: "gpt-5.2", name: "GPT-5.2", size: "normal" },
         { id: "gpt-5.2-codex", name: "GPT-5.2-Codex", size: "normal" },
         { id: "gpt-5.1", name: "GPT-5.1", size: "normal", deprecated: true },
@@ -230,6 +234,7 @@ export const PROVIDER_MODELS = {
     google: [
         { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview", size: "normal" },
         { id: "gemini-3.1-pro-preview-customtools", name: "Gemini 3.1 Pro Preview Custom Tools", size: "normal" },
+        { id: "gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash Lite Preview", size: "small" },
         { id: "gemini-flash-latest", name: "Gemini Flash Latest", size: "small" },
         { id: "gemini-flash-lite-latest", name: "Gemini Flash-Lite Latest", size: "small" },
         { id: "gemini-3-pro-preview", name: "Gemini 3 Pro Preview", size: "normal" },
@@ -273,12 +278,13 @@ export const PROVIDER_MODELS = {
     ],
     "google-antigravity": [
         { id: "claude-opus-4-6-thinking", name: "Claude Opus 4.6 Thinking (Antigravity)", size: "large" },
+        { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6 (Antigravity)", size: "normal" },
         { id: "gpt-oss-120b-medium", name: "GPT-OSS 120B Medium (Antigravity)", size: "normal" },
         { id: "claude-opus-4-5-thinking", name: "Claude Opus 4.5 Thinking (Antigravity)", size: "large" },
         { id: "claude-sonnet-4-5", name: "Claude Sonnet 4.5 (Antigravity)", size: "normal" },
         { id: "claude-sonnet-4-5-thinking", name: "Claude Sonnet 4.5 Thinking (Antigravity)", size: "normal" },
-        { id: "gemini-3-pro-high", name: "Gemini 3 Pro High (Antigravity)", size: "normal" },
-        { id: "gemini-3-pro-low", name: "Gemini 3 Pro Low (Antigravity)", size: "normal" },
+        { id: "gemini-3.1-pro-high", name: "Gemini 3.1 Pro High (Antigravity)", size: "normal" },
+        { id: "gemini-3.1-pro-low", name: "Gemini 3.1 Pro Low (Antigravity)", size: "normal" },
         { id: "gemini-3-flash", name: "Gemini 3 Flash (Antigravity)", size: "small" }
     ],
     "google-gemini-cli": [
@@ -388,6 +394,8 @@ export const PROVIDER_MODELS = {
         { id: "pixtral-12b", name: "Pixtral 12B", size: "normal" }
     ],
     openai: [
+        { id: "gpt-5.4", name: "GPT-5.4", size: "normal" },
+        { id: "gpt-5.4-pro", name: "GPT-5.4 Pro", size: "normal" },
         { id: "gpt-5.3-codex", name: "GPT-5.3 Codex", size: "normal" },
         { id: "gpt-5.3-codex-spark", name: "GPT-5.3 Codex Spark", size: "normal" },
         { id: "gpt-5.2-chat-latest", name: "GPT-5.2 Chat", size: "normal" },
@@ -426,6 +434,7 @@ export const PROVIDER_MODELS = {
         { id: "o1-pro", name: "o1-pro", size: "normal" }
     ],
     "openai-codex": [
+        { id: "gpt-5.4", name: "GPT-5.4", size: "normal" },
         { id: "gpt-5.3-codex", name: "GPT-5.3 Codex", size: "normal" },
         { id: "gpt-5.3-codex-spark", name: "GPT-5.3 Codex Spark", size: "normal" },
         { id: "gpt-5.2", name: "GPT-5.2", size: "normal" },
@@ -435,6 +444,8 @@ export const PROVIDER_MODELS = {
         { id: "gpt-5.1-codex-mini", name: "GPT-5.1 Codex Mini", size: "normal" }
     ],
     opencode: [
+        { id: "gpt-5.4", name: "GPT-5.4", size: "normal" },
+        { id: "gpt-5.4-pro", name: "GPT-5.4 Pro", size: "normal" },
         { id: "gpt-5.3-codex", name: "GPT-5.3 Codex", size: "normal" },
         { id: "claude-opus-4-6", name: "Claude Opus 4.6", size: "large" },
         { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", size: "normal" },
@@ -442,7 +453,6 @@ export const PROVIDER_MODELS = {
         { id: "glm-5", name: "GLM-5", size: "normal" },
         { id: "minimax-m2.5", name: "MiniMax M2.5", size: "normal" },
         { id: "minimax-m2.5-free", name: "MiniMax M2.5 Free", size: "normal" },
-        { id: "trinity-large-preview-free", name: "Trinity Large Preview", size: "large" },
         { id: "gpt-5.2", name: "GPT-5.2", size: "normal" },
         { id: "gpt-5.2-codex", name: "GPT-5.2 Codex", size: "normal" },
         { id: "gpt-5.1", name: "GPT-5.1", size: "normal", deprecated: true },
@@ -464,16 +474,25 @@ export const PROVIDER_MODELS = {
         { id: "gemini-3-flash", name: "Gemini 3 Flash", size: "small" },
         { id: "kimi-k2.5", name: "Kimi K2.5", size: "normal" },
         { id: "minimax-m2.1", name: "MiniMax M2.1", size: "normal" },
-        { id: "kimi-k2", name: "Kimi K2", size: "normal", deprecated: true },
-        { id: "kimi-k2-thinking", name: "Kimi K2 Thinking", size: "normal" },
         { id: "big-pickle", name: "Big Pickle", size: "normal" }
+    ],
+    "opencode-go": [
+        { id: "glm-5", name: "GLM-5", size: "normal" },
+        { id: "kimi-k2.5", name: "Kimi K2.5", size: "normal" },
+        { id: "minimax-m2.5", name: "MiniMax M2.5", size: "normal" }
     ],
     openrouter: [
         { id: "anthropic/claude-opus-4.6", name: "Anthropic: Claude Opus 4.6", size: "large" },
         { id: "anthropic/claude-sonnet-4.6", name: "Anthropic: Claude Sonnet 4.6", size: "normal" },
+        { id: "openai/gpt-5.4", name: "OpenAI: GPT-5.4", size: "normal" },
+        { id: "openai/gpt-5.4-pro", name: "OpenAI: GPT-5.4 Pro", size: "normal" },
         { id: "openai/gpt-5.3-codex", name: "OpenAI: GPT-5.3-Codex", size: "normal" },
+        { id: "openai/gpt-5.3-chat", name: "OpenAI: GPT-5.3 Chat", size: "normal" },
         { id: "google/gemini-3.1-pro-preview", name: "Google: Gemini 3.1 Pro Preview", size: "normal" },
+        { id: "google/gemini-3.1-flash-lite-preview", name: "Google: Gemini 3.1 Flash Lite Preview", size: "small" },
         { id: "z-ai/glm-5", name: "Z.ai: GLM 5", size: "normal" },
+        { id: "inception/mercury-2", name: "Inception: Mercury 2", size: "normal" },
+        { id: "essentialai/rnj-1-instruct", name: "EssentialAI: Rnj 1 Instruct", size: "normal" },
         { id: "qwen/qwen3.5-397b-a17b", name: "Qwen: Qwen3.5 397B A17B", size: "large" },
         { id: "qwen/qwen3-coder-next", name: "Qwen: Qwen3 Coder Next", size: "normal" },
         { id: "auto", name: "Auto", size: "normal" },
@@ -666,7 +685,7 @@ export const PROVIDER_MODELS = {
         { id: "qwen/qwen3-vl-30b-a3b-thinking", name: "Qwen: Qwen3 VL 30B A3B Thinking", size: "normal" },
         { id: "qwen/qwen3-vl-8b-instruct", name: "Qwen: Qwen3 VL 8B Instruct", size: "normal" },
         { id: "qwen/qwen3-vl-8b-thinking", name: "Qwen: Qwen3 VL 8B Thinking", size: "normal" },
-        { id: "upstage/solar-pro-3:free", name: "Upstage: Solar Pro 3 (free)", size: "normal" },
+        { id: "upstage/solar-pro-3", name: "Upstage: Solar Pro 3", size: "normal" },
         { id: "x-ai/grok-3", name: "xAI: Grok 3", size: "normal", deprecated: true },
         { id: "x-ai/grok-3-beta", name: "xAI: Grok 3 Beta", size: "normal" },
         { id: "x-ai/grok-3-mini", name: "xAI: Grok 3 Mini", size: "normal" },
@@ -772,10 +791,15 @@ export const PROVIDER_MODELS = {
     "vercel-ai-gateway": [
         { id: "anthropic/claude-opus-4.6", name: "Claude Opus 4.6", size: "large" },
         { id: "anthropic/claude-sonnet-4.6", name: "Claude Sonnet 4.6", size: "normal" },
+        { id: "openai/gpt-5.4", name: "GPT 5.4", size: "normal" },
+        { id: "openai/gpt-5.4-pro", name: "GPT 5.4 Pro", size: "normal" },
         { id: "openai/gpt-5.3-codex", name: "GPT 5.3 Codex", size: "normal" },
+        { id: "openai/gpt-5.3-chat", name: "GPT-5.3 Chat", size: "normal" },
         { id: "google/gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview", size: "normal" },
+        { id: "google/gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash Lite Preview", size: "small" },
         { id: "zai/glm-5", name: "GLM-5", size: "normal" },
         { id: "deepseek/deepseek-v3.2", name: "DeepSeek V3.2", size: "normal" },
+        { id: "inception/mercury-2", name: "Mercury 2", size: "normal" },
         { id: "alibaba/qwen3-235b-a22b-thinking", name: "Qwen3 235B A22B Thinking 2507", size: "normal" },
         { id: "alibaba/qwen-3-235b", name: "Qwen3 235B A22b Instruct 2507", size: "normal" },
         { id: "mistral/pixtral-12b", name: "Pixtral 12B 2409", size: "normal" },
@@ -874,6 +898,7 @@ export const PROVIDER_MODELS = {
         { id: "google/gemini-2.5-flash-preview-09-2025", name: "Gemini 2.5 Flash Preview 09-2025", size: "small" },
         { id: "minimax/minimax-m2.1", name: "MiniMax M2.1", size: "normal" },
         { id: "minimax/minimax-m2.1-lightning", name: "MiniMax M2.1 Lightning", size: "normal" },
+        { id: "minimax/minimax-m2.5-highspeed", name: "MiniMax M2.5 High Speed", size: "small" },
         { id: "mistral/devstral-2", name: "Devstral 2", size: "normal" },
         { id: "mistral/devstral-small-2", name: "Devstral Small 2", size: "normal" },
         { id: "xai/grok-2-vision", name: "Grok 2 Vision", size: "normal" },

@@ -1,4 +1,4 @@
-import { getOAuthApiKey } from "@mariozechner/pi-ai";
+import { getOAuthApiKey } from "@mariozechner/pi-ai/oauth";
 
 import { recipeAuthAnthropicEntryParse } from "./recipeAuthAnthropicEntryParse.js";
 import { recipeAuthConfigRead } from "./recipeAuthConfigRead.js";

@@ -6,7 +6,7 @@ import type { ProviderDefinition, ProviderModelInfo, ProviderOnboardingApi } fro
 const ZEN_PROVIDER_ID = "zen";
 const OPENCODE_PROVIDER_ID = "opencode";
 const ZEN_BASE_URL = "https://opencode.ai/zen/v1";
-const ZEN_DEFAULT_MODEL_ID = "gpt-5.2-codex";
+const ZEN_DEFAULT_MODEL_ID = "gpt-5.4";
 
 // Source: https://opencode.ai/zen/v1/models (queried 2026-02-25)
 export const zenProviderModels: ProviderModelInfo[] = [
@@ -21,6 +21,8 @@ export const zenProviderModels: ProviderModelInfo[] = [
     { id: "gemini-3.1-pro", name: "Gemini 3.1 Pro", size: "normal" },
     { id: "gemini-3-pro", name: "Gemini 3 Pro", size: "normal" },
     { id: "gemini-3-flash", name: "Gemini 3 Flash", size: "small" },
+    { id: "gpt-5.4", name: "GPT-5.4", size: "normal" },
+    { id: "gpt-5.4-pro", name: "GPT-5.4 Pro", size: "normal" },
     { id: "gpt-5.3-codex", name: "GPT-5.3 Codex", size: "normal" },
     { id: "gpt-5.2", name: "GPT-5.2", size: "normal" },
     { id: "gpt-5.2-codex", name: "GPT-5.2 Codex", size: "normal" },
