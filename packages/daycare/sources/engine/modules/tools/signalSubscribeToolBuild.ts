@@ -41,6 +41,7 @@ export function buildSignalSubscribeTool(signals: Signals): ToolDefinition {
             parameters: schema
         },
         returns: signalSubscribeReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as SubscribeSignalArgs;
             const targetAgentId = payload.agentId?.trim() ?? toolContext.agent.id;

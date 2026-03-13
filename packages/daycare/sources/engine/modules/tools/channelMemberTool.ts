@@ -50,6 +50,7 @@ export function channelAddMemberToolBuild(channels: Channels): ToolDefinition {
             parameters: addMemberSchema
         },
         returns: channelMemberReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ChannelAddMemberArgs;
             const ctx = await toolContext.agentSystem.contextForAgentId(payload.agentId);
@@ -93,6 +94,7 @@ export function channelRemoveMemberToolBuild(channels: Channels): ToolDefinition
             parameters: removeMemberSchema
         },
         returns: channelMemberReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ChannelRemoveMemberArgs;
             const ctx = await toolContext.agentSystem.contextForAgentId(payload.agentId);

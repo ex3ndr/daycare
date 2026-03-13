@@ -4,6 +4,15 @@ description: Understand what Daycare tasks are, how cron and webhook triggers wo
 tools:
   - task_read
   - task_run
+  - channel_create
+  - channel_send
+  - channel_history
+  - channel_add_member
+  - channel_remove_member
+  - generate_signal
+  - signal_events_csv
+  - signal_subscribe
+  - signal_unsubscribe
 ---
 
 # Scheduling

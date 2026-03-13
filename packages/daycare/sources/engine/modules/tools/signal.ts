@@ -71,6 +71,7 @@ export function buildSignalGenerateTool(signals: Signals): ToolDefinition {
             parameters: schema
         },
         returns: signalGenerateReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as GenerateSignalArgs;
             const source =

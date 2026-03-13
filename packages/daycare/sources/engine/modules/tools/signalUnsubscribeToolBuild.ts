@@ -40,6 +40,7 @@ export function buildSignalUnsubscribeTool(signals: Signals): ToolDefinition {
             parameters: schema
         },
         returns: signalUnsubscribeReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as UnsubscribeSignalArgs;
             const targetAgentId = payload.agentId?.trim() ?? toolContext.agent.id;

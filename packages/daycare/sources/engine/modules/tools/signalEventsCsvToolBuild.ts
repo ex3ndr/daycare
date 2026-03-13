@@ -49,6 +49,7 @@ export function signalEventsCsvToolBuild(signals: Signals): ToolDefinition {
             parameters: schema
         },
         returns: signalEventsCsvReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as SignalEventsCsvArgs;
             const timeRange = signalEventsCsvTimeRangeNormalize(payload.fromAt, payload.toAt);

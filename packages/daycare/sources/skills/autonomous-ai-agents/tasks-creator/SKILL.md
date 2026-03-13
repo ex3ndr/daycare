@@ -10,6 +10,15 @@ tools:
   - task_trigger_add
   - task_trigger_remove
   - create_permanent_agent
+  - channel_create
+  - channel_send
+  - channel_history
+  - channel_add_member
+  - channel_remove_member
+  - generate_signal
+  - signal_events_csv
+  - signal_subscribe
+  - signal_unsubscribe
 sandbox: true
 ---
 

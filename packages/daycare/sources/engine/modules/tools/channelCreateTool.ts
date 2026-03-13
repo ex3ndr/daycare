@@ -39,6 +39,7 @@ export function channelCreateToolBuild(channels: Channels): ToolDefinition {
             parameters: schema
         },
         returns: channelCreateReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ChannelCreateArgs;
             const channel = await channels.create(toolContext.ctx, payload.name, payload.leaderAgentId);

@@ -48,6 +48,7 @@ export function channelHistoryToolBuild(channels: Channels): ToolDefinition {
             parameters: schema
         },
         returns: channelHistoryReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ChannelHistoryArgs;
             const history = await channels.getHistory(toolContext.ctx, payload.channelName, payload.limit);

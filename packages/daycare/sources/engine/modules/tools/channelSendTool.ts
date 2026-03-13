@@ -40,6 +40,7 @@ export function channelSendToolBuild(channels: Channels): ToolDefinition {
             parameters: schema
         },
         returns: channelSendReturns,
+        hiddenByDefault: true,
         execute: async (args, toolContext, toolCall) => {
             const payload = args as ChannelSendArgs;
             const senderUsername = senderUsernameResolve(toolContext);
