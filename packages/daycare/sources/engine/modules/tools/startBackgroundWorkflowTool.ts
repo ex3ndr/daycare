@@ -154,7 +154,11 @@ async function startInlineWorkflow(
             code,
             inputs: payload.parameters ?? undefined,
             inputSchemas: inputSchema ?? undefined,
-            context: toolContext.messageContext
+            context: toolContext.messageContext,
+            taskExecution: {
+                taskId: "inline-workflow",
+                taskVersion: 1
+            }
         }
     );
 

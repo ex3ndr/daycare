@@ -289,6 +289,35 @@ describe("startBackgroundWorkflowToolBuild", () => {
         expect(result.typedResult.targetAgentId).toBe("agent-123");
     });
 
+    it("marks inline workflow code as task execution for runtime helpers", async () => {
+        let postedItem: unknown = null;
+        const post = vi.fn(async (_ctx: unknown, _target: unknown, item: unknown) => {
+            postedItem = item;
+        });
+        const tool = startBackgroundWorkflowToolBuild();
+        const context = contextBuild({
+            post
+        });
+
+        await tool.execute(
+            {
+                code: 'step("hello")\ncontext_compact()\ncontext_reset("fresh")'
+            },
+            context,
+            workflowToolCall
+        );
+
+        expect(postedItem).toEqual(
+            expect.objectContaining({
+                type: "system_message",
+                taskExecution: {
+                    taskId: "inline-workflow",
+                    taskVersion: 1
+                }
+            })
+        );
+    });
+
     it("applies a checked raw model override to inline workflows", async () => {
         const updateAgentModelOverride = vi.fn(async () => true);
         const tool = startBackgroundWorkflowToolBuild();
