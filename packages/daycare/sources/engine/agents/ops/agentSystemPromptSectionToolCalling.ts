@@ -40,11 +40,13 @@ function toolListVisibleResolve(context: AgentSystemPromptContext) {
                 path: context.path,
                 config: context.config
             }) ??
-            toolResolver.listToolsForAgent({
-                ctx: context.ctx,
-                path: context.path,
-                config: context.config
-            }).map(toolResolvedFromTool)
+            toolResolver
+                .listToolsForAgent({
+                    ctx: context.ctx,
+                    path: context.path,
+                    config: context.config
+                })
+                .map(toolResolvedFromTool)
         );
     }
     return toolResolver.listResolvedTools?.() ?? toolResolver.listTools().map(toolResolvedFromTool);
