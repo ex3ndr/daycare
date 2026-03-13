@@ -18,7 +18,8 @@ const MISSING_RUN_PYTHON_RESULT_MESSAGE = "Daycare server was restarted before e
  */
 export async function agentHistoryContext(
     records: AgentHistoryRecord[],
-    _agentId: string
+    _agentId: string,
+    options?: { timezone?: string | null }
 ): Promise<Context["messages"]> {
     const messages: Context["messages"] = [];
     let lastAssistantMessageIndex: number | null = null;
@@ -40,7 +41,9 @@ export async function agentHistoryContext(
             continue;
         }
         if (record.type === "user_message") {
+            const timezone = record.timezone ?? options?.timezone;
             const context: MessageContext = {
+                ...(timezone ? { timezone } : {}),
                 ...(record.enrichments ? { enrichments: record.enrichments.map((item) => ({ ...item })) } : {})
             };
             const message = messageFormatIncoming(

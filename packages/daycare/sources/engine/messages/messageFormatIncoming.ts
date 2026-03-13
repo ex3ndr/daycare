@@ -9,7 +9,8 @@ export function messageFormatIncoming(
     if (!message.text && (!message.files || message.files.length === 0)) {
         return message;
     }
-    const time = formatTimeAI(receivedAt, { timezone: context.timezone ?? "UTC" });
+    const timezone = context.timezone?.trim() || "UTC";
+    const time = `${formatTimeAI(receivedAt, { timezone })} [timezone: ${timezone}]`;
     const text = message.text ?? "";
     const enrichmentTags = contextEnrichmentTagsBuild(context);
     const timezoneTag = context.timezone ? `<timezone>${context.timezone}</timezone>` : "";

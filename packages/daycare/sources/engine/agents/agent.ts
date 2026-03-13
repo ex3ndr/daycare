@@ -437,6 +437,7 @@ export class Agent {
             at: receivedAt,
             text: rawText,
             files,
+            ...(context.timezone ? { timezone: context.timezone } : {}),
             ...(context.enrichments ? { enrichments: context.enrichments.map((item) => ({ ...item })) } : {})
         };
 
@@ -1529,7 +1530,8 @@ export class Agent {
     }
 
     private async buildHistoryContext(records: AgentHistoryRecord[]): Promise<InferenceContext["messages"]> {
-        return agentHistoryContext(records, this.id);
+        const user = await this.agentSystem.storage.users.findById(this.ctx.userId);
+        return agentHistoryContext(records, this.id, { timezone: user?.timezone ?? null });
     }
 
     private async applyCompactionSummary(summaryText: string): Promise<number> {

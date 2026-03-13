@@ -116,6 +116,7 @@ export type AgentHistoryRecord =
           at: number;
           text: string;
           files: FileReference[];
+          timezone?: string | null;
           enrichments?: MessageContextEnrichment[];
           /** Set when a first-message prompt was prepended to the user's text. */
           firstMessagePrepended?: boolean;

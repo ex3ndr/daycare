@@ -5,12 +5,13 @@ import { messageFormatIncoming } from "./messageFormatIncoming.js";
 describe("messageFormatIncoming", () => {
     it("wraps message text with time and ids", () => {
         const message = { text: "hello" };
-        const context = { messageId: "msg-1", timezone: "UTC" };
+        const context = { messageId: "msg-1", timezone: "America/New_York" };
         const result = messageFormatIncoming(message, context, new Date("2024-01-01T00:00:00Z"));
 
         expect(result.rawText).toBe("hello");
-        expect(result.text).toContain("<timezone>UTC</timezone>");
+        expect(result.text).toContain("<timezone>America/New_York</timezone>");
         expect(result.text).toContain("<time>");
+        expect(result.text).toContain("[timezone: America/New_York]");
         expect(result.text).toContain("<message_id>msg-1</message_id>");
         expect(result.text).toContain("<message>hello</message>");
     });
@@ -29,6 +30,7 @@ describe("messageFormatIncoming", () => {
         const result = messageFormatIncoming(message, context, new Date("2024-01-01T00:00:00Z"));
 
         expect(result.text).toContain("(UTC)");
+        expect(result.text).toContain("[timezone: UTC]");
         expect(result.text).not.toContain("<timezone>");
     });
 

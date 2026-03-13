@@ -326,4 +326,28 @@ describe("agentHistoryContext", () => {
                 : user.content.map((part) => (part.type === "text" ? part.text : "")).join("\n");
         expect(text).toContain("<profile_name_notice>Set profile name.</profile_name_notice>");
     });
+
+    it("uses the fallback user timezone when replaying historical user messages", async () => {
+        const records: AgentHistoryRecord[] = [
+            {
+                type: "user_message",
+                at: new Date("2024-01-01T12:00:00Z").getTime(),
+                text: "hello",
+                files: []
+            }
+        ];
+
+        const messages = await agentHistoryContext(records, "agent-1", { timezone: "America/New_York" });
+        const user = messages[0];
+        if (!user || user.role !== "user") {
+            throw new Error("Expected user message.");
+        }
+        const text =
+            typeof user.content === "string"
+                ? user.content
+                : user.content.map((part) => (part.type === "text" ? part.text : "")).join("\n");
+        expect(text).toContain("<timezone>America/New_York</timezone>");
+        expect(text).toContain("07:00:00");
+        expect(text).toContain("[timezone: America/New_York]");
+    });
 });
