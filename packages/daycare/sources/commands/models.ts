@@ -38,6 +38,7 @@ import type {
 import { storageOpen } from "../storage/storageOpen.js";
 import { engineReloadRequest } from "./engineReloadRequest.js";
 import { promptConfirm, promptInput, promptSelect } from "./prompts.js";
+import { validationSessionIdCreate } from "./validationSessionIdCreate.js";
 
 export type ModelsCommandOptions = {
     settings?: string;
@@ -904,7 +905,7 @@ async function validateModel(
             tools: []
         };
 
-        const result = await router.complete(context, "model-validation");
+        const result = await router.complete(context, validationSessionIdCreate("model-validation"));
 
         if (result.message.stopReason === "error") {
             return { ok: false, message: "Model returned an error." };

@@ -13,6 +13,7 @@ import { InferenceRegistry } from "../engine/modules/inferenceRegistry.js";
 import { getLogger } from "../log.js";
 import { getProviderDefinition } from "../providers/catalog.js";
 import { DEFAULT_SETTINGS_PATH, listProviders, type ProviderSettings } from "../settings.js";
+import { validationSessionIdCreate } from "./validationSessionIdCreate.js";
 
 export type DoctorOptions = {
     settings?: string;
@@ -113,7 +114,7 @@ async function checkProvider(
             )
         });
 
-        const result = await router.complete(buildContext(), "doctor");
+        const result = await router.complete(buildContext(), validationSessionIdCreate("doctor"));
         const ok = hasAssistantOutput(result.message);
         if (!ok) {
             return { ok: false, message: "No assistant output returned." };
