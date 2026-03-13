@@ -32,7 +32,6 @@ import type { DocumentsRepository } from "../../storage/documentsRepository.js";
 import type { FragmentsRepository } from "../../storage/fragmentsRepository.js";
 import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
 import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
-import type { TodosRepository } from "../../storage/todosRepository.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import type { WorkspaceMembersRepository } from "../../storage/workspaceMembersRepository.js";
 import type { TokenStatsFetchOptions } from "../routes/costs/costsRoutes.js";
@@ -78,7 +77,6 @@ export type AppServerOptions = {
     tasksListActive: (ctx: Context) => Promise<TaskActiveSummary[]>;
     tasksListAll: (ctx: Context) => Promise<TaskListAllResult>;
     taskCallbacks: RouteTaskCallbacks | null;
-    todos?: TodosRepository | null;
     tokenStatsFetch: (ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>;
     documents: DocumentsRepository | null;
     fragments: FragmentsRepository | null;
@@ -116,7 +114,6 @@ export class AppServer {
     private readonly tasksListActive: AppServerOptions["tasksListActive"];
     private readonly tasksListAll: AppServerOptions["tasksListAll"];
     private readonly taskCallbacks: RouteTaskCallbacks | null;
-    private readonly todos: TodosRepository | null;
     private readonly tokenStatsFetch: AppServerOptions["tokenStatsFetch"];
     private readonly documents: DocumentsRepository | null;
     private readonly fragments: FragmentsRepository | null;
@@ -151,7 +148,6 @@ export class AppServer {
         this.tasksListActive = options.tasksListActive;
         this.tasksListAll = options.tasksListAll;
         this.taskCallbacks = options.taskCallbacks;
-        this.todos = options.todos ?? null;
         this.tokenStatsFetch = options.tokenStatsFetch;
         this.documents = options.documents;
         this.fragments = options.fragments;
@@ -389,7 +385,6 @@ export class AppServer {
             tasksListActive: this.tasksListActive,
             tasksListAll: this.tasksListAll,
             taskCallbacks: this.taskCallbacks,
-            todos: this.todos,
             tokenStatsFetch: this.tokenStatsFetch,
             documents: this.documents,
             fragments: this.fragments,

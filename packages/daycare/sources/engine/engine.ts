@@ -108,12 +108,6 @@ import {
     buildTaskTriggerRemoveTool,
     buildTaskUpdateTool
 } from "./modules/tools/task.js";
-import { todoArchiveToolBuild } from "./modules/tools/todoArchiveToolBuild.js";
-import { todoBatchStatusToolBuild } from "./modules/tools/todoBatchStatusToolBuild.js";
-import { todoCreateToolBuild } from "./modules/tools/todoCreateToolBuild.js";
-import { todoListToolBuild } from "./modules/tools/todoListToolBuild.js";
-import { todoReorderToolBuild } from "./modules/tools/todoReorderToolBuild.js";
-import { todoUpdateToolBuild } from "./modules/tools/todoUpdateToolBuild.js";
 import { topologyTool } from "./modules/tools/topologyToolBuild.js";
 import { userProfileUpdateTool } from "./modules/tools/userProfileUpdateTool.js";
 import { buildVoiceListTool } from "./modules/tools/voice-list.js";
@@ -701,7 +695,6 @@ export class Engine {
                     }),
                 webhookTriggerRemove: (ctx, taskId) => this.webhooks.deleteTriggersForTask(ctx, taskId)
             },
-            todos: this.storage.todos,
             tokenStatsFetch: (ctx, options) => this.storage.tokenStats.findMany(ctx, options),
             documents: this.storage.documents,
             fragments: this.storage.fragments,
@@ -783,12 +776,6 @@ export class Engine {
         this.modules.tools.register("core", buildTaskRunTool());
         this.modules.tools.register("core", buildTaskTriggerAddTool());
         this.modules.tools.register("core", buildTaskTriggerRemoveTool());
-        this.modules.tools.register("core", todoListToolBuild());
-        this.modules.tools.register("core", todoCreateToolBuild());
-        this.modules.tools.register("core", todoUpdateToolBuild());
-        this.modules.tools.register("core", todoReorderToolBuild());
-        this.modules.tools.register("core", todoArchiveToolBuild());
-        this.modules.tools.register("core", todoBatchStatusToolBuild());
         this.modules.tools.register("core", buildStartBackgroundAgentTool());
         this.modules.tools.register("core", startBackgroundWorkflowToolBuild());
         this.modules.tools.register("core", buildSendAgentMessageTool());
@@ -856,7 +843,7 @@ export class Engine {
             this.modules.tools.register("core", tool);
         }
         logger.debug(
-            "register: Core tools registered: tasks, todos, topology, user_profile_update, background, agent_ask, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, workspaces, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, document_read, document_append, document_patch, document_write, fragment_create, fragment_read, fragment_list, fragment_update, fragment_archive"
+            "register: Core tools registered: tasks, topology, user_profile_update, background, agent_ask, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, workspaces, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, document_read, document_append, document_patch, document_write, fragment_create, fragment_read, fragment_list, fragment_update, fragment_archive"
         );
 
         await this.pluginManager.preStartAll();

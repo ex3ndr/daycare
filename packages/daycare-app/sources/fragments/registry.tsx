@@ -1,5 +1,4 @@
 import { type Components, defineRegistry, useBoundProp, useStateStore } from "@json-render/react-native";
-import * as React from "react";
 import {
     ActivityIndicator,
     Platform,
@@ -13,15 +12,9 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
 import { ItemList } from "@/components/ItemList";
-import { ReorderingList } from "@/components/ReorderingList";
-import { ReorderingList2 } from "@/components/ReorderingList2";
 import type { Theme } from "@/theme";
-import { TODO_HEIGHT } from "@/views/todos/todoHeight";
 import { type FragmentsCatalog, fragmentsCatalog } from "./catalog";
 import { renderIcon } from "./iconRender";
-import { TodoItem } from "./TodoItem";
-import type { TodoListEntry, TodoListItem } from "./TodoListTypes";
-import { TodoSeparator } from "./TodoSeparator";
 import { colorResolve } from "./theme/colors";
 import { flexAlignResolve, flexJustifyResolve } from "./theme/flex";
 import { spacingResolve } from "./theme/size";
@@ -547,153 +540,6 @@ export const fragmentsComponents: Components<FragmentsCatalog> = {
         );
     },
 
-    TodoList: ({ props, bindings, emit }) => {
-        const { set } = useStateStore();
-        const [boundItems, setItems] = useBoundProp<unknown>(props.items, bindings?.items);
-        const items = React.useMemo(() => todoListEntriesNormalize(boundItems), [boundItems]);
-        const listGap =
-            props.gap === null || props.gap === undefined ? (Platform.OS === "web" ? 4 : 8) : spacingResolve(props.gap);
-        const itemHeight = props.itemHeight ?? TODO_HEIGHT;
-        const ReorderComponent = Platform.OS === "web" ? ReorderingList : ReorderingList2;
-
-        const applyItems = React.useCallback(
-            (nextItems: TodoListEntry[]) => {
-                setItems(nextItems);
-                if (bindings?.items) {
-                    set(bindings.items, nextItems);
-                }
-            },
-            [bindings?.items, set, setItems]
-        );
-
-        const handleMove = React.useCallback(
-            (id: string, toIndex: number) => {
-                const fromIndex = items.findIndex((item) => item.id === id);
-                if (fromIndex < 0 || toIndex < 0 || toIndex >= items.length || fromIndex === toIndex) {
-                    return;
-                }
-
-                const nextItems = [...items];
-                const [moved] = nextItems.splice(fromIndex, 1);
-                if (!moved) {
-                    return;
-                }
-                nextItems.splice(toIndex, 0, moved);
-                applyItems(nextItems);
-                emit("move");
-            },
-            [applyItems, emit, items]
-        );
-
-        const handlePress = React.useCallback(
-            (_id: string) => {
-                emit("press");
-            },
-            [emit]
-        );
-
-        const handleToggle = React.useCallback(
-            (id: string, nextValue: boolean) => {
-                const nextItems = items.map((item) =>
-                    item.id === id && item.type !== "separator" ? { ...item, done: nextValue } : item
-                );
-                applyItems(nextItems);
-                emit("toggle");
-            },
-            [applyItems, emit, items]
-        );
-
-        const handleToggleIcon = React.useCallback(
-            (id: string, nextValue: boolean) => {
-                const nextItems = items.map((item) =>
-                    item.id === id && item.type !== "separator"
-                        ? {
-                              ...item,
-                              toggleIcon: {
-                                  ...(item.toggleIcon ?? {}),
-                                  active: nextValue
-                              }
-                          }
-                        : item
-                );
-                applyItems(nextItems);
-                emit("toggleIcon");
-            },
-            [applyItems, emit, items]
-        );
-
-        const handleTitleChange = React.useCallback(
-            (id: string, nextTitle: string) => {
-                const nextItems = items.map((item) =>
-                    item.id === id && item.type !== "separator" ? { ...item, title: nextTitle } : item
-                );
-                applyItems(nextItems);
-                emit("change");
-            },
-            [applyItems, emit, items]
-        );
-
-        const renderItem = React.useCallback(
-            (item: TodoListEntry) => {
-                if (item.type === "separator") {
-                    return <TodoSeparator id={item.id} title={item.title} onPress={handlePress} />;
-                }
-
-                return (
-                    <TodoItem
-                        id={item.id}
-                        title={item.title}
-                        done={item.done ?? false}
-                        icons={item.icons}
-                        counter={item.counter}
-                        toggleIcon={
-                            props.toggleIcon
-                                ? {
-                                      ...props.toggleIcon,
-                                      active: item.toggleIcon?.active ?? false
-                                  }
-                                : null
-                        }
-                        pill={item.pill}
-                        hint={item.hint}
-                        editable={props.editable ?? false}
-                        showCheckbox={props.showCheckbox ?? true}
-                        pillColor={props.pillColor}
-                        pillTextColor={props.pillTextColor}
-                        onPress={handlePress}
-                        onToggle={handleToggle}
-                        onToggleIcon={handleToggleIcon}
-                        onValueChange={handleTitleChange}
-                    />
-                );
-            },
-            [
-                handlePress,
-                handleTitleChange,
-                handleToggle,
-                handleToggleIcon,
-                props.editable,
-                props.pillColor,
-                props.pillTextColor,
-                props.showCheckbox,
-                props.toggleIcon
-            ]
-        );
-
-        return (
-            <RNView style={{ flexGrow: 1, flexBasis: 0 }}>
-                <ReorderComponent
-                    items={items}
-                    renderItem={renderItem}
-                    keyExtractor={(item) => item.id}
-                    itemHeight={itemHeight}
-                    gap={listGap}
-                    onMove={handleMove}
-                />
-            </RNView>
-        );
-    },
-
     Item: ({ props, emit }) => (
         <Item
             title={String(props.title ?? "")}
@@ -761,49 +607,6 @@ function iconButtonPaletteResolve(
         default:
             return { bg: "transparent", border: "transparent", icon: theme.colors.onSurfaceVariant };
     }
-}
-
-function todoListEntriesNormalize(value: unknown): TodoListEntry[] {
-    if (!Array.isArray(value)) {
-        return [];
-    }
-
-    const normalized: TodoListEntry[] = [];
-    for (const item of value) {
-        if (!item || typeof item !== "object") {
-            continue;
-        }
-
-        const record = item as Record<string, unknown>;
-        if (typeof record.id !== "string" || typeof record.title !== "string") {
-            continue;
-        }
-
-        if (record.type === "separator") {
-            normalized.push({ id: record.id, title: record.title, type: "separator" });
-            continue;
-        }
-
-        normalized.push({
-            id: record.id,
-            title: record.title,
-            type: "item",
-            done: typeof record.done === "boolean" ? record.done : false,
-            icons: Array.isArray(record.icons) ? (record.icons as TodoListItem["icons"]) : undefined,
-            counter:
-                record.counter && typeof record.counter === "object"
-                    ? (record.counter as TodoListItem["counter"])
-                    : undefined,
-            toggleIcon:
-                record.toggleIcon && typeof record.toggleIcon === "object"
-                    ? (record.toggleIcon as TodoListItem["toggleIcon"])
-                    : undefined,
-            pill: typeof record.pill === "string" ? record.pill : undefined,
-            hint: typeof record.hint === "string" ? record.hint : undefined
-        });
-    }
-
-    return normalized;
 }
 
 // -- Registry export --

@@ -11,7 +11,6 @@ import type { DocumentsRepository } from "../../storage/documentsRepository.js";
 import type { FragmentsRepository } from "../../storage/fragmentsRepository.js";
 import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
 import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
-import type { TodosRepository } from "../../storage/todosRepository.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import type { WorkspaceMembersRepository } from "../../storage/workspaceMembersRepository.js";
 import { agentsRouteHandle } from "./agents/agentsRoutes.js";
@@ -31,7 +30,6 @@ import type { RouteAgentCallbacks, RouteTaskCallbacks } from "./routeTypes.js";
 import { secretsRouteHandle } from "./secrets/secretsRoutes.js";
 import { skillsRouteHandle } from "./skills/skillsRoutes.js";
 import { tasksRouteHandle } from "./tasks/tasksRoutes.js";
-import { todosRouteHandle } from "./todos/todosRoutes.js";
 import { toolsRouteHandle } from "./tools/toolsRoutes.js";
 import { workspacesRouteHandle } from "./workspaces/workspacesRoutes.js";
 
@@ -49,7 +47,6 @@ export type ApiRouteContext = {
     tasksListActive: ((ctx: Context) => Promise<TaskActiveSummary[]>) | null;
     tasksListAll: ((ctx: Context) => Promise<TaskListAllResult>) | null;
     taskCallbacks: RouteTaskCallbacks | null;
-    todos?: TodosRepository | null;
     tokenStatsFetch: ((ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>) | null;
     documents: DocumentsRepository | null;
     fragments: FragmentsRepository | null;
@@ -118,14 +115,6 @@ export async function apiRouteHandle(
             tasksListActive: context.tasksListActive,
             tasksListAll: context.tasksListAll,
             callbacks: context.taskCallbacks
-        });
-    }
-    if (pathname.startsWith("/todos")) {
-        return todosRouteHandle(request, response, pathname, {
-            ctx: context.ctx,
-            sendJson: context.sendJson,
-            readJsonBody: context.readJsonBody,
-            todos: context.todos ?? null
         });
     }
     if (pathname.startsWith("/skills")) {

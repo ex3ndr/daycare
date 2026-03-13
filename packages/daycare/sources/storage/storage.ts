@@ -26,7 +26,6 @@ import { SignalEventsRepository } from "./signalEventsRepository.js";
 import { SignalSubscriptionsRepository } from "./signalSubscriptionsRepository.js";
 import { SystemPromptsRepository } from "./systemPromptsRepository.js";
 import { TasksRepository } from "./tasksRepository.js";
-import { TodosRepository } from "./todosRepository.js";
 import { TokenStatsRepository } from "./tokenStatsRepository.js";
 import { UsersRepository } from "./usersRepository.js";
 import { WebhookTasksRepository } from "./webhookTasksRepository.js";
@@ -45,7 +44,6 @@ export class Storage {
     readonly cronTasks: CronTasksRepository;
     readonly webhookTasks: WebhookTasksRepository;
     readonly tasks: TasksRepository;
-    readonly todos: TodosRepository;
     readonly documents: DocumentsRepository;
     readonly fragments: FragmentsRepository;
     readonly signalEvents: SignalEventsRepository;
@@ -80,7 +78,6 @@ export class Storage {
         this.cronTasks = new CronTasksRepository(db);
         this.webhookTasks = new WebhookTasksRepository(db);
         this.tasks = new TasksRepository(db);
-        this.todos = new TodosRepository(db);
         this.documents = new DocumentsRepository(db);
         this.fragments = new FragmentsRepository(db);
         this.signalEvents = new SignalEventsRepository(db);

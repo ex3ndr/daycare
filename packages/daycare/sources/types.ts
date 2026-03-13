@@ -180,10 +180,6 @@ export type {
     ObservationLogFindOptions,
     ObservationLogRecentOptions,
     PsqlDatabaseDbRecord,
-    TodoDbRecord,
     UserConnectorKeyDbRecord,
     UserDbRecord
 } from "./storage/databaseTypes.js";
-export type { TodoStatus } from "./todos/todoTypes.js";
-// Todos
-export { TODO_STATUSES } from "./todos/todoTypes.js";

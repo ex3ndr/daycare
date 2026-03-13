@@ -11,7 +11,6 @@ import { agentSystemPromptSectionPermissions } from "./agentSystemPromptSectionP
 import { agentSystemPromptSectionPlugins } from "./agentSystemPromptSectionPlugins.js";
 import { agentSystemPromptSectionPreamble } from "./agentSystemPromptSectionPreamble.js";
 import { agentSystemPromptSectionSkills } from "./agentSystemPromptSectionSkills.js";
-import { agentSystemPromptSectionTodos } from "./agentSystemPromptSectionTodos.js";
 import { agentSystemPromptSectionToolCalling } from "./agentSystemPromptSectionToolCalling.js";
 
 const logger = getLogger("agent.prompt-build");
@@ -54,7 +53,6 @@ export async function agentSystemPrompt(context: AgentSystemPromptContext): Prom
         agentSystemPromptSectionPlugins(context),
         agentSystemPromptSectionSkills(context),
         agentSystemPromptSectionFormatting(context),
-        agentSystemPromptSectionTodos(context),
         agentSystemPromptSectionMemory(context),
         agentSystemPromptSectionEnvironment(context),
         agentSystemPromptSectionModels(context)

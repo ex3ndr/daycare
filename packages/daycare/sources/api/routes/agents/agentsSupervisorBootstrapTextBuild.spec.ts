@@ -5,7 +5,6 @@ describe("agentsSupervisorBootstrapTextBuild", () => {
     it("wraps bootstrap text in supervisor instructions", () => {
         const result = agentsSupervisorBootstrapTextBuild("Ship the bugfix.");
         expect(result).toContain("<bootstrap_request>\nShip the bugfix.");
-        expect(result).toContain("todo_create");
         expect(result).toContain("document_write");
         expect(result).toContain('parentPath under "doc://document"');
         expect(result).toContain('"mission"');

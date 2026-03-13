@@ -6,48 +6,8 @@ import { fragmentsRegistry } from "@/fragments/registry";
 
 /**
  * Static spec showing practical UI patterns built from fragment components.
- * Includes an interactive TodoList example backed by local fragment state.
  */
 const examplesSpec: Spec = {
-    state: {
-        todos: [
-            {
-                id: "sep-work",
-                type: "separator",
-                title: "Work"
-            },
-            {
-                id: "todo-1",
-                title: "Review PR #248",
-                done: true,
-                icons: [{ name: "git-pull-request", set: "Octicons", color: "primary" }],
-                counter: { current: 2, total: 4 },
-                hint: "Due today",
-                toggleIcon: { active: true }
-            },
-            {
-                id: "todo-2",
-                title: "Prepare release notes",
-                done: false,
-                pill: "Today",
-                hint: "Ship before 17:00",
-                toggleIcon: { active: false }
-            },
-            {
-                id: "sep-personal",
-                type: "separator",
-                title: "Personal"
-            },
-            {
-                id: "todo-3",
-                title: "Book dentist appointment",
-                done: false,
-                icons: [{ name: "calendar", set: "Feather", color: "tertiary" }],
-                hint: "This week",
-                toggleIcon: { active: false }
-            }
-        ]
-    },
     root: "root",
     elements: {
         root: {
@@ -58,7 +18,7 @@ const examplesSpec: Spec = {
         main: {
             type: "View",
             props: { direction: "column", gap: "lg" },
-            children: ["sectionProfile", "sectionSettings", "sectionNotifications", "sectionStats", "sectionTodos"]
+            children: ["sectionProfile", "sectionSettings", "sectionNotifications", "sectionStats"]
         },
 
         // -- Profile Card --
@@ -162,42 +122,6 @@ const examplesSpec: Spec = {
         statsLatency: {
             type: "Text",
             props: { text: "Latency: 42ms", size: "sm", color: "onSurfaceVariant" },
-            children: []
-        },
-
-        // -- TodoList Fragment Example --
-
-        sectionTodos: {
-            type: "Section",
-            props: { title: "Todo List Fragment", subtitle: "Drag, toggle, edit titles", padding: "md", gap: "sm" },
-            children: ["todoIntro", "todoList"]
-        },
-        todoIntro: {
-            type: "Text",
-            props: {
-                text: "Uses state binding (/todos) with separators, icons, counters, pills, hints, and a two-state toggle icon.",
-                size: "sm",
-                color: "onSurfaceVariant"
-            },
-            children: []
-        },
-        todoList: {
-            type: "TodoList",
-            props: {
-                items: { $bindState: "/todos" },
-                gap: "xs",
-                showCheckbox: true,
-                editable: true,
-                pillColor: "secondaryContainer",
-                pillTextColor: "onSecondaryContainer",
-                toggleIcon: {
-                    icon: "star",
-                    activeIcon: "star-fill",
-                    set: "Octicons",
-                    color: "onSurfaceVariant",
-                    activeColor: "tertiary"
-                }
-            },
             children: []
         }
     }

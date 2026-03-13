@@ -105,15 +105,6 @@ sequenceDiagram
     API-->>Client: { ok: true }
 ```
 
-## TodoList Component
-
-The fragment catalog now includes a state-bound `TodoList` component for interactive todos with drag reordering.
-
-- `props.items` is expected as a state binding (for example `{ "$bindState": "/todos" }`)
-- supports row features: checkbox, title edit, icons, counter, pill, hint, toggle icon
-- supports inline separators in the same list via `type: "separator"`
-- emits: `move`, `press`, `toggle`, `toggleIcon`, `change`
-
 ## Fragment Python
 
 Fragments can include an optional root-level `code` string with Python source executed in the app via `react-native-monty`.

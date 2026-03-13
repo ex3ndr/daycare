@@ -142,9 +142,5 @@ export const fragmentSchema = {
     ProgressBar: {
         props: ["value", "color", "trackColor", "height"],
         slots: []
-    },
-    TodoList: {
-        props: ["items", "itemHeight", "gap", "showCheckbox", "toggleIcon", "editable", "pillColor", "pillTextColor"],
-        slots: []
     }
 } as const;

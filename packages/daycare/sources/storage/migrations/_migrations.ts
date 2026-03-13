@@ -72,5 +72,9 @@ export const migrations: Migration[] = [
     {
         name: "20260312191000_agent_connector_keys",
         fileName: "20260312191000_agent_connector_keys.sql"
+    },
+    {
+        name: "20260313110000_drop_todos",
+        fileName: "20260313110000_drop_todos.sql"
     }
 ];

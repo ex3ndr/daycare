@@ -27,10 +27,7 @@ type Segment = {
 /** Sidebar items grouped with visual spacing between groups. */
 const segmentGroups: Segment[][] = [
     [{ key: "home", mode: "home", icon: "home", label: "Home" }],
-    [
-        { key: "todos", mode: "todos", icon: "checklist", label: "Todos" },
-        { key: "documents", mode: "documents", icon: "file", label: "Documents" }
-    ],
+    [{ key: "documents", mode: "documents", icon: "file", label: "Documents" }],
     [
         { key: "agents", mode: "agents", icon: "device-desktop", label: "Agents" },
         { key: "fragments", mode: "fragments", icon: "note", label: "Fragments" },
@@ -55,7 +52,6 @@ const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     "mini-apps": [],
     agents: [],
     fragments: [],
-    todos: [],
     automations: [],
     costs: [],
     documents: [],

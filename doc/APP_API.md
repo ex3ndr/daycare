@@ -28,7 +28,6 @@ flowchart TD
     F --> G[/profile]
     F --> H[/agents]
     F --> I[/tasks]
-    F --> I2[/todos]
     F --> J[/skills]
     F --> O[/swarms]
     F --> K[/documents]
@@ -178,43 +177,6 @@ Trigger remove body:
 ```json
 { "type": "cron" }
 ```
-
-## Todo Routes
-- `GET /todos`
-- `GET /todos/tree`
-- `POST /todos/create`
-- `POST /todos/:id/update`
-- `POST /todos/:id/reorder`
-- `POST /todos/:id/archive`
-- `POST /todos/batch-status`
-
-Todo create body:
-```json
-{
-    "title": "Build MVP",
-    "description": "Parent project todo",
-    "status": "unstarted",
-    "parentId": null
-}
-```
-
-Todo reorder body:
-```json
-{
-    "parentId": "optional-parent-id",
-    "index": 0
-}
-```
-
-Todo batch-status body:
-```json
-{
-    "ids": ["todo-a", "todo-b"],
-    "status": "finished"
-}
-```
-
-Workspace-scoped todo routes use the authenticated workspace context. When the app is addressing another workspace via `/w/:workspaceId/...`, that workspace is already resolved into `ctx.userId` before route dispatch.
 
 ## Skills Routes
 - `GET /skills`

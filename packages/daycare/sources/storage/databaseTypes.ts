@@ -2,7 +2,6 @@ import type { AgentKind, AgentLifecycleState, AgentPath, ConnectorIdentity, Sess
 import type { TaskParameter } from "../engine/modules/tasks/taskParameterTypes.js";
 import type { SignalSource } from "../engine/signals/signalTypes.js";
 import type { ModelRoleKey } from "../settings.js";
-import type { TodoStatus } from "../todos/todoTypes.js";
 
 export type DatabaseAgentRow = {
     id: string;
@@ -408,36 +407,6 @@ export type WorkspaceMemberDbRecord = {
     joinedAt: number;
     leftAt: number | null;
     kickReason: string | null;
-};
-
-export type DatabaseTodoRow = {
-    id: string;
-    workspace_id: string;
-    parent_id: string | null;
-    title: string;
-    description: string;
-    status: TodoStatus;
-    rank: string;
-    version: number;
-    valid_from: number;
-    valid_to: number | null;
-    created_at: number;
-    updated_at: number;
-};
-
-export type TodoDbRecord = {
-    id: string;
-    workspaceId: string;
-    parentId: string | null;
-    title: string;
-    description: string;
-    status: TodoStatus;
-    rank: string;
-    version?: number;
-    validFrom?: number;
-    validTo?: number | null;
-    createdAt: number;
-    updatedAt: number;
 };
 
 export type DatabaseProcessRow = {
