@@ -196,7 +196,11 @@ describe("configResolve", () => {
         const config = configResolve({}, configPath);
 
         expect(config.settings.sandbox).toEqual({
-            backend: "docker"
+            backend: "docker",
+            resourceLimits: {
+                cpu: 4,
+                memory: "16Gi"
+            }
         });
         expect(config.settings.opensandbox).toEqual({
             domain: undefined,
@@ -211,7 +215,11 @@ describe("configResolve", () => {
         const config = configResolve(
             {
                 sandbox: {
-                    backend: "opensandbox"
+                    backend: "opensandbox",
+                    resourceLimits: {
+                        cpu: 6,
+                        memory: "12Gi"
+                    }
                 },
                 opensandbox: {
                     domain: "https://sandbox.example.com",
@@ -224,11 +232,35 @@ describe("configResolve", () => {
         );
 
         expect(config.settings.sandbox.backend).toBe("opensandbox");
+        expect(config.settings.sandbox.resourceLimits).toEqual({
+            cpu: 6,
+            memory: "12Gi"
+        });
         expect(config.settings.opensandbox).toEqual({
             domain: "https://sandbox.example.com",
             apiKey: "secret",
             image: "ubuntu",
             timeoutSeconds: 300
+        });
+    });
+
+    it("normalizes sandbox resource limits", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+        const config = configResolve(
+            {
+                sandbox: {
+                    resourceLimits: {
+                        cpu: 2.5,
+                        memory: " 8Gi "
+                    }
+                }
+            },
+            configPath
+        );
+
+        expect(config.settings.sandbox.resourceLimits).toEqual({
+            cpu: 2.5,
+            memory: "8Gi"
         });
     });
 

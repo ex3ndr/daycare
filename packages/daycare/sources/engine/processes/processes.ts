@@ -6,6 +6,7 @@ import type { Logger } from "pino";
 import type { Context, SessionPermissions } from "@/types";
 import { Sandbox } from "../../sandbox/sandbox.js";
 import { sandboxCanWrite } from "../../sandbox/sandboxCanWrite.js";
+import { sandboxResourceLimitsResolve } from "../../sandbox/sandboxResourceLimitsResolve.js";
 import type { SandboxDockerConfig } from "../../sandbox/sandboxTypes.js";
 import type { ResolvedDockerSettings } from "../../settings.js";
 import type { ProcessDbRecord } from "../../storage/databaseTypes.js";
@@ -143,6 +144,10 @@ export class Processes {
         options: {
             bootTimeProvider?: () => Promise<number | null>;
             docker?: ResolvedDockerSettings;
+            sandboxResourceLimits?: {
+                cpu: number;
+                memory: string;
+            };
             repository: Pick<
                 ProcessesRepository,
                 "create" | "findAll" | "findById" | "update" | "updateRuntime" | "delete" | "deleteByOwner"
@@ -157,7 +162,9 @@ export class Processes {
         this.repository = options.repository;
         this.runtime =
             options.runtime ??
-            (options.docker ? processRuntimeBuild(options.docker) : processRuntimeUnavailableBuild());
+            (options.docker
+                ? processRuntimeBuild(options.docker, options.sandboxResourceLimits)
+                : processRuntimeUnavailableBuild());
     }
 
     async load(): Promise<void> {
@@ -911,10 +918,16 @@ function processPathReadOnly(permissions: SessionPermissions, targetPath: string
     return true;
 }
 
-function processRuntimeBuild(dockerSettings: ResolvedDockerSettings): ProcessRuntime {
+function processRuntimeBuild(
+    dockerSettings: ResolvedDockerSettings,
+    sandboxResourceLimits?: {
+        cpu: number;
+        memory: string;
+    }
+): ProcessRuntime {
     return {
         start: async (record) => {
-            const sandbox = processSandboxBuild(record, dockerSettings);
+            const sandbox = processSandboxBuild(record, dockerSettings, sandboxResourceLimits);
             const settings = processSandboxSettingsBuild(record);
             await processSandboxSettingsWrite(record, settings);
 
@@ -938,7 +951,7 @@ function processRuntimeBuild(dockerSettings: ResolvedDockerSettings): ProcessRun
                 return false;
             }
 
-            const sandbox = processSandboxBuild(record, dockerSettings);
+            const sandbox = processSandboxBuild(record, dockerSettings, sandboxResourceLimits);
             const result = await sandbox.execBuffered({
                 command: processStatusCommandBuild(record.pid),
                 cwd: record.cwd
@@ -950,7 +963,7 @@ function processRuntimeBuild(dockerSettings: ResolvedDockerSettings): ProcessRun
                 return;
             }
 
-            const sandbox = processSandboxBuild(record, dockerSettings);
+            const sandbox = processSandboxBuild(record, dockerSettings, sandboxResourceLimits);
             await sandbox.execBuffered({
                 command: processStopCommandBuild(signal),
                 cwd: record.cwd
@@ -958,19 +971,27 @@ function processRuntimeBuild(dockerSettings: ResolvedDockerSettings): ProcessRun
             await processSandboxWaitForStop(sandbox, record.pid, DOCKER_STOP_TIMEOUT_MS);
         },
         remove: async (record) => {
-            const sandbox = processSandboxBuild(record, dockerSettings);
+            const sandbox = processSandboxBuild(record, dockerSettings, sandboxResourceLimits);
             await sandbox.destroy();
         }
     };
 }
 
-function processSandboxBuild(record: ProcessRecord, dockerSettings: ResolvedDockerSettings): Sandbox {
+function processSandboxBuild(
+    record: ProcessRecord,
+    dockerSettings: ResolvedDockerSettings,
+    sandboxResourceLimits?: {
+        cpu: number;
+        memory: string;
+    }
+): Sandbox {
     const processDir = path.dirname(record.logPath);
     const homeDir = record.home ?? path.join(processDir, "home");
     const processUserId = processSandboxUserIdBuild(record.id);
     const allowLocalNetworkingForUsers = record.allowLocalBinding
         ? Array.from(new Set([...(dockerSettings.allowLocalNetworkingForUsers ?? []), processUserId]))
         : [...(dockerSettings.allowLocalNetworkingForUsers ?? [])];
+    const resourceLimits = sandboxResourceLimitsResolve(sandboxResourceLimits);
     const dockerConfig: SandboxDockerConfig = {
         socketPath: dockerSettings.socketPath,
         runtime: dockerSettings.runtime,
@@ -981,6 +1002,10 @@ function processSandboxBuild(record: ProcessRecord, dockerSettings: ResolvedDock
         allowLocalNetworkingForUsers,
         isolatedDnsServers: dockerSettings.isolatedDnsServers,
         localDnsServers: dockerSettings.localDnsServers,
+        resourceLimits: {
+            cpu: resourceLimits.cpu,
+            memory: resourceLimits.memory
+        },
         userId: processUserId
     };
 

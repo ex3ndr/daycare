@@ -21,7 +21,11 @@ Configure the Docker runtime in `settings.json`:
 ```json
 {
     "sandbox": {
-        "backend": "docker"
+        "backend": "docker",
+        "resourceLimits": {
+            "cpu": 4,
+            "memory": "16Gi"
+        }
     },
     "docker": {
         "socketPath": "/var/run/docker.sock",
@@ -48,6 +52,8 @@ Defaults when omitted:
 - `allowLocalNetworkingForUsers`: `[]`
 - `isolatedDnsServers`: `["1.1.1.1", "8.8.8.8"]`
 - `localDnsServers`: `[]`
+- `sandbox.resourceLimits.cpu`: `4`
+- `sandbox.resourceLimits.memory`: `"16Gi"`
 
 ## Execution Flow
 
@@ -86,7 +92,8 @@ Outbound network access is otherwise unrestricted once the command is running in
 ## Container Refresh
 
 Each sandbox container is labeled with the current runtime image id, network profile, DNS profile, capability
-settings, and writable tmpfs settings. If those labels drift, the container is treated as stale and recreated.
+settings, resource limits, and writable tmpfs settings. If those labels drift, the container is treated as stale
+and recreated.
 
 At engine startup, Daycare validates that `daycare-runtime:latest` exists locally and removes stale
 `daycare-sandbox-*` containers before normal startup continues.

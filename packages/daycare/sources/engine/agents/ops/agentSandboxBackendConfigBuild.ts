@@ -1,3 +1,4 @@
+import { sandboxResourceLimitsResolve } from "../../../sandbox/sandboxResourceLimitsResolve.js";
 import type { SandboxBackendConfig } from "../../../sandbox/sandboxTypes.js";
 import type { ResolvedSettingsConfig } from "../../../settings.js";
 
@@ -6,6 +7,8 @@ import type { ResolvedSettingsConfig } from "../../../settings.js";
  * Expects: settings have already passed config resolution and validation.
  */
 export function agentSandboxBackendConfigBuild(settings: ResolvedSettingsConfig, userId: string): SandboxBackendConfig {
+    const resourceLimits = sandboxResourceLimitsResolve(settings.sandbox.resourceLimits);
+
     if (settings.sandbox.backend === "opensandbox") {
         if (!settings.opensandbox.domain) {
             throw new Error("settings.opensandbox.domain is required when sandbox.backend is opensandbox.");
@@ -19,6 +22,10 @@ export function agentSandboxBackendConfigBuild(settings: ResolvedSettingsConfig,
                 domain: settings.opensandbox.domain,
                 apiKey: settings.opensandbox.apiKey,
                 image: settings.opensandbox.image,
+                resourceLimits: {
+                    cpu: resourceLimits.cpu,
+                    memory: resourceLimits.memory
+                },
                 userId,
                 timeoutSeconds: settings.opensandbox.timeoutSeconds
             }
@@ -37,6 +44,10 @@ export function agentSandboxBackendConfigBuild(settings: ResolvedSettingsConfig,
             allowLocalNetworkingForUsers: settings.docker.allowLocalNetworkingForUsers,
             isolatedDnsServers: settings.docker.isolatedDnsServers,
             localDnsServers: settings.docker.localDnsServers,
+            resourceLimits: {
+                cpu: resourceLimits.cpu,
+                memory: resourceLimits.memory
+            },
             userId
         }
     };

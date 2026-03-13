@@ -29,6 +29,10 @@ describe("OpenSandboxSandboxes", () => {
         const config = {
             domain: "localhost:8080",
             image: "ubuntu",
+            resourceLimits: {
+                cpu: 4,
+                memory: "16Gi"
+            },
             userId: "user-1",
             timeoutSeconds: 600
         };
@@ -46,6 +50,10 @@ describe("OpenSandboxSandboxes", () => {
         expect(createMock).toHaveBeenCalledWith(
             expect.objectContaining({
                 image: "ubuntu",
+                resource: {
+                    cpu: "4",
+                    memory: "16Gi"
+                },
                 timeoutSeconds: 600,
                 volumes: [
                     {
@@ -92,6 +100,10 @@ describe("OpenSandboxSandboxes", () => {
             {
                 domain: "localhost:8080",
                 image: "ubuntu",
+                resourceLimits: {
+                    cpu: 4,
+                    memory: "16Gi"
+                },
                 userId: "user-1",
                 timeoutSeconds: 600
             },
@@ -101,6 +113,10 @@ describe("OpenSandboxSandboxes", () => {
             {
                 domain: "localhost:8080",
                 image: "ubuntu:24.04",
+                resourceLimits: {
+                    cpu: 4,
+                    memory: "16Gi"
+                },
                 userId: "user-1",
                 timeoutSeconds: 600
             },

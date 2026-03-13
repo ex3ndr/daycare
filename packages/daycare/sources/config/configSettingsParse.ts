@@ -77,7 +77,14 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                 .optional(),
             sandbox: z
                 .object({
-                    backend: z.enum(["docker", "opensandbox"]).optional()
+                    backend: z.enum(["docker", "opensandbox"]).optional(),
+                    resourceLimits: z
+                        .object({
+                            cpu: z.number().positive().finite().optional(),
+                            memory: z.string().min(1).optional()
+                        })
+                        .passthrough()
+                        .optional()
                 })
                 .passthrough()
                 .optional(),

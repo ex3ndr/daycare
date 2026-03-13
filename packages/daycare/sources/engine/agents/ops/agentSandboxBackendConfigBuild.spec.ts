@@ -11,7 +11,11 @@ describe("agentSandboxBackendConfigBuild", () => {
             type: "docker",
             docker: expect.objectContaining({
                 userId: "user-1",
-                runtime: "runsc"
+                runtime: "runsc",
+                resourceLimits: {
+                    cpu: 4,
+                    memory: "16Gi"
+                }
             })
         });
     });
@@ -20,7 +24,11 @@ describe("agentSandboxBackendConfigBuild", () => {
         const result = agentSandboxBackendConfigBuild(
             settingsBuild({
                 sandbox: {
-                    backend: "opensandbox"
+                    backend: "opensandbox",
+                    resourceLimits: {
+                        cpu: 4,
+                        memory: "16Gi"
+                    }
                 },
                 opensandbox: {
                     domain: "localhost:8080",
@@ -38,6 +46,10 @@ describe("agentSandboxBackendConfigBuild", () => {
                 domain: "localhost:8080",
                 apiKey: "secret",
                 image: "ubuntu",
+                resourceLimits: {
+                    cpu: 4,
+                    memory: "16Gi"
+                },
                 userId: "user-1",
                 timeoutSeconds: 300
             }
@@ -65,7 +77,11 @@ function settingsBuild(overrides: Partial<ResolvedSettingsConfig> = {}): Resolve
             localDnsServers: []
         },
         sandbox: {
-            backend: "docker"
+            backend: "docker",
+            resourceLimits: {
+                cpu: 4,
+                memory: "16Gi"
+            }
         },
         opensandbox: {
             domain: undefined,

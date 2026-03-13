@@ -14,6 +14,10 @@ const baseConfig: DockerContainerResolvedConfig = {
     capDrop: [],
     userId: "user-1",
     networkName: "daycare-isolated",
+    resourceLimits: {
+        cpu: 4,
+        memory: "16Gi"
+    },
     hostHomeDir: "/tmp/daycare-home-user-1",
     mounts: [
         { hostPath: "/tmp/daycare-home-user-1", mappedPath: "/home" },
@@ -39,6 +43,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.dns.profile": "public",
                         "daycare.dns.servers": "1.1.1.1,8.8.8.8",
                         "daycare.dns.resolver": "bind",
+                        "daycare.resource.cpu": "4",
+                        "daycare.resource.memory": "16Gi",
                         "daycare.tmpfs.tmp": "1",
                         "daycare.tmpfs.run": "1",
                         "daycare.tmpfs.var_tmp": "1",
@@ -85,6 +91,8 @@ describe("dockerContainerEnsure", () => {
                         "daycare.dns.profile": "public",
                         "daycare.dns.servers": "1.1.1.1,8.8.8.8",
                         "daycare.dns.resolver": "bind",
+                        "daycare.resource.cpu": "4",
+                        "daycare.resource.memory": "16Gi",
                         "daycare.tmpfs.tmp": "1",
                         "daycare.tmpfs.run": "1",
                         "daycare.tmpfs.var_tmp": "1",
@@ -509,6 +517,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.dns.profile": "public",
                 "daycare.dns.servers": "1.1.1.1,8.8.8.8",
                 "daycare.dns.resolver": "bind",
+                "daycare.resource.cpu": "4",
+                "daycare.resource.memory": "16Gi",
                 "daycare.tmpfs.tmp": "1",
                 "daycare.tmpfs.run": "1",
                 "daycare.tmpfs.var_tmp": "1",
@@ -524,6 +534,9 @@ describe("dockerContainerEnsure", () => {
                     "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
                 ],
                 NetworkMode: "daycare-isolated",
+                NanoCpus: 4_000_000_000,
+                Memory: 17_179_869_184,
+                MemorySwap: 17_179_869_184,
                 ShmSize: 1024 * 1024 * 1024,
                 Init: true,
                 Tmpfs: {
@@ -584,6 +597,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.dns.profile": "default",
                 "daycare.dns.servers": "default",
                 "daycare.dns.resolver": "docker",
+                "daycare.resource.cpu": "4",
+                "daycare.resource.memory": "16Gi",
                 "daycare.tmpfs.tmp": "1",
                 "daycare.tmpfs.run": "1",
                 "daycare.tmpfs.var_tmp": "1",
@@ -598,6 +613,9 @@ describe("dockerContainerEnsure", () => {
                     "/tmp/daycare-examples:/shared/examples:ro"
                 ],
                 NetworkMode: "daycare-local",
+                NanoCpus: 4_000_000_000,
+                Memory: 17_179_869_184,
+                MemorySwap: 17_179_869_184,
                 ShmSize: 1024 * 1024 * 1024,
                 Init: true,
                 Tmpfs: {
@@ -657,6 +675,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.dns.profile": "private",
                 "daycare.dns.servers": "192.168.1.1,192.168.1.2",
                 "daycare.dns.resolver": "bind",
+                "daycare.resource.cpu": "4",
+                "daycare.resource.memory": "16Gi",
                 "daycare.tmpfs.tmp": "1",
                 "daycare.tmpfs.run": "1",
                 "daycare.tmpfs.var_tmp": "1",
@@ -672,6 +692,9 @@ describe("dockerContainerEnsure", () => {
                     "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
                 ],
                 NetworkMode: "daycare-local",
+                NanoCpus: 4_000_000_000,
+                Memory: 17_179_869_184,
+                MemorySwap: 17_179_869_184,
                 ShmSize: 1024 * 1024 * 1024,
                 Init: true,
                 Tmpfs: {
@@ -805,6 +828,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.dns.profile": "public",
                 "daycare.dns.servers": "1.1.1.1,8.8.8.8",
                 "daycare.dns.resolver": "bind",
+                "daycare.resource.cpu": "4",
+                "daycare.resource.memory": "16Gi",
                 "daycare.tmpfs.tmp": "1",
                 "daycare.tmpfs.run": "1",
                 "daycare.tmpfs.var_tmp": "1",
@@ -820,6 +845,9 @@ describe("dockerContainerEnsure", () => {
                     "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
                 ],
                 NetworkMode: "daycare-isolated",
+                NanoCpus: 4_000_000_000,
+                Memory: 17_179_869_184,
+                MemorySwap: 17_179_869_184,
                 ShmSize: 1024 * 1024 * 1024,
                 Init: true,
                 Tmpfs: {
@@ -920,6 +948,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.dns.profile": "public",
                 "daycare.dns.servers": "1.1.1.1,8.8.8.8",
                 "daycare.dns.resolver": "bind",
+                "daycare.resource.cpu": "4",
+                "daycare.resource.memory": "16Gi",
                 "daycare.tmpfs.tmp": "1",
                 "daycare.tmpfs.run": "1",
                 "daycare.tmpfs.var_tmp": "1",
@@ -935,6 +965,9 @@ describe("dockerContainerEnsure", () => {
                     "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
                 ],
                 NetworkMode: "daycare-isolated",
+                NanoCpus: 4_000_000_000,
+                Memory: 17_179_869_184,
+                MemorySwap: 17_179_869_184,
                 ShmSize: 1024 * 1024 * 1024,
                 Init: true,
                 Tmpfs: {
@@ -996,6 +1029,8 @@ describe("dockerContainerEnsure", () => {
                 "daycare.dns.profile": "public",
                 "daycare.dns.servers": "1.1.1.1,8.8.8.8",
                 "daycare.dns.resolver": "bind",
+                "daycare.resource.cpu": "4",
+                "daycare.resource.memory": "16Gi",
                 "daycare.tmpfs.tmp": "1",
                 "daycare.tmpfs.run": "1",
                 "daycare.tmpfs.var_tmp": "1",
@@ -1011,6 +1046,9 @@ describe("dockerContainerEnsure", () => {
                     "/tmp/daycare-home-user-1/.tmp/daycare-resolv.conf:/etc/resolv.conf:ro"
                 ],
                 NetworkMode: "daycare-isolated",
+                NanoCpus: 4_000_000_000,
+                Memory: 17_179_869_184,
+                MemorySwap: 17_179_869_184,
                 ShmSize: 1024 * 1024 * 1024,
                 Init: true,
                 Tmpfs: {
@@ -1105,6 +1143,60 @@ describe("dockerContainerEnsure", () => {
             ...baseConfig,
             readOnly: true
         });
+
+        expect(result).toBe(created);
+        expect(existing.stop).toHaveBeenCalledTimes(1);
+        expect(existing.remove).toHaveBeenCalledTimes(1);
+        expect(docker.createContainer).toHaveBeenCalledTimes(1);
+    });
+
+    it("recreates container when resource labels do not match", async () => {
+        const existing = {
+            inspect: vi.fn().mockResolvedValue({
+                State: { Running: true },
+                Config: {
+                    Labels: {
+                        "daycare.image.version": DOCKER_IMAGE_VERSION,
+                        "daycare.image.id": CURRENT_IMAGE_ID,
+                        "daycare.security.profile": "default",
+                        "daycare.capabilities": "add=;drop=",
+                        "daycare.readonly": "0",
+                        "daycare.network": "daycare-isolated",
+                        "daycare.dns.profile": "public",
+                        "daycare.dns.servers": "1.1.1.1,8.8.8.8",
+                        "daycare.dns.resolver": "bind",
+                        "daycare.resource.cpu": "2",
+                        "daycare.resource.memory": "8Gi",
+                        "daycare.tmpfs.tmp": "1",
+                        "daycare.tmpfs.run": "1",
+                        "daycare.tmpfs.var_tmp": "1",
+                        "daycare.tmpfs.var_run": "1",
+                        "daycare.tmpfs.dev_shm": "1",
+                        "daycare.init": "1"
+                    }
+                },
+                NetworkSettings: {
+                    Networks: {
+                        "daycare-isolated": {}
+                    }
+                }
+            }),
+            start: vi.fn(),
+            stop: vi.fn().mockResolvedValue(undefined),
+            remove: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const created = {
+            start: vi.fn().mockResolvedValue(undefined)
+        } as unknown as Docker.Container;
+        const docker = {
+            getContainer: vi.fn().mockReturnValue(existing),
+            getImage: vi.fn().mockReturnValue({
+                inspect: vi.fn().mockResolvedValue({ Id: CURRENT_IMAGE_ID })
+            }),
+            createContainer: vi.fn().mockResolvedValue(created)
+        } as unknown as Docker;
+
+        const result = await dockerContainerEnsure(docker, baseConfig);
 
         expect(result).toBe(created);
         expect(existing.stop).toHaveBeenCalledTimes(1);

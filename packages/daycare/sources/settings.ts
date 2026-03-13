@@ -119,8 +119,19 @@ export type DockerSettings = {
 
 export type SandboxBackendType = "docker" | "opensandbox";
 
+export const DEFAULT_SANDBOX_RESOURCE_LIMITS = {
+    cpu: 4,
+    memory: "16Gi"
+} as const;
+
+export type SandboxResourceLimitsSettings = {
+    cpu?: number;
+    memory?: string;
+};
+
 export type SandboxSettings = {
     backend?: SandboxBackendType;
+    resourceLimits?: SandboxResourceLimitsSettings;
 };
 
 export type OpenSandboxSettings = {
@@ -144,6 +155,10 @@ export type ResolvedDockerSettings = {
 
 export type ResolvedSandboxSettings = {
     backend: SandboxBackendType;
+    resourceLimits: {
+        cpu: number;
+        memory: string;
+    };
 };
 
 export type ResolvedOpenSandboxSettings = {

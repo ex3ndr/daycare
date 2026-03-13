@@ -3,6 +3,7 @@ import path from "node:path";
 import type Docker from "dockerode";
 
 import { getLogger } from "../../log.js";
+import { sandboxResourceLimitsResolve } from "../sandboxResourceLimitsResolve.js";
 import { dockerContainerNameBuild } from "./dockerContainerNameBuild.js";
 import { dockerContainerNetworkStateResolve } from "./dockerContainerNetworkStateResolve.js";
 import { dockerDnsProfileResolve } from "./dockerDnsProfileResolve.js";
@@ -43,6 +44,8 @@ const DOCKER_NETWORK_LABEL = "daycare.network";
 const DOCKER_DNS_PROFILE_LABEL = "daycare.dns.profile";
 const DOCKER_DNS_SERVERS_LABEL = "daycare.dns.servers";
 const DOCKER_DNS_RESOLVER_LABEL = "daycare.dns.resolver";
+const DOCKER_RESOURCE_CPU_LABEL = "daycare.resource.cpu";
+const DOCKER_RESOURCE_MEMORY_LABEL = "daycare.resource.memory";
 const DOCKER_TMPFS_TMP_LABEL = "daycare.tmpfs.tmp";
 const DOCKER_TMPFS_RUN_LABEL = "daycare.tmpfs.run";
 const DOCKER_TMPFS_VAR_TMP_LABEL = "daycare.tmpfs.var_tmp";
@@ -81,8 +84,11 @@ export async function dockerContainerEnsure(
         isolatedDnsServers: config.isolatedDnsServers,
         localDnsServers: config.localDnsServers
     });
+    const resourceLimits = sandboxResourceLimitsResolve(config.resourceLimits);
     const dnsServersLabel = dockerDnsServersLabelResolve(dnsProfile.dnsServers);
     const dnsResolverLabel = dnsProfile.dnsServers ? DOCKER_DNS_RESOLVER_BIND : DOCKER_DNS_RESOLVER_DOCKER;
+    const resourceCpuLabel = String(resourceLimits.cpu);
+    const resourceMemoryLabel = resourceLimits.memory;
     const existing = docker.getContainer(containerName);
 
     try {
@@ -98,6 +104,8 @@ export async function dockerContainerEnsure(
             dnsProfile.profileLabel,
             dnsServersLabel,
             dnsResolverLabel,
+            resourceCpuLabel,
+            resourceMemoryLabel,
             hostHomeDir,
             extraMounts
         );
@@ -153,6 +161,8 @@ export async function dockerContainerEnsure(
                 [DOCKER_DNS_PROFILE_LABEL]: dnsProfile.profileLabel,
                 [DOCKER_DNS_SERVERS_LABEL]: dnsServersLabel,
                 [DOCKER_DNS_RESOLVER_LABEL]: dnsResolverLabel,
+                [DOCKER_RESOURCE_CPU_LABEL]: resourceCpuLabel,
+                [DOCKER_RESOURCE_MEMORY_LABEL]: resourceMemoryLabel,
                 [DOCKER_TMPFS_TMP_LABEL]: DOCKER_TMPFS_TMP_ENABLED,
                 [DOCKER_TMPFS_RUN_LABEL]: DOCKER_TMPFS_RUN_ENABLED,
                 [DOCKER_TMPFS_VAR_TMP_LABEL]: DOCKER_TMPFS_VAR_TMP_ENABLED,
@@ -163,6 +173,9 @@ export async function dockerContainerEnsure(
             HostConfig: {
                 Binds: binds,
                 NetworkMode: config.networkName,
+                NanoCpus: resourceLimits.nanoCpus,
+                Memory: resourceLimits.memoryBytes,
+                MemorySwap: resourceLimits.memoryBytes,
                 ShmSize: DOCKER_SHM_SIZE_BYTES,
                 Init: true,
                 Tmpfs: {
@@ -237,6 +250,8 @@ function containerStaleReasonResolve(
     expectedDnsProfileLabel: string,
     expectedDnsServersLabel: string,
     expectedDnsResolverLabel: string,
+    expectedResourceCpuLabel: string,
+    expectedResourceMemoryLabel: string,
     expectedHostHomeDir: string,
     expectedExtraMounts: Array<{ hostPath: string; mappedPath: string; readOnly?: boolean }>
 ): string | null {
@@ -250,6 +265,8 @@ function containerStaleReasonResolve(
     const dnsProfileLabel = labels?.[DOCKER_DNS_PROFILE_LABEL];
     const dnsServersLabel = labels?.[DOCKER_DNS_SERVERS_LABEL];
     const dnsResolverLabel = labels?.[DOCKER_DNS_RESOLVER_LABEL];
+    const resourceCpuLabel = labels?.[DOCKER_RESOURCE_CPU_LABEL];
+    const resourceMemoryLabel = labels?.[DOCKER_RESOURCE_MEMORY_LABEL];
     const tmpfsTmpLabel = labels?.[DOCKER_TMPFS_TMP_LABEL];
     const tmpfsRunLabel = labels?.[DOCKER_TMPFS_RUN_LABEL];
     const tmpfsVarTmpLabel = labels?.[DOCKER_TMPFS_VAR_TMP_LABEL];
@@ -285,6 +302,12 @@ function containerStaleReasonResolve(
     }
     if (!dnsResolverLabel) {
         return "missing-dns-resolver-label";
+    }
+    if (!resourceCpuLabel) {
+        return "missing-resource-cpu-label";
+    }
+    if (!resourceMemoryLabel) {
+        return "missing-resource-memory-label";
     }
     if (!tmpfsTmpLabel) {
         return "missing-tmpfs-tmp-label";
@@ -343,6 +366,12 @@ function containerStaleReasonResolve(
     }
     if (dnsResolverLabel !== expectedDnsResolverLabel) {
         return `dns-resolver-mismatch:${dnsResolverLabel}->${expectedDnsResolverLabel}`;
+    }
+    if (resourceCpuLabel !== expectedResourceCpuLabel) {
+        return `resource-cpu-mismatch:${resourceCpuLabel}->${expectedResourceCpuLabel}`;
+    }
+    if (resourceMemoryLabel !== expectedResourceMemoryLabel) {
+        return `resource-memory-mismatch:${resourceMemoryLabel}->${expectedResourceMemoryLabel}`;
     }
     if (tmpfsTmpLabel !== DOCKER_TMPFS_TMP_ENABLED) {
         return `tmpfs-tmp-mismatch:${tmpfsTmpLabel}->${DOCKER_TMPFS_TMP_ENABLED}`;

@@ -2,7 +2,7 @@ import type { Readable } from "node:stream";
 
 import type Docker from "dockerode";
 import type { PathMountPoint } from "../../utils/pathMountTypes.js";
-import type { SandboxExecSignal } from "../sandboxTypes.js";
+import type { SandboxExecSignal, SandboxResourceLimitsConfig } from "../sandboxTypes.js";
 
 export type DockerContainerConfig = {
     socketPath?: string;
@@ -14,6 +14,7 @@ export type DockerContainerConfig = {
     allowLocalNetworkingForUsers?: string[];
     isolatedDnsServers?: string[];
     localDnsServers?: string[];
+    resourceLimits?: SandboxResourceLimitsConfig;
     userId: string;
     hostHomeDir: string;
     /** All mount points including home. Extra mounts are read-only. */

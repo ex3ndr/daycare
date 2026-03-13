@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { resolveEngineSocketPath } from "../engine/ipc/socket.js";
 import { DEFAULT_DAYCARE_DIR } from "../paths.js";
+import { sandboxResourceLimitsResolve } from "../sandbox/sandboxResourceLimitsResolve.js";
 import type {
     DockerSettings,
     OpenSandboxSettings,
@@ -148,8 +149,14 @@ function configDatabaseUrlResolve(input: string | undefined): string | null {
 }
 
 function resolveSandboxDefaults(sandbox: SandboxSettings | undefined): ResolvedSettingsConfig["sandbox"] {
+    const resourceLimits = sandboxResourceLimitsResolve(sandbox?.resourceLimits);
+
     return {
-        backend: sandbox?.backend ?? "docker"
+        backend: sandbox?.backend ?? "docker",
+        resourceLimits: {
+            cpu: resourceLimits.cpu,
+            memory: resourceLimits.memory
+        }
     };
 }
 

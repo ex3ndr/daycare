@@ -111,7 +111,11 @@ describe("configSettingsParse", () => {
     it("accepts opensandbox backend settings", () => {
         const parsed = configSettingsParse({
             sandbox: {
-                backend: "opensandbox"
+                backend: "opensandbox",
+                resourceLimits: {
+                    cpu: 6,
+                    memory: "12Gi"
+                }
             },
             opensandbox: {
                 domain: "https://sandbox.example.com",
@@ -122,7 +126,11 @@ describe("configSettingsParse", () => {
         });
 
         expect(parsed.sandbox).toEqual({
-            backend: "opensandbox"
+            backend: "opensandbox",
+            resourceLimits: {
+                cpu: 6,
+                memory: "12Gi"
+            }
         });
         expect(parsed.opensandbox).toEqual({
             domain: "https://sandbox.example.com",
@@ -140,6 +148,24 @@ describe("configSettingsParse", () => {
                 }
             })
         ).toThrow();
+    });
+
+    it("accepts sandbox resource limits", () => {
+        const parsed = configSettingsParse({
+            sandbox: {
+                resourceLimits: {
+                    cpu: 2.5,
+                    memory: "8Gi"
+                }
+            }
+        });
+
+        expect(parsed.sandbox).toEqual({
+            resourceLimits: {
+                cpu: 2.5,
+                memory: "8Gi"
+            }
+        });
     });
 
     it("accepts model role and flavor overrides", () => {

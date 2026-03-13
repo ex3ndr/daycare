@@ -2,6 +2,7 @@ import { Sandbox as OpenSandbox } from "@alibaba-group/opensandbox";
 
 import { getLogger } from "../../log.js";
 import type { PathMountPoint } from "../../utils/pathMountTypes.js";
+import { sandboxResourceLimitsResolve } from "../sandboxResourceLimitsResolve.js";
 import type { SandboxOpenSandboxConfig } from "../sandboxTypes.js";
 
 const logger = getLogger("sandbox.opensandbox");
@@ -74,12 +75,17 @@ export class OpenSandboxSandboxes {
         mounts: PathMountPoint[],
         fingerprint: string
     ): Promise<OpenSandboxEntry> {
+        const resourceLimits = sandboxResourceLimitsResolve(config.resourceLimits);
         const sandbox = await OpenSandbox.create({
             connectionConfig: {
                 domain: config.domain,
                 apiKey: config.apiKey
             },
             image: config.image,
+            resource: {
+                cpu: String(resourceLimits.cpu),
+                memory: resourceLimits.memory
+            },
             timeoutSeconds: config.timeoutSeconds,
             metadata: {
                 "daycare.backend": "opensandbox",
@@ -125,6 +131,7 @@ function opensandboxFingerprintBuild(config: SandboxOpenSandboxConfig, mounts: P
         domain: config.domain,
         apiKey: config.apiKey ?? null,
         image: config.image,
+        resourceLimits: sandboxResourceLimitsResolve(config.resourceLimits),
         timeoutSeconds: config.timeoutSeconds,
         mounts: mounts.map((mount) => ({
             hostPath: mount.hostPath,

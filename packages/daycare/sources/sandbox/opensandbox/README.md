@@ -9,7 +9,11 @@ Configure the backend in `settings.json`:
 ```json
 {
     "sandbox": {
-        "backend": "opensandbox"
+        "backend": "opensandbox",
+        "resourceLimits": {
+            "cpu": 4,
+            "memory": "16Gi"
+        }
     },
     "opensandbox": {
         "domain": "http://localhost:8080",
@@ -23,6 +27,8 @@ Configure the backend in `settings.json`:
 Required when `sandbox.backend` is `"opensandbox"`:
 - `opensandbox.domain`
 - `opensandbox.image`
+
+When `sandbox.resourceLimits` is omitted, Daycare creates OpenSandbox instances with `4` CPU and `16Gi` memory.
 
 ## Volume Mapping
 

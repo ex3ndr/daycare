@@ -218,7 +218,8 @@ export class Engine {
         this.acpSessions = new AcpSessions(getLogger("engine.acp"));
         this.processes = new Processes(this.config.current.dataDir, getLogger("engine.processes"), {
             repository: this.storage.processes,
-            docker: this.config.current.docker
+            docker: this.config.current.docker,
+            sandboxResourceLimits: this.config.current.settings.sandbox.resourceLimits
         });
         this.incomingMessages = new IncomingMessages({
             delayMs: INCOMING_MESSAGES_DEBOUNCE_MS,

@@ -88,6 +88,11 @@ export type SandboxMount = {
     readOnly?: boolean;
 };
 
+export type SandboxResourceLimitsConfig = {
+    cpu?: number;
+    memory?: string;
+};
+
 export type SandboxDockerConfig = {
     socketPath?: string;
     runtime?: string;
@@ -98,6 +103,7 @@ export type SandboxDockerConfig = {
     allowLocalNetworkingForUsers?: string[];
     isolatedDnsServers?: string[];
     localDnsServers?: string[];
+    resourceLimits?: SandboxResourceLimitsConfig;
     userId: string;
 };
 
@@ -105,6 +111,7 @@ export type SandboxOpenSandboxConfig = {
     domain: string;
     apiKey?: string;
     image: string;
+    resourceLimits?: SandboxResourceLimitsConfig;
     userId: string;
     timeoutSeconds: number;
 };

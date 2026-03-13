@@ -36,6 +36,10 @@ const sandbox = new Sandbox({
             capAdd: [],
             capDrop: [],
             allowLocalNetworkingForUsers: [],
+            resourceLimits: {
+                cpu: 4,
+                memory: "16Gi"
+            },
             userId: ctx.userId
         }
     }
@@ -125,7 +129,11 @@ Docker remains the default:
 ```json
 {
     "sandbox": {
-        "backend": "docker"
+        "backend": "docker",
+        "resourceLimits": {
+            "cpu": 4,
+            "memory": "16Gi"
+        }
     },
     "docker": {
         "socketPath": "/var/run/docker.sock",
@@ -146,7 +154,11 @@ OpenSandbox is configured separately:
 ```json
 {
     "sandbox": {
-        "backend": "opensandbox"
+        "backend": "opensandbox",
+        "resourceLimits": {
+            "cpu": 4,
+            "memory": "16Gi"
+        }
     },
     "opensandbox": {
         "domain": "http://localhost:8080",
@@ -158,6 +170,7 @@ OpenSandbox is configured separately:
 ```
 
 The Docker image is fixed in code to `daycare-runtime:latest`. OpenSandbox uses the image supplied in settings.
+If `sandbox.resourceLimits` is omitted, Daycare defaults every sandbox to `4` CPU and `16Gi` memory.
 
 Path mapping uses the generic mount list. Home is always `/home`, extra mounts use their `mappedPath`:
 - host: `/data/users/<userId>/home/...` → container: `/home/...`
