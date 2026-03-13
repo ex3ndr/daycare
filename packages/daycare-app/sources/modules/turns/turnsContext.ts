@@ -3,13 +3,13 @@ import { turnsStoreCreate } from "./turnsStoreCreate";
 
 export const useTurnsStore = turnsStoreCreate();
 
-export type TurnsSessionView = Pick<TurnsSessionState, "turns" | "loading" | "error" | "selectedTurnIndex">;
+export type TurnsSessionView = Pick<TurnsSessionState, "turns" | "loading" | "error" | "selectedTurnId">;
 
 const TURNS_SESSION_EMPTY: TurnsSessionView = {
     turns: [],
     loading: false,
     error: null,
-    selectedTurnIndex: null
+    selectedTurnId: null
 };
 
 /**

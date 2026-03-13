@@ -1,7 +1,8 @@
 import type { AgentHistoryRecord, Context } from "@/types";
 
 export type AgentTurn = {
-    index: number;
+    /** Stable turn identity derived from the first record's timestamp. */
+    id: number;
     startedAt: number;
     preview: string;
     records: AgentHistoryRecord[];
@@ -45,33 +46,29 @@ function turnsBuild(history: AgentHistoryRecord[]): AgentTurn[] {
     const sorted = [...history].sort((a, b) => a.at - b.at);
     const turns: AgentTurn[] = [];
     let current: AgentHistoryRecord[] = [];
-    let turnIndex = 0;
 
     for (const record of sorted) {
         if (record.type === "user_message" && current.length > 0) {
-            // Flush previous turn
-            turns.push(turnCreate(turnIndex, current));
-            turnIndex++;
+            turns.push(turnCreate(current));
             current = [];
         }
         current.push(record);
     }
 
-    // Flush remaining records
     if (current.length > 0) {
-        turns.push(turnCreate(turnIndex, current));
+        turns.push(turnCreate(current));
     }
 
     return turns;
 }
 
-function turnCreate(index: number, records: AgentHistoryRecord[]): AgentTurn {
+function turnCreate(records: AgentHistoryRecord[]): AgentTurn {
     const first = records[0];
     if (!first) {
-        return { index, startedAt: 0, preview: "", records };
+        return { id: 0, startedAt: 0, preview: "", records };
     }
     const startedAt = first.at;
     const firstUser = records.find((r) => r.type === "user_message");
     const preview = firstUser && "text" in firstUser ? (firstUser.text as string) : "";
-    return { index, startedAt, preview, records };
+    return { id: startedAt, startedAt, preview, records };
 }

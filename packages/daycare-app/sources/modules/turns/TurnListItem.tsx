@@ -7,7 +7,7 @@ import type { AgentTurn } from "./turnTypes";
 export type TurnListItemProps = {
     turn: AgentTurn;
     selected: boolean;
-    onPress: (turnIndex: number) => void;
+    onPress: (turnId: number) => void;
 };
 
 /** Formats a unix timestamp into a short time string. */
@@ -33,7 +33,7 @@ function previewTruncate(text: string): string {
 
 export const TurnListItem = React.memo(({ turn, selected, onPress }: TurnListItemProps) => {
     const { theme } = useUnistyles();
-    const handlePress = React.useCallback(() => onPress(turn.index), [onPress, turn.index]);
+    const handlePress = React.useCallback(() => onPress(turn.id), [onPress, turn.id]);
 
     const preview = turn.preview ? previewTruncate(turn.preview) : "(system)";
     const recordCount = turn.records.length;

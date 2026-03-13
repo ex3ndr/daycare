@@ -7,14 +7,14 @@ export type TurnsSessionState = {
     turns: AgentTurn[];
     loading: boolean;
     error: string | null;
-    selectedTurnIndex: number | null;
+    selectedTurnId: number | null;
 };
 
 export type TurnsStore = {
     sessions: Record<string, TurnsSessionState>;
     open: (baseUrl: string, token: string, workspaceId: string | null, agentId: string) => Promise<void>;
     poll: (baseUrl: string, token: string, workspaceId: string | null, agentId: string) => Promise<void>;
-    selectTurn: (agentId: string, turnIndex: number | null) => void;
+    selectTurn: (agentId: string, turnId: number | null) => void;
 };
 
 function turnsSessionDefault(agentId: string): TurnsSessionState {
@@ -23,7 +23,7 @@ function turnsSessionDefault(agentId: string): TurnsSessionState {
         turns: [],
         loading: false,
         error: null,
-        selectedTurnIndex: null
+        selectedTurnId: null
     };
 }
 
@@ -50,7 +50,7 @@ export function turnsStoreCreate() {
                         [agentId]: {
                             ...turnsSessionDefault(agentId),
                             turns,
-                            selectedTurnIndex: turns.length > 0 ? turns[turns.length - 1].index : null
+                            selectedTurnId: turns.length > 0 ? turns[turns.length - 1]!.id : null
                         }
                     }
                 });
@@ -72,7 +72,7 @@ export function turnsStoreCreate() {
             if (!existing) return;
             try {
                 const turns = await turnsFetch(baseUrl, token, workspaceId, agentId);
-                const prevSelected = existing.selectedTurnIndex;
+                const prevSelected = existing.selectedTurnId;
                 set({
                     sessions: {
                         ...get().sessions,
@@ -80,7 +80,7 @@ export function turnsStoreCreate() {
                             ...existing,
                             turns,
                             error: null,
-                            selectedTurnIndex: prevSelected
+                            selectedTurnId: prevSelected
                         }
                     }
                 });
@@ -88,13 +88,13 @@ export function turnsStoreCreate() {
                 // Silently ignore poll errors
             }
         },
-        selectTurn: (agentId, turnIndex) => {
+        selectTurn: (agentId, turnId) => {
             const existing = get().sessions[agentId];
             if (!existing) return;
             set({
                 sessions: {
                     ...get().sessions,
-                    [agentId]: { ...existing, selectedTurnIndex: turnIndex }
+                    [agentId]: { ...existing, selectedTurnId: turnId }
                 }
             });
         }

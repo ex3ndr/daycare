@@ -48,8 +48,8 @@ export function AgentTurnsView({ agentId }: AgentTurnsViewProps) {
     }, [baseUrl, token, workspaceId, agentId, poll]);
 
     const handleTurnPress = React.useCallback(
-        (turnIndex: number) => {
-            selectTurn(agentId, turnIndex);
+        (turnId: number) => {
+            selectTurn(agentId, turnId);
         },
         [agentId, selectTurn]
     );
@@ -58,16 +58,16 @@ export function AgentTurnsView({ agentId }: AgentTurnsViewProps) {
     const turnsReversed = React.useMemo(() => [...session.turns].reverse(), [session.turns]);
 
     const selectedTurn = React.useMemo(() => {
-        if (session.selectedTurnIndex === null) return null;
-        return session.turns.find((t) => t.index === session.selectedTurnIndex) ?? null;
-    }, [session.turns, session.selectedTurnIndex]);
+        if (session.selectedTurnId === null) return null;
+        return session.turns.find((t) => t.id === session.selectedTurnId) ?? null;
+    }, [session.turns, session.selectedTurnId]);
 
-    const keyExtractor = React.useCallback((item: AgentTurn) => String(item.index), []);
+    const keyExtractor = React.useCallback((item: AgentTurn) => String(item.id), []);
     const renderItem = React.useCallback(
         ({ item }: { item: AgentTurn }) => (
-            <TurnListItem turn={item} selected={item.index === session.selectedTurnIndex} onPress={handleTurnPress} />
+            <TurnListItem turn={item} selected={item.id === session.selectedTurnId} onPress={handleTurnPress} />
         ),
-        [session.selectedTurnIndex, handleTurnPress]
+        [session.selectedTurnId, handleTurnPress]
     );
 
     if (session.loading && session.turns.length === 0) {

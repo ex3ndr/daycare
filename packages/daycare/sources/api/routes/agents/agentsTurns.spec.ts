@@ -45,8 +45,10 @@ describe("agentsTurns", () => {
         expect(result.ok).toBe(true);
         if (!result.ok) return;
         expect(result.turns).toHaveLength(2);
+        expect(result.turns[0]!.id).toBe(100);
         expect(result.turns[0]!.preview).toBe("hello");
         expect(result.turns[0]!.records).toHaveLength(2);
+        expect(result.turns[1]!.id).toBe(300);
         expect(result.turns[1]!.preview).toBe("second");
         expect(result.turns[1]!.records).toHaveLength(2);
     });
@@ -61,8 +63,10 @@ describe("agentsTurns", () => {
         expect(result.ok).toBe(true);
         if (!result.ok) return;
         expect(result.turns).toHaveLength(2);
+        expect(result.turns[0]!.id).toBe(50);
         expect(result.turns[0]!.preview).toBe("");
         expect(result.turns[0]!.records).toHaveLength(1);
+        expect(result.turns[1]!.id).toBe(100);
         expect(result.turns[1]!.preview).toBe("first");
     });
 
