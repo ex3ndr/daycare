@@ -63,4 +63,6 @@ Create them proactively when you see a recurring need.
 
 Signals and agent channels exist, but their detailed guidance is intentionally not listed here by default.
 
-If you need event-driven coordination or shared multi-agent channel workflows, load the `tasks` skill to learn the unlocked tools and the expected usage patterns.
+Tasks are the system's unit of scheduled or externally triggered work: Python code plus cron or webhook triggers.
+
+If you need event-driven coordination, shared multi-agent channel workflows, or deeper task/scheduling details, load the `tasks` skill to learn the unlocked tools and expected usage patterns.
