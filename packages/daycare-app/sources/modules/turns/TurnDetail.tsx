@@ -1,8 +1,5 @@
 import * as React from "react";
-import { FlatList } from "react-native";
-import { StyleSheet } from "react-native-unistyles";
-import { ChatMessageItem } from "../chat/ChatMessageItem";
-import type { AgentHistoryRecord } from "../chat/chatHistoryTypes";
+import { ChatMessageList } from "../chat/ChatMessageList";
 import type { AgentTurn } from "./turnTypes";
 
 export type TurnDetailProps = {
@@ -10,28 +7,9 @@ export type TurnDetailProps = {
 };
 
 /**
- * Shows all records in a turn in chronological order (oldest first).
+ * Shows all records in a turn using the standard chat message list.
+ * Renders as an inverted FlatList with markdown support (newest at bottom).
  */
 export const TurnDetail = React.memo(({ turn }: TurnDetailProps) => {
-    const keyExtractor = React.useCallback((_item: AgentHistoryRecord, index: number) => String(index), []);
-    const renderItem = React.useCallback(
-        ({ item }: { item: AgentHistoryRecord }) => <ChatMessageItem record={item} />,
-        []
-    );
-
-    return (
-        <FlatList
-            data={turn.records}
-            keyExtractor={keyExtractor}
-            renderItem={renderItem}
-            contentContainerStyle={styles.listContent}
-        />
-    );
-});
-
-const styles = StyleSheet.create({
-    listContent: {
-        paddingVertical: 12,
-        gap: 2
-    }
+    return <ChatMessageList records={turn.records} loading={false} />;
 });
