@@ -17,6 +17,7 @@ describe("skillsEject", () => {
         const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "skills-eject-"));
         tmpPaths.push(tmpDir);
         const personalRoot = path.join(tmpDir, "personal");
+        const historyRoot = path.join(tmpDir, "skill-history");
         const destination = path.join(tmpDir, "exports");
         const sourceDir = path.join(personalRoot, "my-skill-folder");
         await fs.mkdir(sourceDir, { recursive: true });
@@ -25,6 +26,7 @@ describe("skillsEject", () => {
 
         const result = await skillsEject({
             personalRoot,
+            historyRoot,
             skillName: "my-skill",
             destinationPath: destination
         });
@@ -32,10 +34,47 @@ describe("skillsEject", () => {
         expect(result).toEqual({
             ok: true,
             skillName: "my-skill",
-            status: "ejected"
+            status: "ejected",
+            version: 1
         });
-        const copied = await fs.readFile(path.join(destination, "my-skill-folder", "SKILL.md"), "utf8");
+        const copied = await fs.readFile(path.join(destination, "my-skill", "SKILL.md"), "utf8");
         expect(copied).toContain("name: my-skill");
+    });
+
+    it("copies a historical skill version when version is provided", async () => {
+        const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "skills-eject-version-"));
+        tmpPaths.push(tmpDir);
+        const personalRoot = path.join(tmpDir, "personal");
+        const historyRoot = path.join(tmpDir, "skill-history");
+        const destination = path.join(tmpDir, "exports");
+        await fs.mkdir(path.join(personalRoot, "my-skill-folder"), { recursive: true });
+        await fs.writeFile(path.join(personalRoot, "my-skill-folder", "SKILL.md"), "---\nname: my-skill\n---\nCurrent");
+        await fs.mkdir(path.join(historyRoot, "my-skill", "versions", "1"), { recursive: true });
+        await fs.writeFile(
+            path.join(historyRoot, "my-skill", "versions", "1", "SKILL.md"),
+            "---\nname: my-skill\n---\nArchived"
+        );
+        await fs.writeFile(
+            path.join(historyRoot, "my-skill", "current.json"),
+            `${JSON.stringify({ currentVersion: 2 })}\n`
+        );
+
+        const result = await skillsEject({
+            personalRoot,
+            historyRoot,
+            skillName: "my-skill",
+            destinationPath: destination,
+            version: 1
+        });
+
+        expect(result).toEqual({
+            ok: true,
+            skillName: "my-skill",
+            status: "ejected",
+            version: 1
+        });
+        const copied = await fs.readFile(path.join(destination, "my-skill", "SKILL.md"), "utf8");
+        expect(copied).toContain("Archived");
     });
 
     it("returns not found when personal skill does not exist", async () => {
@@ -43,6 +82,7 @@ describe("skillsEject", () => {
         tmpPaths.push(tmpDir);
         const result = await skillsEject({
             personalRoot: path.join(tmpDir, "personal"),
+            historyRoot: path.join(tmpDir, "skill-history"),
             skillName: "missing",
             destinationPath: path.join(tmpDir, "exports")
         });

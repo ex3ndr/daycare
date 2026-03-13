@@ -123,6 +123,7 @@ export async function apiRouteHandle(
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody,
             personalRoot: userHome.skillsPersonal,
+            historyRoot: userHome.skillsHistory,
             skills: context.skills
         });
     }

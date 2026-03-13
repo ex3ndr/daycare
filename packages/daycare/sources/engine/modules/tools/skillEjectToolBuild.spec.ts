@@ -23,16 +23,38 @@ describe("skillEjectToolBuild", () => {
 
             expect(result.typedResult.status).toBe("ejected");
             expect(result.typedResult.skillName).toBe("my-skill");
-            const copiedSkill = await fs.readFile(
-                path.join(dirs.homeDir, "exports", "my-skill-folder", "SKILL.md"),
-                "utf8"
-            );
-            const copiedHelper = await fs.readFile(
-                path.join(dirs.homeDir, "exports", "my-skill-folder", "notes.txt"),
-                "utf8"
-            );
+            expect(result.typedResult.version).toBe(1);
+            const copiedSkill = await fs.readFile(path.join(dirs.homeDir, "exports", "my-skill", "SKILL.md"), "utf8");
+            const copiedHelper = await fs.readFile(path.join(dirs.homeDir, "exports", "my-skill", "notes.txt"), "utf8");
             expect(copiedSkill).toContain("name: my-skill");
             expect(copiedHelper).toBe("helper");
+        } finally {
+            await dirs.cleanup();
+        }
+    });
+
+    it("copies a specific archived version when requested", async () => {
+        const dirs = await testDirsCreate();
+        try {
+            const currentDir = path.join(dirs.personalRoot, "my-skill-folder");
+            const archivedDir = path.join(dirs.historyRoot, "my-skill", "versions", "1");
+            await fs.mkdir(currentDir, { recursive: true });
+            await fs.mkdir(archivedDir, { recursive: true });
+            await fs.writeFile(path.join(currentDir, "SKILL.md"), "---\nname: my-skill\n---\nCurrent");
+            await fs.writeFile(path.join(archivedDir, "SKILL.md"), "---\nname: my-skill\n---\nArchived");
+            await fs.mkdir(path.join(dirs.historyRoot, "my-skill"), { recursive: true });
+            await fs.writeFile(
+                path.join(dirs.historyRoot, "my-skill", "current.json"),
+                `${JSON.stringify({ currentVersion: 2 })}\n`
+            );
+
+            const tool = skillEjectToolBuild();
+            const context = contextBuild({ homeDir: dirs.homeDir, skillsPersonalRoot: dirs.personalRoot });
+            const result = await tool.execute({ name: "my-skill", path: "exports", version: 1 }, context, toolCall);
+
+            expect(result.typedResult.version).toBe(1);
+            const copiedSkill = await fs.readFile(path.join(dirs.homeDir, "exports", "my-skill", "SKILL.md"), "utf8");
+            expect(copiedSkill).toContain("Archived");
         } finally {
             await dirs.cleanup();
         }
@@ -70,16 +92,19 @@ async function testDirsCreate(): Promise<{
     baseDir: string;
     homeDir: string;
     personalRoot: string;
+    historyRoot: string;
     cleanup: () => Promise<void>;
 }> {
     const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "skill-eject-"));
     const homeDir = path.join(baseDir, "home");
     const personalRoot = path.join(baseDir, "personal");
+    const historyRoot = path.join(baseDir, "skill-history");
     await fs.mkdir(homeDir, { recursive: true });
     return {
         baseDir,
         homeDir,
         personalRoot,
+        historyRoot,
         cleanup: () => fs.rm(baseDir, { recursive: true, force: true })
     };
 }
@@ -111,6 +136,10 @@ function contextBuild(input: { skillsPersonalRoot?: string; homeDir: string }): 
         messageContext: {},
         skills: [],
         skillsPersonalRoot: input.skillsPersonalRoot,
-        agentSystem: {} as unknown as ToolExecutionContext["agentSystem"]
+        agentSystem: {
+            userHomeForUserId: () => ({
+                skillsHistory: path.join(path.dirname(input.homeDir), "skill-history")
+            })
+        } as unknown as ToolExecutionContext["agentSystem"]
     };
 }

@@ -1,10 +1,10 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import matter from "gray-matter";
 import type { ToolDefinition, ToolResultContract } from "@/types";
 import { SKILL_FILENAME } from "../../skills/skillConstants.js";
+import { skillVersionInstall } from "../../skills/skillVersionInstall.js";
 import type { ToolExecutionContext } from "./types.js";
 import { workspaceOwnedUserResolve } from "./workspaceOwnedUserResolve.js";
 
@@ -22,7 +22,8 @@ const resultSchema = Type.Object(
     {
         summary: Type.String(),
         skillName: Type.String(),
-        status: Type.String()
+        status: Type.String(),
+        version: Type.Integer({ minimum: 1 })
     },
     { additionalProperties: false }
 );
@@ -36,7 +37,7 @@ const returns: ToolResultContract<SkillAddResult> = {
 
 /**
  * Installs a skill from a local folder path into the user's personal skills directory.
- * Replaces any existing personal skill with the same name.
+ * Each replacement archives the previous current copy as a numbered historical version.
  * Uses sandbox.read to resolve and validate the source path.
  *
  * Expects: path points to a folder containing a valid SKILL.md with a name in frontmatter.
@@ -72,18 +73,18 @@ export function skillAddToolBuild(): ToolDefinition {
 
             // Copy source directory to personal skills using host paths
             const sourceHostDir = path.dirname(readResult.resolvedPath);
-            const targetDir = path.join(target.personalRoot, skillName);
-            const existed = (await statSafe(targetDir))?.isDirectory() ?? false;
-            await fs.rm(targetDir, { recursive: true, force: true });
-            await fs.mkdir(target.personalRoot, { recursive: true });
-            await fs.cp(sourceHostDir, targetDir, { recursive: true });
-
-            const status = existed ? "replaced" : "installed";
+            const install = await skillVersionInstall({
+                personalRoot: target.personalRoot,
+                historyRoot: target.historyRoot,
+                skillName,
+                sourceDir: sourceHostDir
+            });
+            const status = install.status;
             const location = target.userId ? `workspace "${target.userId}" personal skills` : "personal skills";
             const summary =
                 status === "replaced"
-                    ? `Skill "${skillName}" replaced in ${location}.`
-                    : `Skill "${skillName}" installed to ${location}.`;
+                    ? `Skill "${skillName}" replaced in ${location} as version ${install.version}.`
+                    : `Skill "${skillName}" installed to ${location} as version ${install.version}.`;
 
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
@@ -95,7 +96,7 @@ export function skillAddToolBuild(): ToolDefinition {
             };
             return {
                 toolMessage,
-                typedResult: { summary, skillName, status }
+                typedResult: { summary, skillName, status, version: install.version }
             };
         }
     };
@@ -104,14 +105,18 @@ export function skillAddToolBuild(): ToolDefinition {
 async function skillAddTargetResolve(
     payload: SkillAddArgs,
     toolContext: ToolExecutionContext
-): Promise<{ personalRoot: string; userId: string | null }> {
+): Promise<{ personalRoot: string; historyRoot: string; userId: string | null }> {
     const targetUserId = payload.userId?.trim();
     if (!targetUserId) {
         const personalRoot = toolContext.skillsPersonalRoot;
         if (!personalRoot) {
             throw new Error("Personal skills directory is not configured.");
         }
-        return { personalRoot, userId: null };
+        return {
+            personalRoot,
+            historyRoot: toolContext.agentSystem.userHomeForUserId(toolContext.ctx.userId).skillsHistory,
+            userId: null
+        };
     }
 
     const workspaceUser = await workspaceOwnedUserResolve({
@@ -121,6 +126,7 @@ async function skillAddTargetResolve(
     });
     return {
         personalRoot: toolContext.agentSystem.userHomeForUserId(workspaceUser.id).skillsPersonal,
+        historyRoot: toolContext.agentSystem.userHomeForUserId(workspaceUser.id).skillsHistory,
         userId: workspaceUser.id
     };
 }
@@ -167,16 +173,4 @@ function skillNameParse(content: string): string | null {
 /** Rejects names with path separators, dots-only, or traversal patterns. */
 function skillNameSafe(name: string): boolean {
     return !/[/\\]/.test(name) && name !== "." && name !== ".." && !name.startsWith(".");
-}
-
-async function statSafe(target: string): Promise<import("node:fs").Stats | null> {
-    try {
-        return await fs.stat(target);
-    } catch (error) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code === "ENOENT" || code === "ENOTDIR" || code === "EACCES") {
-            return null;
-        }
-        throw error;
-    }
 }

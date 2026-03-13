@@ -29,6 +29,7 @@ describe("skillAddToolBuild", () => {
 
             expect(result.typedResult.status).toBe("installed");
             expect(result.typedResult.skillName).toBe("test-skill");
+            expect(result.typedResult.version).toBe(1);
 
             // Verify files were copied
             const targetSkill = await fs.readFile(path.join(dirs.personalRoot, "test-skill", "SKILL.md"), "utf8");
@@ -40,7 +41,7 @@ describe("skillAddToolBuild", () => {
         }
     });
 
-    it("replaces an existing skill with the same name", async () => {
+    it("replaces an existing skill with the same name and archives the previous version", async () => {
         const dirs = await testDirsCreate();
         try {
             const sourceDir = path.join(dirs.homeDir, "source-skill");
@@ -61,9 +62,15 @@ describe("skillAddToolBuild", () => {
 
             expect(result.typedResult.status).toBe("replaced");
             expect(result.typedResult.skillName).toBe("test-skill");
+            expect(result.typedResult.version).toBe(2);
 
             const content = await fs.readFile(path.join(dirs.personalRoot, "test-skill", "SKILL.md"), "utf8");
             expect(content).toContain("Updated body");
+            const archived = await fs.readFile(
+                path.join(dirs.historyRoot, "test-skill", "versions", "1", "SKILL.md"),
+                "utf8"
+            );
+            expect(archived).toContain("Old body");
         } finally {
             await dirs.cleanup();
         }
@@ -191,7 +198,8 @@ describe("skillAddToolBuild", () => {
                         }
                     },
                     userHomeForUserId: (userId: string) => ({
-                        skillsPersonal: path.join(dirs.baseDir, userId, "skills", "personal")
+                        skillsPersonal: path.join(dirs.baseDir, userId, "skills", "personal"),
+                        skillsHistory: path.join(dirs.baseDir, userId, "skill-history")
                     })
                 } as unknown as ToolExecutionContext["agentSystem"],
                 ctx: { userId: "owner-1", agentId: "agent-1" } as ToolExecutionContext["ctx"]
@@ -275,7 +283,8 @@ describe("skillAddToolBuild", () => {
                         }
                     },
                     userHomeForUserId: (userId: string) => ({
-                        skillsPersonal: path.join(dirs.baseDir, userId, "skills", "personal")
+                        skillsPersonal: path.join(dirs.baseDir, userId, "skills", "personal"),
+                        skillsHistory: path.join(dirs.baseDir, userId, "skill-history")
                     })
                 } as unknown as ToolExecutionContext["agentSystem"],
                 ctx: { userId: "owner-1", agentId: "agent-1" } as ToolExecutionContext["ctx"]
@@ -294,16 +303,19 @@ async function testDirsCreate(): Promise<{
     baseDir: string;
     homeDir: string;
     personalRoot: string;
+    historyRoot: string;
     cleanup: () => Promise<void>;
 }> {
     const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "skill-add-"));
     const homeDir = path.join(baseDir, "home");
     const personalRoot = path.join(baseDir, "personal");
+    const historyRoot = path.join(baseDir, "skill-history");
     await fs.mkdir(homeDir, { recursive: true });
     return {
         baseDir,
         homeDir,
         personalRoot,
+        historyRoot,
         cleanup: () => fs.rm(baseDir, { recursive: true, force: true })
     };
 }
@@ -340,6 +352,12 @@ function contextBuild(input: {
         messageContext: {},
         skills: [],
         skillsPersonalRoot: input?.skillsPersonalRoot,
-        agentSystem: input.agentSystem ?? ({} as unknown as ToolExecutionContext["agentSystem"])
+        agentSystem:
+            input.agentSystem ??
+            ({
+                userHomeForUserId: () => ({
+                    skillsHistory: path.join(path.dirname(input.homeDir), "skill-history")
+                })
+            } as unknown as ToolExecutionContext["agentSystem"])
     };
 }

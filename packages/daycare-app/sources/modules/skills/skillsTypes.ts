@@ -10,3 +10,15 @@ export type SkillListItem = {
     source: SkillSource;
     pluginId?: string;
 };
+
+export type SkillVersionItem = {
+    version: number;
+    updatedAt: number;
+};
+
+export type SkillVersionsResult = {
+    skillId: string;
+    skillName: string;
+    currentVersion: number | null;
+    previousVersions: SkillVersionItem[];
+};

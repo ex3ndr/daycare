@@ -181,6 +181,7 @@ Trigger remove body:
 ## Skills Routes
 - `GET /skills`
 - `GET /skills/:id/content`
+- `GET /skills/:id/versions`
 - `POST /skills/eject`
 
 `GET /skills` response (example):
@@ -214,11 +215,26 @@ Trigger remove body:
 }
 ```
 
+`GET /skills/:id/versions` response:
+```json
+{
+    "ok": true,
+    "skillId": "user:my-skill",
+    "skillName": "my-skill",
+    "currentVersion": 3,
+    "previousVersions": [
+        { "version": 1, "updatedAt": 1741800000000 },
+        { "version": 2, "updatedAt": 1741803600000 }
+    ]
+}
+```
+
 `POST /skills/eject` body:
 ```json
 {
     "name": "my-skill",
-    "path": "/Users/me/workspace/exports"
+    "path": "/Users/me/workspace/exports",
+    "version": 2
 }
 ```
 

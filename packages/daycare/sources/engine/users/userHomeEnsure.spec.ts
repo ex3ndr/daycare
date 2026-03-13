@@ -27,6 +27,7 @@ describe("userHomeEnsure", () => {
             userHome.skills,
             userHome.skillsPersonal,
             userHome.skillsActive,
+            userHome.skillsHistory,
             userHome.home,
             userHome.databases,
             userHome.desktop,

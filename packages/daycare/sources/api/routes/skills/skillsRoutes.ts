@@ -4,11 +4,13 @@ import { skillsContent } from "./skillsContent.js";
 import { skillsEject } from "./skillsEject.js";
 import { skillsFileDownload } from "./skillsFileDownload.js";
 import { skillsList } from "./skillsList.js";
+import { skillsVersionsList } from "./skillsVersionsList.js";
 
 export type SkillsRouteContext = {
     sendJson: (response: http.ServerResponse, statusCode: number, payload: Record<string, unknown>) => void;
     readJsonBody: (request: http.IncomingMessage) => Promise<Record<string, unknown>>;
     personalRoot: string;
+    historyRoot: string;
     skills: {
         list: () => Promise<AgentSkill[]>;
     } | null;
@@ -46,10 +48,31 @@ export async function skillsRouteHandle(
         const body = await context.readJsonBody(request);
         const result = await skillsEject({
             personalRoot: context.personalRoot,
+            historyRoot: context.historyRoot,
             skillName: typeof body.name === "string" ? body.name : "",
-            destinationPath: typeof body.path === "string" ? body.path : ""
+            destinationPath: typeof body.path === "string" ? body.path : "",
+            version: typeof body.version === "number" ? body.version : undefined
         });
-        const statusCode = result.ok ? 200 : result.error.startsWith("Personal skill not found:") ? 404 : 400;
+        const statusCode = result.ok
+            ? 200
+            : result.error.startsWith("Personal skill version not found:")
+              ? 404
+              : result.error.startsWith("Personal skill not found:")
+                ? 404
+                : 400;
+        context.sendJson(response, statusCode, result);
+        return true;
+    }
+
+    const versionsMatch = pathname.match(/^\/skills\/(.+)\/versions$/);
+    if (versionsMatch?.[1] && request.method === "GET") {
+        const result = await skillsVersionsList({
+            skills: context.skills,
+            personalRoot: context.personalRoot,
+            historyRoot: context.historyRoot,
+            skillId: decodeURIComponent(versionsMatch[1])
+        });
+        const statusCode = result.ok ? 200 : result.error === "Skill not found." ? 404 : 400;
         context.sendJson(response, statusCode, result);
         return true;
     }

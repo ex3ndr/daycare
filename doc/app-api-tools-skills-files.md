@@ -18,8 +18,11 @@ This change adds authenticated App API support for:
   - returns all skills
   - includes skill metadata and all files found under each skill directory
   - each file includes a download method/path
+- `GET /skills/:skillId/versions`
+  - returns the current version number and all archived prior versions for one user skill
 - `POST /skills/eject`
   - copies one personal skill folder by frontmatter `name` to a destination `path`
+  - optional `version` ejects a specific archived version instead of the current one
 - `GET /skills/:skillId/download?path=<skill-relative-file-path>`
   - downloads one file from the selected skill
   - path traversal outside the skill root is rejected
@@ -44,7 +47,7 @@ flowchart TD
     D -->|/tools| E[toolsRouteHandle]
     D -->|/skills| F[skillsRouteHandle]
     E --> G[toolsList or toolsFileDownload]
-    F --> H[skillsList + skillsFilesList or skillsFileDownload + skillsEject]
+    F --> H[skillsList + skillsFilesList or skillsFileDownload + skillsEject + skillsVersionsList]
     G --> I[JSON list or binary download]
     H --> I
 ```

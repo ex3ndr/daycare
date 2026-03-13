@@ -2,15 +2,15 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
-import matter from "gray-matter";
 import type { ToolDefinition, ToolResultContract } from "@/types";
-import { SKILL_FILENAME } from "../../skills/skillConstants.js";
+import { skillVersionSourceResolve } from "../../skills/skillVersionSourceResolve.js";
 import type { ToolExecutionContext } from "./types.js";
 
 const schema = Type.Object(
     {
         name: Type.String({ minLength: 1 }),
-        path: Type.String({ minLength: 1 })
+        path: Type.String({ minLength: 1 }),
+        version: Type.Optional(Type.Integer({ minimum: 1 }))
     },
     { additionalProperties: false }
 );
@@ -21,7 +21,8 @@ const resultSchema = Type.Object(
     {
         summary: Type.String(),
         skillName: Type.String(),
-        status: Type.String()
+        status: Type.String(),
+        version: Type.Integer({ minimum: 1 })
     },
     { additionalProperties: false }
 );
@@ -34,7 +35,7 @@ const returns: ToolResultContract<SkillEjectResult> = {
 };
 
 /**
- * Copies a personal skill folder to a destination sandbox path for external inspection or editing.
+ * Copies a current or archived personal skill version to a destination sandbox path.
  * Expects: name matches a personal skill frontmatter name and path is writable in sandbox permissions.
  */
 export function skillEjectToolBuild(): ToolDefinition {
@@ -62,18 +63,20 @@ export function skillEjectToolBuild(): ToolDefinition {
                 throw new Error("Destination path is required.");
             }
 
-            const matchedDir = await skillFolderFind(personalRoot, requestedName);
-            if (!matchedDir) {
-                throw new Error(`Personal skill not found: "${requestedName}".`);
-            }
-
+            const historyRoot = toolContext.agentSystem.userHomeForUserId(toolContext.ctx.userId).skillsHistory;
+            const matched = await skillVersionSourceResolve({
+                personalRoot,
+                historyRoot,
+                skillName: requestedName,
+                ...(payload.version !== undefined ? { version: payload.version } : {})
+            });
             const destinationHostPath = await destinationHostPathResolve(destinationPath, toolContext);
-            const targetDir = path.join(destinationHostPath, path.basename(matchedDir));
+            const targetDir = path.join(destinationHostPath, requestedName);
             await fs.rm(targetDir, { recursive: true, force: true });
             await fs.mkdir(destinationHostPath, { recursive: true });
-            await fs.cp(matchedDir, targetDir, { recursive: true });
+            await fs.cp(matched.path, targetDir, { recursive: true });
 
-            const summary = `Skill "${requestedName}" ejected to ${destinationPath}.`;
+            const summary = `Skill "${requestedName}" v${matched.version} ejected to ${destinationPath}.`;
             const toolMessage: ToolResultMessage = {
                 role: "toolResult",
                 toolCallId: toolCall.id,
@@ -84,7 +87,7 @@ export function skillEjectToolBuild(): ToolDefinition {
             };
             return {
                 toolMessage,
-                typedResult: { summary, skillName: requestedName, status: "ejected" }
+                typedResult: { summary, skillName: requestedName, status: "ejected", version: matched.version }
             };
         }
     };
@@ -106,53 +109,4 @@ async function destinationHostPathResolve(destinationPath: string, toolContext: 
     });
     await fs.rm(marker.resolvedPath, { force: true });
     return path.dirname(marker.resolvedPath);
-}
-
-/**
- * Scans the personal skills root for a folder whose SKILL.md has a matching name.
- * Returns the matched folder path, or null if not found.
- */
-async function skillFolderFind(personalRoot: string, targetName: string): Promise<string | null> {
-    let entries: Array<import("node:fs").Dirent> = [];
-    try {
-        entries = await fs.readdir(personalRoot, { withFileTypes: true });
-    } catch (error) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code === "ENOENT" || code === "ENOTDIR") {
-            return null;
-        }
-        throw error;
-    }
-
-    const normalized = targetName.toLowerCase();
-    for (const entry of entries) {
-        if (!entry.isDirectory()) {
-            continue;
-        }
-        const skillFilePath = path.join(personalRoot, entry.name, SKILL_FILENAME);
-        const name = await skillNameRead(skillFilePath);
-        if (name && name.toLowerCase() === normalized) {
-            return path.join(personalRoot, entry.name);
-        }
-    }
-    return null;
-}
-
-async function skillNameRead(skillFilePath: string): Promise<string | null> {
-    let content = "";
-    try {
-        content = await fs.readFile(skillFilePath, "utf8");
-    } catch {
-        return null;
-    }
-    try {
-        const parsed = matter(content);
-        const name = parsed.data.name;
-        if (typeof name === "string" && name.trim().length > 0) {
-            return name.trim();
-        }
-        return null;
-    } catch {
-        return null;
-    }
 }
