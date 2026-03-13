@@ -1,8 +1,10 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import Handlebars from "handlebars";
+import type { ResolvedTool } from "@/types";
 import { agentPromptBundledRead } from "../../agents/ops/agentPromptBundledRead.js";
 import { bundledExamplesDirResolve } from "../../agents/ops/bundledExamplesDirResolve.js";
 import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
+import { toolResolvedFromTool } from "../tools/toolResolvedFromTool.js";
 
 type RlmNoToolsPromptTemplateContext = {
     preamble: string;
@@ -43,12 +45,12 @@ async function toolsPythonTemplateCompile(): Promise<HandlebarsTemplateDelegate<
  * Expects: tools contains the full runtime tool list used for Monty dispatch.
  */
 export async function rlmNoToolsPromptBuild(
-    tools: Tool[],
+    tools: Array<ResolvedTool | Tool>,
     options: RlmNoToolsPromptBuildOptions = {}
 ): Promise<string> {
     const isForeground = options.isForeground ?? true;
     const examplesDir = options.examplesDir ?? bundledExamplesDirResolve();
-    const preamble = montyPreambleBuild(tools);
+    const preamble = montyPreambleBuild(tools.map((entry) => ("tool" in entry ? entry : toolResolvedFromTool(entry))));
     const pythonTools = await toolsPythonRead(examplesDir);
     const template = await rlmNoToolsPromptTemplateCompile();
     return template({ preamble, pythonTools, isForeground }).trim();

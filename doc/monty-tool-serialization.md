@@ -5,6 +5,7 @@ This change tightens the Python tool bridge so Daycare no longer relies on Monty
 ## Rules
 
 - Tool parameter and return schemas must be representable in Monty typing.
+- Runtime code that needs return typing now uses `ResolvedTool { tool, returns }` instead of hidden metadata on `Tool`.
 - Unsupported schema fragments now fail registration or prompt generation instead of degrading to `Any`.
 - Python `None` passed to optional tool arguments is treated as omission, not JSON `null`.
 - Tool results are converted back to Python only from explicitly safe JS values.
@@ -30,10 +31,13 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    A[Tool schema] --> B[montyPythonTypeFromSchema]
-    A --> C[montyResponseTypedDictLinesBuild]
-    B --> D[Python stub signature]
-    C --> E[TypedDict with NotRequired for optional fields]
-    D --> F[Monty type check prefix]
-    E --> F
+    A[ToolDefinition] --> B[ResolvedTool]
+    B --> C[tool metadata]
+    B --> D[return contract]
+    C --> E[montyPythonTypeFromSchema]
+    D --> F[montyResponseTypedDictLinesBuild]
+    E --> G[Python stub signature]
+    F --> H[TypedDict with NotRequired for optional fields]
+    G --> I[Monty type check prefix]
+    H --> I
 ```

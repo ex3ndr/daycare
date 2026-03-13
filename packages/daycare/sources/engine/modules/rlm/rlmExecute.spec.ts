@@ -2,9 +2,8 @@ import type { Tool, ToolCall } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 
-import type { AgentHistoryRecord, ToolExecutionContext, ToolExecutionResult } from "@/types";
+import type { AgentHistoryRecord, ResolvedTool, ToolExecutionContext, ToolExecutionResult } from "@/types";
 import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
-import { MONTY_RESPONSE_SCHEMA_KEY } from "../monty/montyResponseSchemaKey.js";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { rlmExecute } from "./rlmExecute.js";
 
@@ -362,8 +361,10 @@ describe("rlmExecute", () => {
             } satisfies ToolExecutionResult;
         });
         const resolver: ToolResolverApi = {
-            listTools: () => [echoTool],
-            listToolsForAgent: () => [echoTool],
+            listTools: () => [echoTool.tool],
+            listResolvedTools: () => [echoTool],
+            listToolsForAgent: () => [echoTool.tool],
+            listResolvedToolsForAgent: () => [echoTool],
             execute,
             deferredHandlerFor: () => undefined
         };
@@ -453,12 +454,12 @@ function errorResult(name: string, text: string): ToolExecutionResult {
     };
 }
 
-function toolWithResponseSchemaBuild(tool: Tool, schema: unknown): Tool {
-    const result = { ...tool } as Tool;
-    Object.defineProperty(result, MONTY_RESPONSE_SCHEMA_KEY, {
-        value: schema,
-        enumerable: false,
-        configurable: false
-    });
-    return result;
+function toolWithResponseSchemaBuild(tool: Tool, schema: unknown): ResolvedTool {
+    return {
+        tool,
+        returns: {
+            schema: schema as ResolvedTool["returns"]["schema"],
+            toLLMText: () => ""
+        }
+    };
 }

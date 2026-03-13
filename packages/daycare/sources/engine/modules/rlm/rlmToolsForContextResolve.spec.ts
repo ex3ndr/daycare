@@ -22,7 +22,7 @@ describe("rlmToolsForContextResolve", () => {
 
         const resolved = rlmToolsForContextResolve(resolver, context);
 
-        expect(resolved.map((tool) => tool.name)).toEqual(["memory_node_read", "hidden_task_tool"]);
+        expect(resolved.map((entry) => entry.tool.name)).toEqual(["memory_node_read", "hidden_task_tool"]);
         expect(listExecutableToolsForAgent).toHaveBeenCalledWith({ ctx, path, config });
         expect(listTools).not.toHaveBeenCalled();
         expect(listToolsForAgent).not.toHaveBeenCalled();
@@ -36,7 +36,7 @@ describe("rlmToolsForContextResolve", () => {
 
         const resolved = rlmToolsForContextResolve(resolver, context);
 
-        expect(resolved.map((tool) => tool.name)).toEqual(["global_a", "global_b"]);
+        expect(resolved.map((entry) => entry.tool.name)).toEqual(["global_a", "global_b"]);
         expect(listTools).toHaveBeenCalledTimes(1);
         expect(listToolsForAgent).not.toHaveBeenCalled();
     });
@@ -57,7 +57,7 @@ describe("rlmToolsForContextResolve", () => {
 
         const resolved = rlmToolsForContextResolve(resolver, context);
 
-        expect(resolved.map((tool) => tool.name)).toEqual(["memory_node_read", "memory_node_write"]);
+        expect(resolved.map((entry) => entry.tool.name)).toEqual(["memory_node_read", "memory_node_write"]);
     });
 });
 

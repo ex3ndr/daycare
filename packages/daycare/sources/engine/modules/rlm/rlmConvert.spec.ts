@@ -2,8 +2,7 @@ import type { Tool } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it } from "vitest";
 
-import type { ToolExecutionResult } from "@/types";
-import { MONTY_RESPONSE_SCHEMA_KEY } from "../monty/montyResponseSchemaKey.js";
+import type { ResolvedTool, ToolExecutionResult } from "@/types";
 import { rlmArgsConvert, rlmResultConvert } from "./rlmConvert.js";
 
 describe("rlmArgsConvert", () => {
@@ -274,12 +273,12 @@ describe("rlmResultConvert", () => {
     });
 });
 
-function toolWithResponseSchemaBuild(tool: Tool, schema: unknown): Tool {
-    const result = { ...tool } as Tool;
-    Object.defineProperty(result, MONTY_RESPONSE_SCHEMA_KEY, {
-        value: schema,
-        enumerable: false,
-        configurable: false
-    });
-    return result;
+function toolWithResponseSchemaBuild(tool: Tool, schema: unknown): ResolvedTool {
+    return {
+        tool,
+        returns: {
+            schema: schema as ResolvedTool["returns"]["schema"],
+            toLLMText: () => ""
+        }
+    };
 }

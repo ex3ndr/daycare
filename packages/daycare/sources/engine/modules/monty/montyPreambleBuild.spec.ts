@@ -1,8 +1,8 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it } from "vitest";
+import type { ResolvedTool } from "@/types";
 import { montyPreambleBuild } from "./montyPreambleBuild.js";
-import { MONTY_RESPONSE_SCHEMA_KEY } from "./montyResponseSchemaKey.js";
 
 describe("montyPreambleBuild", () => {
     it("renders full preamble with exact response typed dict and stub text", () => {
@@ -82,7 +82,7 @@ describe("montyPreambleBuild", () => {
     });
 
     it("generates nested response typed dicts and skips invalid tools", () => {
-        const tools: Tool[] = [
+        const tools: ResolvedTool[] = [
             toolWithResponseSchemaBuild(
                 {
                     name: "run_python",
@@ -237,12 +237,12 @@ describe("montyPreambleBuild", () => {
     });
 });
 
-function toolWithResponseSchemaBuild(tool: Tool, schema: unknown): Tool {
-    const result = { ...tool } as Tool;
-    Object.defineProperty(result, MONTY_RESPONSE_SCHEMA_KEY, {
-        value: schema,
-        enumerable: false,
-        configurable: false
-    });
-    return result;
+function toolWithResponseSchemaBuild(tool: Tool, schema: unknown): ResolvedTool {
+    return {
+        tool,
+        returns: {
+            schema: schema as ResolvedTool["returns"]["schema"],
+            toLLMText: () => ""
+        }
+    };
 }

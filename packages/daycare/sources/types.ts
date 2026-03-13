@@ -72,6 +72,7 @@ export type { SpeechGenerationProvider } from "./engine/modules/speech/types.js"
 // Tools
 export type {
     DeferredToolHandler,
+    ResolvedTool,
     ToolDefinition,
     ToolExecutionContext,
     ToolExecutionResult,

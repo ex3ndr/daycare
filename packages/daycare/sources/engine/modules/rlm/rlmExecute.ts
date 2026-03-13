@@ -56,15 +56,15 @@ export async function rlmExecute(
     inputSchema?: TaskParameter[]
 ): Promise<RlmExecuteResult> {
     const availableTools = rlmToolsForContextResolve(toolResolver, context).filter(
-        (tool) => tool.name !== RLM_TOOL_NAME
+        (entry) => entry.tool.name !== RLM_TOOL_NAME
     );
     const workerKey = rlmWorkerKeyResolve(context.ctx);
-    const toolByName = new Map(availableTools.map((tool) => [tool.name, tool]));
+    const toolByName = new Map(availableTools.map((entry) => [entry.tool.name, entry]));
     for (const runtimeTool of rlmRuntimeTools()) {
-        if (toolByName.has(runtimeTool.name)) {
+        if (toolByName.has(runtimeTool.tool.name)) {
             continue;
         }
-        toolByName.set(runtimeTool.name, runtimeTool);
+        toolByName.set(runtimeTool.tool.name, runtimeTool);
     }
     const externalFunctions = [...toolByName.keys()];
     if (!externalFunctions.includes(SKIP_TOOL_NAME)) {

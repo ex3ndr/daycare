@@ -1,9 +1,8 @@
 import type { Tool } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
-
-import type { DeferredToolHandler, ToolExecutionContext } from "@/types";
-import { montyResponseSchemaResolve } from "../monty/montyResponseSchemaResolve.js";
+import type { DeferredToolHandler, ResolvedTool, ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
+import { CONTEXT_COMPACT_TOOL_NAME, CONTEXT_RESET_TOOL_NAME, STEP_TOOL_NAME } from "./rlmConstants.js";
 import { rlmArgsConvert, rlmResultConvert, rlmRuntimeResultConvert } from "./rlmConvert.js";
 import { rlmRuntimeToolExecute } from "./rlmRuntimeToolExecute.js";
 import { rlmValueFormat } from "./rlmValueFormat.js";
@@ -14,7 +13,7 @@ export type RlmStepResumeOptions = RlmWorkerResumeOptions;
 
 type RlmStepToolCallOptions = {
     snapshot: RlmVmSnapshot;
-    toolByName: Map<string, Tool>;
+    toolByName: Map<string, ResolvedTool | Tool>;
     toolResolver: ToolResolverApi;
     context: ToolExecutionContext;
     beforeExecute?: (input: { snapshotDump: Uint8Array; toolName: string; toolArgs: unknown }) => Promise<void>;
@@ -42,8 +41,8 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
     const snapshotArgs = options.snapshot.args;
     const snapshotKwargs = options.snapshot.kwargs;
     const snapshotDump = Buffer.from(options.snapshot.dump());
-    const tool = options.toolByName.get(toolName);
-    if (!tool) {
+    const toolEntry = options.toolByName.get(toolName);
+    if (!toolEntry) {
         const message = `ToolError: Unknown tool: ${toolName}`;
         return {
             snapshotDump,
@@ -64,7 +63,7 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
     let parsedArgs: unknown = null;
     let argsError: unknown = null;
     try {
-        parsedArgs = rlmArgsConvert(snapshotArgs, snapshotKwargs, tool);
+        parsedArgs = rlmArgsConvert(snapshotArgs, snapshotKwargs, toolEntry);
         toolArgs = parsedArgs;
     } catch (error) {
         argsError = error;
@@ -77,16 +76,17 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
     try {
         await options.beforeExecute?.({
             snapshotDump,
-            toolName: tool.name,
+            toolName: toolNameResolve(toolEntry),
             toolArgs
         });
         if (argsError) {
             throw argsError;
         }
-        const runtimeResult = await rlmRuntimeToolExecute(tool.name, parsedArgs, options.context);
+        const runtimeResult = await rlmRuntimeToolExecute(toolNameResolve(toolEntry), parsedArgs, options.context);
         if (runtimeResult.handled) {
-            const value =
-                montyResponseSchemaResolve(tool) !== null ? rlmRuntimeResultConvert(runtimeResult.value, tool) : null;
+            const value = runtimeVoidToolIs(toolNameResolve(toolEntry))
+                ? null
+                : rlmRuntimeResultConvert(runtimeResult.value, toolEntry);
             toolResultText = rlmValueFormat(value);
             resumeOptions = {
                 returnValue: value
@@ -96,12 +96,12 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
                 {
                     type: "toolCall",
                     id: createId(),
-                    name: tool.name,
+                    name: toolNameResolve(toolEntry),
                     arguments: parsedArgs as Record<string, unknown>
                 },
                 { ...options.context, pythonExecution: true }
             );
-            const value = rlmResultConvert(toolResult, tool);
+            const value = rlmResultConvert(toolResult, toolEntry);
             toolResultText = rlmValueFormat(value);
 
             if (toolResult.toolMessage.isError) {
@@ -110,7 +110,9 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
                     exception: {
                         type: "RuntimeError",
                         message:
-                            toolResultText.trim().length > 0 ? toolResultText : `Tool execution failed: ${tool.name}`
+                            toolResultText.trim().length > 0
+                                ? toolResultText
+                                : `Tool execution failed: ${toolNameResolve(toolEntry)}`
                     }
                 };
             } else {
@@ -144,6 +146,14 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
         deferredPayload,
         deferredHandler
     };
+}
+
+function runtimeVoidToolIs(name: string): boolean {
+    return name === STEP_TOOL_NAME || name === CONTEXT_RESET_TOOL_NAME || name === CONTEXT_COMPACT_TOOL_NAME;
+}
+
+function toolNameResolve(tool: ResolvedTool | Tool): string {
+    return "tool" in tool ? tool.tool.name : tool.name;
 }
 
 function abortErrorIs(error: unknown, signal?: AbortSignal): boolean {

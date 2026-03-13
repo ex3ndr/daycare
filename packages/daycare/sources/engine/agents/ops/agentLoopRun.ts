@@ -43,6 +43,7 @@ import {
     deferredToolFlush,
     deferredToolStatusBuild
 } from "../../modules/tools/deferredToolFlush.js";
+import { toolResolvedFromTool } from "../../modules/tools/toolResolvedFromTool.js";
 import type { Skills } from "../../skills/skills.js";
 import type { Webhooks } from "../../webhook/webhooks.js";
 import type { Agent } from "../agent.js";
@@ -322,10 +323,20 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
         };
         const trackingToolResolver: ToolResolverApi = {
             listTools: () => toolResolver.listTools(),
+            listResolvedTools: () =>
+                toolResolver.listResolvedTools?.() ?? toolResolver.listTools().map(toolResolvedFromTool),
             listToolsForAgent: (resolverContext) => toolResolver.listToolsForAgent(resolverContext),
+            listResolvedToolsForAgent: (resolverContext) =>
+                toolResolver.listResolvedToolsForAgent?.(resolverContext) ??
+                toolResolver.listToolsForAgent(resolverContext).map(toolResolvedFromTool),
             listExecutableToolsForAgent: (resolverContext) =>
                 toolResolver.listExecutableToolsForAgent?.(resolverContext) ??
                 toolResolver.listToolsForAgent(resolverContext),
+            listResolvedExecutableToolsForAgent: (resolverContext) =>
+                toolResolver.listResolvedExecutableToolsForAgent?.(resolverContext) ??
+                toolResolver.listResolvedToolsForAgent?.(resolverContext) ??
+                toolResolver.listExecutableToolsForAgent?.(resolverContext)?.map(toolResolvedFromTool) ??
+                toolResolver.listToolsForAgent(resolverContext).map(toolResolvedFromTool),
             deferredHandlerFor: (toolName) => toolResolver.deferredHandlerFor(toolName),
             execute: async (toolCall, toolContext) => {
                 if (isChildAgent && !childAgentMessageSent && toolCall.name === "send_agent_message") {
@@ -855,13 +866,13 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         const runtimeTools = rlmToolsForContextResolve(
                             blockState.trackingToolResolver,
                             blockState.executionContext
-                        ).filter((tool) => tool.name !== RLM_TOOL_NAME);
-                        const toolByName = new Map(runtimeTools.map((tool) => [tool.name, tool]));
+                        ).filter((entry) => entry.tool.name !== RLM_TOOL_NAME);
+                        const toolByName = new Map(runtimeTools.map((entry) => [entry.tool.name, entry]));
                         for (const runtimeTool of rlmRuntimeTools()) {
-                            if (toolByName.has(runtimeTool.name)) {
+                            if (toolByName.has(runtimeTool.tool.name)) {
                                 continue;
                             }
-                            toolByName.set(runtimeTool.name, runtimeTool);
+                            toolByName.set(runtimeTool.tool.name, runtimeTool);
                         }
                         const externalFunctions = [...toolByName.keys()];
                         if (!externalFunctions.includes(SKIP_TOOL_NAME)) {
@@ -938,13 +949,13 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                         const runtimeTools = rlmToolsForContextResolve(
                             blockState.trackingToolResolver,
                             blockState.executionContext
-                        ).filter((tool) => tool.name !== RLM_TOOL_NAME);
-                        const toolByName = new Map(runtimeTools.map((tool) => [tool.name, tool]));
+                        ).filter((entry) => entry.tool.name !== RLM_TOOL_NAME);
+                        const toolByName = new Map(runtimeTools.map((entry) => [entry.tool.name, entry]));
                         for (const runtimeTool of rlmRuntimeTools()) {
-                            if (toolByName.has(runtimeTool.name)) {
+                            if (toolByName.has(runtimeTool.tool.name)) {
                                 continue;
                             }
-                            toolByName.set(runtimeTool.name, runtimeTool);
+                            toolByName.set(runtimeTool.tool.name, runtimeTool);
                         }
 
                         if (!toolByName.has(phase.snapshot.functionName)) {
@@ -1417,8 +1428,13 @@ function toolListInferenceResolve(): Tool[] {
     return [runPythonInferenceTool];
 }
 
-function toolListExecutableResolve(toolResolver: ToolResolverApi, context: ToolVisibilityContext): Tool[] {
-    return toolResolver.listExecutableToolsForAgent?.(context) ?? toolResolver.listToolsForAgent(context);
+function toolListExecutableResolve(toolResolver: ToolResolverApi, context: ToolVisibilityContext) {
+    return (
+        toolResolver.listResolvedExecutableToolsForAgent?.(context) ??
+        toolResolver.listResolvedToolsForAgent?.(context) ??
+        toolResolver.listExecutableToolsForAgent?.(context)?.map(toolResolvedFromTool) ??
+        toolResolver.listToolsForAgent(context).map(toolResolvedFromTool)
+    );
 }
 
 type RunPythonToolCall = {

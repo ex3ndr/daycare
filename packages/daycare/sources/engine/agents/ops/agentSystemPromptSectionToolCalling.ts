@@ -1,5 +1,5 @@
-import type { Tool } from "@mariozechner/pi-ai";
 import Handlebars from "handlebars";
+import type { ResolvedTool } from "@/types";
 
 import { rlmNoToolsPromptBuild } from "../../modules/rlm/rlmNoToolsPromptBuild.js";
 import { agentPromptBundledRead } from "./agentPromptBundledRead.js";
@@ -15,7 +15,7 @@ export async function agentSystemPromptSectionToolCalling(context: AgentSystemPr
     const availableTools = toolListVisibleResolve(context);
     const filteredTools = toolListAllowlistApply(availableTools, context);
     const isForeground = context.config?.foreground === true;
-    const preferSayTool = isForeground && filteredTools.some((tool) => tool.name === "say");
+    const preferSayTool = isForeground && filteredTools.some((entry) => entry.tool.name === "say");
     const examplesDir = context.agentSystem ? "/shared/examples" : bundledExamplesDirResolve();
     const noToolsPrompt =
         filteredTools.length > 0 ? await rlmNoToolsPromptBuild(filteredTools, { isForeground, examplesDir }) : "";
@@ -33,13 +33,13 @@ function toolListVisibleResolve(context: AgentSystemPromptContext) {
         return [];
     }
     if (context.path && context.config) {
-        return toolResolver.listToolsForAgent({
+        return toolResolver.listResolvedToolsForAgent({
             ctx: context.ctx,
             path: context.path,
             config: context.config
         });
     }
-    return toolResolver.listTools();
+    return toolResolver.listResolvedTools();
 }
 
 /**
@@ -47,7 +47,7 @@ function toolListVisibleResolve(context: AgentSystemPromptContext) {
  * Agents with restricted allowlists (e.g. memory-search) only see their allowed tools
  * in the system prompt, preventing RLM from generating stubs for inaccessible tools.
  */
-function toolListAllowlistApply(tools: Tool[], context: AgentSystemPromptContext): Tool[] {
+function toolListAllowlistApply(tools: ResolvedTool[], context: AgentSystemPromptContext): ResolvedTool[] {
     const kind = context.config?.kind;
     if (!kind) {
         return tools;
@@ -56,5 +56,5 @@ function toolListAllowlistApply(tools: Tool[], context: AgentSystemPromptContext
     if (!allowlist) {
         return tools;
     }
-    return tools.filter((tool) => allowlist.has(tool.name));
+    return tools.filter((entry) => allowlist.has(entry.tool.name));
 }

@@ -22,14 +22,16 @@ export function rlmVerify(
         throw new Error("rlmVerify failed: tool resolver is unavailable.");
     }
 
-    const visibleTools = rlmToolsForContextResolve(toolResolver, context).filter((tool) => tool.name !== RLM_TOOL_NAME);
+    const visibleTools = rlmToolsForContextResolve(toolResolver, context).filter(
+        (entry) => entry.tool.name !== RLM_TOOL_NAME
+    );
     const preamble = montyPreambleBuild(visibleTools);
-    const externalFunctions = visibleTools.map((tool) => tool.name);
+    const externalFunctions = visibleTools.map((entry) => entry.tool.name);
     for (const runtimeTool of rlmRuntimeTools()) {
-        if (externalFunctions.includes(runtimeTool.name)) {
+        if (externalFunctions.includes(runtimeTool.tool.name)) {
             continue;
         }
-        externalFunctions.push(runtimeTool.name);
+        externalFunctions.push(runtimeTool.tool.name);
     }
     if (!externalFunctions.includes(SKIP_TOOL_NAME)) {
         externalFunctions.push(SKIP_TOOL_NAME);

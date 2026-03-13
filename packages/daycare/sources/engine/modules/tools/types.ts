@@ -71,6 +71,11 @@ export type ToolResultContract<TResult extends ToolResultObject = ToolResultObje
     toLLMText(result: TResult): string;
 };
 
+export type ResolvedTool<TParams extends TSchema = TSchema, TResult extends ToolResultObject = ToolResultObject> = {
+    tool: Tool<TParams>;
+    returns: ToolResultContract<TResult>;
+};
+
 export type DeferredToolHandler = (payload: unknown, context: ToolExecutionContext) => Promise<void>;
 
 export type ToolExecutionResult<TResult extends ToolResultObject = ToolResultObject> = {
@@ -83,9 +88,10 @@ export type ToolExecutionResult<TResult extends ToolResultObject = ToolResultObj
     deferredHandler?: DeferredToolHandler;
 };
 
-export type ToolDefinition<TParams extends TSchema = TSchema, TResult extends ToolResultObject = ToolResultObject> = {
-    tool: Tool<TParams>;
-    returns: ToolResultContract<TResult>;
+export type ToolDefinition<
+    TParams extends TSchema = TSchema,
+    TResult extends ToolResultObject = ToolResultObject
+> = ResolvedTool<TParams, TResult> & {
     execute: (
         args: unknown,
         context: ToolExecutionContext,

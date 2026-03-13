@@ -1,7 +1,7 @@
-import type { Tool } from "@mariozechner/pi-ai";
-import type { ToolExecutionContext } from "@/types";
+import type { ResolvedTool, ToolExecutionContext } from "@/types";
 
 import type { ToolResolverApi } from "../toolResolver.js";
+import { toolResolvedFromTool } from "../tools/toolResolvedFromTool.js";
 
 /**
  * Resolves tools visible for the current execution context.
@@ -10,19 +10,23 @@ import type { ToolResolverApi } from "../toolResolver.js";
 export function rlmToolsForContextResolve(
     toolResolver: ToolResolverApi,
     context: Pick<ToolExecutionContext, "ctx" | "agent" | "allowedToolNames">
-): Tool[] {
+): ResolvedTool[] {
     const path = context.agent?.path;
     const config = context.agent?.config;
     const visibleTools =
         path && config
-            ? (toolResolver.listExecutableToolsForAgent?.({ ctx: context.ctx, path, config }) ??
-              toolResolver.listToolsForAgent({ ctx: context.ctx, path, config }))
-            : toolResolver.listTools();
+            ? (toolResolver.listResolvedExecutableToolsForAgent?.({ ctx: context.ctx, path, config }) ??
+              toolResolver
+                  .listExecutableToolsForAgent?.({ ctx: context.ctx, path, config })
+                  ?.map(toolResolvedFromTool) ??
+              toolResolver.listResolvedToolsForAgent?.({ ctx: context.ctx, path, config }) ??
+              toolResolver.listToolsForAgent({ ctx: context.ctx, path, config }).map(toolResolvedFromTool))
+            : (toolResolver.listResolvedTools?.() ?? toolResolver.listTools().map(toolResolvedFromTool));
 
     const allowedToolNames = context.allowedToolNames;
     if (!allowedToolNames) {
         return visibleTools;
     }
 
-    return visibleTools.filter((tool) => allowedToolNames.has(tool.name));
+    return visibleTools.filter((entry) => allowedToolNames.has(entry.tool.name));
 }

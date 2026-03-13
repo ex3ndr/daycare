@@ -2,10 +2,15 @@ import type { Tool, ToolCall, ToolResultMessage } from "@mariozechner/pi-ai";
 import { validateToolCall } from "@mariozechner/pi-ai";
 import type { TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
-import type { ToolDefinition, ToolExecutionContext, ToolExecutionResult, ToolVisibilityContext } from "@/types";
+import type {
+    ResolvedTool,
+    ToolDefinition,
+    ToolExecutionContext,
+    ToolExecutionResult,
+    ToolVisibilityContext
+} from "@/types";
 import { getLogger } from "../../log.js";
 import { montyPythonSignatureBuild } from "./monty/montyPythonSignatureBuild.js";
-import { MONTY_RESPONSE_SCHEMA_KEY } from "./monty/montyResponseSchemaKey.js";
 import { montyResponseTypedDictLinesBuild } from "./monty/montyResponseTypedDictLinesBuild.js";
 import { montyResponseTypeNameFromFunction } from "./monty/montyResponseTypeNameFromFunction.js";
 import { toolResultTruncate } from "./tools/toolResultTruncate.js";
@@ -45,7 +50,11 @@ export class ToolResolver {
     }
 
     listTools(): Tool[] {
-        return Array.from(this.tools.values()).map((entry) => toolExpose(entry));
+        return Array.from(this.tools.values()).map((entry) => entry.tool);
+    }
+
+    listResolvedTools(): ResolvedTool[] {
+        return Array.from(this.tools.values()).map((entry) => toolResolve(entry));
     }
 
     /** Returns the executeDeferred handler for a tool, or undefined if not registered or not deferred. */
@@ -56,13 +65,25 @@ export class ToolResolver {
     listToolsForAgent(context: ToolVisibilityContext): Tool[] {
         return Array.from(this.tools.values())
             .filter((entry) => toolVisibleByDefault(entry, context))
-            .map((entry) => toolExpose(entry));
+            .map((entry) => entry.tool);
+    }
+
+    listResolvedToolsForAgent(context: ToolVisibilityContext): ResolvedTool[] {
+        return Array.from(this.tools.values())
+            .filter((entry) => toolVisibleByDefault(entry, context))
+            .map((entry) => toolResolve(entry));
     }
 
     listExecutableToolsForAgent(context: ToolVisibilityContext): Tool[] {
         return Array.from(this.tools.values())
             .filter((entry) => toolExecutableForAgent(entry, context))
-            .map((entry) => toolExpose(entry));
+            .map((entry) => entry.tool);
+    }
+
+    listResolvedExecutableToolsForAgent(context: ToolVisibilityContext): ResolvedTool[] {
+        return Array.from(this.tools.values())
+            .filter((entry) => toolExecutableForAgent(entry, context))
+            .map((entry) => toolResolve(entry));
     }
 
     async execute(toolCall: ToolCall, context: ToolExecutionContext): Promise<ToolExecutionResult> {
@@ -134,7 +155,10 @@ export type ToolResolverApi = Pick<
     ToolResolver,
     "listTools" | "listToolsForAgent" | "execute" | "deferredHandlerFor"
 > & {
+    listResolvedTools?: () => ResolvedTool[];
+    listResolvedToolsForAgent?: (context: ToolVisibilityContext) => ResolvedTool[];
     listExecutableToolsForAgent?: (context: ToolVisibilityContext) => Tool[];
+    listResolvedExecutableToolsForAgent?: (context: ToolVisibilityContext) => ResolvedTool[];
 };
 
 function buildToolError(toolCall: ToolCall, text: string): ToolExecutionResult {
@@ -149,14 +173,11 @@ function buildToolError(toolCall: ToolCall, text: string): ToolExecutionResult {
     return toolExecutionResultOutcome(toolMessage);
 }
 
-function toolExpose(entry: RegisteredTool): Tool {
-    const tool = { ...entry.tool } as Tool;
-    Object.defineProperty(tool, MONTY_RESPONSE_SCHEMA_KEY, {
-        value: entry.returns.schema,
-        enumerable: false,
-        configurable: false
-    });
-    return tool;
+function toolResolve(entry: RegisteredTool): ResolvedTool {
+    return {
+        tool: entry.tool,
+        returns: entry.returns
+    };
 }
 
 function toolVisibleByDefault(entry: RegisteredTool, context: ToolVisibilityContext): boolean {
