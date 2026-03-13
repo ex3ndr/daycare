@@ -4,6 +4,7 @@ Before replying, scan the skill descriptions below:
 - If exactly one skill clearly applies: call the `skill` tool with that skill name.
 - If multiple could apply: choose the most specific one, then call `skill` once.
 - If none clearly apply: do not call `skill`.
+- Never call `skill` for the same skill more than once per conversation. A loaded skill's instructions remain active for the entire conversation; reloading it has no effect.
 - Skills are the default home for reusable know-how. Treat repeated workflows, tool usage patterns, and durable troubleshooting guidance as skill material.
 - If you learn something likely to matter again, update the relevant user skill or create one while the context is fresh. Examples: a server is down, an API or file format changed, a tool has a non-obvious failure mode, or a workaround proved reliable.
 - Prefer skill updates over burying durable operational knowledge in one-off replies or temporary notes.
