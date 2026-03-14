@@ -275,6 +275,38 @@ For coding pipelines, default to this split:
 
 This keeps planning broad and implementation focused. Do not ask Codex to rediscover the plan if an Opus agent already produced it.
 
+### Structured result handoffs
+
+When Codex or Claude Code produces structured data for another step, do not pass that data as loose prose in the prompt history. Write it to a JSON file and make the orchestration layer validate it.
+
+Use this pattern:
+
+1. The producing model writes a result file such as `/developer/tasks/<task-name>/handoff/result.json`.
+2. The orchestration code reads that file.
+3. The orchestration code checks that the JSON matches the expected schema.
+4. Only valid JSON moves to the next inference or action.
+5. If validation fails, the orchestration code asks the producing model to finish or repair the result instead of guessing.
+
+The orchestrator should stay simple: read file, validate schema, decide whether to continue or request another pass.
+
+Example flow:
+
+```python
+res = exec(command="node /developer/tasks/codegen/handoff/read-result.mjs")
+payload = json_parse(text=res.output)["value"]
+
+if payload["valid"] is not True:
+    print("The JSON handoff did not match schema. Complete the missing fields and rewrite result.json.")
+    print(payload["errors"])
+    return
+
+compact = json_stringify(value=payload["result"], pretty=False)["value"]
+print("Use this validated result for the next step:")
+print(compact)
+```
+
+Prefer a checked-in validator script when the schema is non-trivial. Keep the schema explicit and stable so multiple models can share the same contract.
+
 ## Permanent Agents
 
 Tasks can coordinate with **permanent agents** — background agents with stable identities. Use `create_permanent_agent` to set one up.

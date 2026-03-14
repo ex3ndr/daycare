@@ -13,6 +13,7 @@ The skill is sandboxed (`sandbox: true`) so it runs asynchronously in a subagent
 - aggressive `skip()` usage for no-op and mechanical runs
 - skill-based model handoffs for coding workflows
 - Opus planning/orchestration followed by Codex implementation for coding pipelines
+- JSON file handoffs between coding models with schema validation in the orchestrator
 - clear trigger selection and validation workflow
 
 ## Flow
@@ -31,8 +32,10 @@ flowchart TD
     I --> J{Coding pipeline task?}
     J -- Yes --> K[Plan with Opus and hand implementation to Codex via explicit skill]
     J -- No --> L[Use regular task flow]
-    K --> M{Validated output?}
-    L --> M
-    M -- Yes --> N[Attach trigger and verify with task_read]
-    M -- No --> O[Keep checklist unchecked and fix]
+    K --> M[Write structured result to result.json]
+    M --> N[Validate JSON against schema in orchestration code]
+    L --> O{Validated output?}
+    N --> O
+    O -- Yes --> P[Attach trigger and verify with task_read]
+    O -- No --> Q[Keep checklist unchecked and request another pass]
 ```
