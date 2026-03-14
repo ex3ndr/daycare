@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { useUnistyles } from "react-native-unistyles";
+import { AppHeader } from "@/components/AppHeader";
 
 export default function AuthLayout() {
     const { theme } = useUnistyles();
@@ -7,21 +8,41 @@ export default function AuthLayout() {
     return (
         <Stack
             screenOptions={{
-                headerStyle: {
-                    backgroundColor: theme.colors.surface
-                },
-                headerTintColor: theme.colors.onSurface,
-                headerTitleStyle: {
-                    color: theme.colors.onSurface
-                },
-                headerShadowVisible: false,
+                headerShown: false,
                 contentStyle: {
-                    backgroundColor: theme.colors.background
+                    backgroundColor: theme.colors.surface
                 }
             }}
         >
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="auth" options={{ headerShown: false }} />
+            <Stack.Screen name="index" />
+            <Stack.Screen
+                name="signin"
+                options={{
+                    headerShown: true,
+                    header: () => <AppHeader canGoBack />
+                }}
+            />
+            <Stack.Screen
+                name="auth"
+                options={{
+                    headerShown: true,
+                    header: () => <AppHeader canGoBack />
+                }}
+            />
+            <Stack.Screen
+                name="invite"
+                options={{
+                    headerShown: true,
+                    header: () => <AppHeader title="Invite" canGoBack />
+                }}
+            />
+            <Stack.Screen
+                name="verify"
+                options={{
+                    headerShown: true,
+                    header: () => <AppHeader canGoBack />
+                }}
+            />
         </Stack>
     );
 }

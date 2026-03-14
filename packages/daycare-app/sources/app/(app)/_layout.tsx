@@ -114,6 +114,7 @@ export default function AuthenticatedLayout() {
             <Stack.Screen name="[workspace]/automation/[id]" options={modalScreenOptions} />
             <Stack.Screen name="[workspace]/file-preview/[path]" options={modalScreenOptions} />
             <Stack.Screen name="share" />
+            <Stack.Screen name="invite" />
             <Stack.Screen name="workspace-not-found" />
         </Stack>
     );

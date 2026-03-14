@@ -38,23 +38,11 @@ const styles = StyleSheet.create((theme) => ({
     },
     panel: {
         width: "100%",
+        flex: 1,
         maxWidth: {
             xs: "100%",
             sm: "100%",
             md: 480
-        },
-        paddingVertical: {
-            xs: 0,
-            sm: 0,
-            md: 64
-        },
-        minHeight: {
-            xs: "100%",
-            sm: "100%",
-            md: 700
-        },
-        justifyContent: {
-            md: "center"
         }
     }
 }));

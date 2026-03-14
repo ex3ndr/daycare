@@ -10909,10 +10909,10 @@ react-native-is-edge-to-edge@1.2.1, react-native-is-edge-to-edge@^1.2.1:
   resolved "https://registry.yarnpkg.com/react-native-is-edge-to-edge/-/react-native-is-edge-to-edge-1.2.1.tgz#64e10851abd9d176cbf2b40562f751622bde3358"
   integrity sha512-FLbPWl/MyYQWz+KwqOZsSyj2JmLKglHatd3xLZWskXOpRaio4LfEDEz8E/A6uD8QoTHW6Aobw1jbEwK7KMgR7Q==
 
-react-native-monty@0.1.1:
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/react-native-monty/-/react-native-monty-0.1.1.tgz#585d7348268d884f838764851cc77d69de39e1ab"
-  integrity sha512-N0Kolrj6dXj+B7JzLsFrvi6wY77yhML/tN1gLN3LuLkiNy7iCaXsNBOPRyiCpZl4g2IDJ74kpyHwzHzu360NAg==
+react-native-monty@0.8.0:
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/react-native-monty/-/react-native-monty-0.8.0.tgz#4bf4d24351d1c763017f55b2e3935184b4070c7b"
+  integrity sha512-sYgHi/q6f3VbJe6FHFqf5tWnAO5egqe9gc+G0m7NAyGi3iW5mt2QdeezL+p66vrFCeTViFUlLLSmr4jCuXPwPA==
   dependencies:
     "@napi-rs/wasm-runtime" "^1.1.1"
 

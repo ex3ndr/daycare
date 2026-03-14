@@ -2,7 +2,6 @@ import { router } from "expo-router";
 import * as React from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { SinglePanelLayout } from "@/components/layout/SinglePanelLayout";
 import { authEmailConnectVerify, authTelegramExchange } from "@/modules/auth/authApi";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { authLinkPayloadFromUrl } from "@/modules/auth/authLinkPayloadFromUrl";
@@ -171,73 +170,69 @@ export default function AuthVerifyScreen() {
     }, [enterTelegram, telegramWebAppContext]);
 
     return (
-        <SinglePanelLayout>
-            <View style={styles.content}>
-                <View style={[styles.iconContainer, { backgroundColor: theme.colors.primaryContainer }]}>
-                    <Text style={{ fontSize: 48 }}>✨</Text>
-                </View>
-                <Text style={[styles.title, { color: theme.colors.onSurface }]}>You're almost in</Text>
-                {magicPayload ? (
-                    <>
-                        <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
-                            {magicPayload.kind === "connect-email" ? "Connecting email for " : "Connecting to "}
-                            <Text style={[styles.value, { color: theme.colors.onSurface }]}>{serverLabel}</Text>
-                        </Text>
-                        <Pressable
-                            accessibilityRole="button"
-                            disabled={isSubmitting}
-                            onPress={() => void enterMagic()}
-                            style={({ pressed }) => [
-                                styles.button,
-                                { backgroundColor: theme.colors.primary },
-                                pressed && !isSubmitting ? styles.buttonPressed : null,
-                                isSubmitting ? styles.buttonDisabled : null
-                            ]}
-                        >
-                            {isSubmitting ? (
-                                <ActivityIndicator size="small" color={theme.colors.onPrimary} />
-                            ) : (
-                                <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>Enter</Text>
-                            )}
-                        </Pressable>
-                    </>
-                ) : telegramWebAppContext ? (
-                    <>
-                        <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
-                            Connecting Telegram session to{" "}
-                            <Text style={[styles.value, { color: theme.colors.onSurface }]}>{serverLabel}</Text>
-                        </Text>
-                        <Pressable
-                            accessibilityRole="button"
-                            disabled={isSubmitting}
-                            onPress={() => void enterTelegram()}
-                            style={({ pressed }) => [
-                                styles.button,
-                                { backgroundColor: theme.colors.primary },
-                                pressed && !isSubmitting ? styles.buttonPressed : null,
-                                isSubmitting ? styles.buttonDisabled : null
-                            ]}
-                        >
-                            {isSubmitting ? (
-                                <ActivityIndicator size="small" color={theme.colors.onPrimary} />
-                            ) : (
-                                <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>Continue</Text>
-                            )}
-                        </Pressable>
-                    </>
-                ) : isAuthUrlPending ? (
-                    <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
-                        Resolving login link...
-                    </Text>
-                ) : (
-                    <Text style={[styles.message, { color: theme.colors.error }]}>
-                        Invalid login link. Request a new /app link or open this page from Telegram WebApp menu.
-                    </Text>
-                )}
-                {error ? <Text style={[styles.message, { color: theme.colors.error }]}>{error}</Text> : null}
-                {success ? <Text style={[styles.message, { color: theme.colors.primary }]}>{success}</Text> : null}
+        <View style={styles.content}>
+            <View style={[styles.iconContainer, { backgroundColor: theme.colors.primaryContainer }]}>
+                <Text style={{ fontSize: 48 }}>✨</Text>
             </View>
-        </SinglePanelLayout>
+            <Text style={[styles.title, { color: theme.colors.onSurface }]}>You're almost in</Text>
+            {magicPayload ? (
+                <>
+                    <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
+                        {magicPayload.kind === "connect-email" ? "Connecting email for " : "Connecting to "}
+                        <Text style={[styles.value, { color: theme.colors.onSurface }]}>{serverLabel}</Text>
+                    </Text>
+                    <Pressable
+                        accessibilityRole="button"
+                        disabled={isSubmitting}
+                        onPress={() => void enterMagic()}
+                        style={({ pressed }) => [
+                            styles.button,
+                            { backgroundColor: theme.colors.primary },
+                            pressed && !isSubmitting ? styles.buttonPressed : null,
+                            isSubmitting ? styles.buttonDisabled : null
+                        ]}
+                    >
+                        {isSubmitting ? (
+                            <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+                        ) : (
+                            <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>Enter</Text>
+                        )}
+                    </Pressable>
+                </>
+            ) : telegramWebAppContext ? (
+                <>
+                    <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
+                        Connecting Telegram session to{" "}
+                        <Text style={[styles.value, { color: theme.colors.onSurface }]}>{serverLabel}</Text>
+                    </Text>
+                    <Pressable
+                        accessibilityRole="button"
+                        disabled={isSubmitting}
+                        onPress={() => void enterTelegram()}
+                        style={({ pressed }) => [
+                            styles.button,
+                            { backgroundColor: theme.colors.primary },
+                            pressed && !isSubmitting ? styles.buttonPressed : null,
+                            isSubmitting ? styles.buttonDisabled : null
+                        ]}
+                    >
+                        {isSubmitting ? (
+                            <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+                        ) : (
+                            <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>Continue</Text>
+                        )}
+                    </Pressable>
+                </>
+            ) : isAuthUrlPending ? (
+                <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>Resolving login link...</Text>
+            ) : (
+                <Text style={[styles.message, { color: theme.colors.error }]}>
+                    Invalid login link. Request a new /app link or open this page from Telegram WebApp menu.
+                </Text>
+            )}
+            {error ? <Text style={[styles.message, { color: theme.colors.error }]}>{error}</Text> : null}
+            {success ? <Text style={[styles.message, { color: theme.colors.primary }]}>{success}</Text> : null}
+        </View>
     );
 }
 
@@ -255,7 +250,7 @@ const styles = StyleSheet.create({
         borderRadius: 48,
         alignItems: "center",
         justifyContent: "center",
-        marginBottom: 24 // Changed from 8 to 24 for improved spacing
+        marginBottom: 24
     },
     title: {
         fontSize: 32,

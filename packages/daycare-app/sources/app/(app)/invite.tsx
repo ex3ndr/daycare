@@ -1,59 +1,43 @@
-import { router } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as React from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { SinglePanelLayout } from "@/components/layout/SinglePanelLayout";
 import { useAuthStore } from "@/modules/auth/authContext";
-import { authRedirectStore } from "@/modules/auth/authRedirectStorage";
-import { useAuthLinkUrl } from "@/modules/auth/useAuthLinkUrl";
-import { inviteLinkPayloadFromUrl } from "@/modules/members/inviteLinkPayloadFromUrl";
 import { membersInviteAccept } from "@/modules/members/membersInviteAccept";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
-function inviteRedirectPathBuild(payload: { backendUrl: string; token: string; workspaceName?: string }): string {
-    const query = new URLSearchParams({
-        backendUrl: payload.backendUrl,
-        token: payload.token,
-        kind: "workspace-invite"
-    });
-    if (payload.workspaceName) {
-        query.set("workspaceName", payload.workspaceName);
-    }
-    return `/invite?${query.toString()}`;
-}
-
-export default function InviteScreen() {
+/**
+ * Invite screen for authenticated users.
+ * Shows invite details and allows accepting directly.
+ */
+export default function AppInviteScreen() {
     const { theme } = useUnistyles();
-    const authState = useAuthStore((state) => state.state);
+    const router = useRouter();
     const baseUrl = useAuthStore((state) => state.baseUrl);
     const token = useAuthStore((state) => state.token);
     const fetchWorkspaces = useWorkspacesStore((state) => state.fetch);
-    const { url, pending } = useAuthLinkUrl();
-    const invitePayload = React.useMemo(() => inviteLinkPayloadFromUrl(url), [url]);
-    const hasRedirectedRef = React.useRef(false);
+    const params = useLocalSearchParams<{
+        backendUrl?: string;
+        token?: string;
+        workspaceName?: string;
+    }>();
+
+    const hasInvite = Boolean(params.backendUrl && params.token);
     const [submitting, setSubmitting] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
 
-    React.useEffect(() => {
-        if (pending || !invitePayload || authState !== "unauthenticated" || hasRedirectedRef.current) {
-            return;
-        }
-        hasRedirectedRef.current = true;
-        authRedirectStore(inviteRedirectPathBuild(invitePayload));
-        router.replace("/" as never);
-    }, [authState, invitePayload, pending]);
-
     const confirmJoin = React.useCallback(async () => {
-        if (!invitePayload || !baseUrl || !token || submitting) {
+        if (!params.backendUrl || !params.token || !baseUrl || !token || submitting) {
             return;
         }
         setSubmitting(true);
         setError(null);
         try {
-            if (baseUrl !== invitePayload.backendUrl) {
+            if (baseUrl !== params.backendUrl) {
                 throw new Error("This invite belongs to a different Daycare server. Sign in there first.");
             }
-            const result = await membersInviteAccept(baseUrl, token, invitePayload.token);
+            const result = await membersInviteAccept(baseUrl, token, params.token);
             if (!result.ok) {
                 throw new Error(result.error);
             }
@@ -64,15 +48,7 @@ export default function InviteScreen() {
         } finally {
             setSubmitting(false);
         }
-    }, [baseUrl, fetchWorkspaces, invitePayload, submitting, token]);
-
-    const statusText = pending
-        ? "Resolving invite link..."
-        : authState === "unauthenticated"
-          ? "Redirecting to sign in..."
-          : !invitePayload
-            ? "Invalid invite link."
-            : null;
+    }, [baseUrl, fetchWorkspaces, params.backendUrl, params.token, router, submitting, token]);
 
     return (
         <SinglePanelLayout>
@@ -81,14 +57,12 @@ export default function InviteScreen() {
                     <Text style={styles.icon}>👥</Text>
                 </View>
                 <Text style={[styles.title, { color: theme.colors.onSurface }]}>Workspace Invite</Text>
-                {statusText ? (
-                    <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>{statusText}</Text>
-                ) : invitePayload ? (
+                {hasInvite ? (
                     <>
                         <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
-                            You&apos;ve been invited to join{" "}
+                            You've been invited to join{" "}
                             <Text style={[styles.value, { color: theme.colors.onSurface }]}>
-                                {invitePayload.workspaceName ?? "this workspace"}
+                                {params.workspaceName ?? "this workspace"}
                             </Text>
                             .
                         </Text>
@@ -112,7 +86,9 @@ export default function InviteScreen() {
                             )}
                         </Pressable>
                     </>
-                ) : null}
+                ) : (
+                    <Text style={[styles.message, { color: theme.colors.error }]}>Invalid invite link.</Text>
+                )}
                 {error ? <Text style={[styles.message, { color: theme.colors.error }]}>{error}</Text> : null}
             </View>
         </SinglePanelLayout>
