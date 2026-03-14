@@ -4,18 +4,33 @@ import path from "node:path";
 
 import { AuthStore } from "../auth/store.js";
 import { configResolve } from "../config/configResolve.js";
+import { AcpSessions } from "../engine/acp/acpSessions.js";
 import { AgentSystem } from "../engine/agents/agentSystem.js";
+import { Channels } from "../engine/channels/channels.js";
 import { ConfigModule } from "../engine/config/configModule.js";
-import type { Crons } from "../engine/cron/crons.js";
+import { Crons } from "../engine/cron/crons.js";
+import { engineToolsRegister } from "../engine/engineToolsRegister.js";
+import { Friends } from "../engine/friends/friends.js";
 import { EngineEventBus } from "../engine/ipc/events.js";
+import { MiniApps } from "../engine/mini-apps/MiniApps.js";
 import { ConnectorRegistry } from "../engine/modules/connectorRegistry.js";
 import { ImageGenerationRegistry } from "../engine/modules/imageGenerationRegistry.js";
 import type { InferenceRouter } from "../engine/modules/inference/router.js";
 import { MediaAnalysisRegistry } from "../engine/modules/mediaAnalysisRegistry.js";
+import { SpeechGenerationRegistry } from "../engine/modules/speechGenerationRegistry.js";
 import { ToolResolver } from "../engine/modules/toolResolver.js";
 import type { PluginManager } from "../engine/plugins/manager.js";
+import { Secrets } from "../engine/secrets/secrets.js";
 import { DelayedSignals } from "../engine/signals/delayedSignals.js";
 import { Signals } from "../engine/signals/signals.js";
+import { TaskExecutionRunner } from "../engine/tasks/taskExecutionRunner.js";
+import { TaskExecutions } from "../engine/tasks/taskExecutions.js";
+import { userDocumentsEnsure } from "../engine/users/userDocumentsEnsure.js";
+import { userHomeEnsure } from "../engine/users/userHomeEnsure.js";
+import { Webhooks } from "../engine/webhook/webhooks.js";
+import { Workspaces } from "../engine/workspaces/workspaces.js";
+import { getLogger } from "../log.js";
+import { PsqlService } from "../services/psql/PsqlService.js";
 import type { Storage } from "../storage/storage.js";
 import { storageOpenTest } from "../storage/storageOpenTest.js";
 
@@ -57,6 +72,22 @@ export async function evalHarnessCreate(options: { inferenceRouter?: InferenceRo
         delayedSignals: storage.delayedSignals
     });
     await delayedSignals.ensureDir();
+    const connectorRegistry = new ConnectorRegistry({
+        onMessage: async () => undefined
+    });
+    const imageRegistry = new ImageGenerationRegistry();
+    const speechRegistry = new SpeechGenerationRegistry();
+    const mediaRegistry = new MediaAnalysisRegistry();
+    const toolResolver = new ToolResolver();
+    const psqlService = new PsqlService({
+        usersDir: configModule.current.usersDir,
+        databases: storage.psqlDatabases,
+        databaseMode: "memory"
+    });
+    const secrets = new Secrets({
+        usersDir: configModule.current.usersDir,
+        observationLog: storage.observationLog
+    });
 
     const pluginManager = {
         getSystemPrompts: async () => [],
@@ -67,24 +98,84 @@ export async function evalHarnessCreate(options: { inferenceRouter?: InferenceRo
         config: configModule,
         eventBus,
         storage,
-        connectorRegistry: new ConnectorRegistry({
-            onMessage: async () => undefined
-        }),
-        imageRegistry: new ImageGenerationRegistry(),
-        mediaRegistry: new MediaAnalysisRegistry(),
-        toolResolver: new ToolResolver(),
+        connectorRegistry,
+        imageRegistry,
+        mediaRegistry,
+        toolResolver,
         pluginManager,
         inferenceRouter: options.inferenceRouter ?? evalInferenceRouterDefaultBuild(),
         authStore: new AuthStore(config),
-        delayedSignals
+        delayedSignals,
+        psqlService,
+        secrets
     });
+    const friends = new Friends({
+        storage,
+        postToUserAgents: (userId, item) => agentSystem.postToUserAgents(userId, item)
+    });
+    const workspaces = new Workspaces({
+        storage,
+        userHomeForUserId: (userId) => agentSystem.userHomeForUserId(userId)
+    });
+    agentSystem.setExtraMountsForUserId((userId) => workspaces.mountsForOwner(userId));
+    const taskExecutions = new TaskExecutions({
+        runner: new TaskExecutionRunner({
+            agentSystem
+        })
+    });
+    agentSystem.setTaskExecutions(taskExecutions);
+    const crons = new Crons({
+        config: configModule,
+        storage,
+        eventBus,
+        agentSystem
+    });
+    const webhooks = new Webhooks({
+        storage,
+        agentSystem
+    });
+    const miniApps = new MiniApps({
+        usersDir: configModule.current.usersDir,
+        storage
+    });
+    const channels = new Channels({
+        channels: storage.channels,
+        channelMessages: storage.channelMessages,
+        signals,
+        agentSystem,
+        observationLog: storage.observationLog
+    });
+    const acpSessions = new AcpSessions(getLogger("engine.acp"));
 
-    agentSystem.setCrons({
-        listTasks: async () => []
-    } as unknown as Crons);
-    agentSystem.setWebhooks({} as Parameters<AgentSystem["setWebhooks"]>[0]);
+    agentSystem.setCrons(crons);
+    agentSystem.setWebhooks(webhooks);
     agentSystem.setSignals(signals);
+
+    await workspaces.ensureSystem();
+    const ownerCtx = await agentSystem.ownerCtxEnsure();
+    await userHomeEnsure(agentSystem.userHomeForUserId(ownerCtx.userId));
+    await userDocumentsEnsure(ownerCtx, storage);
+    await workspaces.discover(ownerCtx.userId);
     await agentSystem.load();
+    await channels.load();
+    engineToolsRegister({
+        toolResolver,
+        inferenceRouter: agentSystem.inferenceRouter,
+        config: configModule,
+        crons,
+        signals,
+        channels,
+        secrets,
+        acpSessions,
+        workspaces,
+        miniApps,
+        friends,
+        imageRegistry,
+        speechRegistry,
+        mediaRegistry,
+        psqlService,
+        observationLog: storage.observationLog
+    });
     await agentSystem.start();
 
     let cleaned = false;
@@ -98,6 +189,10 @@ export async function evalHarnessCreate(options: { inferenceRouter?: InferenceRo
                 return;
             }
             cleaned = true;
+            delayedSignals.stop();
+            crons.stop();
+            webhooks.stop();
+            await acpSessions.shutdown();
             await storage.connection.close();
             await evalTempDirRemove(dir);
         }

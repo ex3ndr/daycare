@@ -14,7 +14,6 @@ import { ModelRoles } from "../providers/modelRoles.js";
 import { dockerContainersStaleRemove } from "../sandbox/docker/dockerContainersStaleRemove.js";
 import { dockerImageIdResolve } from "../sandbox/docker/dockerImageIdResolve.js";
 import { PsqlService } from "../services/psql/PsqlService.js";
-import { psqlToolsBuild } from "../services/psql/psqlTools.js";
 import { databaseClose } from "../storage/databaseClose.js";
 import { databaseMigrate } from "../storage/databaseMigrate.js";
 import { databaseOpen } from "../storage/databaseOpen.js";
@@ -34,6 +33,7 @@ import { messageContextStatus } from "./agents/ops/messageContextStatus.js";
 import { Channels } from "./channels/channels.js";
 import { ConfigModule } from "./config/configModule.js";
 import { Crons } from "./cron/crons.js";
+import { engineToolsRegister } from "./engineToolsRegister.js";
 import { FileFolder } from "./files/fileFolder.js";
 import { Friends } from "./friends/friends.js";
 import type { EngineEventBus } from "./ipc/events.js";
@@ -41,79 +41,11 @@ import { MemoryWorker } from "./memory/memoryWorker.js";
 import { IncomingMessages } from "./messages/incomingMessages.js";
 import { messageContextEnrichIncoming } from "./messages/messageContextEnrichIncoming.js";
 import { MiniApps } from "./mini-apps/MiniApps.js";
-import { miniAppCreateToolBuild } from "./mini-apps/miniAppCreateToolBuild.js";
-import { miniAppDeleteToolBuild } from "./mini-apps/miniAppDeleteToolBuild.js";
-import { miniAppEjectToolBuild } from "./mini-apps/miniAppEjectToolBuild.js";
-import { miniAppUpdateToolBuild } from "./mini-apps/miniAppUpdateToolBuild.js";
 import { messageContextRecipientResolve } from "./modules/connectors/messageContextRecipientResolve.js";
 import { InferenceRouter } from "./modules/inference/router.js";
 import { ModuleRegistry } from "./modules/moduleRegistry.js";
 import { taskParameterInputsNormalize } from "./modules/tasks/taskParameterInputsNormalize.js";
 import { taskParameterValidate } from "./modules/tasks/taskParameterValidate.js";
-import { acpSessionMessageToolBuild } from "./modules/tools/acpSessionMessageToolBuild.js";
-import { acpSessionStartToolBuild } from "./modules/tools/acpSessionStartToolBuild.js";
-import { agentAskTool } from "./modules/tools/agentAskTool.js";
-import { agentCompactToolBuild } from "./modules/tools/agentCompactTool.js";
-import { agentModelSetToolBuild } from "./modules/tools/agentModelSetToolBuild.js";
-import { agentResetToolBuild } from "./modules/tools/agentResetTool.js";
-import { buildSendAgentMessageTool, buildStartBackgroundAgentTool } from "./modules/tools/background.js";
-import { channelCreateToolBuild } from "./modules/tools/channelCreateTool.js";
-import { channelHistoryToolBuild } from "./modules/tools/channelHistoryTool.js";
-import { channelAddMemberToolBuild, channelRemoveMemberToolBuild } from "./modules/tools/channelMemberTool.js";
-import { channelSendToolBuild } from "./modules/tools/channelSendTool.js";
-import { fragmentArchiveToolBuild } from "./modules/tools/fragmentArchiveToolBuild.js";
-import { fragmentCreateToolBuild } from "./modules/tools/fragmentCreateToolBuild.js";
-import { fragmentListToolBuild } from "./modules/tools/fragmentListToolBuild.js";
-import { fragmentReadToolBuild } from "./modules/tools/fragmentReadToolBuild.js";
-import { fragmentUpdateToolBuild } from "./modules/tools/fragmentUpdateToolBuild.js";
-import { friendAddToolBuild } from "./modules/tools/friendAddToolBuild.js";
-import { friendRemoveToolBuild } from "./modules/tools/friendRemoveToolBuild.js";
-import { friendSendToolBuild } from "./modules/tools/friendSendToolBuild.js";
-import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
-import { inferenceClassifyToolBuild } from "./modules/tools/inference/inferenceClassifyToolBuild.js";
-import { inferenceSummaryToolBuild } from "./modules/tools/inference/inferenceSummaryToolBuild.js";
-import { buildMediaAnalysisTool } from "./modules/tools/media-analysis.js";
-import { buildMermaidPngTool } from "./modules/tools/mermaid-png.js";
-import { nowTool } from "./modules/tools/nowTool.js";
-import { pdfProcessTool } from "./modules/tools/pdf-process.js";
-import { permanentAgentToolBuild } from "./modules/tools/permanentAgentToolBuild.js";
-import { buildReactionTool } from "./modules/tools/reaction.js";
-import { sayTool } from "./modules/tools/sayTool.js";
-import { secretAddToolBuild } from "./modules/tools/secretAddToolBuild.js";
-import { secretRemoveToolBuild } from "./modules/tools/secretRemoveToolBuild.js";
-import { secretCopyToolBuild } from "./modules/tools/secretsCopyToolBuild.js";
-import { buildSendFileTool } from "./modules/tools/send-file.js";
-import { sendUserMessageToolBuild } from "./modules/tools/sendUserMessageTool.js";
-import { sessionHistoryToolBuild } from "./modules/tools/sessionHistoryToolBuild.js";
-import { buildSignalGenerateTool } from "./modules/tools/signal.js";
-import { signalEventsCsvToolBuild } from "./modules/tools/signalEventsCsvToolBuild.js";
-import { buildSignalSubscribeTool } from "./modules/tools/signalSubscribeToolBuild.js";
-import { buildSignalUnsubscribeTool } from "./modules/tools/signalUnsubscribeToolBuild.js";
-import { skillAddToolBuild } from "./modules/tools/skillAddToolBuild.js";
-import { skillEjectToolBuild } from "./modules/tools/skillEjectToolBuild.js";
-import { skillRemoveToolBuild } from "./modules/tools/skillRemoveToolBuild.js";
-import { skillToolBuild } from "./modules/tools/skillToolBuild.js";
-import { buildSpeechGenerationTool } from "./modules/tools/speech-generation.js";
-import { startBackgroundWorkflowToolBuild } from "./modules/tools/startBackgroundWorkflowTool.js";
-import {
-    buildTaskCreateTool,
-    buildTaskDeleteTool,
-    buildTaskReadTool,
-    buildTaskRunTool,
-    buildTaskTriggerAddTool,
-    buildTaskTriggerRemoveTool,
-    buildTaskUpdateTool
-} from "./modules/tools/task.js";
-import { topologyTool } from "./modules/tools/topologyToolBuild.js";
-import { userProfileUpdateTool } from "./modules/tools/userProfileUpdateTool.js";
-import { vaultAppendToolBuild } from "./modules/tools/vaultAppendToolBuild.js";
-import { vaultPatchToolBuild } from "./modules/tools/vaultPatchToolBuild.js";
-import { vaultReadToolBuild } from "./modules/tools/vaultReadToolBuild.js";
-import { vaultSearchToolBuild } from "./modules/tools/vaultSearchToolBuild.js";
-import { vaultTreeToolBuild } from "./modules/tools/vaultTreeToolBuild.js";
-import { vaultWriteToolBuild } from "./modules/tools/vaultWriteToolBuild.js";
-import { buildVoiceListTool } from "./modules/tools/voice-list.js";
-import { observationQueryToolBuild } from "./observations/observationQueryToolBuild.js";
 import { buildPluginCatalog } from "./plugins/catalog.js";
 import { PluginManager } from "./plugins/manager.js";
 import { PluginRegistry } from "./plugins/registry.js";
@@ -133,7 +65,6 @@ import { taskListAll } from "./tasks/taskListAll.js";
 import { userDocumentsEnsure } from "./users/userDocumentsEnsure.js";
 import { userHomeEnsure } from "./users/userHomeEnsure.js";
 import { Webhooks } from "./webhook/webhooks.js";
-import { workspaceCreateToolBuild } from "./workspaces/workspaceCreateToolBuild.js";
 import { Workspaces } from "./workspaces/workspaces.js";
 
 const logger = getLogger("engine.runtime");
@@ -804,81 +735,24 @@ export class Engine {
         await this.channels.load();
 
         logger.debug("register: Registering core tools");
-        this.modules.tools.register("core", buildTaskCreateTool());
-        this.modules.tools.register("core", buildTaskReadTool());
-        this.modules.tools.register("core", buildTaskUpdateTool());
-        this.modules.tools.register("core", buildTaskDeleteTool());
-        this.modules.tools.register("core", buildTaskRunTool());
-        this.modules.tools.register("core", buildTaskTriggerAddTool());
-        this.modules.tools.register("core", buildTaskTriggerRemoveTool());
-        this.modules.tools.register("core", buildStartBackgroundAgentTool());
-        this.modules.tools.register("core", startBackgroundWorkflowToolBuild());
-        this.modules.tools.register("core", buildSendAgentMessageTool());
-        this.modules.tools.register("core", acpSessionStartToolBuild(this.acpSessions));
-        this.modules.tools.register("core", acpSessionMessageToolBuild(this.acpSessions));
-        this.modules.tools.register("core", agentAskTool());
-        this.modules.tools.register("core", vaultSearchToolBuild());
-        this.modules.tools.register("core", inferenceSummaryToolBuild(this.inferenceRouter, this.config));
-        this.modules.tools.register("core", inferenceClassifyToolBuild(this.inferenceRouter, this.config));
-        this.modules.tools.register("core", agentModelSetToolBuild());
-        this.modules.tools.register("core", agentResetToolBuild());
-        this.modules.tools.register("core", agentCompactToolBuild());
-        this.modules.tools.register("core", sendUserMessageToolBuild());
-        this.modules.tools.register("core", skillToolBuild());
-        this.modules.tools.register("core", skillAddToolBuild());
-        this.modules.tools.register("core", skillRemoveToolBuild());
-        this.modules.tools.register("core", skillEjectToolBuild());
-        this.modules.tools.register("core", secretAddToolBuild());
-        this.modules.tools.register("core", secretRemoveToolBuild());
-        this.modules.tools.register("core", secretCopyToolBuild());
-        this.modules.tools.register("core", userProfileUpdateTool());
-        this.modules.tools.register(
-            "core",
-            topologyTool(this.crons, this.signals, this.channels, this.secrets, this.acpSessions)
-        );
-        this.modules.tools.register("core", sessionHistoryToolBuild());
-        this.modules.tools.register("core", permanentAgentToolBuild());
-        this.modules.tools.register("core", workspaceCreateToolBuild(this.workspaces));
-        this.modules.tools.register("core", miniAppCreateToolBuild(this.miniApps));
-        this.modules.tools.register("core", miniAppUpdateToolBuild(this.miniApps));
-        this.modules.tools.register("core", miniAppDeleteToolBuild(this.miniApps));
-        this.modules.tools.register("core", miniAppEjectToolBuild(this.miniApps));
-        this.modules.tools.register("core", channelCreateToolBuild(this.channels));
-        this.modules.tools.register("core", channelSendToolBuild(this.channels));
-        this.modules.tools.register("core", channelHistoryToolBuild(this.channels));
-        this.modules.tools.register("core", channelAddMemberToolBuild(this.channels));
-        this.modules.tools.register("core", channelRemoveMemberToolBuild(this.channels));
-        this.modules.tools.register("core", friendAddToolBuild(this.friends));
-        this.modules.tools.register("core", friendRemoveToolBuild(this.friends));
-        this.modules.tools.register("core", friendSendToolBuild());
-        this.modules.tools.register("core", buildImageGenerationTool(this.modules.images));
-        this.modules.tools.register("core", buildSpeechGenerationTool(this.modules.speech));
-        this.modules.tools.register("core", buildVoiceListTool(this.modules.speech));
-        this.modules.tools.register("core", buildMediaAnalysisTool(this.modules.mediaAnalysis));
-        this.modules.tools.register("core", buildMermaidPngTool());
-        this.modules.tools.register("core", buildReactionTool());
-        this.modules.tools.register("core", nowTool());
-        this.modules.tools.register("core", sayTool());
-        this.modules.tools.register("core", buildSendFileTool());
-        this.modules.tools.register("core", pdfProcessTool());
-        this.modules.tools.register("core", buildSignalGenerateTool(this.signals));
-        this.modules.tools.register("core", signalEventsCsvToolBuild(this.signals));
-        this.modules.tools.register("core", buildSignalSubscribeTool(this.signals));
-        this.modules.tools.register("core", buildSignalUnsubscribeTool(this.signals));
-        this.modules.tools.register("core", observationQueryToolBuild(this.storage.observationLog));
-        this.modules.tools.register("core", vaultReadToolBuild());
-        this.modules.tools.register("core", vaultTreeToolBuild());
-        this.modules.tools.register("core", vaultAppendToolBuild());
-        this.modules.tools.register("core", vaultPatchToolBuild());
-        this.modules.tools.register("core", vaultWriteToolBuild());
-        this.modules.tools.register("core", fragmentCreateToolBuild());
-        this.modules.tools.register("core", fragmentReadToolBuild());
-        this.modules.tools.register("core", fragmentListToolBuild());
-        this.modules.tools.register("core", fragmentUpdateToolBuild());
-        this.modules.tools.register("core", fragmentArchiveToolBuild());
-        for (const tool of psqlToolsBuild(this.psqlService)) {
-            this.modules.tools.register("core", tool);
-        }
+        engineToolsRegister({
+            toolResolver: this.modules.tools,
+            inferenceRouter: this.inferenceRouter,
+            config: this.config,
+            crons: this.crons,
+            signals: this.signals,
+            channels: this.channels,
+            secrets: this.secrets,
+            acpSessions: this.acpSessions,
+            workspaces: this.workspaces,
+            miniApps: this.miniApps,
+            friends: this.friends,
+            imageRegistry: this.modules.images,
+            speechRegistry: this.modules.speech,
+            mediaRegistry: this.modules.mediaAnalysis,
+            psqlService: this.psqlService,
+            observationLog: this.storage.observationLog
+        });
         logger.debug(
             "register: Core tools registered: tasks, topology, user_profile_update, background, agent_ask, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, workspaces, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, now, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, vault_read, vault_tree, vault_append, vault_patch, vault_write, fragment_create, fragment_read, fragment_list, fragment_update, fragment_archive"
         );

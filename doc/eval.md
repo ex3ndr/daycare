@@ -51,6 +51,27 @@ The harness intentionally stays small and deterministic:
 
 This means eval runs are cheap and disposable, but still exercise the real agent system, inbox processing, history persistence, and event emission paths.
 
+## Tool Surface
+
+The harness now registers the same built-in core tool catalog as the main engine runtime.
+
+That includes:
+
+- task, background, and agent control tools
+- vault, fragment, signal, and observation tools
+- workspace, channel, friend, secret, and mini-app tools
+- image, speech, media, PDF, Mermaid, and PSQL tools
+
+The provider registries still start empty unless the run loads plugins or test doubles, so generation tools can be present in the catalog even when no concrete provider is available.
+
+```mermaid
+flowchart LR
+    A[evalHarnessCreate] --> B[Boot supporting facades]
+    B --> C[engineToolsRegister]
+    C --> D[ToolResolver]
+    D --> E[Same core tool names as Engine.start]
+```
+
 ## High-Level Flow
 
 ```mermaid
