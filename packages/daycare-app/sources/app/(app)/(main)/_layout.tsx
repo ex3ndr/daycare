@@ -167,18 +167,10 @@ function DesktopLayout() {
             <LayoutScreen name="index" />
             <LayoutScreen name="[workspace]" dangerouslySingular={workspaceRouteSingularId} />
             <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
-                <WorkspaceStrip style={{ paddingTop: 18 + insets.top, paddingBottom: 8 + insets.bottom }} />
+                <WorkspaceStrip style={{ paddingTop: insets.top, paddingBottom: insets.bottom }} />
                 {appReady && (
                     <Animated.View
-                        style={[
-                            styles.sidebarCard,
-                            sidebarAnimatedStyle,
-                            {
-                                ...cardMargins,
-                                backgroundColor: theme.colors.surface,
-                                boxShadow: cardShadow
-                            }
-                        ]}
+                        style={[styles.sidebarCard, sidebarAnimatedStyle, { backgroundColor: theme.colors.surface }]}
                     >
                         <AppSidebar
                             onToggleCollapse={toggleSidebar}
@@ -304,10 +296,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8
     },
     sidebarCard: {
-        borderTopLeftRadius: 16,
-        borderBottomLeftRadius: 16,
-        borderTopRightRadius: 8,
-        borderBottomRightRadius: 8,
         overflow: "hidden",
         flexShrink: 0
     },
