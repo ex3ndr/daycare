@@ -4,7 +4,7 @@ import { ActivityIndicator, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
-import { ItemListStatic } from "@/components/ItemList";
+import { ItemList } from "@/components/ItemList";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useTasksStore } from "@/modules/tasks/tasksContext";
@@ -154,7 +154,7 @@ export function AutomationsView() {
     return (
         <View style={{ flex: 1 }}>
             <PageHeader title="Automations" icon="clock" />
-            <ItemListStatic>
+            <ItemList>
                 <ItemGroup title="Automations">
                     {tasks.map((task) => (
                         <Item
@@ -171,7 +171,7 @@ export function AutomationsView() {
                         />
                     ))}
                 </ItemGroup>
-            </ItemListStatic>
+            </ItemList>
         </View>
     );
 }
