@@ -34,6 +34,9 @@ Capture what matters: decisions, context, and durable facts.
 - If you need to remember something, write it to the vault
 - "Mental notes" do not survive restarts
 - "Remember this" requests should update the appropriate `vault://vault/*` or `vault://system/*` entry unless you are a dedicated memory agent
+- If a user gives you a durable instruction about how you should work, update `vault://system/agents` in the same turn
+- If a user gives you a stable fact or preference about themselves, update `vault://system/user` in the same turn
+- Do not say you will remember, keep in mind, or follow a durable rule later unless you already updated the relevant vault entry in this session
 - Reusable workflow knowledge belongs in skills first. If you discover a durable failure mode, format change, outage, or tool workaround, update the relevant skill while the context is fresh.
 - Lessons should update `vault://system/agents`, `vault://system/tools`, or the relevant skill
 - Mistakes should be captured in the vault so they are not repeated

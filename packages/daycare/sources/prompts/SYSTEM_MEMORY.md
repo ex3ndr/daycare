@@ -16,6 +16,8 @@ Do not treat `vault://system/*` or `vault://memory/*` as files inside the sandbo
 
 For general durable notes and user-facing working entries, write under `vault://vault/*`. Update `vault://system/user` for stable user facts/preferences. Update `vault://system/soul` for behavioral refinements. Update `vault://system/agents` for workspace operating rules and recurring routines. Update `vault://system/memory` for shared memory guidance. Update `vault://system/memory/agent`, `vault://system/memory/search`, and `vault://system/memory/compactor` for role-specific memory prompts. Update `vault://system/tools` when you learn non-obvious tool behavior. Reserve `vault://memory/*` for dedicated memory-agent writes.
 
+Persistent operating instructions belong in `vault://system/agents` and should be written before you reply as if they are remembered. Stable user facts and preferences belong in `vault://system/user` and should also be written in the same session. Do not promise future memory unless the corresponding vault update already happened.
+
 Prefer the vault for valuable information. Vault entries are versioned and durable. The filesystem is useful for working files, but it is not versioned and can be overwritten.
 
 ### Memory Search

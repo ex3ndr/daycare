@@ -16,6 +16,36 @@ import { agentSystemPrompt } from "./agentSystemPrompt.js";
 type AgentSystemPromptParameter = NonNullable<Parameters<typeof agentSystemPrompt>[0]>;
 
 describe("agentSystemPrompt", () => {
+    it("renders explicit same-turn vault persistence guidance for durable instructions", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-system-prompt-memory-rule-"));
+        try {
+            const userHome = new UserHome(path.join(dir, "users"), "user-1");
+
+            const rendered = await agentSystemPrompt({
+                ctx: contextForUser({ userId: "user-1" }),
+                path: "/user-1/agent/helper",
+                userHome,
+                agentSystem: {
+                    config: {
+                        current: {
+                            configDir: dir
+                        }
+                    },
+                    toolResolver: { listTools: () => [], listToolsForAgent: () => [] }
+                } as unknown as NonNullable<AgentSystemPromptParameter["agentSystem"]>
+            });
+
+            expect(rendered).toContain(
+                "If a user gives you a durable instruction about how you should work, update `vault://system/agents` in the same turn"
+            );
+            expect(rendered).toContain(
+                "Do not say you will remember, keep in mind, or follow a durable rule later unless you already updated the relevant vault entry in this session"
+            );
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("renders plugin prompt sections and collects system prompt images", async () => {
         const context: AgentSystemPromptParameter = {
             ctx: contextForUser({ userId: "user-1" }),
