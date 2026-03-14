@@ -5,6 +5,7 @@ import { useTasksStore } from "@/modules/tasks/tasksContext";
 import { tasksCronNextRunAtResolve } from "@/modules/tasks/tasksCronNextRunAtResolve";
 import { tasksFormatLastRun } from "@/modules/tasks/tasksFormatLastRun";
 import { tasksFormatNextRun } from "@/modules/tasks/tasksFormatNextRun";
+import { tasksFormatNextRunRelative } from "@/modules/tasks/tasksFormatNextRunRelative";
 
 /**
  * Automation detail content.
@@ -77,51 +78,53 @@ export const AutomationDetailPanel = React.memo(() => {
             {triggers.cron.length > 0 && (
                 <View style={panelStyles.section}>
                     <Text style={[panelStyles.label, { color: theme.colors.onSurfaceVariant }]}>Cron Triggers</Text>
-                    {triggers.cron.map((trigger) => (
-                        <View
-                            key={trigger.id}
-                            style={[panelStyles.triggerCard, { borderColor: theme.colors.outlineVariant }]}
-                        >
-                            <View style={panelStyles.triggerRow}>
-                                <Text style={[panelStyles.triggerSchedule, { color: theme.colors.onSurface }]}>
-                                    {trigger.schedule}
-                                </Text>
-                                <View
-                                    style={[
-                                        panelStyles.badge,
-                                        { backgroundColor: trigger.enabled ? "#2e7d3220" : "#ed6c0220" }
-                                    ]}
-                                >
-                                    <Text
+                    {triggers.cron.map((trigger) => {
+                        const nextRunAt = tasksCronNextRunAtResolve({
+                            schedule: trigger.schedule,
+                            timezone: trigger.timezone,
+                            enabled: trigger.enabled,
+                            fromAt: now
+                        });
+
+                        return (
+                            <View
+                                key={trigger.id}
+                                style={[panelStyles.triggerCard, { borderColor: theme.colors.outlineVariant }]}
+                            >
+                                <View style={panelStyles.triggerRow}>
+                                    <Text style={[panelStyles.triggerSchedule, { color: theme.colors.onSurface }]}>
+                                        {trigger.schedule}
+                                    </Text>
+                                    <View
                                         style={[
-                                            panelStyles.badgeText,
-                                            { color: trigger.enabled ? "#2e7d32" : "#ed6c02" }
+                                            panelStyles.badge,
+                                            { backgroundColor: trigger.enabled ? "#2e7d3220" : "#ed6c0220" }
                                         ]}
                                     >
-                                        {trigger.enabled ? "enabled" : "disabled"}
-                                    </Text>
+                                        <Text
+                                            style={[
+                                                panelStyles.badgeText,
+                                                { color: trigger.enabled ? "#2e7d32" : "#ed6c02" }
+                                            ]}
+                                        >
+                                            {trigger.enabled ? "enabled" : "disabled"}
+                                        </Text>
+                                    </View>
                                 </View>
+                                <Text style={[panelStyles.triggerMeta, { color: theme.colors.onSurfaceVariant }]}>
+                                    {trigger.timezone}
+                                    {trigger.agentId ? ` · ${trigger.agentId}` : ""}
+                                </Text>
+                                <Text style={[panelStyles.triggerMeta, { color: theme.colors.onSurfaceVariant }]}>
+                                    Last run: {tasksFormatLastRun(trigger.lastRunAt, now)}
+                                </Text>
+                                <Text style={[panelStyles.triggerMeta, { color: theme.colors.onSurfaceVariant }]}>
+                                    Next fire: {tasksFormatNextRun(nextRunAt)} (
+                                    {tasksFormatNextRunRelative(nextRunAt, now)})
+                                </Text>
                             </View>
-                            <Text style={[panelStyles.triggerMeta, { color: theme.colors.onSurfaceVariant }]}>
-                                {trigger.timezone}
-                                {trigger.agentId ? ` · ${trigger.agentId}` : ""}
-                            </Text>
-                            <Text style={[panelStyles.triggerMeta, { color: theme.colors.onSurfaceVariant }]}>
-                                Last run: {tasksFormatLastRun(trigger.lastRunAt, now)}
-                            </Text>
-                            <Text style={[panelStyles.triggerMeta, { color: theme.colors.onSurfaceVariant }]}>
-                                Next fire:{" "}
-                                {tasksFormatNextRun(
-                                    tasksCronNextRunAtResolve({
-                                        schedule: trigger.schedule,
-                                        timezone: trigger.timezone,
-                                        enabled: trigger.enabled,
-                                        fromAt: now
-                                    })
-                                )}
-                            </Text>
-                        </View>
-                    ))}
+                        );
+                    })}
                 </View>
             )}
 

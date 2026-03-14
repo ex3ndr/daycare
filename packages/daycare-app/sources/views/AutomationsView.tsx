@@ -9,8 +9,9 @@ import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useTasksStore } from "@/modules/tasks/tasksContext";
 import { tasksFormatLastRun } from "@/modules/tasks/tasksFormatLastRun";
-import { tasksFormatNextRun } from "@/modules/tasks/tasksFormatNextRun";
+import { tasksFormatNextRunRelative } from "@/modules/tasks/tasksFormatNextRunRelative";
 import { tasksNextRunAtFind } from "@/modules/tasks/tasksNextRunAtFind";
+import { tasksSortByNextRun } from "@/modules/tasks/tasksSortByNextRun";
 import { tasksStatus } from "@/modules/tasks/tasksStatus";
 import { tasksSubtitle } from "@/modules/tasks/tasksSubtitle";
 import type { CronTriggerSummary, TaskStatus, WebhookTriggerSummary } from "@/modules/tasks/tasksTypes";
@@ -119,6 +120,10 @@ export function AutomationsView() {
     // Recalculate "now" when tasks change so relative times are fresh
     // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally recompute when tasks update
     const now = useMemo(() => Date.now(), [tasks, triggers]);
+    const sortedTasks = useMemo(
+        () => tasksSortByNextRun(tasks, triggersByTask.cronByTask, now),
+        [tasks, triggersByTask, now]
+    );
 
     if (loading && tasks.length === 0) {
         return (
@@ -158,7 +163,7 @@ export function AutomationsView() {
             <PageHeader title="Automations" icon="clock" />
             <ItemList>
                 <ItemGroup title="Automations">
-                    {tasks.map((task) => (
+                    {sortedTasks.map((task) => (
                         <Item
                             key={task.id}
                             title={task.title}
@@ -185,5 +190,5 @@ function taskSubtitleBuild(cron: CronTriggerSummary[], webhook: WebhookTriggerSu
         return summary;
     }
 
-    return `${summary}\nNext fire: ${tasksFormatNextRun(tasksNextRunAtFind(cron, now))}`;
+    return `${summary}\nNext fire: ${tasksFormatNextRunRelative(tasksNextRunAtFind(cron, now), now)}`;
 }

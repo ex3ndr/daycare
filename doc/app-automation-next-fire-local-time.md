@@ -4,8 +4,9 @@
 
 - Added a client-side cron resolver in `daycare-app` to compute the next fire unix timestamp from each trigger's `schedule`, `timezone`, and `enabled` state.
 - Added local-time formatting with timezone labels for resolved cron fire times.
-- Updated the automations list to show a `Next fire` line.
-- Updated automation detail cards to show `Next fire` per cron trigger.
+- Added relative `Next fire` text in seconds, minutes, hours, and days.
+- Updated the automations list to show a `Next fire` line and sort by earliest upcoming fire time.
+- Updated automation detail cards to show `Next fire` per cron trigger with both absolute local time and relative time.
 
 ## Client flow
 
@@ -15,9 +16,13 @@ flowchart TD
     B --> C[tasksCronNextRunAtResolve]
     C --> D[Resolved nextRunAt unix timestamp]
     D --> E[tasksFormatNextRun]
-    E --> F[Local timezone text with zone suffix]
-    F --> G[AutomationsView]
-    F --> H[AutomationDetailPanel]
+    D --> F[tasksFormatNextRunRelative]
+    E --> G[Local timezone text with zone suffix]
+    F --> H[Relative next fire text]
+    G --> I[AutomationsView]
+    G --> J[AutomationDetailPanel]
+    H --> I
+    H --> J
 ```
 
 ## Notes
@@ -25,3 +30,4 @@ flowchart TD
 - The app computes next fire times locally; no backend payload changes are required.
 - Disabled cron triggers resolve to `not scheduled`.
 - Formatting uses the device's local timezone for display, while cron matching still respects the trigger's configured timezone.
+- Automation cards are ordered by earliest computed next fire time, with unscheduled items last.
