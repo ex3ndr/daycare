@@ -276,6 +276,12 @@ describe("agentSystemPrompt", () => {
             expect(rendered).toContain("Soul prompt text");
             expect(rendered).toContain("Memory prompt text");
             expect(rendered).toContain("Tools prompt text");
+            expect(rendered).toContain("Prefer reusable workflows over ad-hoc execution.");
+            expect(rendered).toContain("be workflow-first for almost every non-trivial request");
+            expect(rendered).toContain(
+                "existing core task, reusable task, permanent agent, or skill already fits the job"
+            );
+            expect(rendered).toContain("load the `tasks` skill and create a custom workflow or reusable task");
             expect(rendered).toContain("`core:software-development` and `core:plan-verify` are bundled built-in tasks");
             expect(rendered).toContain(
                 'Use `task_run(taskId="core:software-development", sync=true, parameters={...})`'

@@ -1,6 +1,6 @@
 ## Agent Orchestration
 
-Subagents, permanent agents, signals, and agent channels exist, but their detailed guidance is intentionally hidden by default. Load the `tasks` skill to learn when to use these coordination features and which related tools are available.
+Subagents, permanent agents, signals, and agent channels exist, but their detailed guidance is intentionally hidden by default. Load the `tasks` skill to learn when to use these coordination features, how to inspect or reuse existing workflows, and which related tools are available.
 
 ## Topology and Scheduling
 
@@ -16,6 +16,8 @@ Use `task_create` to create a task with code and optional parameters.
 Use `task_trigger_add` / `task_trigger_remove` to attach or manage cron or webhook triggers.
 Use `task_run` to execute a task immediately.
 Use `start_background_workflow` to launch a fresh subagent and kick it off with inline code or a stored task.
+
+Foreground agents should treat reusable workflows as the default orchestration surface for non-trivial work: inspect or reuse an existing task/workflow first, then create a new custom workflow only when nothing suitable already exists.
 
 For non-trivial software work, prefer the bundled chain:
 - foreground agent: `task_run(taskId="core:software-development", sync=true, parameters={...})`
