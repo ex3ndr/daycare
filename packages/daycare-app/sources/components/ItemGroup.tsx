@@ -45,7 +45,7 @@ const stylesheet = StyleSheet.create((theme, _runtime) => ({
         fontWeight: Platform.select({ ios: "normal", default: "500" })
     },
     contentContainer: {
-        backgroundColor: theme.colors.surface,
+        backgroundColor: theme.colors.surfaceContainerLow,
         marginHorizontal: Platform.select({ ios: 16, default: 12 }),
         borderRadius: Platform.select({ ios: 10, default: 16 }),
         overflow: "hidden",
