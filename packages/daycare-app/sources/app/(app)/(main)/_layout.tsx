@@ -170,7 +170,11 @@ function DesktopLayout() {
                 <WorkspaceStrip style={{ paddingTop: insets.top, paddingBottom: insets.bottom }} />
                 {appReady && (
                     <Animated.View
-                        style={[styles.sidebarCard, sidebarAnimatedStyle, { backgroundColor: theme.colors.surface }]}
+                        style={[
+                            styles.sidebarCard,
+                            sidebarAnimatedStyle,
+                            { backgroundColor: theme.colors.surfaceContainerLow }
+                        ]}
                     >
                         <AppSidebar
                             onToggleCollapse={toggleSidebar}
