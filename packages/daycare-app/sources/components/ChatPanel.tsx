@@ -65,6 +65,11 @@ export const ChatPanel = React.memo<ChatPanelProps>(({ onToggleCollapse, labelsO
         opacity: labelsOpacity ? 1 - labelsOpacity.value : 0
     }));
 
+    // Overlay opacity: visible (1) when collapsed, hidden (0) when expanded
+    const overlayStyle = useAnimatedStyle(() => ({
+        opacity: labelsOpacity ? 1 - labelsOpacity.value : 0
+    }));
+
     return (
         <View style={[styles.panel, { backgroundColor: theme.colors.surface }]}>
             <Pressable
@@ -89,7 +94,13 @@ export const ChatPanel = React.memo<ChatPanelProps>(({ onToggleCollapse, labelsO
                     </Animated.View>
                 </Animated.View>
             </Pressable>
-            <View style={styles.content}>{directAgentId ? <Chat agentId={directAgentId} /> : null}</View>
+            <View style={styles.content}>
+                {directAgentId ? <Chat agentId={directAgentId} /> : null}
+                <Animated.View
+                    style={[styles.contentOverlay, { backgroundColor: theme.colors.surface }, overlayStyle]}
+                    pointerEvents="none"
+                />
+            </View>
         </View>
     );
 });
@@ -135,6 +146,14 @@ const styles = StyleSheet.create({
         height: 32
     },
     content: {
-        flex: 1
+        flex: 1,
+        position: "relative"
+    },
+    contentOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0
     }
 });

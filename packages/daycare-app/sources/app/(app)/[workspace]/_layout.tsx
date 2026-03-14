@@ -1,19 +1,11 @@
-import { Octicons } from "@expo/vector-icons";
-import { Slot, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import * as React from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import {
-    AppSidebar,
-    SIDEBAR_COLLAPSED_WIDTH,
-    SIDEBAR_WIDTH,
-    WORKSPACE_STRIP_WIDTH,
-    WorkspaceStrip
-} from "@/components/AppSidebar";
+import { AppSidebar, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH, WorkspaceStrip } from "@/components/AppSidebar";
 import { CHAT_COLLAPSED_WIDTH, CHAT_PANEL_WIDTH, ChatPanel } from "@/components/ChatPanel";
-import { Drawer } from "@/components/Drawer";
 import { useConfigStore } from "@/modules/config/configContext";
 import { WorkspaceSync } from "@/modules/sync/WorkspaceSync";
 import { useWorkspace, WorkspaceProvider } from "@/modules/workspaces/workspaceProvider";
@@ -43,6 +35,8 @@ function panelStateWrite(key: string, collapsed: boolean): void {
  */
 export default function WorkspaceLayout() {
     const { workspace: workspaceId } = useLocalSearchParams<{ workspace: string }>();
+    const { theme } = useUnistyles();
+    const isMobile = theme.layout.isMobileLayout;
     const workspaces = useWorkspacesStore((s) => s.workspaces);
     const workspace = React.useMemo(
         () => workspaces.find((w) => w.userId === workspaceId) ?? null,
@@ -53,24 +47,23 @@ export default function WorkspaceLayout() {
         return null;
     }
 
+    const stack = (
+        <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+        </Stack>
+    );
+
     return (
         <WorkspaceProvider workspaceId={workspaceId} workspace={workspace}>
             <WorkspaceSync>
-                <WorkspaceChrome />
+                {isMobile ? <MobileShell>{stack}</MobileShell> : <DesktopShell>{stack}</DesktopShell>}
             </WorkspaceSync>
         </WorkspaceProvider>
     );
 }
 
-/** Picks desktop or mobile layout based on breakpoint. */
-function WorkspaceChrome() {
-    const { theme } = useUnistyles();
-    const isMobile = theme.layout.isMobileLayout;
-    return isMobile ? <MobileLayout /> : <DesktopLayout />;
-}
-
 /** Desktop: sidebar on left, content in center, chat panel on right. */
-function DesktopLayout() {
+function DesktopShell({ children }: { children: React.ReactNode }) {
     const { theme } = useUnistyles();
     const insets = useSafeAreaInsets();
     const { workspaceId } = useWorkspace();
@@ -124,7 +117,7 @@ function DesktopLayout() {
                     style={[
                         styles.sidebarCard,
                         sidebarAnimatedStyle,
-                        { backgroundColor: theme.colors.surfaceContainerLow }
+                        { backgroundColor: theme.colors.surfaceContainerLow, paddingTop: insets.top }
                     ]}
                 >
                     <AppSidebar
@@ -141,7 +134,7 @@ function DesktopLayout() {
                     { ...cardMargins, backgroundColor: theme.colors.surface, boxShadow: cardShadow }
                 ]}
             >
-                <Slot />
+                {children}
             </View>
             {appReady && (
                 <Animated.View
@@ -162,70 +155,11 @@ function DesktopLayout() {
     );
 }
 
-/** Mobile: full-screen content with a floating hamburger that opens a drawer. */
-function MobileLayout() {
+/** Mobile: full-screen content with bottom tabs and stack navigation. */
+function MobileShell({ children }: { children: React.ReactNode }) {
     const { theme } = useUnistyles();
-    const insets = useSafeAreaInsets();
-    const { workspaceId } = useWorkspace();
-    const appReady = useConfigStore((s) => s.configFor(workspaceId).appReady);
-    const [drawerOpen, setDrawerOpen] = React.useState(false);
 
-    const openDrawer = React.useCallback(() => setDrawerOpen(true), []);
-    const closeDrawer = React.useCallback(() => setDrawerOpen(false), []);
-
-    const renderDrawerContent = React.useCallback(
-        () => (
-            <View style={styles.mobileDrawerContent}>
-                <WorkspaceStrip onNavigate={closeDrawer} />
-                <AppSidebar onNavigate={closeDrawer} />
-            </View>
-        ),
-        [closeDrawer]
-    );
-
-    // When sidebars are hidden, render content directly without the drawer wrapper
-    if (!appReady) {
-        return (
-            <View style={[styles.mobileRoot, { backgroundColor: theme.colors.surfaceContainerLow }]}>
-                <View style={styles.content}>
-                    <Slot />
-                </View>
-            </View>
-        );
-    }
-
-    return (
-        <View style={[styles.mobileRoot, { backgroundColor: theme.colors.surfaceContainerLow }]}>
-            <Drawer
-                isOpen={drawerOpen}
-                onClose={closeDrawer}
-                renderDrawer={renderDrawerContent}
-                width={WORKSPACE_STRIP_WIDTH + SIDEBAR_WIDTH + 16}
-                position="left"
-            >
-                <View style={styles.content}>
-                    <Slot />
-                </View>
-            </Drawer>
-
-            {/* Floating hamburger button — flies above everything */}
-            {!drawerOpen && (
-                <Pressable
-                    onPress={openDrawer}
-                    style={[
-                        styles.hamburger,
-                        {
-                            top: 12 + insets.top,
-                            backgroundColor: theme.colors.surface,
-                            boxShadow: theme.elevation.level2
-                        }
-                    ]}
-                >
-                    <Octicons name="three-bars" size={18} color={theme.colors.onSurface} />
-                </Pressable>
-            )}
-        </View>
-    );
+    return <View style={[styles.mobileRoot, { backgroundColor: theme.colors.surface }]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -254,26 +188,9 @@ const styles = StyleSheet.create({
         overflow: "hidden",
         flexShrink: 0
     },
-    content: {
-        flex: 1
-    },
 
     // Mobile
     mobileRoot: {
         flex: 1
-    },
-    mobileDrawerContent: {
-        flex: 1,
-        flexDirection: "row"
-    },
-    hamburger: {
-        position: "absolute",
-        left: 16,
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 100
     }
 });

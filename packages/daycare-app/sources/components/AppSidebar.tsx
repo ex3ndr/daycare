@@ -1,7 +1,7 @@
 import { Octicons } from "@expo/vector-icons";
 import { type Href, usePathname, useRouter } from "expo-router";
 import * as React from "react";
-import { Pressable, ScrollView, type StyleProp, Text, View, type ViewStyle } from "react-native";
+import { Platform, Pressable, ScrollView, type StyleProp, Text, View, type ViewStyle } from "react-native";
 import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useConfigStore } from "@/modules/config/configContext";
@@ -262,7 +262,8 @@ const stripStyles = StyleSheet.create({
         fontWeight: "600"
     },
     workspaceEmoji: {
-        fontSize: 18
+        fontSize: 18,
+        ...(Platform.OS === "web" && { fontFamily: "system-ui, -apple-system, sans-serif" })
     }
 });
 
@@ -513,7 +514,8 @@ const styles = StyleSheet.create({
         height: 56
     },
     headerEmoji: {
-        fontSize: 18
+        fontSize: 18,
+        ...(Platform.OS === "web" && { fontFamily: "system-ui, -apple-system, sans-serif" })
     },
     title: {
         fontSize: 18,
