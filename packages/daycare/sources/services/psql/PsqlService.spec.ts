@@ -35,6 +35,36 @@ describe("PsqlService", () => {
         }
     });
 
+    it("includes psql_schema comment requirements in the system prompt section", async () => {
+        const storage = await storageOpenTest();
+        try {
+            const service = new PsqlService({
+                usersDir,
+                databases: storage.psqlDatabases,
+                databaseMode: "memory"
+            });
+            const ctx = contextForUser({ userId: "user-1" });
+
+            const emptySection = await service.systemPromptSection(ctx);
+            expect(emptySection).toContain("table comment");
+            expect(emptySection).toContain("fields[] item comment");
+
+            const database = await service.createDatabase(ctx, "CRM");
+            await service.applySchema(ctx, database.id, {
+                table: "contacts",
+                comment: "Contact records",
+                fields: [{ name: "first_name", type: "text", comment: "Given name" }]
+            });
+
+            const populatedSection = await service.systemPromptSection(ctx);
+            expect(populatedSection).toContain("table comment");
+            expect(populatedSection).toContain("fields[] item comment");
+            expect(populatedSection).toContain("contacts[first_name:text]");
+        } finally {
+            await storage.connection.close();
+        }
+    });
+
     it("applies schema, mutates data, and runs read-only queries", async () => {
         const storage = await storageOpenTest();
         try {

@@ -239,7 +239,8 @@ export function psqlToolsBuild(service: PsqlService): ToolDefinition[] {
     const schemaTool: ToolDefinition = {
         tool: {
             name: "psql_schema",
-            description: "Apply additive schema declarations for a single table and its fields.",
+            description:
+                "Apply additive schema declarations for a single table. The table comment and every field comment are required and must be non-empty.",
             parameters: schemaParametersSchema
         },
         returns: schemaReturns,

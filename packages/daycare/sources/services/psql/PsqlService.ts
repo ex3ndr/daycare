@@ -30,6 +30,9 @@ export type PsqlServiceOptions = {
  * Expects: metadata repository is backed by migrated storage.
  */
 export class PsqlService {
+    private static readonly SYSTEM_PROMPT_SCHEMA_NOTE =
+        "When calling psql_schema, the table comment and every fields[] item comment are required and must be non-empty.";
+
     private readonly usersDir: string;
     private readonly databases: PsqlDatabasesRepository;
     private readonly databaseMode: "file" | "memory";
@@ -119,10 +122,10 @@ export class PsqlService {
     async systemPromptSection(ctx: Context): Promise<string> {
         const databases = await this.listDatabases(ctx);
         if (databases.length === 0) {
-            return "## PSQL Databases\nNo user databases available.";
+            return `## PSQL Databases\n${PsqlService.SYSTEM_PROMPT_SCHEMA_NOTE}\nNo user databases available.`;
         }
 
-        const lines: string[] = ["## PSQL Databases"];
+        const lines: string[] = ["## PSQL Databases", PsqlService.SYSTEM_PROMPT_SCHEMA_NOTE];
         for (const entry of databases) {
             lines.push(`- ${entry.name} (${entry.id})`);
             try {

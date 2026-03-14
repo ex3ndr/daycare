@@ -107,4 +107,12 @@ describe("psqlTools schemas", () => {
             })
         ).toThrow();
     });
+
+    it("documents required table and field comments in psql_schema", () => {
+        const schemaTool = tools.find((tool) => tool.name === "psql_schema");
+
+        expect(schemaTool?.description).toContain("table comment");
+        expect(schemaTool?.description).toContain("field comment");
+        expect(schemaTool?.description).toContain("non-empty");
+    });
 });
