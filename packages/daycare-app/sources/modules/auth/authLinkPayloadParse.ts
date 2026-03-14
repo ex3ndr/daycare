@@ -30,7 +30,12 @@ export function authLinkPayloadParse(hash: string): AuthLinkPayload | null {
 
         const backendUrl = authLinkPayloadBackendUrlNormalize(parsed.backendUrl);
         const token = parsed.token.trim();
-        const kind = parsed.kind === "connect-email" ? "connect-email" : parsed.kind === undefined ? "session" : null;
+        const kind =
+            parsed.kind === "connect-email"
+                ? "connect-email"
+                : parsed.kind === undefined || parsed.kind === "session"
+                  ? "session"
+                  : null;
         if (!backendUrl || !token || !kind) {
             authLinkPayloadInvalidLog("invalid-field-values", encoded.length);
             return null;

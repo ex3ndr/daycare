@@ -24,6 +24,25 @@ describe("authLinkPayloadParse", () => {
         expect(warnSpy).not.toHaveBeenCalled();
     });
 
+    it("decodes payload with explicit kind session", () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const encoded = Buffer.from(
+            JSON.stringify({
+                backendUrl: "http://127.0.0.1:7332/",
+                token: "token-1",
+                kind: "session"
+            }),
+            "utf8"
+        ).toString("base64url");
+
+        expect(authLinkPayloadParse(`#${encoded}`)).toEqual({
+            backendUrl: "http://127.0.0.1:7332",
+            token: "token-1",
+            kind: "session"
+        });
+        expect(warnSpy).not.toHaveBeenCalled();
+    });
+
     it("decodes a connect-email payload hash", () => {
         const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
         const encoded = Buffer.from(

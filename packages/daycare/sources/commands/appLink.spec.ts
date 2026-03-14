@@ -75,7 +75,7 @@ describe("appLinkCommand", () => {
 
         appJwtSecretResolveMock.mockResolvedValue("resolved-secret");
         appAuthLinkGenerateMock.mockResolvedValue({
-            url: "http://127.0.0.1:7332/verify#eyJiYWNrZW5kVXJsIjoiaHR0cDovLzEyNy4wLjAuMTo3MzMyIiwidG9rZW4iOiJ0b2tlbi0xIn0",
+            url: "http://127.0.0.1:7332/auth#eyJiYWNrZW5kVXJsIjoiaHR0cDovLzEyNy4wLjAuMTo3MzMyIiwidG9rZW4iOiJ0b2tlbi0xIn0",
             token: "token-1",
             userId: "user-1",
             expiresAt: 123
@@ -99,7 +99,7 @@ describe("appLinkCommand", () => {
             expiresInSeconds: 3600
         });
         expect(console.log).toHaveBeenCalledWith(
-            "http://127.0.0.1:7332/verify#eyJiYWNrZW5kVXJsIjoiaHR0cDovLzEyNy4wLjAuMTo3MzMyIiwidG9rZW4iOiJ0b2tlbi0xIn0"
+            "http://127.0.0.1:7332/auth#eyJiYWNrZW5kVXJsIjoiaHR0cDovLzEyNy4wLjAuMTo3MzMyIiwidG9rZW4iOiJ0b2tlbi0xIn0"
         );
         expect(process.exitCode).toBeUndefined();
     });
@@ -110,7 +110,7 @@ describe("appLinkCommand", () => {
         expect(console.log).toHaveBeenCalledWith(
             JSON.stringify(
                 {
-                    url: "http://127.0.0.1:7332/verify#eyJiYWNrZW5kVXJsIjoiaHR0cDovLzEyNy4wLjAuMTo3MzMyIiwidG9rZW4iOiJ0b2tlbi0xIn0",
+                    url: "http://127.0.0.1:7332/auth#eyJiYWNrZW5kVXJsIjoiaHR0cDovLzEyNy4wLjAuMTo3MzMyIiwidG9rZW4iOiJ0b2tlbi0xIn0",
                     token: "token-1",
                     userId: "user-1",
                     expiresAt: 123

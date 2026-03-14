@@ -1344,7 +1344,7 @@ describe("TelegramConnector file uploads", () => {
                 {
                     type: "url",
                     text: "Open",
-                    url: "https://app.example.com/verify#token",
+                    url: "https://app.example.com/auth#token",
                     openMode: "browser"
                 }
             ]
@@ -1359,7 +1359,7 @@ describe("TelegramConnector file uploads", () => {
                     [
                         {
                             text: "Open",
-                            url: "https://app.example.com/verify#token"
+                            url: "https://app.example.com/auth#token"
                         }
                     ]
                 ]

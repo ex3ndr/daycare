@@ -83,8 +83,10 @@ export default function AuthenticatedLayout() {
         return <Redirect href="/" />;
     }
 
-    // Wait for workspaces before mounting the Stack
-    if (!workspacesLoaded || !configLoaded) {
+    // Wait for workspaces and configs before mounting the Stack.
+    // When there are no workspaces, config fetch never fires, so skip the config check.
+    const needsConfigLoad = workspaces.length > 0;
+    if (!workspacesLoaded || (needsConfigLoad && !configLoaded)) {
         routeDebugLog("app-gate-block", {
             pathname,
             workspacesLoaded,

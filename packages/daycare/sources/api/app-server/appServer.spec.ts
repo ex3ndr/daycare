@@ -374,7 +374,7 @@ describe("AppServer auth endpoints", () => {
         expect(sent.replyToMessageId).toBe("42");
         expect(sent.buttons).toHaveLength(1);
         expect(sent.buttons?.[0]).toMatchObject({ type: "url", text: "Open Daycare", openMode: "browser" });
-        expect(sent.buttons?.[0]?.type === "url" ? sent.buttons[0].url : "").toContain("/verify#");
+        expect(sent.buttons?.[0]?.type === "url" ? sent.buttons[0].url : "").toContain("/auth#");
     });
 
     it("keeps app command and tool disabled when app server is disabled", async () => {

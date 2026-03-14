@@ -1,6 +1,5 @@
 import { Octicons } from "@expo/vector-icons";
 import { type Href, useRouter } from "expo-router";
-import { View } from "react-native";
 import { useUnistyles } from "react-native-unistyles";
 import { Item } from "@/components/Item";
 import { ItemGroup } from "@/components/ItemGroup";
