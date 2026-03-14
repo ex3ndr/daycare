@@ -167,7 +167,7 @@ function DesktopLayout() {
             <LayoutScreen name="index" />
             <LayoutScreen name="[workspace]" dangerouslySingular={workspaceRouteSingularId} />
             <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
-                <WorkspaceStrip style={{ paddingTop: insets.top, paddingBottom: insets.bottom }} />
+                <WorkspaceStrip style={{ paddingTop: 8 + insets.top, paddingBottom: 8 + insets.bottom }} />
                 {appReady && (
                     <Animated.View
                         style={[
