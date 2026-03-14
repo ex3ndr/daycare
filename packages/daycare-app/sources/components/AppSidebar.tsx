@@ -370,7 +370,11 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                         </Text>
                     </Animated.View>
                     <Animated.View
-                        style={[styles.collapseButton, { backgroundColor: theme.colors.surface }, collapseButtonStyle]}
+                        style={[
+                            styles.collapseButton,
+                            { backgroundColor: theme.colors.surfaceContainerLow },
+                            collapseButtonStyle
+                        ]}
                         pointerEvents="none"
                     >
                         <Animated.View style={[styles.collapseIcon, expandedIconStyle]}>
