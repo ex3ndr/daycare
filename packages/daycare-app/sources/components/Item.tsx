@@ -101,7 +101,7 @@ const stylesheet = StyleSheet.create((theme, _runtime) => ({
         backgroundColor: theme.colors.outlineVariant
     },
     pressablePressed: {
-        backgroundColor: theme.colors.surfaceContainerHighest
+        backgroundColor: theme.colors.surfaceContainerLowHighest
     }
 }));
 
@@ -289,8 +289,8 @@ export const Item = React.memo<ItemProps>((props) => {
                     {
                         backgroundColor:
                             pressed && isIOS && !isWeb
-                                ? theme.colors.surfaceContainerHighest
-                                : theme.colors.surfaceContainer,
+                                ? theme.colors.surfaceContainerLowHighest
+                                : theme.colors.surfaceContainerLow,
                         opacity: disabled ? 0.5 : 1
                     },
                     pressableStyle
@@ -311,7 +311,9 @@ export const Item = React.memo<ItemProps>((props) => {
     }
 
     return (
-        <View style={[{ opacity: disabled ? 0.5 : 1, backgroundColor: theme.colors.surfaceContainer }, pressableStyle]}>
+        <View
+            style={[{ opacity: disabled ? 0.5 : 1, backgroundColor: theme.colors.surfaceContainerLow }, pressableStyle]}
+        >
             {content}
         </View>
     );
