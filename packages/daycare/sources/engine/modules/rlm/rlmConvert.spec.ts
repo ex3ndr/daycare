@@ -96,6 +96,45 @@ describe("rlmArgsConvert", () => {
             'Tool "write_file" arguments.content must be a string.'
         );
     });
+
+    it("reports schema validation details when converted arguments are missing required fields", () => {
+        const psqlTool = {
+            name: "psql_schema",
+            description: "",
+            parameters: Type.Object(
+                {
+                    dbId: Type.String(),
+                    table: Type.String(),
+                    comment: Type.String(),
+                    fields: Type.Array(
+                        Type.Object(
+                            {
+                                name: Type.String(),
+                                comment: Type.String(),
+                                type: Type.String(),
+                                nullable: Type.Optional(Type.Boolean())
+                            },
+                            { additionalProperties: false }
+                        )
+                    )
+                },
+                { additionalProperties: false }
+            )
+        } as unknown as Tool;
+
+        expect(() =>
+            rlmArgsConvert(
+                [],
+                {
+                    dbId: "db1",
+                    table: "contacts",
+                    comment: "Contact records",
+                    fields: [{ name: "first_name", type: "text" }]
+                },
+                psqlTool
+            )
+        ).toThrow('Tool "psql_schema" arguments.fields[0]');
+    });
 });
 
 describe("rlmResultConvert", () => {

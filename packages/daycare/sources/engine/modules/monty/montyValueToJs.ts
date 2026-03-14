@@ -1,5 +1,6 @@
 import { Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
+import { montySchemaMismatchMessageBuild } from "./montySchemaMismatchMessageBuild.js";
 
 const OMIT = Symbol("monty.omit");
 const NO_MATCH = Symbol("monty.no-match");
@@ -16,7 +17,7 @@ export function montyValueToJs(value: unknown, schema: unknown, label: string): 
         throw new Error(`${label} cannot be omitted.`);
     }
     if (!schemaMatches(schema, converted)) {
-        throw new Error(`${label} does not match its declared schema after conversion.`);
+        throw new Error(montySchemaMismatchMessageBuild(schema, converted, label));
     }
     return converted;
 }
