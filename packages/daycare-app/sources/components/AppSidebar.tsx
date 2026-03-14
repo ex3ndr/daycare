@@ -27,12 +27,12 @@ type Segment = {
 /** Sidebar items grouped with visual spacing between groups. */
 const segmentGroups: Segment[][] = [
     [{ key: "home", mode: "home", icon: "home", label: "Home" }],
-    [{ key: "vault", mode: "vault", icon: "file", label: "Vault" }],
     [
         { key: "agents", mode: "agents", icon: "device-desktop", label: "Agents" },
         { key: "fragments", mode: "fragments", icon: "note", label: "Fragments" },
         { key: "automations", mode: "automations", icon: "clock", label: "Automations" },
         { key: "files", mode: "files", icon: "file-directory", label: "Files" },
+        { key: "vault", mode: "vault", icon: "file", label: "Vault" },
         { key: "skills", mode: "skills", icon: "zap", label: "Skills" },
         { key: "tools", mode: "tools", icon: "tools", label: "Tools" },
         { key: "members", mode: "members", icon: "people", label: "Members" },
@@ -332,7 +332,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                 itemId: app.id
             }));
             return miniAppGroup.length > 0
-                ? [...staticGroups.slice(0, 2), miniAppGroup, ...staticGroups.slice(2)]
+                ? [...staticGroups.slice(0, 1), miniAppGroup, ...staticGroups.slice(1)]
                 : staticGroups;
         }, [activeWorkspace?.isSelf, miniApps]);
 
