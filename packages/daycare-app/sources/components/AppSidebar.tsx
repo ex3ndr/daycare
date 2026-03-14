@@ -355,7 +355,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         );
 
         return (
-            <View style={[styles.sidebar, { backgroundColor: theme.colors.surface }]}>
+            <View style={[styles.sidebar, { backgroundColor: theme.colors.surfaceContainerLow }]}>
                 {/* Workspace header — entire row is pressable to toggle collapse */}
                 <Pressable
                     onPress={onToggleCollapse}
