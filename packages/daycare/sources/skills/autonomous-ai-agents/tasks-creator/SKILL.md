@@ -277,7 +277,7 @@ This keeps planning broad and implementation focused. Do not ask Codex to redisc
 
 ### Structured result handoffs
 
-When Codex or Claude Code produces structured data for another step, do not pass that data as loose prose in the prompt history. Write it to a JSON file and make the orchestration layer validate it.
+When any subagent produces structured data for another step, do not pass that data as loose prose in the prompt history. Write it to a JSON file and make the orchestration layer validate it.
 
 Use this pattern:
 
@@ -285,7 +285,7 @@ Use this pattern:
 2. The orchestration code reads that file.
 3. The orchestration code checks that the JSON matches the expected schema.
 4. Only valid JSON moves to the next inference or action.
-5. If validation fails, the orchestration code asks the producing model to finish or repair the result instead of guessing.
+5. If validation fails, the orchestration code asks the producing subagent to finish or repair the result instead of guessing.
 
 The orchestrator should stay simple: read file, validate schema, decide whether to continue or request another pass.
 
@@ -305,7 +305,22 @@ print("Use this validated result for the next step:")
 print(compact)
 ```
 
-Prefer a checked-in validator script when the schema is non-trivial. Keep the schema explicit and stable so multiple models can share the same contract.
+Prefer a checked-in validator script when the schema is non-trivial. Keep the schema explicit and stable so multiple subagents can share the same contract.
+
+## Multi-Task Workflows
+
+`tasks-creator` does not need to force everything into one task. If the workflow has clear stages, create additional tasks and let them cooperate.
+
+Good reasons to split work into multiple tasks:
+
+- one task gathers or normalizes data
+- one task validates or transforms structured output
+- one task performs reasoning or summarization
+- one task acts as a periodic trigger for a deeper subagent workflow
+
+Use this pattern when it improves isolation, retry behavior, or reuse. Keep each task narrow, and let orchestration stitch them together instead of building one oversized task.
+
+If one task hands data to another task or subagent, use the same structured handoff rule: write JSON, validate schema, then continue.
 
 ## Permanent Agents
 
