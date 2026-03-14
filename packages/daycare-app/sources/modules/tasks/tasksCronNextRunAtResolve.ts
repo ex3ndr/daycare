@@ -1,20 +1,15 @@
 import type { CronTriggerSummary } from "./tasksTypes";
 
-type CronField = {
-    kind: "any" | "step" | "values";
-    step?: number;
-    values?: number[];
-};
-
 type CronExpression = {
-    minute: CronField;
-    hour: CronField;
-    day: CronField;
-    month: CronField;
-    weekday: CronField;
+    minute: number[];
+    hour: number[];
+    day: number[];
+    month: number[];
+    weekday: number[];
 };
 
 type CronDateParts = {
+    year: number;
     month: number;
     day: number;
     weekday: number;
@@ -31,6 +26,8 @@ const WEEKDAY_TO_INDEX: Record<string, number> = {
     Fri: 5,
     Sat: 6
 };
+
+const SEARCH_LIMIT = 10_000;
 
 /**
  * Resolves the next cron fire time as a unix timestamp in milliseconds.
@@ -50,29 +47,55 @@ export function tasksCronNextRunAtResolve(
         return null;
     }
 
-    const start = trigger.fromAt ?? Date.now();
-    let candidateMs = Math.floor(start / 60_000) * 60_000 + 60_000;
     const timezone = trigger.timezone.trim();
     const formatter = timezoneFormatterCreate(timezone);
     if (timezone && !formatter) {
         return null;
     }
 
-    for (let i = 0; i < 365 * 24 * 60 * 2; i++) {
-        const candidate = new Date(candidateMs);
-        const parts = formatter ? datePartsInTimezone(candidate, formatter) : datePartsInLocalTimezone(candidate);
+    const start = trigger.fromAt ?? Date.now();
+    let parts = datePartsFromTimestamp(Math.floor(start / 60_000) * 60_000 + 60_000, formatter);
 
-        if (
-            cronFieldMatch(parsed.month, parts.month) &&
-            cronFieldMatch(parsed.day, parts.day) &&
-            cronFieldMatch(parsed.weekday, parts.weekday) &&
-            cronFieldMatch(parsed.hour, parts.hour) &&
-            cronFieldMatch(parsed.minute, parts.minute)
-        ) {
-            return candidateMs;
+    for (let i = 0; i < SEARCH_LIMIT; i++) {
+        const nextMonth = valueAtOrAfter(parsed.month, parts.month);
+        if (nextMonth === null) {
+            parts = datePartsCreate(parts.year + 1, parsed.month[0]!, 1, 0, 0);
+            continue;
+        }
+        if (nextMonth !== parts.month) {
+            parts = datePartsCreate(parts.year, nextMonth, 1, 0, 0);
+            continue;
         }
 
-        candidateMs += 60_000;
+        if (!parsed.day.includes(parts.day) || !parsed.weekday.includes(parts.weekday)) {
+            parts = datePartsAddDays(parts, 1, parsed.hour[0]!, parsed.minute[0]!);
+            continue;
+        }
+
+        const nextHour = valueAtOrAfter(parsed.hour, parts.hour);
+        if (nextHour === null) {
+            parts = datePartsAddDays(parts, 1, parsed.hour[0]!, parsed.minute[0]!);
+            continue;
+        }
+        if (nextHour !== parts.hour) {
+            parts = datePartsCreate(parts.year, parts.month, parts.day, nextHour, parsed.minute[0]!);
+            continue;
+        }
+
+        const nextMinute = valueAtOrAfter(parsed.minute, parts.minute);
+        if (nextMinute === null) {
+            parts = datePartsAddHours(parts, 1, parsed.minute[0]!);
+            continue;
+        }
+        if (nextMinute !== parts.minute) {
+            parts = datePartsCreate(parts.year, parts.month, parts.day, parts.hour, nextMinute);
+        }
+
+        const timestamp = timestampFromDateParts(parts, formatter);
+        if (timestamp !== null) {
+            return timestamp;
+        }
+        parts = datePartsAddMinutes(parts, 1);
     }
 
     return null;
@@ -106,17 +129,16 @@ function cronExpressionParse(expression: string): CronExpression | null {
     };
 }
 
-function cronFieldParse(raw: string, min: number, max: number): CronField | null {
+function cronFieldParse(raw: string, min: number, max: number): number[] | null {
     if (raw === "*") {
-        return { kind: "any" };
+        return rangeBuild(min, max, 1);
     }
-
     if (raw.startsWith("*/")) {
         const step = Number(raw.slice(2));
         if (!Number.isInteger(step) || step <= 0) {
             return null;
         }
-        return { kind: "step", step };
+        return rangeBuild(min, max, step);
     }
 
     const values = new Set<number>();
@@ -141,21 +163,74 @@ function cronFieldParse(raw: string, min: number, max: number): CronField | null
         values.add(value);
     }
 
-    return values.size > 0 ? { kind: "values", values: Array.from(values).sort((a, b) => a - b) } : null;
+    return values.size > 0 ? Array.from(values).sort((left, right) => left - right) : null;
 }
 
-function cronFieldMatch(field: CronField, value: number): boolean {
-    if (field.kind === "any") {
-        return true;
+function rangeBuild(min: number, max: number, step: number): number[] {
+    const values: number[] = [];
+    for (let value = min; value <= max; value += step) {
+        values.push(value);
     }
-    if (field.kind === "step") {
-        return value % (field.step ?? 1) === 0;
-    }
-    return field.values?.includes(value) ?? false;
+    return values;
+}
+
+function valueAtOrAfter(values: number[], current: number): number | null {
+    return values.find((value) => value >= current) ?? null;
+}
+
+function datePartsFromTimestamp(timestamp: number, formatter: Intl.DateTimeFormat | null): CronDateParts {
+    const date = new Date(timestamp);
+    return formatter ? datePartsInTimezone(date, formatter) : datePartsInLocalTimezone(date);
+}
+
+function datePartsCreate(year: number, month: number, day: number, hour: number, minute: number): CronDateParts {
+    const date = new Date(Date.UTC(year, month - 1, day, hour, minute));
+    return {
+        year: date.getUTCFullYear(),
+        month: date.getUTCMonth() + 1,
+        day: date.getUTCDate(),
+        weekday: date.getUTCDay(),
+        hour: date.getUTCHours(),
+        minute: date.getUTCMinutes()
+    };
+}
+
+function datePartsAddDays(parts: CronDateParts, days: number, hour: number, minute: number): CronDateParts {
+    const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days, hour, minute));
+    return datePartsCreate(
+        date.getUTCFullYear(),
+        date.getUTCMonth() + 1,
+        date.getUTCDate(),
+        date.getUTCHours(),
+        date.getUTCMinutes()
+    );
+}
+
+function datePartsAddHours(parts: CronDateParts, hours: number, minute: number): CronDateParts {
+    const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour + hours, minute));
+    return datePartsCreate(
+        date.getUTCFullYear(),
+        date.getUTCMonth() + 1,
+        date.getUTCDate(),
+        date.getUTCHours(),
+        date.getUTCMinutes()
+    );
+}
+
+function datePartsAddMinutes(parts: CronDateParts, minutes: number): CronDateParts {
+    const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute + minutes));
+    return datePartsCreate(
+        date.getUTCFullYear(),
+        date.getUTCMonth() + 1,
+        date.getUTCDate(),
+        date.getUTCHours(),
+        date.getUTCMinutes()
+    );
 }
 
 function datePartsInLocalTimezone(date: Date): CronDateParts {
     return {
+        year: date.getFullYear(),
         month: date.getMonth() + 1,
         day: date.getDate(),
         weekday: date.getDay(),
@@ -172,6 +247,7 @@ function timezoneFormatterCreate(timezone: string): Intl.DateTimeFormat | null {
     try {
         return new Intl.DateTimeFormat("en-US", {
             timeZone: timezone,
+            year: "numeric",
             weekday: "short",
             month: "numeric",
             day: "numeric",
@@ -186,6 +262,7 @@ function timezoneFormatterCreate(timezone: string): Intl.DateTimeFormat | null {
 
 function datePartsInTimezone(date: Date, formatter: Intl.DateTimeFormat): CronDateParts {
     const parts = formatter.formatToParts(date);
+    const year = Number(parts.find((part) => part.type === "year")?.value ?? "0");
     const month = Number(parts.find((part) => part.type === "month")?.value ?? "0");
     const day = Number(parts.find((part) => part.type === "day")?.value ?? "0");
     const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0") % 24;
@@ -193,5 +270,40 @@ function datePartsInTimezone(date: Date, formatter: Intl.DateTimeFormat): CronDa
     const weekdayName = parts.find((part) => part.type === "weekday")?.value ?? "";
     const weekday = WEEKDAY_TO_INDEX[weekdayName] ?? -1;
 
-    return { month, day, weekday, hour, minute };
+    return { year, month, day, weekday, hour, minute };
+}
+
+function timestampFromDateParts(parts: CronDateParts, formatter: Intl.DateTimeFormat | null): number | null {
+    if (!formatter) {
+        const date = new Date(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, 0, 0);
+        const resolved = datePartsInLocalTimezone(date);
+        return datePartsEqual(resolved, parts) ? date.getTime() : null;
+    }
+
+    let timestamp = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute);
+    for (let i = 0; i < 4; i++) {
+        const resolved = datePartsInTimezone(new Date(timestamp), formatter);
+        const deltaMinutes =
+            (Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute) -
+                Date.UTC(resolved.year, resolved.month - 1, resolved.day, resolved.hour, resolved.minute)) /
+            60_000;
+
+        if (deltaMinutes === 0) {
+            return timestamp;
+        }
+        timestamp += deltaMinutes * 60_000;
+    }
+
+    const resolved = datePartsInTimezone(new Date(timestamp), formatter);
+    return datePartsEqual(resolved, parts) ? timestamp : null;
+}
+
+function datePartsEqual(left: CronDateParts, right: CronDateParts): boolean {
+    return (
+        left.year === right.year &&
+        left.month === right.month &&
+        left.day === right.day &&
+        left.hour === right.hour &&
+        left.minute === right.minute
+    );
 }
