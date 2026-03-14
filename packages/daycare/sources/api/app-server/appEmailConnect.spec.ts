@@ -64,7 +64,7 @@ describe("AppEmailConnect", () => {
         expect(sent).toHaveLength(1);
         const url = appEmailUrlExtract(sent[0]?.text ?? "");
         expect(url.origin).toBe("https://app.customer.example");
-        expect(url.pathname).toBe("/verify");
+        expect(url.pathname).toBe("/auth");
         expect(appEmailPayloadDecode(sent[0]?.text ?? "")).toEqual({
             backendUrl: "https://api.customer.example",
             token: expect.any(String),

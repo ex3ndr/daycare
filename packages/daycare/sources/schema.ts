@@ -18,6 +18,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { drizzle as drizzlePglite, type PgliteDatabase } from "drizzle-orm/pglite";
 import type { Client as PostgresClient } from "pg";
+import type { VoiceAgentToolDefinition } from "./engine/modules/voice/types.js";
 import type { UserConfiguration } from "./engine/users/userConfigurationTypes.js";
 
 export const migrationsTable = pgTable("_migrations", {
@@ -220,6 +221,25 @@ export const fragmentsTable = pgTable(
         index("idx_fragments_user_id").on(table.userId),
         index("idx_fragments_id_valid_to").on(table.id, table.validTo),
         index("idx_fragments_updated_at").on(table.updatedAt)
+    ]
+);
+
+export const voiceAgentsTable = pgTable(
+    "voice_agents",
+    {
+        id: text("id").primaryKey(),
+        userId: text("user_id").notNull(),
+        name: text("name").notNull(),
+        description: text("description"),
+        systemPrompt: text("system_prompt").notNull(),
+        tools: jsonb("tools").$type<VoiceAgentToolDefinition[]>().notNull().default(sql`'[]'::jsonb`),
+        settings: jsonb("settings").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+        createdAt: bigint("created_at", { mode: "number" }).notNull(),
+        updatedAt: bigint("updated_at", { mode: "number" }).notNull()
+    },
+    (table) => [
+        index("idx_voice_agents_user_id").on(table.userId),
+        index("idx_voice_agents_updated_at").on(table.updatedAt)
     ]
 );
 
@@ -729,6 +749,7 @@ export const schema = {
     tasksTable,
     vaultsTable,
     fragmentsTable,
+    voiceAgentsTable,
     vaultReferencesTable,
     tasksCronTable,
     tasksWebhookTable,

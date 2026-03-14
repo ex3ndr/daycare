@@ -11,7 +11,8 @@ import type {
     MessageContext,
     PluginCommandDefinition,
     SpeechGenerationProvider,
-    ToolDefinition
+    ToolDefinition,
+    VoiceAgentProvider
 } from "@/types";
 import type { CommandRegistry } from "../modules/commandRegistry.js";
 import type { ConnectorRegistry } from "../modules/connectorRegistry.js";
@@ -22,6 +23,7 @@ import type { MediaAnalysisRegistry } from "../modules/mediaAnalysisRegistry.js"
 import type { ModuleRegistry } from "../modules/moduleRegistry.js";
 import type { SpeechGenerationRegistry } from "../modules/speechGenerationRegistry.js";
 import type { ToolResolver } from "../modules/toolResolver.js";
+import type { VoiceAgentRegistry } from "../modules/voiceAgentRegistry.js";
 
 type PluginRegistrations = {
     connectors: Set<string>;
@@ -29,6 +31,7 @@ type PluginRegistrations = {
     tools: Set<string>;
     images: Set<string>;
     speech: Set<string>;
+    voice: Set<string>;
     mediaAnalysis: Set<string>;
     commands: Set<string>;
     skills: Set<string>;
@@ -41,6 +44,7 @@ export class PluginRegistrar {
     private inferenceRegistry: InferenceRegistry;
     private imageRegistry: ImageGenerationRegistry;
     private speechRegistry: SpeechGenerationRegistry;
+    private voiceRegistry: VoiceAgentRegistry;
     private mediaAnalysisRegistry: MediaAnalysisRegistry;
     private toolResolver: ToolResolver;
     private connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorIdentity | null>;
@@ -53,6 +57,7 @@ export class PluginRegistrar {
         inferenceRegistry: InferenceRegistry,
         imageRegistry: ImageGenerationRegistry,
         speechRegistry: SpeechGenerationRegistry,
+        voiceRegistry: VoiceAgentRegistry,
         mediaAnalysisRegistry: MediaAnalysisRegistry,
         toolResolver: ToolResolver,
         connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorIdentity | null>
@@ -63,6 +68,7 @@ export class PluginRegistrar {
         this.inferenceRegistry = inferenceRegistry;
         this.imageRegistry = imageRegistry;
         this.speechRegistry = speechRegistry;
+        this.voiceRegistry = voiceRegistry;
         this.mediaAnalysisRegistry = mediaAnalysisRegistry;
         this.toolResolver = toolResolver;
         this.connectorRecipientResolve = connectorRecipientResolve;
@@ -72,6 +78,7 @@ export class PluginRegistrar {
             tools: new Set(),
             images: new Set(),
             speech: new Set(),
+            voice: new Set(),
             mediaAnalysis: new Set(),
             commands: new Set(),
             skills: new Set()
@@ -153,6 +160,16 @@ export class PluginRegistrar {
         this.registrations.speech.delete(id);
     }
 
+    registerVoiceAgentProvider(provider: VoiceAgentProvider): void {
+        this.voiceRegistry.register(this.pluginId, provider);
+        this.registrations.voice.add(provider.id);
+    }
+
+    unregisterVoiceAgentProvider(id: string): void {
+        this.voiceRegistry.unregister(id);
+        this.registrations.voice.delete(id);
+    }
+
     registerMediaAnalysisProvider(provider: MediaAnalysisProvider): void {
         this.mediaAnalysisRegistry.register(this.pluginId, provider);
         this.registrations.mediaAnalysis.add(provider.id);
@@ -190,6 +207,9 @@ export class PluginRegistrar {
         for (const id of this.registrations.speech) {
             this.speechRegistry.unregister(id);
         }
+        for (const id of this.registrations.voice) {
+            this.voiceRegistry.unregister(id);
+        }
         for (const id of this.registrations.mediaAnalysis) {
             this.mediaAnalysisRegistry.unregister(id);
         }
@@ -203,6 +223,7 @@ export class PluginRegistrar {
         this.registrations.providers.clear();
         this.registrations.images.clear();
         this.registrations.speech.clear();
+        this.registrations.voice.clear();
         this.registrations.mediaAnalysis.clear();
         this.registrations.tools.clear();
         this.registrations.commands.clear();
@@ -216,6 +237,7 @@ export class PluginRegistry {
     private inferenceRegistry: InferenceRegistry;
     private imageRegistry: ImageGenerationRegistry;
     private speechRegistry: SpeechGenerationRegistry;
+    private voiceRegistry: VoiceAgentRegistry;
     private mediaAnalysisRegistry: MediaAnalysisRegistry;
     private toolResolver: ToolResolver;
     private connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorIdentity | null>;
@@ -229,6 +251,7 @@ export class PluginRegistry {
         this.inferenceRegistry = modules.inference;
         this.imageRegistry = modules.images;
         this.speechRegistry = modules.speech;
+        this.voiceRegistry = modules.voice;
         this.mediaAnalysisRegistry = modules.mediaAnalysis;
         this.toolResolver = modules.tools;
         this.connectorRecipientResolve = connectorRecipientResolve;
@@ -242,6 +265,7 @@ export class PluginRegistry {
             this.inferenceRegistry,
             this.imageRegistry,
             this.speechRegistry,
+            this.voiceRegistry,
             this.mediaAnalysisRegistry,
             this.toolResolver,
             this.connectorRecipientResolve

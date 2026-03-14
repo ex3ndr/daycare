@@ -34,6 +34,9 @@ export default {
             bundleIdentifier: bundleId,
             config: {
                 usesNonExemptEncryption: false
+            },
+            infoPlist: {
+                NSMicrophoneUsageDescription: "This app needs microphone access for voice conversations with Daycare."
             }
         },
         android: {
@@ -42,7 +45,8 @@ export default {
                 monochromeImage: "./sources/assets/images/icon-monochrome.png",
                 backgroundColor: "#19120d"
             },
-            package: bundleId
+            package: bundleId,
+            permissions: ["RECORD_AUDIO"]
         },
         web: {
             bundler: "metro",
@@ -58,6 +62,8 @@ export default {
             ],
             "expo-secure-store",
             "expo-system-ui",
+            "@livekit/react-native-expo-plugin",
+            "@config-plugins/react-native-webrtc",
             [
                 "expo-splash-screen",
                 {

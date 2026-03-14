@@ -76,5 +76,9 @@ export const migrations: Migration[] = [
     {
         name: "20260313110000_drop_todos",
         fileName: "20260313110000_drop_todos.sql"
+    },
+    {
+        name: "20260314110000_voice_agents",
+        fileName: "20260314110000_voice_agents.sql"
     }
 ];

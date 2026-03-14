@@ -4,7 +4,7 @@ import * as Fonts from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as React from "react";
-import { StatusBar, Text, View } from "react-native";
+import { Platform, StatusBar, Text, View } from "react-native";
 import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context";
 import { useUnistyles } from "react-native-unistyles";
 import { AlertProvider } from "@/components/alert";
@@ -117,23 +117,33 @@ export default function RootLayout() {
         <>
             <StatusBar barStyle={theme.dark ? "light-content" : "dark-content"} />
             <AuthProvider>
-                <AlertProvider>
-                    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-                        <View style={{ flexDirection: "column", flexGrow: 1, flexBasis: 0 }}>
-                            <ThemeProvider value={navigationTheme}>
-                                <Stack screenOptions={{ headerShown: false }}>
-                                    <Stack.Protected guard={authState === "authenticated"}>
-                                        <Stack.Screen name="(app)" />
-                                    </Stack.Protected>
-                                    <Stack.Protected guard={authState === "unauthenticated"}>
-                                        <Stack.Screen name="(auth)" />
-                                    </Stack.Protected>
-                                </Stack>
-                            </ThemeProvider>
-                        </View>
-                    </SafeAreaProvider>
-                </AlertProvider>
+                <VoiceSdkProvider>
+                    <AlertProvider>
+                        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+                            <View style={{ flexDirection: "column", flexGrow: 1, flexBasis: 0 }}>
+                                <ThemeProvider value={navigationTheme}>
+                                    <Stack screenOptions={{ headerShown: false }}>
+                                        <Stack.Protected guard={authState === "authenticated"}>
+                                            <Stack.Screen name="(app)" />
+                                        </Stack.Protected>
+                                        <Stack.Protected guard={authState === "unauthenticated"}>
+                                            <Stack.Screen name="(auth)" />
+                                        </Stack.Protected>
+                                    </Stack>
+                                </ThemeProvider>
+                            </View>
+                        </SafeAreaProvider>
+                    </AlertProvider>
+                </VoiceSdkProvider>
             </AuthProvider>
         </>
     );
+}
+
+function VoiceSdkProvider(props: { children: React.ReactNode }) {
+    if (Platform.OS === "web") {
+        return <>{props.children}</>;
+    }
+    const { ElevenLabsProvider } = require("@elevenlabs/react-native") as typeof import("@elevenlabs/react-native");
+    return <ElevenLabsProvider>{props.children}</ElevenLabsProvider>;
 }

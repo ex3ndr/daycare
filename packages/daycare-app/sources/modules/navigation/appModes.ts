@@ -2,6 +2,7 @@ export type AppMode =
     | "home"
     | "mini-apps"
     | "agents"
+    | "voice"
     | "fragments"
     | "automations"
     | "costs"
@@ -17,6 +18,7 @@ export const appModes: AppMode[] = [
     "home",
     "mini-apps",
     "agents",
+    "voice",
     "fragments",
     "automations",
     "costs",

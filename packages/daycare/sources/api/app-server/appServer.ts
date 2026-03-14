@@ -20,6 +20,7 @@ import type { CommandRegistry } from "../../engine/modules/commandRegistry.js";
 import type { ConnectorRegistry } from "../../engine/modules/connectorRegistry.js";
 import { messageContextRecipientResolve } from "../../engine/modules/connectors/messageContextRecipientResolve.js";
 import type { ToolResolver } from "../../engine/modules/toolResolver.js";
+import type { VoiceAgentRegistry } from "../../engine/modules/voiceAgentRegistry.js";
 import type { Secret } from "../../engine/secrets/secretTypes.js";
 import { userConfigurationSyncEventBuild } from "../../engine/users/userConfigurationSyncEventBuild.js";
 import type { Webhooks } from "../../engine/webhook/webhooks.js";
@@ -33,6 +34,7 @@ import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
 import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import type { VaultsRepository } from "../../storage/vaultsRepository.js";
+import type { VoiceAgentsRepository } from "../../storage/voiceAgentsRepository.js";
 import type { WorkspaceMembersRepository } from "../../storage/workspaceMembersRepository.js";
 import type { TokenStatsFetchOptions } from "../routes/costs/costsRoutes.js";
 import { eventsRouteHandle } from "../routes/events/eventsRoutes.js";
@@ -81,6 +83,8 @@ export type AppServerOptions = {
     documents: VaultsRepository | null;
     fragments: FragmentsRepository | null;
     keyValues: KeyValuesRepository | null;
+    voiceAgents: VoiceAgentsRepository | null;
+    voiceRegistry: VoiceAgentRegistry | null;
     psql?: PsqlService | null;
     observationLog: ObservationLogRepository | null;
     miniApps?: MiniApps | null;
@@ -118,6 +122,8 @@ export class AppServer {
     private readonly documents: VaultsRepository | null;
     private readonly fragments: FragmentsRepository | null;
     private readonly keyValues: KeyValuesRepository | null;
+    private readonly voiceAgents: VoiceAgentsRepository | null;
+    private readonly voiceRegistry: VoiceAgentRegistry | null;
     private readonly psql: PsqlService | null;
     private readonly observationLog: ObservationLogRepository | null;
     private readonly miniApps: MiniApps | null;
@@ -152,6 +158,8 @@ export class AppServer {
         this.documents = options.documents;
         this.fragments = options.fragments;
         this.keyValues = options.keyValues;
+        this.voiceAgents = options.voiceAgents;
+        this.voiceRegistry = options.voiceRegistry;
         this.psql = options.psql ?? null;
         this.observationLog = options.observationLog;
         this.miniApps = options.miniApps ?? null;
@@ -389,6 +397,8 @@ export class AppServer {
             documents: this.documents,
             fragments: this.fragments,
             keyValues: this.keyValues,
+            voiceAgents: this.voiceAgents,
+            voiceRegistry: this.voiceRegistry,
             miniApps: this.miniApps,
             psql: this.psql,
             observationLog: this.observationLog,

@@ -84,6 +84,16 @@ export type {
     ToolResultValue,
     ToolVisibilityContext
 } from "./engine/modules/tools/types.js";
+// Voice
+export type {
+    VoiceAgentProvider,
+    VoiceAgentSettings,
+    VoiceAgentToolDefinition,
+    VoiceAgentToolParameter,
+    VoiceSessionContext,
+    VoiceSessionStartRequest,
+    VoiceSessionStartResult
+} from "./engine/modules/voice/types.js";
 // Observations
 export { type ObservationEmitInput, observationEmit } from "./engine/observations/observationEmit.js";
 export { type ObservationLogFormatMode, observationLogFormat } from "./engine/observations/observationLogFormat.js";

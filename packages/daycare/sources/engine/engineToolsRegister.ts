@@ -79,6 +79,7 @@ import { vaultSearchToolBuild } from "./modules/tools/vaultSearchToolBuild.js";
 import { vaultTreeToolBuild } from "./modules/tools/vaultTreeToolBuild.js";
 import { vaultWriteToolBuild } from "./modules/tools/vaultWriteToolBuild.js";
 import { buildVoiceListTool } from "./modules/tools/voice-list.js";
+import { voiceAgentCreateToolBuild } from "./modules/tools/voiceAgentCreateToolBuild.js";
 import { observationQueryToolBuild } from "./observations/observationQueryToolBuild.js";
 import type { Secrets } from "./secrets/secrets.js";
 import type { Signals } from "./signals/signals.js";
@@ -159,6 +160,7 @@ export function engineToolsRegister(options: EngineToolsRegisterOptions): void {
     options.toolResolver.register("core", buildImageGenerationTool(options.imageRegistry));
     options.toolResolver.register("core", buildSpeechGenerationTool(options.speechRegistry));
     options.toolResolver.register("core", buildVoiceListTool(options.speechRegistry));
+    options.toolResolver.register("core", voiceAgentCreateToolBuild());
     options.toolResolver.register("core", buildMediaAnalysisTool(options.mediaRegistry));
     options.toolResolver.register("core", buildMermaidPngTool());
     options.toolResolver.register("core", buildReactionTool());

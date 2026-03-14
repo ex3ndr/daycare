@@ -28,6 +28,7 @@ import { TasksRepository } from "./tasksRepository.js";
 import { TokenStatsRepository } from "./tokenStatsRepository.js";
 import { UsersRepository } from "./usersRepository.js";
 import { VaultsRepository } from "./vaultsRepository.js";
+import { VoiceAgentsRepository } from "./voiceAgentsRepository.js";
 import { WebhookTasksRepository } from "./webhookTasksRepository.js";
 import { WorkspaceMembersRepository } from "./workspaceMembersRepository.js";
 
@@ -60,6 +61,7 @@ export class Storage {
     readonly modelRoleRules: ModelRoleRulesRepository;
     readonly psqlDatabases: PsqlDatabasesRepository;
     readonly miniApps: MiniAppsRepository;
+    readonly voiceAgents: VoiceAgentsRepository;
     readonly observationLog: ObservationLogRepository;
 
     readonly db: DaycareDb;
@@ -94,6 +96,7 @@ export class Storage {
         this.modelRoleRules = new ModelRoleRulesRepository(db);
         this.psqlDatabases = new PsqlDatabasesRepository(db);
         this.miniApps = new MiniAppsRepository(db);
+        this.voiceAgents = new VoiceAgentsRepository(db);
         this.observationLog = new ObservationLogRepository(db);
     }
 

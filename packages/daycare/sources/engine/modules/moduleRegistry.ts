@@ -6,6 +6,7 @@ import { InferenceRegistry } from "./inferenceRegistry.js";
 import { MediaAnalysisRegistry } from "./mediaAnalysisRegistry.js";
 import { SpeechGenerationRegistry } from "./speechGenerationRegistry.js";
 import { ToolResolver } from "./toolResolver.js";
+import { VoiceAgentRegistry } from "./voiceAgentRegistry.js";
 
 export type ModuleRegistryOptions = Omit<ConnectorRegistryOptions, "commandRegistry">;
 
@@ -15,6 +16,7 @@ export class ModuleRegistry {
     readonly inference: InferenceRegistry;
     readonly images: ImageGenerationRegistry;
     readonly speech: SpeechGenerationRegistry;
+    readonly voice: VoiceAgentRegistry;
     readonly mediaAnalysis: MediaAnalysisRegistry;
     readonly tools: ToolResolver;
 
@@ -27,6 +29,7 @@ export class ModuleRegistry {
         this.inference = new InferenceRegistry();
         this.images = new ImageGenerationRegistry();
         this.speech = new SpeechGenerationRegistry();
+        this.voice = new VoiceAgentRegistry();
         this.mediaAnalysis = new MediaAnalysisRegistry();
         this.tools = new ToolResolver();
     }

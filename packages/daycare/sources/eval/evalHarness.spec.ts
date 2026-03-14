@@ -37,7 +37,7 @@ describe("evalHarnessCreate", () => {
                 .map((tool) => tool.name)
                 .sort((left, right) => left.localeCompare(right));
 
-            expect(toolNames).toHaveLength(74);
+            expect(toolNames).toHaveLength(75);
             expect(toolNames).toEqual(
                 expect.arrayContaining([
                     "acp_session_message",
@@ -113,6 +113,7 @@ describe("evalHarnessCreate", () => {
                     "vault_search",
                     "vault_tree",
                     "vault_write",
+                    "voice_agent_create",
                     "workspace_create"
                 ])
             );

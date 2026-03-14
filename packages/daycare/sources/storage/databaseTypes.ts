@@ -1,5 +1,6 @@
 import type { AgentKind, AgentLifecycleState, AgentPath, ConnectorIdentity, SessionPermissions } from "@/types";
 import type { TaskParameter } from "../engine/modules/tasks/taskParameterTypes.js";
+import type { VoiceAgentSettings, VoiceAgentToolDefinition } from "../engine/modules/voice/types.js";
 import type { SignalSource } from "../engine/signals/signalTypes.js";
 import type { ModelRoleKey } from "../settings.js";
 
@@ -239,6 +240,30 @@ export type FragmentDbRecord = {
     description: string;
     spec: unknown;
     archived: boolean;
+    createdAt: number;
+    updatedAt: number;
+};
+
+export type DatabaseVoiceAgentRow = {
+    id: string;
+    user_id: string;
+    name: string;
+    description: string | null;
+    system_prompt: string;
+    tools: unknown;
+    settings: unknown;
+    created_at: number;
+    updated_at: number;
+};
+
+export type VoiceAgentDbRecord = {
+    id: string;
+    userId: string;
+    name: string;
+    description: string | null;
+    systemPrompt: string;
+    tools: VoiceAgentToolDefinition[];
+    settings: VoiceAgentSettings;
     createdAt: number;
     updatedAt: number;
 };

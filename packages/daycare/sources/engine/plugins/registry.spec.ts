@@ -135,4 +135,30 @@ describe("PluginRegistrar command registration", () => {
         await registrar.unregisterAll();
         expect(modules.speech.get("speech-provider")).toBeNull();
     });
+
+    it("registers and unregisters voice providers", async () => {
+        const modules = new ModuleRegistry({
+            onMessage: async () => undefined
+        });
+        const registry = new PluginRegistry(modules, connectorRecipientResolve);
+        const registrar = registry.createRegistrar("voice-instance");
+
+        registrar.registerVoiceAgentProvider({
+            id: "voice-provider",
+            label: "Voice Provider",
+            startSession: async () => ({
+                agentId: "agent-voice",
+                overrides: {}
+            })
+        });
+        expect(modules.voice.get("voice-provider")).toEqual(
+            expect.objectContaining({
+                id: "voice-provider",
+                label: "Voice Provider"
+            })
+        );
+
+        await registrar.unregisterAll();
+        expect(modules.voice.get("voice-provider")).toBeNull();
+    });
 });

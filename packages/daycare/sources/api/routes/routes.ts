@@ -3,6 +3,7 @@ import type { Tool } from "@mariozechner/pi-ai";
 import type { AgentSkill, Context, TaskActiveSummary, TaskListAllResult } from "@/types";
 import type { EngineEventBus } from "../../engine/ipc/events.js";
 import type { MiniApps } from "../../engine/mini-apps/MiniApps.js";
+import type { VoiceAgentRegistry } from "../../engine/modules/voiceAgentRegistry.js";
 import type { Secret } from "../../engine/secrets/secretTypes.js";
 import { UserHome } from "../../engine/users/userHome.js";
 import type { PsqlService } from "../../services/psql/PsqlService.js";
@@ -12,6 +13,7 @@ import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
 import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
 import type { VaultsRepository } from "../../storage/vaultsRepository.js";
+import type { VoiceAgentsRepository } from "../../storage/voiceAgentsRepository.js";
 import type { WorkspaceMembersRepository } from "../../storage/workspaceMembersRepository.js";
 import { agentsRouteHandle } from "./agents/agentsRoutes.js";
 import { configRouteHandle } from "./config/configRoutes.js";
@@ -31,6 +33,7 @@ import { secretsRouteHandle } from "./secrets/secretsRoutes.js";
 import { skillsRouteHandle } from "./skills/skillsRoutes.js";
 import { tasksRouteHandle } from "./tasks/tasksRoutes.js";
 import { toolsRouteHandle } from "./tools/toolsRoutes.js";
+import { voiceAgentsRouteHandle } from "./voice-agents/voiceAgentsRoutes.js";
 import { workspacesRouteHandle } from "./workspaces/workspacesRoutes.js";
 
 export type ApiRouteContext = {
@@ -51,6 +54,8 @@ export type ApiRouteContext = {
     documents: VaultsRepository | null;
     fragments: FragmentsRepository | null;
     keyValues: KeyValuesRepository | null;
+    voiceAgents: VoiceAgentsRepository | null;
+    voiceRegistry: VoiceAgentRegistry | null;
     miniApps: MiniApps | null;
     psql: PsqlService | null;
     observationLog: ObservationLogRepository | null;
@@ -201,6 +206,15 @@ export async function apiRouteHandle(
             readJsonBody: context.readJsonBody,
             miniApps: context.miniApps,
             launch: context.miniAppLaunch
+        });
+    }
+    if (pathname.startsWith("/voice-agents")) {
+        return voiceAgentsRouteHandle(request, response, pathname, {
+            ctx: context.ctx,
+            sendJson: context.sendJson,
+            readJsonBody: context.readJsonBody,
+            voiceAgents: context.voiceAgents,
+            voiceRegistry: context.voiceRegistry
         });
     }
     if (pathname.startsWith("/files")) {

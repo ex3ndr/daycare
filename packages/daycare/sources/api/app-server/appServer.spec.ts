@@ -230,6 +230,8 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         documents: null,
         fragments: null,
         keyValues: storage.keyValues,
+        voiceAgents: storage.voiceAgents,
+        voiceRegistry: modules.voice,
         miniApps,
         observationLog: storage.observationLog,
         secrets,

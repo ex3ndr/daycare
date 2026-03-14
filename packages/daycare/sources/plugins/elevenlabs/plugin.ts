@@ -15,7 +15,7 @@ import {
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import { z } from "zod";
-import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
+import type { ToolDefinition, ToolExecutionContext, ToolResultContract, VoiceAgentToolDefinition } from "@/types";
 import type {
     SpeechGenerationContext,
     SpeechGenerationRequest,
@@ -109,6 +109,7 @@ const settingsSchema = z
         outputFormat: z.string().min(1).optional(),
         providerId: z.string().min(1).optional(),
         label: z.string().min(1).optional(),
+        baseAgentId: z.string().min(1).optional(),
         authId: z.string().min(1).optional(),
         voices: z
             .array(
@@ -163,12 +164,34 @@ export const plugin = definePlugin({
                         return speechVoicesList(voiceCatalog);
                     }
                 });
+                api.registrar.registerVoiceAgentProvider({
+                    id: providerId,
+                    label,
+                    startSession: async (request) => {
+                        const baseAgentId = settings.baseAgentId?.trim();
+                        if (!baseAgentId) {
+                            throw new Error("ElevenLabs voice provider requires settings.baseAgentId.");
+                        }
+                        return {
+                            agentId: baseAgentId,
+                            overrides: {
+                                agent: {
+                                    prompt: {
+                                        prompt: request.systemPrompt
+                                    },
+                                    tools: elevenLabsConversationTools(request.tools)
+                                }
+                            }
+                        };
+                    }
+                });
                 api.registrar.registerTool(elevenlabsToolMusic(authId));
                 api.registrar.registerTool(elevenlabsToolSoundEffects(authId));
                 api.registrar.registerTool(elevenlabsToolVoiceIsolator(authId));
             },
             unload: async () => {
                 api.registrar.unregisterSpeechProvider(providerId);
+                api.registrar.unregisterVoiceAgentProvider(providerId);
                 api.registrar.unregisterTool(ELEVENLABS_MUSIC_TOOL);
                 api.registrar.unregisterTool(ELEVENLABS_SOUND_EFFECTS_TOOL);
                 api.registrar.unregisterTool(ELEVENLABS_VOICE_ISOLATOR_TOOL);
@@ -212,6 +235,29 @@ function elevenlabsToolMusic(authId: string): ToolDefinition {
             return elevenlabsToolAudioResult(toolCall, `Generated music file ${saved.filePath}.`, saved);
         }
     };
+}
+
+function elevenLabsConversationTools(tools: VoiceAgentToolDefinition[]): Array<Record<string, unknown>> {
+    return tools.map((tool) => ({
+        type: "client",
+        name: tool.name,
+        description: tool.description,
+        parameters: {
+            type: "object",
+            properties: Object.fromEntries(
+                Object.entries(tool.parameters).map(([name, parameter]) => [
+                    name,
+                    {
+                        type: parameter.type,
+                        description: parameter.description
+                    }
+                ])
+            ),
+            required: Object.entries(tool.parameters)
+                .filter(([, parameter]) => parameter.required)
+                .map(([name]) => name)
+        }
+    }));
 }
 
 function elevenlabsToolSoundEffects(authId: string): ToolDefinition {

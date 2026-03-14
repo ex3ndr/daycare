@@ -664,6 +664,8 @@ export class Engine {
             documents: this.storage.documents,
             fragments: this.storage.fragments,
             keyValues: this.storage.keyValues,
+            voiceAgents: this.storage.voiceAgents,
+            voiceRegistry: this.modules.voice,
             miniApps: this.miniApps,
             psql: this.psqlService,
             observationLog: this.storage.observationLog,

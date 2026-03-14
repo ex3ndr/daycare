@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { PluginApi, SpeechGenerationProvider } from "@/types";
+import type { PluginApi, SpeechGenerationProvider, VoiceAgentProvider } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
 import { FileFolder } from "../../engine/files/fileFolder.js";
@@ -72,10 +72,14 @@ describe("elevenlabs plugin", () => {
 
         const registrationState: {
             provider: SpeechGenerationProvider | null;
+            voiceProvider: VoiceAgentProvider | null;
             unregisteredProviderId: string | null;
+            unregisteredVoiceProviderId: string | null;
         } = {
             provider: null,
-            unregisteredProviderId: null
+            voiceProvider: null,
+            unregisteredProviderId: null,
+            unregisteredVoiceProviderId: null
         };
 
         const registrar = {
@@ -84,6 +88,12 @@ describe("elevenlabs plugin", () => {
             },
             unregisterSpeechProvider: (id: string) => {
                 registrationState.unregisteredProviderId = id;
+            },
+            registerVoiceAgentProvider: (provider: VoiceAgentProvider) => {
+                registrationState.voiceProvider = provider;
+            },
+            unregisterVoiceAgentProvider: (id: string) => {
+                registrationState.unregisteredVoiceProviderId = id;
             },
             registerMediaAnalysisProvider: () => undefined,
             unregisterMediaAnalysisProvider: () => undefined,
@@ -109,7 +119,7 @@ describe("elevenlabs plugin", () => {
             withRawResponse: withRawResponseMock
         });
 
-        const settings = elevenLabs.settingsSchema.parse({});
+        const settings = elevenLabs.settingsSchema.parse({ baseAgentId: "agent-base-1" });
         const api: PluginApi<typeof settings> = {
             instance: { instanceId: "elevenlabs-main", pluginId: "elevenlabs", enabled: true },
             settings,
@@ -145,6 +155,9 @@ describe("elevenlabs plugin", () => {
 
         if (!registrationState.provider) {
             throw new Error("Speech provider was not registered");
+        }
+        if (!registrationState.voiceProvider) {
+            throw new Error("Voice provider was not registered");
         }
 
         const voices = await registrationState.provider.listVoices?.({
@@ -197,8 +210,64 @@ describe("elevenlabs plugin", () => {
             })
         );
 
+        await expect(
+            registrationState.voiceProvider.startSession(
+                {
+                    voiceAgentId: "voice-1",
+                    systemPrompt: "Be helpful.",
+                    tools: [
+                        {
+                            name: "lookup_order",
+                            description: "Lookup an order",
+                            parameters: {
+                                orderId: {
+                                    type: "string",
+                                    description: "Order ID",
+                                    required: true
+                                }
+                            }
+                        }
+                    ],
+                    settings: {
+                        providerId: "elevenlabs"
+                    }
+                },
+                {
+                    ctx: { userId: "user-1" } as never,
+                    logger: getLogger("test.elevenlabs.voice")
+                }
+            )
+        ).resolves.toEqual({
+            agentId: "agent-base-1",
+            overrides: {
+                agent: {
+                    prompt: {
+                        prompt: "Be helpful."
+                    },
+                    tools: [
+                        {
+                            type: "client",
+                            name: "lookup_order",
+                            description: "Lookup an order",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    orderId: {
+                                        type: "string",
+                                        description: "Order ID"
+                                    }
+                                },
+                                required: ["orderId"]
+                            }
+                        }
+                    ]
+                }
+            }
+        });
+
         await instance.unload?.();
         expect(registrationState.unregisteredProviderId).toBe("elevenlabs");
+        expect(registrationState.unregisteredVoiceProviderId).toBe("elevenlabs");
     });
 
     it("normalizes shorthand output format aliases", async () => {
@@ -219,6 +288,8 @@ describe("elevenlabs plugin", () => {
                 registrationState.provider = provider;
             },
             unregisterSpeechProvider: () => undefined,
+            registerVoiceAgentProvider: () => undefined,
+            unregisterVoiceAgentProvider: () => undefined,
             registerMediaAnalysisProvider: () => undefined,
             unregisterMediaAnalysisProvider: () => undefined,
             registerInferenceProvider: () => undefined,
@@ -318,6 +389,8 @@ describe("elevenlabs plugin", () => {
                 registrationState.provider = provider;
             },
             unregisterSpeechProvider: () => undefined,
+            registerVoiceAgentProvider: () => undefined,
+            unregisterVoiceAgentProvider: () => undefined,
             registerMediaAnalysisProvider: () => undefined,
             unregisterMediaAnalysisProvider: () => undefined,
             registerInferenceProvider: () => undefined,
@@ -403,6 +476,8 @@ describe("elevenlabs plugin", () => {
         const registrar = {
             registerSpeechProvider: () => undefined,
             unregisterSpeechProvider: () => undefined,
+            registerVoiceAgentProvider: () => undefined,
+            unregisterVoiceAgentProvider: () => undefined,
             registerMediaAnalysisProvider: () => undefined,
             unregisterMediaAnalysisProvider: () => undefined,
             registerInferenceProvider: () => undefined,
