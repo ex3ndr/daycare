@@ -233,8 +233,6 @@ export const WorkspaceStrip = React.memo<{ onNavigate?: () => void; style?: Styl
 const stripStyles = StyleSheet.create({
     strip: {
         width: WORKSPACE_STRIP_WIDTH,
-        paddingTop: 8,
-        paddingBottom: 8,
         alignItems: "center",
         justifyContent: "space-between"
     },
