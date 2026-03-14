@@ -11,11 +11,11 @@ export async function agentSystemPromptSectionMemory(context: AgentSystemPromptC
     const isForeground = context.config?.foreground === true;
     const systemRoot = await context.agentSystem?.storage?.documents.findBySlugAndParent(context.ctx, "system", null);
     const [soul, user, agents, memory, tools] = await Promise.all([
-        systemPromptDocumentRead(context, systemRoot?.id ?? null, "soul", "SOUL.md"),
-        systemPromptDocumentRead(context, systemRoot?.id ?? null, "user", "USER.md"),
-        systemPromptDocumentRead(context, systemRoot?.id ?? null, "agents", "AGENTS.md"),
-        systemPromptDocumentRead(context, systemRoot?.id ?? null, "memory", "MEMORY.md"),
-        systemPromptDocumentRead(context, systemRoot?.id ?? null, "tools", "TOOLS.md")
+        systemPromptVaultRead(context, systemRoot?.id ?? null, "soul", "SOUL.md"),
+        systemPromptVaultRead(context, systemRoot?.id ?? null, "user", "USER.md"),
+        systemPromptVaultRead(context, systemRoot?.id ?? null, "agents", "AGENTS.md"),
+        systemPromptVaultRead(context, systemRoot?.id ?? null, "memory", "MEMORY.md"),
+        systemPromptVaultRead(context, systemRoot?.id ?? null, "tools", "TOOLS.md")
     ]);
 
     const template = await agentPromptBundledRead("SYSTEM_MEMORY.md");
@@ -32,7 +32,7 @@ export async function agentSystemPromptSectionMemory(context: AgentSystemPromptC
     return section.trim();
 }
 
-async function systemPromptDocumentRead(
+async function systemPromptVaultRead(
     context: AgentSystemPromptContext,
     systemRootId: string | null,
     slug: string,

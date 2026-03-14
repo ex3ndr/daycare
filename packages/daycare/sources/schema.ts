@@ -175,7 +175,7 @@ export const tasksTable = pgTable(
     ]
 );
 
-export const documentsTable = pgTable(
+export const vaultsTable = pgTable(
     "documents",
     {
         id: text("id").notNull(),
@@ -223,7 +223,7 @@ export const fragmentsTable = pgTable(
     ]
 );
 
-export const documentReferencesTable = pgTable(
+export const vaultReferencesTable = pgTable(
     "document_references",
     {
         id: serial("id").primaryKey(),
@@ -727,9 +727,9 @@ export const schema = {
     sessionHistoryTable,
     inboxTable,
     tasksTable,
-    documentsTable,
+    vaultsTable,
     fragmentsTable,
-    documentReferencesTable,
+    vaultReferencesTable,
     tasksCronTable,
     tasksWebhookTable,
     signalsEventsTable,

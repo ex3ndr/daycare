@@ -14,10 +14,10 @@ import { UserHome } from "../engine/users/userHome.js";
 import { cuid2Is } from "../utils/cuid2Is.js";
 import { databaseOpenTest } from "./databaseOpenTest.js";
 import type { UserConnectorKeyDbRecord } from "./databaseTypes.js";
-import { documentPathFind } from "./documentPathFind.js";
-import { documentPathResolve } from "./documentPathResolve.js";
 import { Storage } from "./storage.js";
 import { storageOpenTest } from "./storageOpenTest.js";
+import { vaultPathFind } from "./vaultPathFind.js";
+import { vaultPathResolve } from "./vaultPathResolve.js";
 
 describe("Storage", () => {
     it("does not run migrations when built from an existing database instance", async () => {
@@ -89,8 +89,8 @@ describe("Storage", () => {
                 parentId: "daily"
             });
 
-            expect(await documentPathResolve(ctx, "events", storage.documents)).toBe("vault://memory/daily/events");
-            expect(await documentPathFind(ctx, "vault://memory/daily/events", storage.documents)).toBe("events");
+            expect(await vaultPathResolve(ctx, "events", storage.documents)).toBe("vault://memory/daily/events");
+            expect(await vaultPathFind(ctx, "vault://memory/daily/events", storage.documents)).toBe("events");
         } finally {
             storage.connection.close();
         }

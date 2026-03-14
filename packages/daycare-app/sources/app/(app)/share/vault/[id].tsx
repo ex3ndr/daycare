@@ -1,13 +1,13 @@
 import { useLocalSearchParams } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import { useUnistyles } from "react-native-unistyles";
-import { useDocumentsStore } from "@/modules/documents/documentsContext";
+import { useVaultsStore } from "@/modules/documents/vaultsContext";
 
 export default function ShareVaultScreen() {
     const { theme } = useUnistyles();
     const { id } = useLocalSearchParams<{ id: string }>();
 
-    const document = useDocumentsStore((s) => s.items.find((d) => d.id === id) ?? null);
+    const document = useVaultsStore((s) => s.items.find((d) => d.id === id) ?? null);
 
     if (!document) return null;
 

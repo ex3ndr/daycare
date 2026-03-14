@@ -27,7 +27,7 @@ flowchart TD
     K --> N[vault://system]
     K --> O[vault_read / vault_write / vault_patch / vault_append / vault_tree / vault_search]
 
-    O --> P[documentsRepository]
+    O --> P[vaultsRepository]
     P --> Q[(documents)]
     P --> R[(document_references)]
     S[User home] --> T[home/documents]
@@ -36,5 +36,5 @@ flowchart TD
 ## Compatibility Notes
 
 - Root vault entries still use the stored slug `document` internally, but public path rendering now exposes that root as `vault://vault`.
-- `documentPathFind` and body-ref resolution accept both `vault://...` and legacy `doc://...` inputs.
+- `vaultPathFind` and body-ref resolution accept both `vault://...` and legacy `doc://...` inputs.
 - No database migration is required for this rename.

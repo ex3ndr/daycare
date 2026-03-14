@@ -56,7 +56,7 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     participant Client
-    participant Repo as DocumentsRepository
+    participant Repo as VaultsRepository
     participant DB as Database
 
     Client->>Repo: create/update vault entry
@@ -86,7 +86,7 @@ sequenceDiagram
 
 ## Vault Viewer
 
-The vault viewer (`DocumentsView`) provides three tabs:
+The vault viewer (`VaultView`) provides three tabs:
 
 - **View** — renders the markdown body as themed HTML
 - **Edit** — WYSIWYG editor using `contenteditable` in an iframe with a formatting toolbar; auto-saves with debounce
@@ -94,12 +94,12 @@ The vault viewer (`DocumentsView`) provides three tabs:
 
 ```mermaid
 flowchart LR
-    A[View Tab] -->|read-only| B[DocumentMarkdownView]
-    C[Edit Tab] -->|contenteditable iframe| D[DocumentEditorView]
-    D -->|HTML to Markdown| E[documentHtmlToMarkdown]
+    A[View Tab] -->|read-only| B[VaultMarkdownView]
+    C[Edit Tab] -->|contenteditable iframe| D[VaultEditorView]
+    D -->|HTML to Markdown| E[vaultHtmlToMarkdown]
     E -->|auto-save| F[POST /vault/:id/update]
-    G[History Tab] -->|GET /vault/:id/history| H[DocumentHistoryPanel]
-    H -->|line diff| I[documentDiffCompute]
+    G[History Tab] -->|GET /vault/:id/history| H[VaultHistoryPanel]
+    H -->|line diff| I[vaultDiffCompute]
 ```
 
 Protected vault entries (memory/system/people subtrees) hide the Edit tab.

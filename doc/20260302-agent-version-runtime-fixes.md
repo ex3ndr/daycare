@@ -38,7 +38,7 @@ Separately, external `updatedAt` values in updates made timestamp behavior incon
 - `cronTasksRepository`
 - `signalSubscriptionsRepository`
 - `webhookTasksRepository`
-- `documentsRepository`
+- `vaultsRepository`
 - `exposeEndpointsRepository`
 
 Note: `connectionsRepository` also uses temporal versioning but does not expose `createdAt`/`updatedAt` fields, so no

@@ -5,7 +5,7 @@ import { type Context, contextForAgent } from "../agents/context.js";
 import { agentPathMemory } from "../agents/ops/agentPathBuild.js";
 import type { ConfigModule } from "../config/configModule.js";
 import { formatHistoryMessages } from "./infer/utils/formatHistoryMessages.js";
-import { memoryRootDocumentEnsure } from "./memoryRootDocumentEnsure.js";
+import { memoryRootVaultEnsure } from "./memoryRootVaultEnsure.js";
 
 const logger = getLogger("engine.memory");
 
@@ -154,7 +154,7 @@ export class MemoryWorker {
 
                 const path = agentPathMemory(sourcePath);
                 const ctx = contextForAgent({ userId: agent.userId, agentId: session.agentId });
-                await memoryRootDocumentEnsure(ctx, this.storage);
+                await memoryRootVaultEnsure(ctx, this.storage);
                 await this.postToAgent(
                     ctx,
                     { path },

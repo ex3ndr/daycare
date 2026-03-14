@@ -75,7 +75,7 @@ export class Agent {
     private readonly userHome: UserHome;
     sandbox: Sandbox;
     private endTurnCount = 0;
-    private readonly documentLastReadVersions = new Map<string, number>();
+    private readonly vaultLastReadVersions = new Map<string, number>();
 
     private constructor(
         ctx: Context,
@@ -197,26 +197,26 @@ export class Agent {
      * Remembers the latest read version for each document in the active session.
      * Expects: entries are from a resolved root-to-target chain.
      */
-    documentChainReadMark(entries: Array<{ id: string; version: number }>): void {
+    vaultChainReadMark(entries: Array<{ id: string; version: number }>): void {
         for (const entry of entries) {
             const id = entry.id.trim();
             if (!id) {
                 continue;
             }
-            this.documentLastReadVersions.set(id, entry.version);
+            this.vaultLastReadVersions.set(id, entry.version);
         }
     }
 
     /**
      * Returns the last read version for a document in this session.
-     * Expects: documentId belongs to the same user scope as this agent.
+     * Expects: vaultId belongs to the same user scope as this agent.
      */
-    documentVersionLastRead(documentId: string): number | null {
-        const id = documentId.trim();
+    vaultVersionLastRead(vaultId: string): number | null {
+        const id = vaultId.trim();
         if (!id) {
             return null;
         }
-        return this.documentLastReadVersions.get(id) ?? null;
+        return this.vaultLastReadVersions.get(id) ?? null;
     }
 
     start(): void {
@@ -1099,7 +1099,7 @@ export class Agent {
             resetMessage: resetMessage.length > 0 ? resetMessage : null
         });
         this.state.updatedAt = now;
-        this.documentLastReadVersions.clear();
+        this.vaultLastReadVersions.clear();
         await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
         this.agentSystem.eventBus.emit("agent.reset", {
             agentId: this.id,
@@ -1573,7 +1573,7 @@ export class Agent {
             createdAt: compactionAt,
             resetMessage
         });
-        this.documentLastReadVersions.clear();
+        this.vaultLastReadVersions.clear();
         await agentStateWrite(this.agentSystem.storage, this.ctx, this.state);
         await agentHistoryAppend(this.agentSystem.storage, this.ctx, {
             type: "user_message",

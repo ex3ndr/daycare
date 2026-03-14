@@ -12,7 +12,7 @@ flowchart TD
     C -->|code tables options| E[ChatMarkdownView native containers]
     C -->|mermaid| F[markdownMermaidRender]
     F --> G[ASCII diagram in code block]
-    F --> H[documentMarkdownHtml]
+    F --> H[vaultMarkdownHtml]
 ```
 
 ## Notes

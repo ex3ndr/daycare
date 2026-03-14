@@ -11,7 +11,6 @@ import { CronTasksRepository } from "./cronTasksRepository.js";
 import type { StorageDatabase } from "./databaseOpen.js";
 import type { CreateAgentInput, CreateUserInput, UserWithConnectorKeysDbRecord } from "./databaseTypes.js";
 import { DelayedSignalsRepository } from "./delayedSignalsRepository.js";
-import { DocumentsRepository } from "./documentsRepository.js";
 import { FragmentsRepository } from "./fragmentsRepository.js";
 import { HistoryRepository } from "./historyRepository.js";
 import { InboxRepository } from "./inboxRepository.js";
@@ -28,6 +27,7 @@ import { SystemPromptsRepository } from "./systemPromptsRepository.js";
 import { TasksRepository } from "./tasksRepository.js";
 import { TokenStatsRepository } from "./tokenStatsRepository.js";
 import { UsersRepository } from "./usersRepository.js";
+import { VaultsRepository } from "./vaultsRepository.js";
 import { WebhookTasksRepository } from "./webhookTasksRepository.js";
 import { WorkspaceMembersRepository } from "./workspaceMembersRepository.js";
 
@@ -44,7 +44,7 @@ export class Storage {
     readonly cronTasks: CronTasksRepository;
     readonly webhookTasks: WebhookTasksRepository;
     readonly tasks: TasksRepository;
-    readonly documents: DocumentsRepository;
+    readonly documents: VaultsRepository;
     readonly fragments: FragmentsRepository;
     readonly signalEvents: SignalEventsRepository;
     readonly signalSubscriptions: SignalSubscriptionsRepository;
@@ -78,7 +78,7 @@ export class Storage {
         this.cronTasks = new CronTasksRepository(db);
         this.webhookTasks = new WebhookTasksRepository(db);
         this.tasks = new TasksRepository(db);
-        this.documents = new DocumentsRepository(db);
+        this.documents = new VaultsRepository(db);
         this.fragments = new FragmentsRepository(db);
         this.signalEvents = new SignalEventsRepository(db);
         this.signalSubscriptions = new SignalSubscriptionsRepository(db);

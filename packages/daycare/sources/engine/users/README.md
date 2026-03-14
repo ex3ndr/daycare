@@ -50,6 +50,6 @@ flowchart TD
     B --> F[permissionBuildUser]
     F --> G[Agent session permissions + skills active read access]
     B --> H[Agent files facade: home/downloads, home/desktop, home/tmp]
-    A --> I[documentSystemDocsEnsure]
+    A --> I[vaultSystemDocsEnsure]
     I --> J[vault://system/{soul,user,agents,tools}]
 ```

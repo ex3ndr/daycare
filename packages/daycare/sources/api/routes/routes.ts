@@ -7,18 +7,18 @@ import type { Secret } from "../../engine/secrets/secretTypes.js";
 import { UserHome } from "../../engine/users/userHome.js";
 import type { PsqlService } from "../../services/psql/PsqlService.js";
 import type { TokenStatsHourlyDbRecord } from "../../storage/databaseTypes.js";
-import type { DocumentsRepository } from "../../storage/documentsRepository.js";
 import type { FragmentsRepository } from "../../storage/fragmentsRepository.js";
 import type { KeyValuesRepository } from "../../storage/keyValuesRepository.js";
 import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
+import type { VaultsRepository } from "../../storage/vaultsRepository.js";
 import type { WorkspaceMembersRepository } from "../../storage/workspaceMembersRepository.js";
 import { agentsRouteHandle } from "./agents/agentsRoutes.js";
 import { configRouteHandle } from "./config/configRoutes.js";
 import type { TokenStatsFetchOptions } from "./costs/costsRoutes.js";
 import { costsRouteHandle } from "./costs/costsRoutes.js";
 import { databasesRouteHandle } from "./databases/databasesRoutes.js";
-import { documentsRouteHandle } from "./documents/documentsRoutes.js";
+import { vaultsRouteHandle } from "./documents/vaultsRoutes.js";
 import { filesRouteHandle } from "./files/filesRoutes.js";
 import { fragmentsRouteHandle } from "./fragments/fragmentsRoutes.js";
 import { inviteRouteHandle } from "./invite/inviteRoutes.js";
@@ -48,7 +48,7 @@ export type ApiRouteContext = {
     tasksListAll: ((ctx: Context) => Promise<TaskListAllResult>) | null;
     taskCallbacks: RouteTaskCallbacks | null;
     tokenStatsFetch: ((ctx: Context, options: TokenStatsFetchOptions) => Promise<TokenStatsHourlyDbRecord[]>) | null;
-    documents: DocumentsRepository | null;
+    documents: VaultsRepository | null;
     fragments: FragmentsRepository | null;
     keyValues: KeyValuesRepository | null;
     miniApps: MiniApps | null;
@@ -171,7 +171,7 @@ export async function apiRouteHandle(
         });
     }
     if (pathname.startsWith("/vault") && context.documents) {
-        return documentsRouteHandle(request, response, pathname, {
+        return vaultsRouteHandle(request, response, pathname, {
             ctx: context.ctx,
             sendJson: context.sendJson,
             readJsonBody: context.readJsonBody,

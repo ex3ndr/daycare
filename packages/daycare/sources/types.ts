@@ -173,14 +173,14 @@ export type {
 } from "./services/psql/psqlTypes.js";
 // Storage
 export type {
-    DocumentDbRecord,
-    DocumentReferenceDbRecord,
-    DocumentReferenceKind,
     MiniAppDbRecord,
     ObservationLogDbRecord,
     ObservationLogFindOptions,
     ObservationLogRecentOptions,
     PsqlDatabaseDbRecord,
     UserConnectorKeyDbRecord,
-    UserDbRecord
+    UserDbRecord,
+    VaultDbRecord,
+    VaultReferenceDbRecord,
+    VaultReferenceKind
 } from "./storage/databaseTypes.js";

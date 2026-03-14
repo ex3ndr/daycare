@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 
 import { type Context, contextForUser } from "../agents/context.js";
 
-type DocumentRecord = {
+type VaultRecord = {
     id: string;
     title: string;
     description: string;
@@ -12,7 +12,7 @@ type DocumentRecord = {
     updatedAt: number;
 };
 
-type DocumentReferenceRecord = {
+type VaultReferenceRecord = {
     kind: "parent" | "link" | "body";
     targetId: string;
 };
@@ -20,14 +20,14 @@ type DocumentReferenceRecord = {
 type MemoryRoutesRuntime = {
     storage: {
         documents: {
-            findById: (ctx: Context, id: string) => Promise<DocumentRecord | null>;
+            findById: (ctx: Context, id: string) => Promise<VaultRecord | null>;
             findBySlugAndParent: (
                 ctx: Context,
                 slug: string,
                 parentId: string | null
             ) => Promise<{ id: string } | null>;
-            findChildren: (ctx: Context, parentId: string | null) => Promise<DocumentRecord[]>;
-            findReferences: (ctx: Context, id: string) => Promise<DocumentReferenceRecord[]>;
+            findChildren: (ctx: Context, parentId: string | null) => Promise<VaultRecord[]>;
+            findReferences: (ctx: Context, id: string) => Promise<VaultReferenceRecord[]>;
             findParentId: (ctx: Context, id: string) => Promise<string | null>;
         };
     };
@@ -81,7 +81,7 @@ export function serverMemoryRoutesRegister(app: FastifyInstance, runtime: Memory
             const ctx = contextForUser({ userId });
             const tree =
                 scope === "vault"
-                    ? await documentsTreeBuild(ctx, runtime.storage.documents)
+                    ? await vaultsTreeBuild(ctx, runtime.storage.documents)
                     : await memoryGraphTreeBuild(ctx, runtime.storage.documents);
             return reply.send({ ok: true, graph: graphTreeJsonBuild(tree) });
         } catch (error) {
@@ -110,7 +110,7 @@ export function serverMemoryRoutesRegister(app: FastifyInstance, runtime: Memory
             const ctx = contextForUser({ userId });
             if (scope === "vault") {
                 if (nodeId === VAULT_ROOT_NODE_ID) {
-                    return reply.send({ ok: true, node: documentsRootNodeBuild() });
+                    return reply.send({ ok: true, node: vaultsRootNodeBuild() });
                 }
                 const node = await graphNodeBuild(ctx, nodeId, runtime.storage.documents);
                 if (!node) {
@@ -167,11 +167,11 @@ async function memoryGraphTreeBuild(
     return memoryTreeBuild(ctx, memoryRoot.id, documents);
 }
 
-async function documentsTreeBuild(
+async function vaultsTreeBuild(
     ctx: Context,
     documents: MemoryRoutesRuntime["storage"]["documents"]
 ): Promise<GraphTreeRuntime> {
-    const root = documentsRootNodeBuild();
+    const root = vaultsRootNodeBuild();
     const children = new Map<string, GraphNode[]>();
     const visited = new Set<string>();
 
@@ -272,7 +272,7 @@ async function graphNodeBuild(
     };
 }
 
-function graphNodeRefsBuild(refs: DocumentReferenceRecord[]): string[] {
+function graphNodeRefsBuild(refs: VaultReferenceRecord[]): string[] {
     const resolved = new Set<string>();
     for (const ref of refs) {
         if (ref.kind === "parent") {
@@ -319,7 +319,7 @@ async function memoryNodeInTreeIs(
     return false;
 }
 
-function documentsRootNodeBuild(): GraphNode {
+function vaultsRootNodeBuild(): GraphNode {
     return {
         id: VAULT_ROOT_NODE_ID,
         frontmatter: {

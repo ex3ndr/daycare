@@ -20,7 +20,7 @@ flowchart TD
   C -- no --> D[Throw not found]
   C -- yes --> E[Memory scope assert for memory agents]
   E --> F[Compute next body append or patch]
-  F --> G[peopleDocumentFrontmatterAssert]
+  F --> G[peopleVaultFrontmatterAssert]
   G --> H[storage.documents.update with ctx]
   H --> I[Return tool summary + new version]
 ```

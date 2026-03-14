@@ -1,0 +1,50 @@
+import type { Context } from "@/types";
+
+export type VaultPathResolveRepo = {
+    findById: (ctx: Context, id: string) => Promise<{ id: string; slug: string } | null>;
+    findParentId: (ctx: Context, id: string) => Promise<string | null>;
+};
+
+const VAULT_ROOT_SEGMENT = "vault";
+const DOCUMENT_ROOT_STORAGE_SLUG = "document";
+
+/**
+ * Builds a public `vault://a/b/c` path for a document by walking the active parent chain.
+ * The stored root slug `document` is rendered as `vault` without changing persisted data.
+ *
+ * Expects: parent links form an acyclic chain for each active document version.
+ */
+export async function vaultPathResolve(
+    ctx: Context,
+    vaultId: string,
+    repo: VaultPathResolveRepo
+): Promise<string | null> {
+    const rootId = vaultId.trim();
+    if (!rootId) {
+        return null;
+    }
+
+    const visited = new Set<string>();
+    const segments: string[] = [];
+
+    let currentId: string | null = rootId;
+    while (currentId) {
+        if (visited.has(currentId)) {
+            throw new Error(`Vault parent cycle detected for ${currentId}.`);
+        }
+        visited.add(currentId);
+
+        const current = await repo.findById(ctx, currentId);
+        if (!current) {
+            return null;
+        }
+
+        segments.unshift(current.slug);
+        currentId = await repo.findParentId(ctx, current.id);
+    }
+
+    const publicSegments = segments.map((segment, index) =>
+        index === 0 && segment === DOCUMENT_ROOT_STORAGE_SLUG ? VAULT_ROOT_SEGMENT : segment
+    );
+    return `vault://${publicSegments.join("/")}`;
+}

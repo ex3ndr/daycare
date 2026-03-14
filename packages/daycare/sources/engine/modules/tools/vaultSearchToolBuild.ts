@@ -1,0 +1,114 @@
+import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import { type Static, Type } from "@sinclair/typebox";
+
+import type { ToolDefinition, ToolResultContract } from "@/types";
+import { agentPathChildAllocate } from "../../agents/ops/agentPathChildAllocate.js";
+
+const searchSchema = Type.Object(
+    {
+        query: Type.String({ minLength: 1 }),
+        sync: Type.Optional(
+            Type.Boolean({
+                description:
+                    "When true, wait for the memory-search agent to finish and return its answer in this tool result."
+            })
+        )
+    },
+    { additionalProperties: false }
+);
+
+type VaultSearchArgs = Static<typeof searchSchema>;
+
+const searchResultSchema = Type.Object(
+    {
+        summary: Type.String(),
+        targetAgentId: Type.String(),
+        originAgentId: Type.String()
+    },
+    { additionalProperties: false }
+);
+
+type SearchResult = Static<typeof searchResultSchema>;
+
+const searchReturns: ToolResultContract<SearchResult> = {
+    schema: searchResultSchema,
+    toLLMText: (result) => result.summary
+};
+
+/**
+ * Builds the vault_search tool that delegates retrieval to memory-search agents.
+ * Default mode is async; sync mode waits for the answer before returning.
+ */
+export function vaultSearchToolBuild(): ToolDefinition {
+    return {
+        tool: {
+            name: "vault_search",
+            description:
+                "Search persistent vault entries to answer a question. By default, returns a query ID immediately and " +
+                "delivers results asynchronously. Set sync=true to wait for the answer before continuing " +
+                "(recommended for background agents).",
+            parameters: searchSchema
+        },
+        returns: searchReturns,
+        execute: async (args, toolContext, toolCall) => {
+            const payload = args as VaultSearchArgs;
+            const query = payload.query.trim();
+            const sync = payload.sync === true;
+            if (!query) {
+                throw new Error("Search query is required");
+            }
+
+            const path = await agentPathChildAllocate({
+                storage: toolContext.agentSystem.storage,
+                parentAgentId: toolContext.agent.id,
+                kind: "search"
+            });
+            const agentId = await toolContext.agentSystem.agentIdForTarget(
+                toolContext.ctx,
+                { path },
+                {
+                    kind: "search",
+                    parentAgentId: toolContext.agent.id,
+                    name: "memory-search"
+                }
+            );
+            const message = { type: "message" as const, message: { text: query }, context: {} };
+            let summary = "";
+            if (sync) {
+                // Background agents often need retrieved context before continuing.
+                const result = await toolContext.agentSystem.postAndAwait(toolContext.ctx, { agentId }, message);
+                const responseText = "responseText" in result ? (result.responseText?.trim() ?? "") : "";
+                const summaryPrefix = `Vault query completed in sync mode. Query ID: ${agentId}.`;
+                summary =
+                    responseText.length > 0
+                        ? `${summaryPrefix}\n\n${responseText}`
+                        : `${summaryPrefix} No response text returned.`;
+            } else {
+                await toolContext.agentSystem.post(toolContext.ctx, { agentId }, message);
+                summary = `Vault query submitted. Query ID: ${agentId}. Results will arrive asynchronously.`;
+            }
+            const toolMessage: ToolResultMessage = {
+                role: "toolResult",
+                toolCallId: toolCall.id,
+                toolName: toolCall.name,
+                content: [
+                    {
+                        type: "text",
+                        text: summary
+                    }
+                ],
+                isError: false,
+                timestamp: Date.now()
+            };
+
+            return {
+                toolMessage,
+                typedResult: {
+                    summary,
+                    targetAgentId: agentId,
+                    originAgentId: toolContext.agent.id
+                }
+            };
+        }
+    };
+}

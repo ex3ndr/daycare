@@ -10,7 +10,7 @@ sequenceDiagram
     participant S as Session Storage
     participant MW as MemoryWorker
     participant MA as Memory-Agent
-    participant D as DocumentsRepository
+    participant D as VaultsRepository
 
     A->>S: Session invalidated (sleep/reset/threshold)
     MW->>S: Poll findInvalidated()
@@ -29,7 +29,7 @@ sequenceDiagram
 | MemoryWorker | `engine/memory/memoryWorker.ts` | Timer-based poller (30s) that routes invalidated sessions |
 | Memory-Agent | descriptor `{ type: "memory-agent", id }` | Per-source-agent agent that receives transcripts and updates memory vault entries |
 | formatHistoryMessages | `engine/memory/infer/utils/formatHistoryMessages.ts` | Converts history records to markdown transcript |
-| Vault Storage | `storage/documentsRepository.ts` | Versioned vault storage with parent/link/body references |
+| Vault Storage | `storage/vaultsRepository.ts` | Versioned vault storage with parent/link/body references |
 
 ### Memory-Agent Descriptor
 

@@ -18,10 +18,10 @@ This change moves core prompt persistence from per-user filesystem files under `
 ```mermaid
 flowchart TD
     A[Engine.start] --> B[userHomeEnsure]
-    A --> C[memoryRootDocumentEnsure]
-    A --> D[peopleRootDocumentEnsure]
-    A --> E[documentRootDocumentEnsure]
-    A --> F[documentSystemDocsEnsure]
+    A --> C[memoryRootVaultEnsure]
+    A --> D[peopleRootVaultEnsure]
+    A --> E[vaultRootVaultEnsure]
+    A --> F[vaultSystemDocsEnsure]
     F --> G[vault://system]
     G --> H[vault://system/soul]
     G --> I[vault://system/user]

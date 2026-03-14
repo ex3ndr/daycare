@@ -183,7 +183,7 @@ export type TaskDbRecord = {
     updatedAt: number;
 };
 
-export type DocumentReferenceKind = "parent" | "link" | "body";
+export type VaultReferenceKind = "parent" | "link" | "body";
 
 export type DatabaseDocumentRow = {
     id: string;
@@ -199,7 +199,7 @@ export type DatabaseDocumentRow = {
     updated_at: number;
 };
 
-export type DocumentDbRecord = {
+export type VaultDbRecord = {
     id: string;
     userId: string;
     version?: number;
@@ -243,22 +243,22 @@ export type FragmentDbRecord = {
     updatedAt: number;
 };
 
-export type DatabaseDocumentReferenceRow = {
+export type DatabaseVaultReferenceRow = {
     id: number;
     user_id: string;
     source_id: string;
     source_version: number;
     target_id: string;
-    kind: DocumentReferenceKind;
+    kind: VaultReferenceKind;
 };
 
-export type DocumentReferenceDbRecord = {
+export type VaultReferenceDbRecord = {
     id: number;
     userId: string;
     sourceId: string;
     sourceVersion: number;
     targetId: string;
-    kind: DocumentReferenceKind;
+    kind: VaultReferenceKind;
 };
 
 export type DatabaseSignalEventRow = {

@@ -11,7 +11,7 @@ import type { ToolResolverApi } from "../engine/modules/toolResolver.js";
 
 const SYSTEM_TASKS_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), ".");
 
-const documentTreeTool = {
+const vaultTreeTool = {
     name: "vault_tree",
     description: "Read a vault tree.",
     parameters: Type.Object(
@@ -21,7 +21,7 @@ const documentTreeTool = {
         { additionalProperties: false }
     )
 };
-const documentReadTool = {
+const vaultReadTool = {
     name: "vault_read",
     description: "Read a vault entry.",
     parameters: Type.Object(
@@ -115,8 +115,8 @@ function systemTaskResolver(
         };
     });
     const resolver: ToolResolverApi = {
-        listTools: () => [documentTreeTool, documentReadTool, nowToolDefinition],
-        listToolsForAgent: () => [documentTreeTool, documentReadTool, nowToolDefinition],
+        listTools: () => [vaultTreeTool, vaultReadTool, nowToolDefinition],
+        listToolsForAgent: () => [vaultTreeTool, vaultReadTool, nowToolDefinition],
         execute,
         deferredHandlerFor: () => undefined
     };
@@ -201,7 +201,7 @@ describe("system-tasks VM execution", () => {
             const context = systemTaskContext();
             const result = await rlmExecute(
                 code,
-                montyPreambleBuild([documentTreeTool, documentReadTool, nowToolDefinition]),
+                montyPreambleBuild([vaultTreeTool, vaultReadTool, nowToolDefinition]),
                 context,
                 resolver,
                 "system-memory-compactor-noop",
@@ -261,7 +261,7 @@ describe("system-tasks VM execution", () => {
             const context = systemTaskContext();
             const result = await rlmExecute(
                 code,
-                montyPreambleBuild([documentTreeTool, documentReadTool, nowToolDefinition]),
+                montyPreambleBuild([vaultTreeTool, vaultReadTool, nowToolDefinition]),
                 context,
                 resolver,
                 "system-memory-compactor-run",

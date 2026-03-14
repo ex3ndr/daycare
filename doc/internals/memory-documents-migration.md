@@ -8,7 +8,7 @@ Memory storage is now backed by the `documents` tables instead of markdown graph
 sequenceDiagram
     participant A as Agent Session
     participant MW as MemoryWorker
-    participant DR as DocumentsRepository
+    participant DR as VaultsRepository
     participant MA as Memory-Agent
 
     A->>MW: Session invalidated
@@ -47,4 +47,4 @@ graph TD
 - `vault_read`
 - `vault_write`
 - `vault_search`
-- `memoryRootDocumentEnsure()` for `vault://memory` bootstrap
+- `memoryRootVaultEnsure()` for `vault://memory` bootstrap

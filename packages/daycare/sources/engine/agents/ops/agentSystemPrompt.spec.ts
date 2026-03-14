@@ -6,7 +6,7 @@ import type { Tool } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
 import type { Storage } from "../../../storage/storage.js";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
-import { documentSystemDocsEnsure } from "../../document/documentSystemDocsEnsure.js";
+import { vaultSystemDocsEnsure } from "../../document/vaultSystemDocsEnsure.js";
 import { UserHome } from "../../users/userHome.js";
 import { contextForAgent, contextForUser } from "../context.js";
 import { systemAgentPromptResolve } from "../system/systemAgentPromptResolve.js";
@@ -381,7 +381,7 @@ async function systemPromptDocumentsWrite(
     }
 ): Promise<void> {
     const ctx = contextForUser({ userId });
-    const system = await documentSystemDocsEnsure(ctx, storage);
+    const system = await vaultSystemDocsEnsure(ctx, storage);
     const docs = [
         { slug: "soul", body: input.soul },
         { slug: "user", body: input.user },
