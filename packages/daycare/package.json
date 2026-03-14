@@ -37,6 +37,7 @@
     "build": "yarn --cwd ../daycare-dashboard build:export && tsc -p tsconfig.json && yarn build:assets",
     "build:assets": "tsx sources/build/buildAssetsSync.ts",
     "dev": "tsx sources/main.ts",
+    "eval": "node --import tsx ./scripts/evalRun.mjs",
     "release": "tsx sources/release/releaseRun.ts",
     "recipe": "tsx sources/recipe/recipeRun.ts",
     "test": "vitest run",

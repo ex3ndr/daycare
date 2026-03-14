@@ -19,6 +19,7 @@
     "build": "yarn workspace daycare-cli run build",
     "dashboard": "yarn workspace daycare-dashboard dev",
     "dev": "DAYCARE_ROOT_DIR=~/.dev yarn workspace daycare-cli run dev",
+    "eval": "yarn workspace daycare-cli run eval",
     "env": "node ./scripts/envRun.mjs",
     "env:link": "node ./scripts/envLink.mjs",
     "env:proxy:start": "portless proxy start",
