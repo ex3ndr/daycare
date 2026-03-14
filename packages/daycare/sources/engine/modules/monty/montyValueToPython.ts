@@ -6,12 +6,21 @@ const NO_MATCH = Symbol("monty.no-match");
 const ALLOW_ANY = Symbol("monty.allow-any");
 const unknownSchema = Type.Unknown();
 
+type MontyValueToPythonOptions = {
+    unknownProperties?: "error" | "omit";
+};
+
 /**
  * Converts a JS tool result into a Python-safe value that matches the given schema.
  * Expects: schema is a supported TypeBox/JSON-schema fragment for tool results/runtime helpers.
  */
-export function montyValueToPython(value: unknown, schema: unknown, label: string): unknown {
-    const converted = valueConvert(value, schema, label);
+export function montyValueToPython(
+    value: unknown,
+    schema: unknown,
+    label: string,
+    options?: MontyValueToPythonOptions
+): unknown {
+    const converted = valueConvert(value, schema, label, options?.unknownProperties ?? "error");
     if (converted === OMIT) {
         throw new Error(`${label} cannot be omitted.`);
     }
@@ -21,7 +30,7 @@ export function montyValueToPython(value: unknown, schema: unknown, label: strin
     return converted;
 }
 
-function valueConvert(value: unknown, schema: unknown, label: string): unknown {
+function valueConvert(value: unknown, schema: unknown, label: string, unknownProperties: "error" | "omit"): unknown {
     if (schemaAnyIs(schema)) {
         return genericValueConvert(value, label);
     }
@@ -29,14 +38,14 @@ function valueConvert(value: unknown, schema: unknown, label: string): unknown {
         throw new Error(`${label} uses an unsupported schema.`);
     }
 
-    const union = unionConvert(value, schema, label);
+    const union = unionConvert(value, schema, label, unknownProperties);
     if (union !== NO_MATCH) {
         return union;
     }
 
     const type = schema.type;
     if (Array.isArray(type)) {
-        return unionConvert(value, { anyOf: type.map((entry) => ({ type: entry })) }, label);
+        return unionConvert(value, { anyOf: type.map((entry) => ({ type: entry })) }, label, unknownProperties);
     }
     if (type === "string") {
         if (typeof value !== "string") {
@@ -75,16 +84,21 @@ function valueConvert(value: unknown, schema: unknown, label: string): unknown {
         if (Array.isArray(schema.items)) {
             throw new Error(`${label} uses unsupported tuple array items.`);
         }
-        return value.map((entry, index) => valueConvert(entry, schema.items, `${label}[${index}]`));
+        return value.map((entry, index) => valueConvert(entry, schema.items, `${label}[${index}]`, unknownProperties));
     }
     if (type === "object") {
-        return objectConvert(value, schema, label);
+        return objectConvert(value, schema, label, unknownProperties);
     }
 
     throw new Error(`${label} uses an unsupported schema.`);
 }
 
-function objectConvert(value: unknown, schema: Record<string, unknown>, label: string): Record<string, unknown> {
+function objectConvert(
+    value: unknown,
+    schema: Record<string, unknown>,
+    label: string,
+    unknownProperties: "error" | "omit"
+): Record<string, unknown> {
     const record = recordFromValue(value, label);
     const properties = propertyRecordResolve(schema.properties);
     const additionalProperties = additionalPropertiesResolve(schema);
@@ -94,9 +108,12 @@ function objectConvert(value: unknown, schema: Record<string, unknown>, label: s
         const propertySchema =
             properties[key] ?? (additionalProperties === ALLOW_ANY ? unknownSchema : additionalProperties);
         if (!propertySchema) {
+            if (unknownProperties === "omit") {
+                continue;
+            }
             throw new Error(`${label}.${key} is not allowed by the schema.`);
         }
-        const converted = propertyConvert(entry, propertySchema, `${label}.${key}`);
+        const converted = propertyConvert(entry, propertySchema, `${label}.${key}`, unknownProperties);
         if (converted === OMIT) {
             continue;
         }
@@ -106,14 +123,19 @@ function objectConvert(value: unknown, schema: Record<string, unknown>, label: s
     return result;
 }
 
-function propertyConvert(value: unknown, schema: unknown, label: string): unknown {
+function propertyConvert(value: unknown, schema: unknown, label: string, unknownProperties: "error" | "omit"): unknown {
     if (value === undefined) {
         return propertyOptionalOmitIs(schema) ? OMIT : null;
     }
-    return valueConvert(value, schema, label);
+    return valueConvert(value, schema, label, unknownProperties);
 }
 
-function unionConvert(value: unknown, schema: Record<string, unknown>, label: string): unknown {
+function unionConvert(
+    value: unknown,
+    schema: Record<string, unknown>,
+    label: string,
+    unknownProperties: "error" | "omit"
+): unknown {
     for (const key of ["anyOf", "oneOf"] as const) {
         const variants = schema[key];
         if (!Array.isArray(variants) || variants.length === 0) {
@@ -122,7 +144,7 @@ function unionConvert(value: unknown, schema: Record<string, unknown>, label: st
         const errors: string[] = [];
         for (const [index, variant] of variants.entries()) {
             try {
-                return valueConvert(value, variant, `${label} (${key}[${index}])`);
+                return valueConvert(value, variant, `${label} (${key}[${index}])`, unknownProperties);
             } catch (error) {
                 errors.push(error instanceof Error ? error.message : String(error));
             }
@@ -160,7 +182,7 @@ function genericValueConvert(value: unknown, label: string): unknown {
         throw new Error(`${label} cannot be converted from ${valueTypeResolve(value)}.`);
     }
     if (value instanceof Map) {
-        return objectConvert(Object.fromEntries(value.entries()), {}, label);
+        return objectConvert(Object.fromEntries(value.entries()), {}, label, "error");
     }
     if (!recordIs(value)) {
         throw new Error(`${label} cannot be converted from ${valueTypeResolve(value)}.`);

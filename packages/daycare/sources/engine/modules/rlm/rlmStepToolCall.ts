@@ -2,6 +2,7 @@ import type { Tool } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import type { DeferredToolHandler, ResolvedTool, ToolExecutionContext } from "@/types";
 import type { ToolResolverApi } from "../toolResolver.js";
+import { toolMessageTextExtract } from "../tools/toolReturnOutcome.js";
 import { CONTEXT_COMPACT_TOOL_NAME, CONTEXT_RESET_TOOL_NAME, STEP_TOOL_NAME } from "./rlmConstants.js";
 import { rlmArgsConvert, rlmResultConvert, rlmRuntimeResultConvert } from "./rlmConvert.js";
 import { rlmRuntimeToolExecute } from "./rlmRuntimeToolExecute.js";
@@ -101,21 +102,22 @@ export async function rlmStepToolCall(options: RlmStepToolCallOptions): Promise<
                 },
                 { ...options.context, pythonExecution: true }
             );
-            const value = rlmResultConvert(toolResult, toolEntry);
-            toolResultText = rlmValueFormat(value);
 
             if (toolResult.toolMessage.isError) {
                 toolIsError = true;
+                toolResultText = toolMessageTextExtract(toolResult.toolMessage).trim();
+                if (toolResultText.length === 0) {
+                    toolResultText = `Tool execution failed: ${toolNameResolve(toolEntry)}`;
+                }
                 resumeOptions = {
                     exception: {
                         type: "RuntimeError",
-                        message:
-                            toolResultText.trim().length > 0
-                                ? toolResultText
-                                : `Tool execution failed: ${toolNameResolve(toolEntry)}`
+                        message: toolResultText
                     }
                 };
             } else {
+                const value = rlmResultConvert(toolResult, toolEntry);
+                toolResultText = rlmValueFormat(value);
                 resumeOptions = { returnValue: value };
                 deferredPayload = toolResult.deferredPayload;
                 deferredHandler = toolResult.deferredHandler;

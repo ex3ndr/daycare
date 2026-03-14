@@ -56,8 +56,12 @@ export function rlmResultConvert(
     const schema = resolvedTool?.returns.schema ?? null;
     const normalized =
         schema !== null
-            ? montyValueToPython(toolResult.typedResult, schema, `Tool "${toolName}" response`)
-            : montyValueToPython(toolResult.typedResult, genericObjectSchema, `Tool "${toolName}" response`);
+            ? montyValueToPython(toolResult.typedResult, schema, `Tool "${toolName}" response`, {
+                  unknownProperties: "omit"
+              })
+            : montyValueToPython(toolResult.typedResult, genericObjectSchema, `Tool "${toolName}" response`, {
+                  unknownProperties: "omit"
+              });
 
     if (toolResultObjectIs(normalized)) {
         return normalized;
@@ -75,7 +79,10 @@ export function rlmRuntimeResultConvert(value: unknown, tool: ResolvedTool | Too
     const normalized = montyValueToPython(
         value,
         resolvedTool.returns.schema,
-        `Tool "${resolvedTool.tool.name}" response`
+        `Tool "${resolvedTool.tool.name}" response`,
+        {
+            unknownProperties: "omit"
+        }
     );
     if (toolResultObjectIs(normalized)) {
         return normalized;

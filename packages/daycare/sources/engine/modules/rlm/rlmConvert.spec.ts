@@ -189,6 +189,50 @@ describe("rlmResultConvert", () => {
         });
     });
 
+    it("filters undeclared response fields instead of throwing", () => {
+        const result = {
+            toolMessage: {
+                role: "toolResult",
+                toolCallId: "1",
+                toolName: "exec",
+                content: [{ type: "text", text: "ok" }],
+                isError: false,
+                timestamp: Date.now()
+            },
+            typedResult: {
+                output: "ok",
+                action: "exec",
+                isError: false,
+                toolCallId: "tool-1"
+            }
+        } as unknown as ToolExecutionResult;
+
+        expect(
+            rlmResultConvert(
+                result,
+                toolWithResponseSchemaBuild(
+                    {
+                        name: "exec",
+                        description: "",
+                        parameters: Type.Object({}, { additionalProperties: false })
+                    },
+                    Type.Object(
+                        {
+                            output: Type.String(),
+                            action: Type.String(),
+                            isError: Type.Boolean()
+                        },
+                        { additionalProperties: false }
+                    )
+                )
+            )
+        ).toEqual({
+            output: "ok",
+            action: "exec",
+            isError: false
+        });
+    });
+
     it("throws when typed result cannot be converted to Monty", () => {
         const result = {
             toolMessage: {

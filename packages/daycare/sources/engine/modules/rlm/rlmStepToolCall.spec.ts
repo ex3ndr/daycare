@@ -2,7 +2,7 @@ import type { Tool } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ToolExecutionContext, ToolExecutionResult } from "@/types";
+import type { ResolvedTool, ToolExecutionContext, ToolExecutionResult } from "@/types";
 import { montyPreambleBuild } from "../monty/montyPreambleBuild.js";
 import type { ToolResolverApi } from "../toolResolver.js";
 import { RLM_LIMITS } from "./rlmLimits.js";
@@ -57,6 +57,53 @@ describe("rlmStepToolCall", () => {
         if ("exception" in result.resumeOptions) {
             expect(result.resumeOptions.exception.message).toContain("boom");
         }
+    });
+
+    it("preserves original tool errors when the error payload does not match the tool response schema", async () => {
+        const resolver = resolverBuild(async () => ({
+            toolMessage: {
+                role: "toolResult",
+                toolCallId: "1",
+                toolName: "echo",
+                content: [{ type: "text", text: 'Tool "echo" is not allowed for this agent.' }],
+                isError: true,
+                timestamp: Date.now()
+            },
+            typedResult: {
+                toolCallId: "1",
+                toolName: "echo",
+                isError: true,
+                timestamp: Date.now(),
+                text: 'Tool "echo" is not allowed for this agent.'
+            }
+        }));
+        const step = await startSnapshotBuild("echo('hello')");
+        const resolvedTool: ResolvedTool = {
+            tool: tools[0] as Tool,
+            returns: {
+                schema: Type.Object(
+                    {
+                        output: Type.String(),
+                        action: Type.String(),
+                        isError: Type.Boolean()
+                    },
+                    { additionalProperties: false }
+                ),
+                toLLMText: (result) => String((result as { output?: unknown }).output ?? "")
+            }
+        };
+
+        const result = await rlmStepToolCall({
+            snapshot: step,
+            toolByName: new Map([[resolvedTool.tool.name, resolvedTool]]),
+            toolResolver: resolver,
+            context: contextBuild()
+        });
+
+        expect(result.toolIsError).toBe(true);
+        expect(result.toolResult).toContain('Tool "echo" is not allowed for this agent.');
+        expect(result.toolResult).not.toContain("response.toolCallId");
+        expect("exception" in result.resumeOptions).toBe(true);
     });
 
     it("converts beforeExecute failures into tool errors", async () => {
