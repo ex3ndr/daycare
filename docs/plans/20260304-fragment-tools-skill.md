@@ -18,7 +18,7 @@ Add LLM tools for fragment CRUD and a `create-fragment` skill that guides the LL
 - Fragment repository: `packages/daycare/sources/storage/fragmentsRepository.ts` (already implemented)
 - Tool pattern: `packages/daycare/sources/engine/modules/tools/documentWriteToolBuild.ts` — TypeBox schema, `ToolDefinition`, `ToolResultContract`
 - Tool registration: `packages/daycare/sources/engine/engine.ts` line ~708 — `this.modules.tools.register("core", ...)`
-- Skill pattern: `packages/daycare/sources/skills/autonomous-ai-agents/task-creation/SKILL.md` — YAML frontmatter + markdown body
+- Skill pattern: `packages/daycare/sources/skills/autonomous-ai-agents/tasks-creator/SKILL.md` — YAML frontmatter + markdown body
 - Widget catalog: `packages/daycare-app/sources/widgets/widgets.ts` — `widgetsCatalog` with `jsonSchema()` and `prompt()` methods
 - Skills directory: `packages/daycare/sources/skills/`
 

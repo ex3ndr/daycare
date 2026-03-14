@@ -31,9 +31,10 @@ Build task workflows that are small, deterministic, and cheap to run repeatedly.
 1. **Search memory first.** Before using any tool, search memory for how the tool works and how the user expects it to be used. Understand both the mechanics and the user's intent before writing task code.
 2. Keep task `code` short and orchestration-focused.
 3. Offload heavy or reusable logic to real scripts invoked via `exec`.
-4. Use `skip()` whenever the run does not require LLM reasoning.
-5. Keep command inputs explicit and reproducible; do not hide behavior behind ad hoc shell state.
-6. Make tasks idempotent: safe to run multiple times without harmful side effects.
+4. Develop tasks with an explicit checkmark checklist and only mark a step complete after you have run it and seen the output.
+5. Use `skip()` whenever the run does not require LLM reasoning.
+6. Keep command inputs explicit and reproducible; do not hide behavior behind ad hoc shell state.
+7. Make tasks idempotent: safe to run multiple times without harmful side effects.
 
 ## Tooling Model
 
@@ -49,9 +50,23 @@ Use these tools as the default flow:
 Tasks must be validated before they go live. Test incrementally to minimize side effects:
 
 1. **Test segments in isolation first.** Before assembling the full task, run individual `exec` commands or tool calls manually to confirm they produce expected output and have no unintended effects.
-2. **Run the full task with `task_run`.** Use `sync: true` on the complete task code. Review the output carefully before adding triggers.
-3. **Never attach triggers to untested tasks.** Add `task_trigger_add` only after a successful `task_run` proves the code works end-to-end.
-4. **Scope blast radius.** When a task touches external services, test against a single item or narrow filter before widening to the full dataset.
+2. **Invoke every helper script directly.** If the task uses `python`, `node`, `bash`, or any checked-in parser/fetcher script, run that script by itself first and inspect stdout/stderr. Do not assume it works because the code looks correct.
+3. **Run the full task with `task_run`.** Use `sync: true` on the complete task code. Review the output carefully before adding triggers.
+4. **Never attach triggers to untested tasks.** Add `task_trigger_add` only after a successful `task_run` proves the code works end-to-end.
+5. **Scope blast radius.** When a task touches external services, test against a single item or narrow filter before widening to the full dataset.
+
+## Checkmark-Based Development (Mandatory)
+
+When building or revising a task, keep a concrete checklist in your working notes and update it as you verify behavior:
+
+- `[ ]` task behavior and parameters are defined
+- `[ ]` each helper script exists and is runnable on its own
+- `[ ]` each helper script was invoked directly and produced the expected output
+- `[ ]` task code calls those scripts with explicit commands
+- `[ ]` `task_run(sync=True)` succeeded and output was reviewed
+- `[ ]` triggers were added only after the validated run
+
+If any box is still unchecked, the task is not ready.
 
 ## Trigger Selection
 
@@ -89,6 +104,8 @@ Good candidates to offload:
 - large API fetch + normalization
 - file generation pipelines
 - repeated business logic shared by multiple tasks
+
+The task should orchestrate scripts, not absorb them. Write the script first, run it directly, confirm its output, then call it from the task.
 
 ### 4) Keep network usage explicit in commands
 
@@ -215,7 +232,8 @@ When a task needs to scrape or parse a website, write a dedicated parser script 
 
 1. Write the parser in Python or TypeScript.
 2. Store it on disk under `/developer/tasks/<task-name>/` (e.g. `/developer/tasks/price-monitor/parse.py`).
-3. Call it from the task via `exec`.
+3. Run the parser script directly while developing and inspect the real output.
+4. Call it from the task via `exec`.
 
 ```python
 res = exec(command="python3 /developer/tasks/price-monitor/parse.py")
@@ -230,6 +248,32 @@ print(compact)
 ```
 
 This keeps the task code minimal, makes the parser independently testable, and avoids fragile inline scraping logic.
+
+For website automation, HTML parsing, or scraping pipelines, always prefer this script-first pattern over inline parsing inside the task body.
+
+## Coding Pipelines and Model Handoffs
+
+When the task is orchestrating coding work, use distinct models for distinct roles and make handoffs explicit.
+
+### Skill-based handoffs
+
+Do not describe a vague "use another model" handoff in plain text alone. Tell the receiving agent which skill to load.
+
+- Use the `codex` skill for Codex-based implementation work.
+- Use the `claude-code` skill only when Claude Code CLI is the intended executor.
+- Use the `code-review` skill for review passes.
+
+If a task or permanent agent hands work from one coding model to another, the prompt should name the relevant skill so the next model loads the correct workflow instead of improvising it.
+
+### Default coding pipeline
+
+For coding pipelines, default to this split:
+
+1. Planning and orchestration: use an Opus-backed agent.
+2. Implementation: hand off to Codex using the `codex` skill.
+3. Review or follow-up fixes: use the appropriate review skill or another explicit skill-based handoff.
+
+This keeps planning broad and implementation focused. Do not ask Codex to rediscover the plan if an Opus agent already produced it.
 
 ## Permanent Agents
 

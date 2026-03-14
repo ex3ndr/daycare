@@ -2,31 +2,37 @@
 
 ## Summary
 
-Added a new core skill at `packages/daycare/sources/skills/autonomous-ai-agents/task-creation/SKILL.md`.
-The skill is sandboxed (`sandbox: true`) so it runs asynchronously in a subagent and focuses on robust task authoring:
+Updated the core task-authoring skill at `packages/daycare/sources/skills/autonomous-ai-agents/tasks-creator/SKILL.md`.
+The skill is sandboxed (`sandbox: true`) so it runs asynchronously in a subagent and now focuses on checkmark-based task development and robust task authoring:
 
+- explicit build checklist with direct script verification before triggers
 - minimal Python orchestration
 - offloading complex logic through `exec`
-- strict `allowedDomains` usage for networked commands
+- script-first website parsing and scraping
 - runtime `json_parse` / `json_stringify` for safe JSON handling in task Python
 - aggressive `skip()` usage for no-op and mechanical runs
+- skill-based model handoffs for coding workflows
+- Opus planning/orchestration followed by Codex implementation for coding pipelines
 - clear trigger selection and validation workflow
 
 ## Flow
 
 ```mermaid
 flowchart TD
-    A[Receive automation request] --> B[Choose trigger: cron heartbeat webhook]
-    B --> C[Create or update task with typed parameters]
-    C --> D[Write minimal orchestration code]
-    D --> E{Need heavy logic?}
-    E -- Yes --> F[Offload via exec to script]
-    E -- No --> G[Keep inline orchestration]
-    F --> H{Need LLM reasoning now?}
-    G --> H
-    H -- No --> I[Call skip early]
-    H -- Yes --> J[Print minimal context for reasoning]
-    I --> K[Attach trigger and validate]
-    J --> K
-    K --> L[task_run sync test + task_read verify]
+    A[Receive automation request] --> B[Write task checklist]
+    B --> C[Define parameters and task behavior]
+    C --> D{Need parser or helper logic?}
+    D -- Yes --> E[Write script under /developer/tasks/...]
+    D -- No --> F[Keep task orchestration minimal]
+    E --> G[Invoke each script directly and inspect output]
+    G --> H[Call script from task via exec]
+    F --> H
+    H --> I[Run task_run with sync true]
+    I --> J{Coding pipeline task?}
+    J -- Yes --> K[Plan with Opus and hand implementation to Codex via explicit skill]
+    J -- No --> L[Use regular task flow]
+    K --> M{Validated output?}
+    L --> M
+    M -- Yes --> N[Attach trigger and verify with task_read]
+    M -- No --> O[Keep checklist unchecked and fix]
 ```
