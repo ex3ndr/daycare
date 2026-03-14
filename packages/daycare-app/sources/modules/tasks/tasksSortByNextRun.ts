@@ -1,18 +1,13 @@
-import { tasksNextRunAtFind } from "./tasksNextRunAtFind";
-import type { CronTriggerSummary, TaskSummary } from "./tasksTypes";
+import type { TaskSummary } from "./tasksTypes";
 
 /**
  * Returns tasks ordered by earliest next cron fire time, with unscheduled tasks last.
- * Expects: cronByTask contains the cron triggers for the provided tasks.
+ * Expects: nextRunAtByTask contains earliest resolved next fire times keyed by task id.
  */
-export function tasksSortByNextRun(
-    tasks: TaskSummary[],
-    cronByTask: Map<string, CronTriggerSummary[]>,
-    fromAt?: number
-): TaskSummary[] {
+export function tasksSortByNextRun(tasks: TaskSummary[], nextRunAtByTask: Map<string, number | null>): TaskSummary[] {
     return tasks.slice().sort((left, right) => {
-        const leftNextRunAt = tasksNextRunAtFind(cronByTask.get(left.id) ?? [], fromAt);
-        const rightNextRunAt = tasksNextRunAtFind(cronByTask.get(right.id) ?? [], fromAt);
+        const leftNextRunAt = nextRunAtByTask.get(left.id) ?? null;
+        const rightNextRunAt = nextRunAtByTask.get(right.id) ?? null;
 
         if (leftNextRunAt === null && rightNextRunAt === null) {
             return left.title.localeCompare(right.title);

@@ -2,11 +2,10 @@ import * as React from "react";
 import { ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useTasksStore } from "@/modules/tasks/tasksContext";
-import { tasksCronNextRunAtResolve } from "@/modules/tasks/tasksCronNextRunAtResolve";
 import { tasksFormatLastRun } from "@/modules/tasks/tasksFormatLastRun";
 import { tasksFormatNextRun } from "@/modules/tasks/tasksFormatNextRun";
 import { tasksFormatNextRunRelative } from "@/modules/tasks/tasksFormatNextRunRelative";
-import { useTasksNow } from "@/modules/tasks/useTasksNow";
+import { useTasksLiveNextRuns } from "@/modules/tasks/useTasksLiveNextRuns";
 
 /**
  * Automation detail content.
@@ -17,7 +16,7 @@ export const AutomationDetailPanel = React.memo(() => {
     const { theme } = useUnistyles();
 
     const detail = useTasksStore((s) => s.selectedDetail);
-    const now = useTasksNow(detail?.triggers.cron ?? []);
+    const { now, nextRunAtById } = useTasksLiveNextRuns(detail?.triggers.cron ?? []);
 
     if (!detail) {
         return null;
@@ -78,12 +77,7 @@ export const AutomationDetailPanel = React.memo(() => {
                 <View style={panelStyles.section}>
                     <Text style={[panelStyles.label, { color: theme.colors.onSurfaceVariant }]}>Cron Triggers</Text>
                     {triggers.cron.map((trigger) => {
-                        const nextRunAt = tasksCronNextRunAtResolve({
-                            schedule: trigger.schedule,
-                            timezone: trigger.timezone,
-                            enabled: trigger.enabled,
-                            fromAt: now
-                        });
+                        const nextRunAt = nextRunAtById.get(trigger.id) ?? null;
 
                         return (
                             <View

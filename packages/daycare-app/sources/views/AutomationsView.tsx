@@ -10,12 +10,11 @@ import { useAuthStore } from "@/modules/auth/authContext";
 import { useTasksStore } from "@/modules/tasks/tasksContext";
 import { tasksFormatLastRun } from "@/modules/tasks/tasksFormatLastRun";
 import { tasksFormatNextRunRelative } from "@/modules/tasks/tasksFormatNextRunRelative";
-import { tasksNextRunAtFind } from "@/modules/tasks/tasksNextRunAtFind";
 import { tasksSortByNextRun } from "@/modules/tasks/tasksSortByNextRun";
 import { tasksStatus } from "@/modules/tasks/tasksStatus";
 import { tasksSubtitle } from "@/modules/tasks/tasksSubtitle";
 import type { CronTriggerSummary, TaskStatus, WebhookTriggerSummary } from "@/modules/tasks/tasksTypes";
-import { useTasksNow } from "@/modules/tasks/useTasksNow";
+import { useTasksLiveNextRuns } from "@/modules/tasks/useTasksLiveNextRuns";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 function AutomationStatus({ status, label }: { status: TaskStatus; label: string }) {
@@ -118,11 +117,23 @@ export function AutomationsView() {
         [router, workspaceId]
     );
 
-    const now = useTasksNow(triggers.cron);
-    const sortedTasks = useMemo(
-        () => tasksSortByNextRun(tasks, triggersByTask.cronByTask, now),
-        [tasks, triggersByTask, now]
-    );
+    const { now, nextRunAtById } = useTasksLiveNextRuns(triggers.cron);
+    const nextRunAtByTask = useMemo(() => {
+        const nextRunMap = new Map<string, number | null>();
+        for (const trigger of triggers.cron) {
+            const candidate = nextRunAtById.get(trigger.id) ?? null;
+            const current = nextRunMap.get(trigger.taskId) ?? null;
+            if (typeof candidate === "number" && (current === null || candidate < current)) {
+                nextRunMap.set(trigger.taskId, candidate);
+                continue;
+            }
+            if (!nextRunMap.has(trigger.taskId)) {
+                nextRunMap.set(trigger.taskId, null);
+            }
+        }
+        return nextRunMap;
+    }, [triggers.cron, nextRunAtById]);
+    const sortedTasks = useMemo(() => tasksSortByNextRun(tasks, nextRunAtByTask), [tasks, nextRunAtByTask]);
 
     if (loading && tasks.length === 0) {
         return (
@@ -166,7 +177,12 @@ export function AutomationsView() {
                         <Item
                             key={task.id}
                             title={task.title}
-                            subtitle={taskSubtitleBuild(taskCron(task.id), taskWebhook(task.id), now)}
+                            subtitle={taskSubtitleBuild(
+                                taskCron(task.id),
+                                taskWebhook(task.id),
+                                nextRunAtByTask.get(task.id) ?? null,
+                                now
+                            )}
                             subtitleLines={0}
                             onPress={() => handleTaskPress(task.id)}
                             rightElement={
@@ -183,11 +199,16 @@ export function AutomationsView() {
     );
 }
 
-function taskSubtitleBuild(cron: CronTriggerSummary[], webhook: WebhookTriggerSummary[], now: number): string {
+function taskSubtitleBuild(
+    cron: CronTriggerSummary[],
+    webhook: WebhookTriggerSummary[],
+    nextRunAt: number | null,
+    now: number
+): string {
     const summary = tasksSubtitle(cron, webhook);
     if (cron.length === 0) {
         return summary;
     }
 
-    return `${summary}\nNext fire: ${tasksFormatNextRunRelative(tasksNextRunAtFind(cron, now), now)}`;
+    return `${summary}\nNext fire: ${tasksFormatNextRunRelative(nextRunAt, now)}`;
 }

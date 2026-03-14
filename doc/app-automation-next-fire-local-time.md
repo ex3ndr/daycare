@@ -7,7 +7,7 @@
 - Added relative `Next fire` text in seconds, minutes, hours, and days.
 - Updated the automations list to show a `Next fire` line and sort by earliest upcoming fire time.
 - Updated automation detail cards to show `Next fire` per cron trigger with both absolute local time and relative time.
-- Added a live `useTasksNow()` hook that refreshes on second, minute, or hour boundaries based on the nearest upcoming fire time.
+- Added a live `useTasksLiveNextRuns()` hook that caches resolved next-fire timestamps and refreshes on second, minute, or hour boundaries based on the nearest upcoming fire time.
 
 ## Client flow
 
@@ -20,9 +20,10 @@ flowchart TD
     D --> F[tasksFormatNextRunRelative]
     E --> G[Local timezone text with zone suffix]
     F --> H[Relative next fire text]
-    H --> K[useTasksNow]
-    K --> I[Live list refresh]
-    K --> J[Live detail refresh]
+    C --> K[tasksNextRunMapResolve]
+    K --> L[useTasksLiveNextRuns]
+    L --> I[Live list refresh]
+    L --> J[Live detail refresh]
     G --> I[AutomationsView]
     G --> J[AutomationDetailPanel]
     H --> I

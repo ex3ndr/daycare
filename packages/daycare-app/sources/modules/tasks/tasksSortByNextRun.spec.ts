@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { tasksSortByNextRun } from "./tasksSortByNextRun";
-import type { CronTriggerSummary, TaskSummary } from "./tasksTypes";
+import type { TaskSummary } from "./tasksTypes";
 
 function task(overrides: Partial<TaskSummary> = {}): TaskSummary {
     return {
@@ -15,18 +15,6 @@ function task(overrides: Partial<TaskSummary> = {}): TaskSummary {
     };
 }
 
-function cron(taskId: string, schedule: string, enabled = true): CronTriggerSummary {
-    return {
-        id: `cron-${taskId}-${schedule}`,
-        taskId,
-        schedule,
-        timezone: "UTC",
-        agentId: null,
-        enabled,
-        lastExecutedAt: null
-    };
-}
-
 describe("tasksSortByNextRun", () => {
     it("sorts tasks by earliest next run and keeps unscheduled tasks last", () => {
         const tasks = [
@@ -34,13 +22,13 @@ describe("tasksSortByNextRun", () => {
             task({ id: "none", title: "None" }),
             task({ id: "soon", title: "Soon" })
         ];
-        const cronByTask = new Map<string, CronTriggerSummary[]>([
-            ["later", [cron("later", "30 10 * * *")]],
-            ["none", [cron("none", "0 9 * * *", false)]],
-            ["soon", [cron("soon", "0 9 * * *")]]
+        const nextRunAtByTask = new Map<string, number | null>([
+            ["later", Date.parse("2024-01-15T10:30:00.000Z")],
+            ["none", null],
+            ["soon", Date.parse("2024-01-15T09:00:00.000Z")]
         ]);
 
-        const result = tasksSortByNextRun(tasks, cronByTask, Date.parse("2024-01-15T08:45:00.000Z"));
+        const result = tasksSortByNextRun(tasks, nextRunAtByTask);
 
         expect(result.map((entry) => entry.id)).toEqual(["soon", "later", "none"]);
     });

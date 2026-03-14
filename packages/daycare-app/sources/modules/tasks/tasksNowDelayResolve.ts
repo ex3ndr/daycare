@@ -1,21 +1,23 @@
-import { tasksCronNextRunAtResolve } from "./tasksCronNextRunAtResolve";
-import type { CronTriggerSummary, TaskDetailCronTrigger } from "./tasksTypes";
-
 const SECOND_MS = 1_000;
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 
-type TaskCronLikeTrigger =
-    | Pick<CronTriggerSummary, "schedule" | "timezone" | "enabled">
-    | Pick<TaskDetailCronTrigger, "schedule" | "timezone" | "enabled">;
-
 /**
  * Resolves the next refresh delay for live task timing labels.
- * Expects: triggers are cron-like objects with schedule, timezone, and enabled fields.
+ * Expects: nextRunAts contains resolved unix timestamps or nulls for visible triggers.
  */
-export function tasksNowDelayResolve(triggers: TaskCronLikeTrigger[], now: number): number {
-    const nextRunAt = tasksNextRunAtResolve(triggers, now);
+export function tasksNowDelayResolve(nextRunAts: Array<number | null>, now: number): number {
+    const nextRunAt = nextRunAts.reduce<number | null>((current, candidate) => {
+        if (typeof candidate !== "number") {
+            return current;
+        }
+        if (current === null || candidate < current) {
+            return candidate;
+        }
+        return current;
+    }, null);
+
     if (nextRunAt === null) {
         return boundaryDelayResolve(now, HOUR_MS);
     }
@@ -28,20 +30,6 @@ export function tasksNowDelayResolve(triggers: TaskCronLikeTrigger[], now: numbe
         return boundaryDelayResolve(now, MINUTE_MS);
     }
     return boundaryDelayResolve(now, HOUR_MS);
-}
-
-function tasksNextRunAtResolve(triggers: TaskCronLikeTrigger[], now: number): number | null {
-    let nextRunAt: number | null = null;
-    for (const trigger of triggers) {
-        const candidate = tasksCronNextRunAtResolve({ ...trigger, fromAt: now });
-        if (typeof candidate !== "number") {
-            continue;
-        }
-        if (nextRunAt === null || candidate < nextRunAt) {
-            nextRunAt = candidate;
-        }
-    }
-    return nextRunAt;
 }
 
 function boundaryDelayResolve(now: number, stepMs: number): number {
