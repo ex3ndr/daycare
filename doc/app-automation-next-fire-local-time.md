@@ -7,6 +7,7 @@
 - Added relative `Next fire` text in seconds, minutes, hours, and days.
 - Updated the automations list to show a `Next fire` line and sort by earliest upcoming fire time.
 - Updated automation detail cards to show `Next fire` per cron trigger with both absolute local time and relative time.
+- Added a live `useTasksNow()` hook that refreshes on second, minute, or hour boundaries based on the nearest upcoming fire time.
 
 ## Client flow
 
@@ -19,6 +20,9 @@ flowchart TD
     D --> F[tasksFormatNextRunRelative]
     E --> G[Local timezone text with zone suffix]
     F --> H[Relative next fire text]
+    H --> K[useTasksNow]
+    K --> I[Live list refresh]
+    K --> J[Live detail refresh]
     G --> I[AutomationsView]
     G --> J[AutomationDetailPanel]
     H --> I
@@ -31,3 +35,4 @@ flowchart TD
 - Disabled cron triggers resolve to `not scheduled`.
 - Formatting uses the device's local timezone for display, while cron matching still respects the trigger's configured timezone.
 - Automation cards are ordered by earliest computed next fire time, with unscheduled items last.
+- The live hook refreshes every second when the next fire is within a minute, every minute when it is within a day, and every hour otherwise.

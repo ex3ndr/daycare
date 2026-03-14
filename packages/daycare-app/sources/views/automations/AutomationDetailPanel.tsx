@@ -6,6 +6,7 @@ import { tasksCronNextRunAtResolve } from "@/modules/tasks/tasksCronNextRunAtRes
 import { tasksFormatLastRun } from "@/modules/tasks/tasksFormatLastRun";
 import { tasksFormatNextRun } from "@/modules/tasks/tasksFormatNextRun";
 import { tasksFormatNextRunRelative } from "@/modules/tasks/tasksFormatNextRunRelative";
+import { useTasksNow } from "@/modules/tasks/useTasksNow";
 
 /**
  * Automation detail content.
@@ -16,9 +17,7 @@ export const AutomationDetailPanel = React.memo(() => {
     const { theme } = useUnistyles();
 
     const detail = useTasksStore((s) => s.selectedDetail);
-
-    // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally recompute when detail loads
-    const now = React.useMemo(() => Date.now(), [detail]);
+    const now = useTasksNow(detail?.triggers.cron ?? []);
 
     if (!detail) {
         return null;

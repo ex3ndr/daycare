@@ -15,6 +15,7 @@ import { tasksSortByNextRun } from "@/modules/tasks/tasksSortByNextRun";
 import { tasksStatus } from "@/modules/tasks/tasksStatus";
 import { tasksSubtitle } from "@/modules/tasks/tasksSubtitle";
 import type { CronTriggerSummary, TaskStatus, WebhookTriggerSummary } from "@/modules/tasks/tasksTypes";
+import { useTasksNow } from "@/modules/tasks/useTasksNow";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
 
 function AutomationStatus({ status, label }: { status: TaskStatus; label: string }) {
@@ -117,9 +118,7 @@ export function AutomationsView() {
         [router, workspaceId]
     );
 
-    // Recalculate "now" when tasks change so relative times are fresh
-    // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally recompute when tasks update
-    const now = useMemo(() => Date.now(), [tasks, triggers]);
+    const now = useTasksNow(triggers.cron);
     const sortedTasks = useMemo(
         () => tasksSortByNextRun(tasks, triggersByTask.cronByTask, now),
         [tasks, triggersByTask, now]
