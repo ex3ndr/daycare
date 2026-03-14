@@ -101,7 +101,7 @@ const stylesheet = StyleSheet.create((theme, _runtime) => ({
         backgroundColor: theme.colors.outlineVariant
     },
     pressablePressed: {
-        backgroundColor: theme.colors.surfaceContainerLowHighest
+        backgroundColor: theme.colors.surfaceContainerHighest
     }
 }));
 
@@ -289,7 +289,7 @@ export const Item = React.memo<ItemProps>((props) => {
                     {
                         backgroundColor:
                             pressed && isIOS && !isWeb
-                                ? theme.colors.surfaceContainerLowHighest
+                                ? theme.colors.surfaceContainerHighest
                                 : theme.colors.surfaceContainerLow,
                         opacity: disabled ? 0.5 : 1
                     },
