@@ -50,7 +50,7 @@ export default React.memo(function SignIn() {
             router.push({ pathname: "/verify", params: { email: normalizedEmail } });
             return;
         } catch (requestError) {
-            setError(requestError instanceof Error ? requestError.message : "Failed to send sign-in email.");
+            setError(requestError instanceof Error ? requestError.message : "Failed to send sign-in code.");
         } finally {
             setSubmitting(false);
         }
@@ -66,7 +66,7 @@ export default React.memo(function SignIn() {
                 <View style={styles.top}>
                     <Text style={[styles.title, { color: theme.colors.onSurface }]}>Sign in with email</Text>
                     <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-                        Enter your email and we'll send a magic link to sign in.
+                        Enter your email and we'll send a sign-in code.
                     </Text>
                 </View>
                 <View style={styles.form}>
@@ -105,7 +105,7 @@ export default React.memo(function SignIn() {
                         {submitting ? (
                             <ActivityIndicator size="small" color={theme.colors.onPrimary} />
                         ) : (
-                            <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>Send Magic Link</Text>
+                            <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>Continue</Text>
                         )}
                     </Pressable>
                     {error ? <Text style={[styles.feedback, { color: theme.colors.error }]}>{error}</Text> : null}
