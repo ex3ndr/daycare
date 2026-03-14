@@ -2,7 +2,9 @@ import * as React from "react";
 import { ScrollView, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useTasksStore } from "@/modules/tasks/tasksContext";
+import { tasksCronNextRunAtResolve } from "@/modules/tasks/tasksCronNextRunAtResolve";
 import { tasksFormatLastRun } from "@/modules/tasks/tasksFormatLastRun";
+import { tasksFormatNextRun } from "@/modules/tasks/tasksFormatNextRun";
 
 /**
  * Automation detail content.
@@ -106,6 +108,17 @@ export const AutomationDetailPanel = React.memo(() => {
                             </Text>
                             <Text style={[panelStyles.triggerMeta, { color: theme.colors.onSurfaceVariant }]}>
                                 Last run: {tasksFormatLastRun(trigger.lastRunAt, now)}
+                            </Text>
+                            <Text style={[panelStyles.triggerMeta, { color: theme.colors.onSurfaceVariant }]}>
+                                Next fire:{" "}
+                                {tasksFormatNextRun(
+                                    tasksCronNextRunAtResolve({
+                                        schedule: trigger.schedule,
+                                        timezone: trigger.timezone,
+                                        enabled: trigger.enabled,
+                                        fromAt: now
+                                    })
+                                )}
                             </Text>
                         </View>
                     ))}

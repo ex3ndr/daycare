@@ -9,6 +9,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useTasksStore } from "@/modules/tasks/tasksContext";
 import { tasksFormatLastRun } from "@/modules/tasks/tasksFormatLastRun";
+import { tasksFormatNextRun } from "@/modules/tasks/tasksFormatNextRun";
+import { tasksNextRunAtFind } from "@/modules/tasks/tasksNextRunAtFind";
 import { tasksStatus } from "@/modules/tasks/tasksStatus";
 import { tasksSubtitle } from "@/modules/tasks/tasksSubtitle";
 import type { CronTriggerSummary, TaskStatus, WebhookTriggerSummary } from "@/modules/tasks/tasksTypes";
@@ -116,7 +118,7 @@ export function AutomationsView() {
 
     // Recalculate "now" when tasks change so relative times are fresh
     // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally recompute when tasks update
-    const now = useMemo(() => Date.now(), [tasks]);
+    const now = useMemo(() => Date.now(), [tasks, triggers]);
 
     if (loading && tasks.length === 0) {
         return (
@@ -160,7 +162,8 @@ export function AutomationsView() {
                         <Item
                             key={task.id}
                             title={task.title}
-                            subtitle={tasksSubtitle(taskCron(task.id), taskWebhook(task.id))}
+                            subtitle={taskSubtitleBuild(taskCron(task.id), taskWebhook(task.id), now)}
+                            subtitleLines={0}
                             onPress={() => handleTaskPress(task.id)}
                             rightElement={
                                 <AutomationStatus
@@ -174,4 +177,13 @@ export function AutomationsView() {
             </ItemList>
         </View>
     );
+}
+
+function taskSubtitleBuild(cron: CronTriggerSummary[], webhook: WebhookTriggerSummary[], now: number): string {
+    const summary = tasksSubtitle(cron, webhook);
+    if (cron.length === 0) {
+        return summary;
+    }
+
+    return `${summary}\nNext fire: ${tasksFormatNextRun(tasksNextRunAtFind(cron, now))}`;
 }
