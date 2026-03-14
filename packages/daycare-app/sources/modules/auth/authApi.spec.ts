@@ -100,12 +100,14 @@ describe("authEmailRequest", () => {
         vi.stubGlobal(
             "fetch",
             vi.fn(async () => ({
-                json: async () => ({ ok: true })
+                json: async () => ({ ok: true, expiresAt: 1234, retryAfterMs: 30_000 })
             }))
         );
 
         await expect(authEmailRequest("http://localhost:7332", "person@example.com")).resolves.toEqual({
-            ok: true
+            ok: true,
+            expiresAt: 1234,
+            retryAfterMs: 30_000
         });
     });
 
@@ -137,7 +139,7 @@ describe("authEmailVerify", () => {
             }))
         );
 
-        await expect(authEmailVerify("http://localhost:7332", "magic-token")).resolves.toEqual({
+        await expect(authEmailVerify("http://localhost:7332", "person@example.com", "123456")).resolves.toEqual({
             ok: true,
             userId: "user-9",
             token: "jwt-9"
@@ -152,7 +154,7 @@ describe("authEmailVerify", () => {
             }))
         );
 
-        await expect(authEmailVerify("http://localhost:7332", "magic-token")).resolves.toEqual({
+        await expect(authEmailVerify("http://localhost:7332", "person@example.com", "123456")).resolves.toEqual({
             ok: false,
             error: "EXPIRED_TOKEN"
         });

@@ -537,7 +537,6 @@ export class AppServer {
             return this.emailAuth;
         }
 
-        const settings = this.settingsRequire();
         const users = this.users;
         const email = this.activeEmailSettings;
         const smtpUrl = email?.smtpUrl?.trim() ?? "";
@@ -550,12 +549,7 @@ export class AppServer {
         }
 
         this.emailAuth = new AppEmailAuth({
-            db: this.db,
             users,
-            host: settings.host,
-            port: settings.port,
-            serverEndpoint: settings.serverEndpoint,
-            appEndpoint: settings.appEndpoint,
             secret: await this.secretResolve(),
             replyTo: email?.replyTo,
             mailSend: emailSend({

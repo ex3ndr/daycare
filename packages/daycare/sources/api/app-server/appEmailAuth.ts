@@ -1,141 +1,178 @@
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { magicLink } from "better-auth/plugins";
+import { createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import type { EmailMessage } from "../../email/emailSend.js";
-import type { DaycareDb } from "../../schema.js";
-import {
-    appAuthAccountsTable,
-    appAuthSessionsTable,
-    appAuthUsersTable,
-    appAuthVerificationsTable
-} from "../../schema.js";
 import type { UsersRepository } from "../../storage/usersRepository.js";
-import { APP_AUTH_SESSION_EXPIRES_IN_SECONDS, appAuthPayloadUrlBuild } from "./appAuthLinkTool.js";
-import { type AppRequestEndpointHeaders, appRequestEndpointsResolve } from "./appRequestEndpointsResolve.js";
+import { AsyncLock } from "../../utils/lock.js";
+
+export const APP_EMAIL_CODE_EXPIRES_IN_MS = 10 * 60 * 1000;
+export const APP_EMAIL_CODE_RESEND_IN_MS = 30 * 1000;
+export const APP_EMAIL_CODE_REQUEST_WINDOW_MS = 10 * 60 * 1000;
+export const APP_EMAIL_CODE_MAX_REQUESTS_PER_WINDOW = 5;
+export const APP_EMAIL_CODE_MAX_ATTEMPTS = 5;
+
+type AppEmailChallenge = {
+    codeHash: Buffer;
+    salt: string;
+    expiresAt: number;
+    resendAvailableAt: number;
+    requestWindowStartedAt: number;
+    requestCount: number;
+    failedAttempts: number;
+    updatedAt: number;
+};
 
 export type AppEmailAuthOptions = {
-    db: DaycareDb;
     users: UsersRepository;
-    host: string;
-    port: number;
-    serverEndpoint?: string;
-    appEndpoint?: string;
     secret: string;
     replyTo?: string;
     mailSend: (message: EmailMessage) => Promise<void>;
 };
 
+export type AppEmailRequestResult = {
+    expiresAt: number;
+    retryAfterMs: number;
+};
+
 /**
- * Coordinates Better Auth magic-link email delivery and maps verified emails to Daycare users.
- * Expects: storage migrations are applied and mailSend delivers outbound email.
+ * Coordinates email sign-in codes and maps verified emails to Daycare users.
+ * Expects: secret is stable for the app server process and mailSend delivers outbound email.
  */
 export class AppEmailAuth {
     private readonly users: UsersRepository;
-    private readonly host: string;
-    private readonly port: number;
-    private readonly serverEndpoint?: string;
-    private readonly appEndpoint?: string;
     private readonly secret: string;
     private readonly replyTo?: string;
     private readonly mailSend: AppEmailAuthOptions["mailSend"];
-    private readonly db: DaycareDb;
+    private readonly pendingEmails = new Map<string, AppEmailChallenge>();
+    private readonly pendingLock = new AsyncLock();
 
     constructor(options: AppEmailAuthOptions) {
-        this.db = options.db;
         this.users = options.users;
-        this.host = options.host;
-        this.port = options.port;
-        this.serverEndpoint = options.serverEndpoint;
-        this.appEndpoint = options.appEndpoint;
-        this.secret = options.secret;
+        this.secret = options.secret.trim();
         this.replyTo = options.replyTo;
         this.mailSend = options.mailSend;
     }
 
-    async request(email: string, headers?: AppRequestEndpointHeaders): Promise<void> {
+    async request(email: string): Promise<AppEmailRequestResult> {
         const normalizedEmail = appEmailNormalize(email);
-        if (!normalizedEmail) {
-            throw new Error("Email is required.");
+        if (!appEmailIsValid(normalizedEmail)) {
+            throw new Error("A valid email is required.");
         }
 
-        const endpoints = appRequestEndpointsResolve({
-            host: this.host,
-            port: this.port,
-            appEndpoint: this.appEndpoint,
-            serverEndpoint: this.serverEndpoint,
-            headers
-        });
-        const auth = this.authCreate(endpoints);
+        return this.pendingLock.inLock(async () => {
+            const now = Date.now();
+            this.pendingPrune(now);
 
-        await auth.api.signInMagicLink({
-            body: {
-                email: normalizedEmail
-            },
-            headers: appEmailAuthHeadersBuild(headers, this.host, this.port, endpoints.serverEndpoint)
-        });
-    }
+            const existing = this.pendingEmails.get(normalizedEmail);
+            if (existing && now < existing.resendAvailableAt) {
+                throw new Error(appEmailRetryMessage(existing.resendAvailableAt - now));
+            }
 
-    async verify(token: string, headers?: AppRequestEndpointHeaders): Promise<{ email: string; userId: string }> {
-        const normalizedToken = token.trim();
-        if (!normalizedToken) {
-            throw new Error("Magic-link token is required.");
-        }
-
-        const endpoints = appRequestEndpointsResolve({
-            host: this.host,
-            port: this.port,
-            appEndpoint: this.appEndpoint,
-            serverEndpoint: this.serverEndpoint,
-            headers
-        });
-        const auth = this.authCreate(endpoints);
-
-        const result = await auth.api.magicLinkVerify({
-            query: {
-                token: normalizedToken
-            },
-            headers: appEmailAuthHeadersBuild(headers, this.host, this.port, endpoints.serverEndpoint)
-        });
-
-        const email = appEmailNormalize(result.user.email);
-        if (!email) {
-            throw new Error("Verified email is missing.");
-        }
-
-        const userId = await this.userIdResolveByEmail(email);
-        return {
-            email,
-            userId
-        };
-    }
-
-    private authCreate(endpoints: { appEndpoint: string; serverEndpoint: string }) {
-        return appEmailAuthCreate(
-            {
-                db: this.db,
-                users: this.users,
-                host: this.host,
-                port: this.port,
-                serverEndpoint: endpoints.serverEndpoint,
-                appEndpoint: endpoints.appEndpoint,
-                secret: this.secret,
-                replyTo: this.replyTo,
-                mailSend: this.mailSend
-            },
-            async ({ email, token }) => {
-                await this.mailSend(
-                    appEmailAuthMessageBuild({
-                        email,
-                        token,
-                        host: this.host,
-                        port: this.port,
-                        serverEndpoint: endpoints.serverEndpoint,
-                        appEndpoint: endpoints.appEndpoint,
-                        replyTo: this.replyTo
-                    })
+            const requestWindowStartedAt =
+                existing && now - existing.requestWindowStartedAt < APP_EMAIL_CODE_REQUEST_WINDOW_MS
+                    ? existing.requestWindowStartedAt
+                    : now;
+            const requestCount =
+                existing && requestWindowStartedAt === existing.requestWindowStartedAt ? existing.requestCount + 1 : 1;
+            if (requestCount > APP_EMAIL_CODE_MAX_REQUESTS_PER_WINDOW) {
+                throw new Error(
+                    `Too many sign-in codes requested. Try again in ${appEmailMinutesText(
+                        requestWindowStartedAt + APP_EMAIL_CODE_REQUEST_WINDOW_MS - now
+                    )}.`
                 );
             }
-        );
+
+            const code = appEmailCodeGenerate();
+            const salt = randomBytes(16).toString("hex");
+            const expiresAt = now + APP_EMAIL_CODE_EXPIRES_IN_MS;
+            const resendAvailableAt = now + APP_EMAIL_CODE_RESEND_IN_MS;
+
+            await this.mailSend(
+                appEmailAuthMessageBuild({
+                    email: normalizedEmail,
+                    code,
+                    expiresAt,
+                    replyTo: this.replyTo
+                })
+            );
+
+            this.pendingEmails.set(normalizedEmail, {
+                codeHash: appEmailCodeHash(this.secret, normalizedEmail, salt, code),
+                salt,
+                expiresAt,
+                resendAvailableAt,
+                requestWindowStartedAt,
+                requestCount,
+                failedAttempts: 0,
+                updatedAt: now
+            });
+
+            return {
+                expiresAt,
+                retryAfterMs: APP_EMAIL_CODE_RESEND_IN_MS
+            };
+        });
+    }
+
+    async verify(email: string, code: string): Promise<{ email: string; userId: string }> {
+        const normalizedEmail = appEmailNormalize(email);
+        const normalizedCode = appEmailCodeNormalize(code);
+        if (!appEmailIsValid(normalizedEmail)) {
+            throw new Error("A valid email is required.");
+        }
+        if (!normalizedCode) {
+            throw new Error("Code must be six digits.");
+        }
+
+        return this.pendingLock.inLock(async () => {
+            const now = Date.now();
+            this.pendingPrune(now);
+
+            const pending = this.pendingEmails.get(normalizedEmail);
+            if (!pending) {
+                throw new Error("Invalid or expired sign-in code.");
+            }
+            if (now > pending.expiresAt) {
+                this.pendingEmails.delete(normalizedEmail);
+                throw new Error("Invalid or expired sign-in code.");
+            }
+            if (pending.failedAttempts >= APP_EMAIL_CODE_MAX_ATTEMPTS) {
+                this.pendingEmails.delete(normalizedEmail);
+                throw new Error("Too many failed attempts. Request a new sign-in code.");
+            }
+
+            const providedHash = appEmailCodeHash(this.secret, normalizedEmail, pending.salt, normalizedCode);
+            if (!timingSafeEqual(providedHash, pending.codeHash)) {
+                const failedAttempts = pending.failedAttempts + 1;
+                if (failedAttempts >= APP_EMAIL_CODE_MAX_ATTEMPTS) {
+                    this.pendingEmails.delete(normalizedEmail);
+                    throw new Error("Too many failed attempts. Request a new sign-in code.");
+                }
+                this.pendingEmails.set(normalizedEmail, {
+                    ...pending,
+                    failedAttempts,
+                    updatedAt: now
+                });
+                throw new Error("Invalid or expired sign-in code.");
+            }
+
+            this.pendingEmails.delete(normalizedEmail);
+            const userId = await this.userIdResolveByEmail(normalizedEmail);
+            return {
+                email: normalizedEmail,
+                userId
+            };
+        });
+    }
+
+    private pendingPrune(now: number): void {
+        for (const [email, challenge] of this.pendingEmails.entries()) {
+            if (
+                challenge.expiresAt <= now ||
+                challenge.requestWindowStartedAt + APP_EMAIL_CODE_REQUEST_WINDOW_MS <= now ||
+                challenge.updatedAt + APP_EMAIL_CODE_REQUEST_WINDOW_MS <= now
+            ) {
+                this.pendingEmails.delete(email);
+            }
+        }
     }
 
     private async userIdResolveByEmail(email: string): Promise<string> {
@@ -164,121 +201,55 @@ function appEmailNormalize(email: string): string {
     return email.trim().toLowerCase();
 }
 
-function appEmailAuthCreate(
-    options: AppEmailAuthOptions,
-    sendMagicLink: (data: { email: string; token: string }) => Promise<void>
-) {
-    return betterAuth({
-        secret: options.secret,
-        baseURL: appEmailAuthBaseUrlResolve(options.host, options.port, options.serverEndpoint),
-        session: {
-            expiresIn: APP_AUTH_SESSION_EXPIRES_IN_SECONDS
-        },
-        database: drizzleAdapter(options.db, {
-            provider: "pg",
-            schema: {
-                user: appAuthUsersTable,
-                session: appAuthSessionsTable,
-                account: appAuthAccountsTable,
-                verification: appAuthVerificationsTable
-            },
-            usePlural: false
-        }),
-        plugins: [
-            magicLink({
-                sendMagicLink: async ({ email, token }) => {
-                    await sendMagicLink({ email, token });
-                }
-            })
-        ]
-    });
+function appEmailIsValid(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function appEmailAuthBaseUrlResolve(host: string, port: number, serverEndpoint?: string): string {
-    return serverEndpoint?.trim() || `http://${host}:${port}`;
+function appEmailCodeGenerate(): string {
+    return `${randomInt(1, 10)}${randomInt(0, 10)}${randomInt(0, 10)}${randomInt(0, 10)}${randomInt(0, 10)}${randomInt(0, 10)}`;
 }
 
-function appEmailAuthHeadersBuild(
-    headers: AppRequestEndpointHeaders | undefined,
-    host: string,
-    port: number,
-    serverEndpoint?: string
-): Headers {
-    const result = new Headers();
-    const source =
-        headers instanceof Headers
-            ? headers
-            : Array.isArray(headers)
-              ? new Headers(headers)
-              : new Headers(appEmailAuthHeadersNormalize(headers));
-    source.forEach((value, key) => {
-        result.set(key, value);
-    });
-
-    const baseUrl = new URL(appEmailAuthBaseUrlResolve(host, port, serverEndpoint));
-    if (!result.has("host")) {
-        result.set("host", baseUrl.host);
-    }
-    if (!result.has("origin")) {
-        result.set("origin", baseUrl.origin);
-    }
-    if (!result.has("x-forwarded-host")) {
-        result.set("x-forwarded-host", baseUrl.host);
-    }
-    if (!result.has("x-forwarded-proto")) {
-        result.set("x-forwarded-proto", baseUrl.protocol.replace(":", ""));
-    }
-    return result;
+function appEmailCodeNormalize(code: string): string | null {
+    const digits = code.replaceAll(/\D/g, "");
+    return /^[1-9][0-9]{5}$/.test(digits) ? digits : null;
 }
 
-function appEmailAuthHeadersNormalize(headers: AppRequestEndpointHeaders | undefined): Record<string, string> {
-    if (!headers || headers instanceof Headers || Array.isArray(headers)) {
-        return {};
-    }
+function appEmailCodeHash(secret: string, email: string, salt: string, code: string): Buffer {
+    return createHmac("sha256", secret).update(`${email}:${salt}:${code}`, "utf8").digest();
+}
 
-    const result: Record<string, string> = {};
-    for (const [key, value] of Object.entries(headers)) {
-        if (typeof value === "string") {
-            result[key] = value;
-            continue;
-        }
-        if (Array.isArray(value)) {
-            result[key] = value.join(", ");
-        }
-    }
-    return result;
+function appEmailRetryMessage(retryAfterMs: number): string {
+    return `Please wait ${appEmailSecondsText(retryAfterMs)} before requesting another sign-in code.`;
+}
+
+function appEmailSecondsText(durationMs: number): string {
+    const seconds = Math.max(1, Math.ceil(durationMs / 1000));
+    return `${seconds} second${seconds === 1 ? "" : "s"}`;
+}
+
+function appEmailMinutesText(durationMs: number): string {
+    const minutes = Math.max(1, Math.ceil(durationMs / 60_000));
+    return `${minutes} minute${minutes === 1 ? "" : "s"}`;
 }
 
 function appEmailAuthMessageBuild(options: {
     email: string;
-    token: string;
-    host: string;
-    port: number;
-    serverEndpoint?: string;
-    appEndpoint?: string;
+    code: string;
+    expiresAt: number;
     replyTo?: string;
 }): EmailMessage {
-    const url = appAuthPayloadUrlBuild(
-        options.host,
-        options.port,
-        {
-            backendUrl: options.serverEndpoint?.trim() ?? "",
-            token: options.token,
-            kind: "email"
-        },
-        options.appEndpoint,
-        options.serverEndpoint
-    );
+    const expiresInMinutes = Math.max(1, Math.ceil((options.expiresAt - Date.now()) / 60_000));
+    const expirationText = `${expiresInMinutes} minute${expiresInMinutes === 1 ? "" : "s"}`;
 
     return {
         to: options.email,
-        subject: "Your Daycare sign-in link",
+        subject: "Your Daycare sign-in code",
         replyTo: options.replyTo,
-        text: `Use this link to sign in to Daycare: ${url}`,
+        text: `Your Daycare sign-in code is ${options.code}. It expires in ${expirationText}.`,
         html: [
-            "<p>Use this link to sign in to Daycare.</p>",
-            `<p><a href="${url}">Open Daycare</a></p>`,
-            `<p>${url}</p>`
+            "<p>Your Daycare sign-in code is:</p>",
+            `<p><strong style="font-size: 28px; letter-spacing: 4px;">${options.code}</strong></p>`,
+            `<p>It expires in ${expirationText}.</p>`
         ].join("")
     };
 }

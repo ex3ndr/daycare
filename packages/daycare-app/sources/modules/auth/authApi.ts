@@ -23,6 +23,8 @@ export type AuthTokenExchangeResult =
 export type AuthEmailRequestResult =
     | {
           ok: true;
+          expiresAt?: number;
+          retryAfterMs?: number;
       }
     | {
           ok: false;
@@ -125,7 +127,7 @@ export async function authTelegramExchange(
 }
 
 /**
- * Requests a Better Auth magic link email for the provided address.
+ * Requests a six-digit email sign-in code for the provided address.
  * Expects: baseUrl points to daycare-app-server and email is non-empty.
  */
 export async function authEmailRequest(baseUrl: string, email: string): Promise<AuthEmailRequestResult> {
@@ -139,30 +141,36 @@ export async function authEmailRequest(baseUrl: string, email: string): Promise<
 
     const parsed = (await response.json()) as {
         ok?: boolean;
+        expiresAt?: number;
+        retryAfterMs?: number;
         error?: string;
     };
 
     if (parsed.ok === true) {
-        return { ok: true };
+        return {
+            ok: true,
+            expiresAt: typeof parsed.expiresAt === "number" ? parsed.expiresAt : undefined,
+            retryAfterMs: typeof parsed.retryAfterMs === "number" ? parsed.retryAfterMs : undefined
+        };
     }
 
     return {
         ok: false,
-        error: typeof parsed.error === "string" ? parsed.error : "Failed to send sign-in email."
+        error: typeof parsed.error === "string" ? parsed.error : "Failed to send sign-in code."
     };
 }
 
 /**
- * Verifies an email magic-link token and exchanges it for a Daycare app session token.
- * Expects: baseUrl points to daycare-app-server and token is non-empty.
+ * Verifies an email sign-in code and exchanges it for a Daycare app session token.
+ * Expects: baseUrl points to daycare-app-server and email/code are non-empty.
  */
-export async function authEmailVerify(baseUrl: string, token: string): Promise<AuthTokenExchangeResult> {
+export async function authEmailVerify(baseUrl: string, email: string, code: string): Promise<AuthTokenExchangeResult> {
     const response = await fetch(`${baseUrl}/auth/email/verify`, {
         method: "POST",
         headers: {
             "content-type": "application/json"
         },
-        body: JSON.stringify({ token })
+        body: JSON.stringify({ email, code })
     });
 
     const parsed = (await response.json()) as {
@@ -182,7 +190,7 @@ export async function authEmailVerify(baseUrl: string, token: string): Promise<A
 
     return {
         ok: false,
-        error: typeof parsed.error === "string" ? parsed.error : "Magic link verification failed."
+        error: typeof parsed.error === "string" ? parsed.error : "Sign-in code verification failed."
     };
 }
 

@@ -98,7 +98,7 @@ export function SettingsView() {
             setEmailMessage(`We sent a connection link to ${normalizedEmail}.`);
             setEmail("");
         } catch (requestError) {
-            setEmailError(requestError instanceof Error ? requestError.message : "Failed to send email link.");
+            setEmailError(requestError instanceof Error ? requestError.message : "Failed to send connection link.");
         } finally {
             setEmailSubmitting(false);
         }
@@ -150,7 +150,7 @@ export function SettingsView() {
                     ) : (
                         <Item
                             title="No connected emails"
-                            subtitle="Add an email to sign in with a magic link."
+                            subtitle="Add an email to sign in with a code."
                             showChevron={false}
                         />
                     )}

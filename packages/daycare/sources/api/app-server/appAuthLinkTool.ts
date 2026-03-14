@@ -8,7 +8,7 @@ export const APP_AUTH_LINK_EXPIRES_IN_SECONDS = 3600;
 export const APP_AUTH_SESSION_EXPIRES_IN_SECONDS = 365 * 24 * 60 * 60;
 export const APP_AUTH_LINK_SERVICE = "daycare.app-auth.link";
 export const APP_AUTH_DEFAULT_ENDPOINT = "https://daycare.dev";
-export type AppAuthLinkKind = "session" | "email" | "connect-email";
+export type AppAuthLinkKind = "session" | "connect-email";
 
 const appAuthLinkToolSchema = Type.Object({}, { additionalProperties: false });
 type AppAuthLinkArgs = Static<typeof appAuthLinkToolSchema>;

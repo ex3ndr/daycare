@@ -76,22 +76,6 @@ describe("authLinkPayloadFromUrl", () => {
         expect(warnSpy).not.toHaveBeenCalled();
     });
 
-    it("parses email magic-link payloads", () => {
-        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-        const encoded = authLinkPayloadEncode({
-            backendUrl: "http://127.0.0.1:7332/",
-            token: "token-1",
-            kind: "email"
-        });
-
-        expect(authLinkPayloadFromUrl(`https://daycare.dev/verify#${encoded}`)).toEqual({
-            backendUrl: "http://127.0.0.1:7332",
-            token: "token-1",
-            kind: "email"
-        });
-        expect(warnSpy).not.toHaveBeenCalled();
-    });
-
     it("parses connect-email payloads", () => {
         const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
         const encoded = authLinkPayloadEncode({
@@ -112,7 +96,7 @@ describe("authLinkPayloadFromUrl", () => {
 function authLinkPayloadEncode(payload: {
     backendUrl: string;
     token: string;
-    kind?: "session" | "email" | "connect-email";
+    kind?: "session" | "connect-email";
 }): string {
     return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
 }

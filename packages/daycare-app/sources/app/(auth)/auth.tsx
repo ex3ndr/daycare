@@ -3,7 +3,7 @@ import * as React from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { SinglePanelLayout } from "@/components/layout/SinglePanelLayout";
-import { authEmailConnectVerify, authEmailVerify, authTelegramExchange } from "@/modules/auth/authApi";
+import { authEmailConnectVerify, authTelegramExchange } from "@/modules/auth/authApi";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { authLinkPayloadFromUrl } from "@/modules/auth/authLinkPayloadFromUrl";
 import { authRedirectTake } from "@/modules/auth/authRedirectStorage";
@@ -15,7 +15,7 @@ import { tmaInitData } from "@/modules/tma/tmaInitData";
 import { tmaLaunchParams } from "@/modules/tma/tmaLaunchParams";
 import { tmaReady } from "@/modules/tma/tmaReady";
 
-export default function AuthMagicLinkScreen() {
+export default function AuthVerifyScreen() {
     const { theme } = useUnistyles();
     const authBaseUrl = useAuthStore((state) => state.baseUrl);
     const authToken = useAuthStore((state) => state.token);
@@ -100,15 +100,7 @@ export default function AuthMagicLinkScreen() {
         setError(null);
         setSuccess(null);
         try {
-            if (magicPayload.kind === "email") {
-                const result = await authEmailVerify(magicPayload.backendUrl, magicPayload.token);
-                if (!result.ok) {
-                    throw new Error(result.error);
-                }
-                await login(magicPayload.backendUrl, result.token);
-                router.replace((authRedirectTake() ?? "/(app)") as never);
-                return;
-            } else if (magicPayload.kind === "connect-email") {
+            if (magicPayload.kind === "connect-email") {
                 const result = await authEmailConnectVerify(magicPayload.backendUrl, magicPayload.token);
                 if (!result.ok) {
                     throw new Error(result.error);
@@ -130,11 +122,9 @@ export default function AuthMagicLinkScreen() {
             }
         } catch {
             setError(
-                magicPayload.kind === "email"
-                    ? "Email sign-in link expired or invalid. Request a new link."
-                    : magicPayload.kind === "connect-email"
-                      ? "Email connection link expired or invalid. Request a new link from Settings."
-                      : "Magic link expired or invalid. Request a new /app link."
+                magicPayload.kind === "connect-email"
+                    ? "Email connection link expired or invalid. Request a new link from Settings."
+                    : "Magic link expired or invalid. Request a new /app link."
             );
         } finally {
             setIsSubmitting(false);
@@ -190,11 +180,7 @@ export default function AuthMagicLinkScreen() {
                 {magicPayload ? (
                     <>
                         <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
-                            {magicPayload.kind === "email"
-                                ? "Verifying email sign-in with "
-                                : magicPayload.kind === "connect-email"
-                                  ? "Connecting email for "
-                                  : "Connecting to "}
+                            {magicPayload.kind === "connect-email" ? "Connecting email for " : "Connecting to "}
                             <Text style={[styles.value, { color: theme.colors.onSurface }]}>{serverLabel}</Text>
                         </Text>
                         <Pressable

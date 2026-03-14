@@ -486,7 +486,7 @@ describe("AppServer auth endpoints", () => {
         expect(verified.userId).toBe(mappedUser.id);
     });
 
-    it("sends and verifies email magic links through Better Auth", async () => {
+    it("sends and verifies email sign-in codes", async () => {
         const secret = "valid-secret-for-tests-1234567890";
         const built = await appServerCreateForTests({
             secret,
@@ -502,15 +502,19 @@ describe("AppServer auth endpoints", () => {
             body: JSON.stringify({ email: "person@example.com" })
         });
 
-        await expect(requestResponse.json()).resolves.toEqual({ ok: true });
+        await expect(requestResponse.json()).resolves.toEqual({
+            ok: true,
+            expiresAt: expect.any(Number),
+            retryAfterMs: 30_000
+        });
         expect(sendMailMock).toHaveBeenCalledTimes(1);
         const sentMessage = sendMailMock.mock.calls[0]?.[0] as { text?: string } | undefined;
-        const emailToken = appServerEmailTokenExtract(sentMessage?.text ?? "");
+        const emailCode = appServerEmailCodeExtract(sentMessage?.text ?? "");
 
         const verifyResponse = await fetch(`http://127.0.0.1:${built.port}/auth/email/verify`, {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ token: emailToken })
+            body: JSON.stringify({ email: "person@example.com", code: emailCode })
         });
 
         const payload = (await verifyResponse.json()) as {
@@ -552,7 +556,7 @@ describe("AppServer auth endpoints", () => {
         await expect(requestResponse.json()).resolves.toEqual({ ok: true });
         expect(sendMailMock).toHaveBeenCalledTimes(1);
         const sentMessage = sendMailMock.mock.calls[0]?.[0] as { text?: string } | undefined;
-        const connectToken = appServerEmailTokenExtract(sentMessage?.text ?? "");
+        const connectToken = appServerEmailLinkTokenExtract(sentMessage?.text ?? "");
 
         const verifyResponse = await fetch(`http://127.0.0.1:${built.port}/auth/email/connect/verify`, {
             method: "POST",
@@ -735,7 +739,15 @@ describe("AppServer auth endpoints", () => {
     });
 });
 
-function appServerEmailTokenExtract(text: string): string {
+function appServerEmailCodeExtract(text: string): string {
+    const match = text.match(/\b([1-9][0-9]{5})\b/);
+    if (!match?.[1]) {
+        throw new Error("Expected sign-in code in email body.");
+    }
+    return match[1];
+}
+
+function appServerEmailLinkTokenExtract(text: string): string {
     const match = text.match(/https?:\/\/\S+/);
     if (!match?.[0]) {
         throw new Error("Expected auth URL in email body.");

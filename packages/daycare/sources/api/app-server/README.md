@@ -25,6 +25,8 @@ Notes:
 - `POST /auth/validate`: validate session tokens and exchange link tokens to 1-year session tokens
 - `POST /auth/refresh`: validate token and return a fresh 1-year session token
 - `POST /auth/telegram`: verify Telegram WebApp `initData` and issue a 1-year session token
+- `POST /auth/email/request`: send a 6-digit email sign-in code
+- `POST /auth/email/verify`: verify `{ email, code }` and issue a 1-year session token
 
 ### Tasks (authenticated via `Authorization: Bearer <token>`)
 - `GET /tasks/active`: list active tasks with cron/webhook triggers and last execution timestamps
@@ -52,7 +54,8 @@ Both generate a short-lived app URL in the form:
 
 Token lifecycle:
 - Link token (ephemeral): embedded in `/verify#...` URL payload, default TTL is 1 hour.
-- Session token (long-term): returned by `/auth/validate`, `/auth/refresh`, and `/auth/telegram`, TTL is 1 year.
+- Email code (ephemeral): kept only in app-server memory, default TTL is 10 minutes.
+- Session token (long-term): returned by `/auth/validate`, `/auth/refresh`, `/auth/telegram`, and `/auth/email/verify`, TTL is 1 year.
 
 ## Structure
 

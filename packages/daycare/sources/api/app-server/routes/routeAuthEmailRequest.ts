@@ -7,7 +7,7 @@ export type RouteAuthEmailRequestOptions = {
 };
 
 /**
- * Handles POST /auth/email/request and triggers Better Auth magic-link delivery.
+ * Handles POST /auth/email/request and delivers a six-digit sign-in code.
  * Expects: options.emailAuth is configured with SMTP delivery.
  */
 export async function routeAuthEmailRequest(
@@ -23,12 +23,16 @@ export async function routeAuthEmailRequest(
     }
 
     try {
-        await options.emailAuth.request(email, request.headers);
-        appSendJson(response, 200, { ok: true });
+        const result = await options.emailAuth.request(email);
+        appSendJson(response, 200, {
+            ok: true,
+            expiresAt: result.expiresAt,
+            retryAfterMs: result.retryAfterMs
+        });
     } catch (error) {
         appSendJson(response, 200, {
             ok: false,
-            error: error instanceof Error ? error.message : "Failed to send sign-in email."
+            error: error instanceof Error ? error.message : "Failed to send sign-in code."
         });
     }
 }

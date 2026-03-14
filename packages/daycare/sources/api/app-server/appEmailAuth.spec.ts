@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EmailMessage } from "../../email/emailSend.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
@@ -9,81 +9,37 @@ const activeStorages: Storage[] = [];
 
 describe("AppEmailAuth", () => {
     afterEach(async () => {
+        vi.restoreAllMocks();
         await Promise.all(activeStorages.splice(0).map((storage) => storage.connection.close()));
     });
 
-    it("sends an email payload that targets the app auth screen", async () => {
+    it("sends a six-digit code email", async () => {
         const sent: EmailMessage[] = [];
         const storage = await storageOpenTest();
         activeStorages.push(storage);
         const auth = new AppEmailAuth({
-            db: storage.db,
             users: storage.users,
-            host: "127.0.0.1",
-            port: 7332,
-            serverEndpoint: "https://api.example.com",
-            appEndpoint: "https://app.example.com",
             secret: "12345678901234567890123456789012",
             mailSend: async (message) => {
                 sent.push(message);
             }
         });
 
-        await auth.request("person@example.com");
+        const result = await auth.request("person@example.com");
 
+        expect(typeof result.expiresAt).toBe("number");
+        expect(result.retryAfterMs).toBe(30_000);
         expect(sent).toHaveLength(1);
         expect(sent[0]?.to).toBe("person@example.com");
-
-        const payload = appEmailPayloadDecode(sent[0]?.text ?? "");
-        expect(payload.backendUrl).toBe("https://api.example.com");
-        expect(payload.kind).toBe("email");
-        expect(typeof payload.token).toBe("string");
-        expect(payload.token.length).toBeGreaterThan(0);
+        expect(appEmailCodeExtract(sent[0]?.text ?? "")).toMatch(/^[1-9][0-9]{5}$/);
     });
 
-    it("uses request headers when public endpoints are not configured", async () => {
+    it("verifies a code and creates an email-scoped Daycare user", async () => {
         const sent: EmailMessage[] = [];
         const storage = await storageOpenTest();
         activeStorages.push(storage);
         const auth = new AppEmailAuth({
-            db: storage.db,
             users: storage.users,
-            host: "127.0.0.1",
-            port: 7332,
-            secret: "12345678901234567890123456789012",
-            mailSend: async (message) => {
-                sent.push(message);
-            }
-        });
-
-        await auth.request("person@example.com", {
-            origin: "https://app.customer.example",
-            host: "api.customer.example",
-            "x-forwarded-proto": "https"
-        });
-
-        expect(sent).toHaveLength(1);
-        const url = appEmailUrlExtract(sent[0]?.text ?? "");
-        expect(url.origin).toBe("https://app.customer.example");
-        expect(url.pathname).toBe("/verify");
-        expect(appEmailPayloadDecode(sent[0]?.text ?? "")).toEqual({
-            backendUrl: "https://api.customer.example",
-            token: expect.any(String),
-            kind: "email"
-        });
-    });
-
-    it("verifies a magic-link token and creates an email-scoped Daycare user", async () => {
-        const sent: EmailMessage[] = [];
-        const storage = await storageOpenTest();
-        activeStorages.push(storage);
-        const auth = new AppEmailAuth({
-            db: storage.db,
-            users: storage.users,
-            host: "127.0.0.1",
-            port: 7332,
-            serverEndpoint: "https://api.example.com",
-            appEndpoint: "https://app.example.com",
             secret: "12345678901234567890123456789012",
             mailSend: async (message) => {
                 sent.push(message);
@@ -91,8 +47,8 @@ describe("AppEmailAuth", () => {
         });
 
         await auth.request("person@example.com");
-        const payload = appEmailPayloadDecode(sent[0]?.text ?? "");
-        const verified = await auth.verify(payload.token);
+        const code = appEmailCodeExtract(sent[0]?.text ?? "");
+        const verified = await auth.verify("person@example.com", code);
         const user = await storage.users.findById(verified.userId);
 
         expect(verified.email).toBe("person@example.com");
@@ -109,12 +65,7 @@ describe("AppEmailAuth", () => {
             connector: { name: "email", key: "person@example.com" }
         });
         const auth = new AppEmailAuth({
-            db: storage.db,
             users: storage.users,
-            host: "127.0.0.1",
-            port: 7332,
-            serverEndpoint: "https://api.example.com",
-            appEndpoint: "https://app.example.com",
             secret: "12345678901234567890123456789012",
             mailSend: async (message) => {
                 sent.push(message);
@@ -122,31 +73,67 @@ describe("AppEmailAuth", () => {
         });
 
         await auth.request("person@example.com");
-        const payload = appEmailPayloadDecode(sent[0]?.text ?? "");
-        const verified = await auth.verify(payload.token);
+        const code = appEmailCodeExtract(sent[0]?.text ?? "");
+        const verified = await auth.verify("person@example.com", code);
 
         expect(verified.userId).toBe(existing.id);
     });
+
+    it("throttles repeated code requests", async () => {
+        const sent: EmailMessage[] = [];
+        const storage = await storageOpenTest();
+        activeStorages.push(storage);
+        const auth = new AppEmailAuth({
+            users: storage.users,
+            secret: "12345678901234567890123456789012",
+            mailSend: async (message) => {
+                sent.push(message);
+            }
+        });
+
+        await auth.request("person@example.com");
+
+        await expect(auth.request("person@example.com")).rejects.toThrow(
+            "Please wait 30 seconds before requesting another sign-in code."
+        );
+        expect(sent).toHaveLength(1);
+    });
+
+    it("invalidates the code after repeated failures", async () => {
+        const sent: EmailMessage[] = [];
+        const storage = await storageOpenTest();
+        activeStorages.push(storage);
+        const auth = new AppEmailAuth({
+            users: storage.users,
+            secret: "12345678901234567890123456789012",
+            mailSend: async (message) => {
+                sent.push(message);
+            }
+        });
+
+        const nowSpy = vi.spyOn(Date, "now");
+        nowSpy.mockReturnValue(10);
+        await auth.request("person@example.com");
+
+        nowSpy.mockReturnValue(40_000);
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+            await expect(auth.verify("person@example.com", "123456")).rejects.toThrow(
+                "Invalid or expired sign-in code."
+            );
+        }
+        await expect(auth.verify("person@example.com", "123456")).rejects.toThrow(
+            "Too many failed attempts. Request a new sign-in code."
+        );
+
+        const code = appEmailCodeExtract(sent[0]?.text ?? "");
+        await expect(auth.verify("person@example.com", code)).rejects.toThrow("Invalid or expired sign-in code.");
+    });
 });
 
-function appEmailPayloadDecode(text: string): { backendUrl: string; token: string; kind: string } {
-    const url = appEmailUrlExtract(text);
-    const encoded = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
-    if (!encoded) {
-        throw new Error("Expected auth hash payload.");
+function appEmailCodeExtract(text: string): string {
+    const match = text.match(/\b([1-9][0-9]{5})\b/);
+    if (!match?.[1]) {
+        throw new Error("Expected sign-in code in email body.");
     }
-
-    return JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as {
-        backendUrl: string;
-        token: string;
-        kind: string;
-    };
-}
-
-function appEmailUrlExtract(text: string): URL {
-    const match = text.match(/https?:\/\/\S+/);
-    if (!match?.[0]) {
-        throw new Error("Expected auth URL in email body.");
-    }
-    return new URL(match[0]);
+    return match[1];
 }

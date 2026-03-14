@@ -31,7 +31,7 @@ export type AuthStore = {
 };
 
 /**
- * Creates an auth store that can validate and persist magic-link tokens.
+ * Creates an auth store that can validate and persist app session tokens.
  * Expects: dependency methods are side-effect safe and return resolved promises.
  */
 export function authStoreCreate(dependencies: AuthStoreDependencies) {

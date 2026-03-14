@@ -10,7 +10,7 @@ export type RouteAuthEmailVerifyOptions = {
 };
 
 /**
- * Handles POST /auth/email/verify and exchanges a Better Auth token for a Daycare app session token.
+ * Handles POST /auth/email/verify and exchanges an email code for a Daycare app session token.
  * Expects: options.emailAuth is configured and secretResolve returns the active Daycare JWT secret.
  */
 export async function routeAuthEmailVerify(
@@ -19,14 +19,19 @@ export async function routeAuthEmailVerify(
     options: RouteAuthEmailVerifyOptions
 ): Promise<void> {
     const body = await appReadJsonBody(request);
-    const token = typeof body.token === "string" ? body.token.trim() : "";
-    if (!token) {
-        appSendJson(response, 200, { ok: false, error: "Token is required." });
+    const email = typeof body.email === "string" ? body.email.trim() : "";
+    const code = typeof body.code === "string" ? body.code.trim() : "";
+    if (!email) {
+        appSendJson(response, 200, { ok: false, error: "Email is required." });
+        return;
+    }
+    if (!code) {
+        appSendJson(response, 200, { ok: false, error: "Code is required." });
         return;
     }
 
     try {
-        const verified = await options.emailAuth.verify(token, request.headers);
+        const verified = await options.emailAuth.verify(email, code);
         const secret = await options.secretResolve();
         const sessionToken = await jwtSign({ userId: verified.userId }, secret, APP_AUTH_SESSION_EXPIRES_IN_SECONDS);
         appSendJson(response, 200, {
@@ -39,7 +44,7 @@ export async function routeAuthEmailVerify(
     } catch (error) {
         appSendJson(response, 200, {
             ok: false,
-            error: error instanceof Error ? error.message : "Magic link verification failed."
+            error: error instanceof Error ? error.message : "Sign-in code verification failed."
         });
     }
 }

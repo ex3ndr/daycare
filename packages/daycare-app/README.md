@@ -1,6 +1,6 @@
 # Daycare App
 
-Expo app scaffold for Daycare (iOS/Android/Web) with a token-based magic-link auth flow.
+Expo app scaffold for Daycare (iOS/Android/Web) with email-code sign-in plus token-based `/verify` links for app entry flows.
 
 ## Development
 
@@ -23,9 +23,14 @@ Expo app scaffold for Daycare (iOS/Android/Web) with a token-based magic-link au
 
 ## Auth flow
 
-- Open `/verify#<base64url-json>` from the app server link.
-- Hash payload JSON must contain `backendUrl` and `token`.
-- The app displays backend server info and waits for the user to tap `Enter`.
-- On enter, the app calls `POST <backendUrl>/auth/validate`.
-- On success it stores `{ baseUrl, token }` in secure storage (native) or localStorage (web).
-- App shell then renders the authenticated route group.
+- Welcome screen email flow:
+  - Enter an email address.
+  - App calls `POST <backendUrl>/auth/email/request`.
+  - Server emails a 6-digit code.
+  - User enters the code in the app.
+  - App calls `POST <backendUrl>/auth/email/verify` with `{ email, code }`.
+  - On success it stores `{ baseUrl, token }` in secure storage (native) or localStorage (web).
+- `/verify#<base64url-json>` flow:
+  - Used for signed `/app` links and email-connect links.
+  - Hash payload JSON contains `backendUrl`, `token`, and optional `kind`.
+  - The app calls `POST <backendUrl>/auth/validate` for session links or `POST <backendUrl>/auth/email/connect/verify` for email-connect links.
