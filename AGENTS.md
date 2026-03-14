@@ -34,6 +34,8 @@
 - Run `yarn install` before tests.
 - Tests must run against in-memory PGlite only (`:memory:`); do not use file-backed PGlite or Postgres in tests unless explicitly requested.
 - Run CLI in dev: `yarn dev`.
+- Run eval scenarios: `yarn eval <scenario.json> [output.trace.md]`.
+- Eval harness documentation lives at `doc/eval.md`.
 - Run named end-to-end env: `yarn env <name>` (uses `portless`, stores state in `.data/<name>`).
 - Generate auth link for an env: `yarn env:link <name> [userId]`.
 - Env helper scripts: `yarn env:proxy:start` and `yarn env:proxy:stop`.
