@@ -6,6 +6,7 @@ if (!process.env.DAYCARE_LOG_LEVEL && !process.env.LOG_LEVEL) {
 
 const scenarioPath = process.argv[2];
 const outputPath = process.argv[3];
+const cwd = process.env.INIT_CWD || process.cwd();
 
 if (!scenarioPath) {
     console.error("Usage: yarn eval <scenario.json> [output.trace.md]");
@@ -14,4 +15,4 @@ if (!scenarioPath) {
 
 const { evalCli } = await import("../sources/eval/evalCli.ts");
 
-await evalCli(scenarioPath, outputPath);
+await evalCli(scenarioPath, outputPath, { cwd });

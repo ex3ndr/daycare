@@ -12,15 +12,25 @@ export type EvalCliResult = {
     outputPath: string;
 };
 
+type EvalCliOptions = {
+    cwd?: string;
+};
+
 /**
  * Runs a scenario file end-to-end and writes a markdown trace report.
  * Expects: scenarioPath points to a valid JSON file; outputPath defaults next to it as <scenario-name>.trace.md.
  */
-export async function evalCli(scenarioPath: string, outputPath?: string): Promise<EvalCliResult> {
-    const resolvedScenarioPath = path.resolve(scenarioPath);
+export async function evalCli(
+    scenarioPath: string,
+    outputPath?: string,
+    options: EvalCliOptions = {}
+): Promise<EvalCliResult> {
+    const baseDir = options.cwd ?? process.cwd();
+    const resolvedScenarioPath = path.resolve(baseDir, scenarioPath);
     const scenarioJson = await readFile(resolvedScenarioPath, "utf8");
     const scenario = evalScenarioParse(evalJsonParse(scenarioJson, resolvedScenarioPath));
     const resolvedOutputPath = path.resolve(
+        baseDir,
         outputPath ?? path.join(path.dirname(resolvedScenarioPath), `${scenario.name}.trace.md`)
     );
     const harness = await evalHarnessCreate();

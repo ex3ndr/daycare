@@ -30,6 +30,7 @@ yarn eval path/to/scenario.json path/to/output.trace.md
 Default behavior:
 
 - reads a JSON scenario file
+- resolves relative scenario and output paths from the shell directory where `yarn eval` is invoked
 - boots an in-process `AgentSystem`
 - creates or resolves the target agent from the scenario
 - sends all turns synchronously with `postAndAwait()`

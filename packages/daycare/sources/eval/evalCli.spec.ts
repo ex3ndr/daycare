@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -40,6 +40,39 @@ describe("evalCli", () => {
             expect(consoleSpy).toHaveBeenCalledWith("Scenario: cli-test");
         } finally {
             await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("resolves relative scenario paths from an explicit cwd", async () => {
+        const rootDir = await mkdtemp(path.join(os.tmpdir(), "daycare-eval-cli-root-"));
+
+        try {
+            const scenarioPath = path.join(rootDir, ".context", "scenario.json");
+            const outputPath = path.join(rootDir, ".context", "cli-relative.trace.md");
+            const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+            await mkdir(path.dirname(scenarioPath), { recursive: true });
+            await writeFile(
+                scenarioPath,
+                JSON.stringify({
+                    name: "cli-relative",
+                    agent: {
+                        kind: "agent",
+                        path: "eval-agent"
+                    },
+                    turns: [{ role: "user", text: "Hello there" }]
+                }),
+                "utf8"
+            );
+
+            const result = await evalCli(".context/scenario.json", undefined, { cwd: rootDir });
+            const markdown = await readFile(outputPath, "utf8");
+
+            expect(result.outputPath).toBe(outputPath);
+            expect(markdown).toContain("# Eval Trace: cli-relative");
+            expect(consoleSpy).toHaveBeenCalledWith(`Output: ${outputPath}`);
+        } finally {
+            await rm(rootDir, { recursive: true, force: true });
         }
     });
 });
