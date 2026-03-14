@@ -20,7 +20,7 @@ flowchart TD
     D --> F[tasksFormatNextRunRelative]
     E --> G[Local timezone text with zone suffix]
     F --> H[Relative next fire text]
-    C --> K[tasksNextRunMapResolve]
+    C --> K[tasksNextRunCacheResolve]
     K --> L[useTasksLiveNextRuns]
     L --> I[Live list refresh]
     L --> J[Live detail refresh]
