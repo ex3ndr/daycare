@@ -8,17 +8,6 @@ import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
 const REFRESH_INTERVAL_MS = 60_000;
 
-const modalScreenOptions = {
-    presentation: "modal" as const,
-    animation: "fade_from_bottom" as const,
-    webModalStyle: {
-        width: "90vw",
-        height: "90vh",
-        minWidth: "min(1100px, 90vw)",
-        minHeight: "min(800px, 90vh)"
-    }
-};
-
 /**
  * Authenticated app layout. Loads workspaces and their config flags,
  * refreshes periodically, and redirects when auth becomes unavailable.
@@ -94,9 +83,7 @@ export default function AuthenticatedLayout() {
         return <Redirect href="/" />;
     }
 
-    // Wait for workspaces before mounting the Stack.
-    // The root Stack keeps (app) as a screen-slot, so returning null here is safe
-    // and avoids child Navigator remount issues.
+    // Wait for workspaces before mounting the Stack
     if (!workspacesLoaded || !configLoaded) {
         routeDebugLog("app-gate-block", {
             pathname,
@@ -109,13 +96,9 @@ export default function AuthenticatedLayout() {
 
     return (
         <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(main)" />
-            <Stack.Screen name="[workspace]/fragment/[id]" options={modalScreenOptions} />
-            <Stack.Screen name="[workspace]/automation/[id]" options={modalScreenOptions} />
-            <Stack.Screen name="[workspace]/file-preview/[path]" options={modalScreenOptions} />
-            <Stack.Screen name="share" />
+            <Stack.Screen name="index" />
+            <Stack.Screen name="[workspace]" />
             <Stack.Screen name="invite" />
-            <Stack.Screen name="workspace-not-found" />
         </Stack>
     );
 }
