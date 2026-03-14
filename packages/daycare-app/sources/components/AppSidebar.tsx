@@ -573,9 +573,7 @@ const styles = StyleSheet.create({
         fontWeight: "400",
         flex: 1
     },
-    modeLabelActive: {
-        fontWeight: "600"
-    },
+    modeLabelActive: {},
     subItems: {
         paddingLeft: 16,
         marginBottom: 4
