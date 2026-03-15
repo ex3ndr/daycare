@@ -14,6 +14,7 @@ execution.
 - The app calls the ElevenLabs React Native SDK with that session payload and executes client tools locally
 - The built-in `voice_agent_create` tool lets other agents create voice agents through storage
 - Load the `voice-agents-creator` skill when you want the hidden-by-default `voice_agent_create` tool documented in-prompt
+- The app now supports voice calls on both native and web; web uses the ElevenLabs React SDK and starts after a user-triggered microphone permission grant
 
 ```mermaid
 sequenceDiagram
@@ -23,7 +24,7 @@ sequenceDiagram
     participant Registry as VoiceAgentRegistry
     participant EL as ElevenLabs Plugin
     participant App as Daycare App
-    participant SDK as ElevenLabs RN SDK
+    participant SDK as ElevenLabs SDK
 
     Agent->>API: voice_agent_create
     API->>Store: insert prompt/tools/settings
@@ -33,7 +34,7 @@ sequenceDiagram
     Registry->>EL: startSession(request)
     EL-->>API: { agentId, overrides }
     API-->>App: session payload
-    App->>SDK: startSession({ agentId, overrides })
+    App->>SDK: startSession({ agentId, overrides, connectionType })
     SDK-->>App: WebRTC connected
     SDK->>App: client_tool_call
     App-->>SDK: client_tool_result

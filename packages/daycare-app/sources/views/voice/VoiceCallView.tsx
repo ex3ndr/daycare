@@ -7,43 +7,45 @@ import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { voiceAgentRead, voiceSessionStart } from "@/modules/voice/voiceAgentsFetch";
 import { voiceSessionClientToolsBuild } from "@/modules/voice/voiceSession";
-import type { VoiceAgentRecord } from "@/modules/voice/voiceTypes";
+import { voiceTranscriptApply } from "@/modules/voice/voiceTranscriptApply";
+import type { VoiceAgentRecord, VoiceConversationEvent, VoiceTranscriptEntry } from "@/modules/voice/voiceTypes";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
-
-type VoiceTranscriptEntry = {
-    id: string;
-    role: "user" | "agent";
-    text: string;
-};
-
-type ConversationEvent = {
-    type?: string;
-    user_transcription_event?: {
-        user_transcript?: string;
-    };
-    agent_response_event?: {
-        agent_response?: string;
-    };
-    agent_response_correction_event?: {
-        corrected_agent_response?: string;
-    };
-};
 
 export function VoiceCallView(props: { voiceAgentId: string }) {
     if (Platform.OS === "web") {
-        return <VoiceCallWebFallback voiceAgentId={props.voiceAgentId} />;
+        return <VoiceCallWebView voiceAgentId={props.voiceAgentId} />;
     }
 
     return <VoiceCallNativeView voiceAgentId={props.voiceAgentId} />;
 }
 
-function VoiceCallWebFallback(props: { voiceAgentId: string }) {
+function VoiceCallWebView(props: { voiceAgentId: string }) {
     const { theme } = useUnistyles();
     const baseUrl = useAuthStore((s) => s.baseUrl);
     const token = useAuthStore((s) => s.token);
     const { workspaceId } = useWorkspace();
     const [voiceAgent, setVoiceAgent] = React.useState<VoiceAgentRecord | null>(null);
+    const [status, setStatus] = React.useState<string>("disconnected");
+    const [bootstrapping, setBootstrapping] = React.useState(false);
+    const [muted, setMuted] = React.useState(false);
+    const [transcript, setTranscript] = React.useState<VoiceTranscriptEntry[]>([]);
     const [error, setError] = React.useState<string | null>(null);
+    const elevenLabs = require("@elevenlabs/react") as typeof import("@elevenlabs/react");
+    const clientTools = React.useMemo(() => voiceSessionClientToolsBuild(voiceAgent?.tools ?? []), [voiceAgent?.tools]);
+    const conversation = elevenLabs.useConversation({
+        clientTools,
+        micMuted: muted,
+        onError: (message) => {
+            setError(message);
+        },
+        onMessage: ({ message }) => {
+            setTranscript((current) => voiceTranscriptApply(current, message as VoiceConversationEvent));
+        },
+        onStatusChange: ({ status: nextStatus }) => {
+            setStatus(nextStatus);
+        }
+    });
+    const mode = conversation.isSpeaking ? "speaking" : "listening";
 
     React.useEffect(() => {
         if (!baseUrl || !token) {
@@ -59,19 +61,124 @@ function VoiceCallWebFallback(props: { voiceAgentId: string }) {
             });
     }, [baseUrl, token, workspaceId, props.voiceAgentId]);
 
+    React.useEffect(() => {
+        return () => {
+            void conversation.endSession().catch(() => undefined);
+        };
+    }, [conversation]);
+
+    const handleStart = React.useCallback(() => {
+        if (!baseUrl || !token) {
+            setError("Authentication is required to start a voice call.");
+            return;
+        }
+
+        setBootstrapping(true);
+        setError(null);
+
+        void (async () => {
+            try {
+                if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+                    throw new Error("Browser microphone access is unavailable.");
+                }
+                const permissionStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                for (const track of permissionStream.getTracks()) {
+                    track.stop();
+                }
+
+                const started = await voiceSessionStart(baseUrl, token, workspaceId, props.voiceAgentId);
+                setVoiceAgent(started.voiceAgent);
+                await conversation.startSession({
+                    agentId: started.session.agentId,
+                    overrides: started.session.overrides,
+                    userId: workspaceId ?? undefined,
+                    connectionType: "webrtc"
+                });
+            } catch (nextError) {
+                setError(nextError instanceof Error ? nextError.message : "Failed to start voice call");
+                setStatus("disconnected");
+            } finally {
+                setBootstrapping(false);
+            }
+        })();
+    }, [baseUrl, token, workspaceId, props.voiceAgentId, conversation]);
+
+    const handleMuteToggle = React.useCallback(() => {
+        setMuted((current) => !current);
+    }, []);
+
+    const handleHangup = React.useCallback(() => {
+        void conversation.endSession().catch((nextError: unknown) => {
+            setError(nextError instanceof Error ? nextError.message : "Failed to end voice call");
+        });
+    }, [conversation]);
+
     return (
         <View style={{ flex: 1 }}>
-            <PageHeader title={voiceAgent?.name ?? "Voice Call"} icon="unmute" subtitle="Web preview" />
-            <ItemList containerStyle={styles.listContent}>
-                <ItemGroup title="Unavailable on Web">
-                    <View style={styles.centerBlock}>
+            <PageHeader
+                title={voiceAgent?.name ?? "Voice Call"}
+                icon="unmute"
+                subtitle={voiceCallSubtitle(status, mode)}
+            />
+            {bootstrapping ? (
+                <View style={[styles.centered, { flex: 1 }]}>
+                    <ActivityIndicator color={theme.colors.primary} />
+                </View>
+            ) : (
+                <ItemList containerStyle={styles.listContent}>
+                    <ItemGroup
+                        title="Call Controls"
+                        footer={
+                            voiceAgent?.description ??
+                            "Browser calls use the ElevenLabs web SDK and browser mic access."
+                        }
+                    >
+                        <View style={styles.controls}>
+                            {status === "connected" || status === "connecting" ? (
+                                <>
+                                    <VoiceCallButton
+                                        label={muted ? "Unmute" : "Mute"}
+                                        tone={muted ? "muted" : "neutral"}
+                                        onPress={handleMuteToggle}
+                                    />
+                                    <VoiceCallButton label="Hang Up" tone="danger" onPress={handleHangup} />
+                                </>
+                            ) : (
+                                <VoiceCallButton label="Start Call" tone="neutral" onPress={handleStart} />
+                            )}
+                        </View>
+                        <View style={styles.statusGrid}>
+                            <VoiceStat label="Status" value={status} />
+                            <VoiceStat label="Mode" value={mode} />
+                            <VoiceStat label="Mic" value={muted ? "muted" : "live"} />
+                        </View>
                         <Text style={[styles.errorText, { color: theme.colors.onSurfaceVariant }]}>
-                            Voice calls require a native iOS or Android build with LiveKit/WebRTC support.
+                            Browser calls need microphone permission and a user gesture to start.
                         </Text>
                         {error ? <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
-                    </View>
-                </ItemGroup>
-            </ItemList>
+                    </ItemGroup>
+                    <ItemGroup title="Transcript" footer="Realtime transcript events from the active voice session.">
+                        {transcript.length > 0 ? (
+                            transcript.map((entry) => (
+                                <View key={entry.id} style={styles.transcriptRow}>
+                                    <Text style={[styles.transcriptRole, { color: theme.colors.onSurfaceVariant }]}>
+                                        {entry.role === "agent" ? "Agent" : "You"}
+                                    </Text>
+                                    <Text style={[styles.transcriptText, { color: theme.colors.onSurface }]}>
+                                        {entry.text}
+                                    </Text>
+                                </View>
+                            ))
+                        ) : (
+                            <View style={styles.centerBlock}>
+                                <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
+                                    No transcript yet.
+                                </Text>
+                            </View>
+                        )}
+                    </ItemGroup>
+                </ItemList>
+            )}
         </View>
     );
 }
@@ -115,23 +222,7 @@ function VoiceCallNativeView(props: { voiceAgentId: string }) {
             setStatus(nextStatus);
         },
         onMessage: ({ message }) => {
-            const event = message as ConversationEvent;
-            const nextEntry = voiceTranscriptEntryBuild(event);
-            if (!nextEntry) {
-                return;
-            }
-            setTranscript((current) => {
-                if (event.type === "agent_response_correction" && nextEntry.role === "agent") {
-                    const updated = [...current];
-                    for (let index = updated.length - 1; index >= 0; index -= 1) {
-                        if (updated[index]?.role === "agent") {
-                            updated[index] = nextEntry;
-                            return updated;
-                        }
-                    }
-                }
-                return [...current, nextEntry];
-            });
+            setTranscript((current) => voiceTranscriptApply(current, message as VoiceConversationEvent));
         }
     });
 
@@ -282,35 +373,7 @@ function VoiceStat(props: { label: string; value: string }) {
     );
 }
 
-function voiceTranscriptEntryBuild(event: ConversationEvent): VoiceTranscriptEntry | null {
-    if (event.type === "user_transcript" && event.user_transcription_event?.user_transcript?.trim()) {
-        return {
-            id: `user-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-            role: "user",
-            text: event.user_transcription_event.user_transcript.trim()
-        };
-    }
-    if (event.type === "agent_response" && event.agent_response_event?.agent_response?.trim()) {
-        return {
-            id: `agent-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-            role: "agent",
-            text: event.agent_response_event.agent_response.trim()
-        };
-    }
-    if (
-        event.type === "agent_response_correction" &&
-        event.agent_response_correction_event?.corrected_agent_response?.trim()
-    ) {
-        return {
-            id: `agent-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-            role: "agent",
-            text: event.agent_response_correction_event.corrected_agent_response.trim()
-        };
-    }
-    return null;
-}
-
-function voiceCallSubtitle(status: "connecting" | "connected" | "disconnected", mode: "speaking" | "listening") {
+function voiceCallSubtitle(status: string, mode: "speaking" | "listening") {
     return `${status} · ${mode}`;
 }
 

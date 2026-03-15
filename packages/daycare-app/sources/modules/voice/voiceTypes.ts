@@ -10,6 +10,25 @@ export type VoiceAgentToolDefinition = {
     parameters: Record<string, VoiceAgentToolParameter>;
 };
 
+export type VoiceTranscriptEntry = {
+    id: string;
+    role: "user" | "agent";
+    text: string;
+};
+
+export type VoiceConversationEvent = {
+    type?: string;
+    user_transcription_event?: {
+        user_transcript?: string;
+    };
+    agent_response_event?: {
+        agent_response?: string;
+    };
+    agent_response_correction_event?: {
+        corrected_agent_response?: string;
+    };
+};
+
 export type VoiceAgentRecord = {
     id: string;
     userId: string;
