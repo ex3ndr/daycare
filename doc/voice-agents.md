@@ -13,6 +13,7 @@ execution.
   `{ agentId, overrides }`
 - The app calls the ElevenLabs React Native SDK with that session payload and executes client tools locally
 - The built-in `voice_agent_create` tool lets other agents create voice agents through storage
+- Load the `voice-agents-creator` skill when you want the hidden-by-default `voice_agent_create` tool documented in-prompt
 
 ```mermaid
 sequenceDiagram
