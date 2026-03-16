@@ -1,17 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as React from "react";
-import {
-    ActivityIndicator,
-    InteractionManager,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    View
-} from "react-native";
+import { ActivityIndicator, InteractionManager, Pressable, Text, TextInput, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { authEmailVerify } from "@/modules/auth/authApi";
@@ -67,83 +58,81 @@ export default function VerifyScreen() {
     }, [code, defaults.backendUrl, email, login, router, submitting]);
 
     return (
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-            <ScrollView
-                style={styles.flex}
-                contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
-                keyboardShouldPersistTaps="handled"
-            >
-                <View style={styles.top}>
-                    <View style={[styles.iconContainer, { backgroundColor: theme.colors.primaryContainer }]}>
-                        <Ionicons name="mail-outline" size={42} color={theme.colors.onPrimaryContainer} />
-                    </View>
-                    <Text style={[styles.title, { color: theme.colors.onSurface }]}>Check your email</Text>
-                    <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
-                        We sent a 6-digit code to{" "}
-                        <Text style={[styles.email, { color: theme.colors.onSurface }]}>{email ?? "your email"}</Text>
-                    </Text>
+        <KeyboardAwareScrollView
+            style={styles.flex}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
+            keyboardShouldPersistTaps="handled"
+        >
+            <View style={styles.top}>
+                <View style={[styles.iconContainer, { backgroundColor: theme.colors.primaryContainer }]}>
+                    <Ionicons name="mail-outline" size={42} color={theme.colors.onPrimaryContainer} />
                 </View>
-                <View style={styles.form}>
-                    <TextInput
-                        ref={codeInputRef}
-                        autoCapitalize="none"
-                        autoComplete="one-time-code"
-                        autoCorrect={false}
-                        keyboardType="number-pad"
-                        maxLength={6}
-                        onChangeText={setCode}
-                        onSubmitEditing={() => void verifyCode()}
-                        placeholder="000000"
-                        placeholderTextColor={theme.colors.onSurfaceVariant}
-                        returnKeyType="go"
-                        style={[
-                            styles.input,
-                            {
-                                color: theme.colors.onSurface,
-                                backgroundColor: theme.colors.surfaceContainerHighest,
-                                borderColor: theme.colors.outlineVariant
-                            }
-                        ]}
-                        textContentType="oneTimeCode"
-                        value={code}
-                    />
-                    <Pressable
-                        accessibilityRole="button"
-                        disabled={submitting || code.trim().length === 0}
-                        onPress={() => void verifyCode()}
-                        style={({ pressed }) => [
-                            styles.button,
-                            { backgroundColor: theme.colors.primary },
-                            pressed && !submitting ? styles.buttonPressed : null,
-                            submitting || code.trim().length === 0 ? styles.buttonDisabled : null
-                        ]}
-                    >
-                        {submitting ? (
-                            <ActivityIndicator size="small" color={theme.colors.onPrimary} />
-                        ) : (
-                            <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>Verify</Text>
-                        )}
-                    </Pressable>
-                    {error ? <Text style={[styles.feedback, { color: theme.colors.error }]}>{error}</Text> : null}
-                    <Text style={[styles.hint, { color: theme.colors.onSurfaceVariant }]}>
-                        Didn't receive it? Check your spam folder or try again.
+                <Text style={[styles.title, { color: theme.colors.onSurface }]}>Check your email</Text>
+                <Text style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
+                    We sent a 6-digit code to{" "}
+                    <Text style={[styles.email, { color: theme.colors.onSurface }]}>{email ?? "your email"}</Text>
+                </Text>
+            </View>
+            <View style={styles.form}>
+                <TextInput
+                    ref={codeInputRef}
+                    autoCapitalize="none"
+                    autoComplete="one-time-code"
+                    autoCorrect={false}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    onChangeText={setCode}
+                    onSubmitEditing={() => void verifyCode()}
+                    placeholder="000000"
+                    placeholderTextColor={theme.colors.onSurfaceVariant}
+                    returnKeyType="go"
+                    style={[
+                        styles.input,
+                        {
+                            color: theme.colors.onSurface,
+                            backgroundColor: theme.colors.surfaceContainerHighest,
+                            borderColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                    textContentType="oneTimeCode"
+                    value={code}
+                />
+                <Pressable
+                    accessibilityRole="button"
+                    disabled={submitting || code.trim().length === 0}
+                    onPress={() => void verifyCode()}
+                    style={({ pressed }) => [
+                        styles.button,
+                        { backgroundColor: theme.colors.primary },
+                        pressed && !submitting ? styles.buttonPressed : null,
+                        submitting || code.trim().length === 0 ? styles.buttonDisabled : null
+                    ]}
+                >
+                    {submitting ? (
+                        <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+                    ) : (
+                        <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>Verify</Text>
+                    )}
+                </Pressable>
+                {error ? <Text style={[styles.feedback, { color: theme.colors.error }]}>{error}</Text> : null}
+                <Text style={[styles.hint, { color: theme.colors.onSurfaceVariant }]}>
+                    Didn't receive it? Check your spam folder or try again.
+                </Text>
+                <Pressable
+                    accessibilityRole="button"
+                    onPress={() => router.back()}
+                    style={({ pressed }) => [
+                        styles.secondaryButton,
+                        { backgroundColor: theme.colors.surfaceContainerHighest },
+                        pressed && styles.buttonPressed
+                    ]}
+                >
+                    <Text style={[styles.secondaryButtonText, { color: theme.colors.onSurface }]}>
+                        Try another email
                     </Text>
-                    <Pressable
-                        accessibilityRole="button"
-                        onPress={() => router.back()}
-                        style={({ pressed }) => [
-                            styles.secondaryButton,
-                            { backgroundColor: theme.colors.surfaceContainerHighest },
-                            pressed && styles.buttonPressed
-                        ]}
-                    >
-                        <Text style={[styles.secondaryButtonText, { color: theme.colors.onSurface }]}>
-                            Try another email
-                        </Text>
-                    </Pressable>
-                </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
+                </Pressable>
+            </View>
+        </KeyboardAwareScrollView>
     );
 }
 

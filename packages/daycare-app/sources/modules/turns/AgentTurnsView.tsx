@@ -1,5 +1,6 @@
+import { LegendList } from "@legendapp/list";
 import * as React from "react";
-import { ActivityIndicator, FlatList, Text, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useAuthStore } from "@/modules/auth/authContext";
 import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
@@ -97,7 +98,12 @@ export function AgentTurnsView({ agentId }: AgentTurnsViewProps) {
     return (
         <View style={styles.root}>
             <View style={[styles.listPanel, { borderRightColor: theme.colors.outlineVariant }]}>
-                <FlatList data={turnsReversed} keyExtractor={keyExtractor} renderItem={renderItem} />
+                <LegendList
+                    data={turnsReversed}
+                    estimatedItemSize={72}
+                    keyExtractor={keyExtractor}
+                    renderItem={renderItem}
+                />
             </View>
             <View style={styles.detailPanel}>
                 {selectedTurn ? (

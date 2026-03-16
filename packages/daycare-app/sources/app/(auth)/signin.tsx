@@ -1,16 +1,7 @@
 import { useRouter } from "expo-router";
 import * as React from "react";
-import {
-    ActivityIndicator,
-    InteractionManager,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    View
-} from "react-native";
+import { ActivityIndicator, InteractionManager, Pressable, Text, TextInput, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { authEmailRequest } from "@/modules/auth/authApi";
@@ -57,61 +48,59 @@ export default React.memo(function SignIn() {
     }, [defaults.backendUrl, email, router, submitting]);
 
     return (
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-            <ScrollView
-                style={styles.flex}
-                contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
-                keyboardShouldPersistTaps="handled"
-            >
-                <View style={styles.top}>
-                    <Text style={[styles.title, { color: theme.colors.onSurface }]}>Sign in with email</Text>
-                    <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-                        Enter your email and we'll send a sign-in code.
-                    </Text>
-                </View>
-                <View style={styles.form}>
-                    <TextInput
-                        ref={emailInputRef}
-                        autoCapitalize="none"
-                        autoComplete="email"
-                        autoCorrect={false}
-                        keyboardType="email-address"
-                        onChangeText={setEmail}
-                        onSubmitEditing={() => void requestMagicLink()}
-                        placeholder="you@company.com"
-                        placeholderTextColor={theme.colors.onSurfaceVariant}
-                        returnKeyType="go"
-                        style={[
-                            styles.input,
-                            {
-                                color: theme.colors.onSurface,
-                                backgroundColor: theme.colors.surfaceContainerHighest,
-                                borderColor: theme.colors.outlineVariant
-                            }
-                        ]}
-                        value={email}
-                    />
-                    <Pressable
-                        accessibilityRole="button"
-                        disabled={submitting || email.trim().length === 0}
-                        onPress={() => void requestMagicLink()}
-                        style={({ pressed }) => [
-                            styles.button,
-                            { backgroundColor: theme.colors.primary },
-                            pressed && !submitting ? styles.buttonPressed : null,
-                            submitting || email.trim().length === 0 ? styles.buttonDisabled : null
-                        ]}
-                    >
-                        {submitting ? (
-                            <ActivityIndicator size="small" color={theme.colors.onPrimary} />
-                        ) : (
-                            <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>Continue</Text>
-                        )}
-                    </Pressable>
-                    {error ? <Text style={[styles.feedback, { color: theme.colors.error }]}>{error}</Text> : null}
-                </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
+        <KeyboardAwareScrollView
+            style={styles.flex}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
+            keyboardShouldPersistTaps="handled"
+        >
+            <View style={styles.top}>
+                <Text style={[styles.title, { color: theme.colors.onSurface }]}>Sign in with email</Text>
+                <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+                    Enter your email and we'll send a sign-in code.
+                </Text>
+            </View>
+            <View style={styles.form}>
+                <TextInput
+                    ref={emailInputRef}
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    onChangeText={setEmail}
+                    onSubmitEditing={() => void requestMagicLink()}
+                    placeholder="you@company.com"
+                    placeholderTextColor={theme.colors.onSurfaceVariant}
+                    returnKeyType="go"
+                    style={[
+                        styles.input,
+                        {
+                            color: theme.colors.onSurface,
+                            backgroundColor: theme.colors.surfaceContainerHighest,
+                            borderColor: theme.colors.outlineVariant
+                        }
+                    ]}
+                    value={email}
+                />
+                <Pressable
+                    accessibilityRole="button"
+                    disabled={submitting || email.trim().length === 0}
+                    onPress={() => void requestMagicLink()}
+                    style={({ pressed }) => [
+                        styles.button,
+                        { backgroundColor: theme.colors.primary },
+                        pressed && !submitting ? styles.buttonPressed : null,
+                        submitting || email.trim().length === 0 ? styles.buttonDisabled : null
+                    ]}
+                >
+                    {submitting ? (
+                        <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+                    ) : (
+                        <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>Continue</Text>
+                    )}
+                </Pressable>
+                {error ? <Text style={[styles.feedback, { color: theme.colors.error }]}>{error}</Text> : null}
+            </View>
+        </KeyboardAwareScrollView>
     );
 });
 

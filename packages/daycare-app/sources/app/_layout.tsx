@@ -117,27 +117,40 @@ export default function RootLayout() {
         <>
             <StatusBar barStyle={theme.dark ? "light-content" : "dark-content"} />
             <AuthProvider>
-                <VoiceSdkProvider>
-                    <AlertProvider>
-                        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-                            <View style={{ flexDirection: "column", flexGrow: 1, flexBasis: 0 }}>
-                                <ThemeProvider value={navigationTheme}>
-                                    <Stack screenOptions={{ headerShown: false }}>
-                                        <Stack.Protected guard={authState === "authenticated"}>
-                                            <Stack.Screen name="(app)" />
-                                        </Stack.Protected>
-                                        <Stack.Protected guard={authState === "unauthenticated"}>
-                                            <Stack.Screen name="(auth)" />
-                                        </Stack.Protected>
-                                    </Stack>
-                                </ThemeProvider>
-                            </View>
-                        </SafeAreaProvider>
-                    </AlertProvider>
-                </VoiceSdkProvider>
+                <KeyboardSdkProvider>
+                    <VoiceSdkProvider>
+                        <AlertProvider>
+                            <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+                                <View style={{ flexDirection: "column", flexGrow: 1, flexBasis: 0 }}>
+                                    <ThemeProvider value={navigationTheme}>
+                                        <Stack screenOptions={{ headerShown: false }}>
+                                            <Stack.Protected guard={authState === "authenticated"}>
+                                                <Stack.Screen name="(app)" />
+                                            </Stack.Protected>
+                                            <Stack.Protected guard={authState === "unauthenticated"}>
+                                                <Stack.Screen name="(auth)" />
+                                            </Stack.Protected>
+                                        </Stack>
+                                    </ThemeProvider>
+                                </View>
+                            </SafeAreaProvider>
+                        </AlertProvider>
+                    </VoiceSdkProvider>
+                </KeyboardSdkProvider>
             </AuthProvider>
         </>
     );
+}
+
+function KeyboardSdkProvider(props: { children: React.ReactNode }) {
+    if (Platform.OS === "web") {
+        return <>{props.children}</>;
+    }
+
+    const { KeyboardProvider } =
+        require("react-native-keyboard-controller") as typeof import("react-native-keyboard-controller");
+
+    return <KeyboardProvider>{props.children}</KeyboardProvider>;
 }
 
 function VoiceSdkProvider(props: { children: React.ReactNode }) {
