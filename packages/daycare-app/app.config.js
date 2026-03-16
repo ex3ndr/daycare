@@ -60,6 +60,7 @@ export default {
                     root: "./sources/app"
                 }
             ],
+            "expo-image",
             "expo-secure-store",
             "expo-system-ui",
             "@livekit/react-native-expo-plugin",
