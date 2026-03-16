@@ -46,6 +46,8 @@ function VoiceCallWebView(props: { voiceAgentId: string }) {
         }
     });
     const mode = conversation.isSpeaking ? "speaking" : "listening";
+    const conversationRef = React.useRef(conversation);
+    conversationRef.current = conversation;
 
     React.useEffect(() => {
         if (!baseUrl || !token) {
@@ -63,9 +65,9 @@ function VoiceCallWebView(props: { voiceAgentId: string }) {
 
     React.useEffect(() => {
         return () => {
-            void conversation.endSession().catch(() => undefined);
+            void conversationRef.current.endSession().catch(() => undefined);
         };
-    }, [conversation]);
+    }, []);
 
     const handleStart = React.useCallback(() => {
         if (!baseUrl || !token) {
@@ -225,6 +227,8 @@ function VoiceCallNativeView(props: { voiceAgentId: string }) {
             setTranscript((current) => voiceTranscriptApply(current, message as VoiceConversationEvent));
         }
     });
+    const conversationRef = React.useRef(conversation);
+    conversationRef.current = conversation;
 
     React.useEffect(() => {
         if (!baseUrl || !token || startedRef.current) {
@@ -242,7 +246,7 @@ function VoiceCallNativeView(props: { voiceAgentId: string }) {
                     return;
                 }
                 setVoiceAgent(started.voiceAgent);
-                await conversation.startSession({
+                await conversationRef.current.startSession({
                     agentId: started.session.agentId,
                     overrides: started.session.overrides,
                     userId: workspaceId ?? undefined
@@ -261,9 +265,9 @@ function VoiceCallNativeView(props: { voiceAgentId: string }) {
 
         return () => {
             cancelled = true;
-            void conversation.endSession().catch(() => undefined);
+            void conversationRef.current.endSession().catch(() => undefined);
         };
-    }, [baseUrl, token, workspaceId, props.voiceAgentId, conversation]);
+    }, [baseUrl, token, workspaceId, props.voiceAgentId]);
 
     React.useEffect(() => {
         if (!localParticipant) {
