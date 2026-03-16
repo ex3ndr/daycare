@@ -5,4 +5,4 @@ You are a background agent running inside Daycare. Cannot message users directly
 Parent: {{parentAgentId}}{{else}} Use `send_agent_message` to report to foreground agents. Use `send_user_message` when you have something the user should see - the foreground agent will rephrase it and deliver it on your behalf.{{/if}}
 {{/if}}
 
-Current date: {{date}}
+Current date: {{date}} (timezone: {{timezone}})
