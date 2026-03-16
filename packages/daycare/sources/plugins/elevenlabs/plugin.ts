@@ -1,5 +1,5 @@
 import path from "node:path";
-import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+import { ElevenLabs, ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import type {
     AllowedOutputFormats,
     BodyAudioIsolationV1AudioIsolationPost,
@@ -7,10 +7,6 @@ import type {
     BodyTextToSpeechFull,
     CreateSoundEffectRequest,
     TextToSpeechConvertRequestOutputFormat
-} from "@elevenlabs/elevenlabs-js/api";
-import {
-    AllowedOutputFormats as mediaOutputFormats,
-    TextToSpeechConvertRequestOutputFormat as textToSpeechOutputFormats
 } from "@elevenlabs/elevenlabs-js/api";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
@@ -33,12 +29,14 @@ const SPEECH_OUTPUT_FORMAT_ALIASES: Record<string, TextToSpeechConvertRequestOut
     mpeg: "mp3_44100_128",
     wav: "wav_44100"
 };
-const SPEECH_OUTPUT_FORMATS_SUPPORTED = new Set<string>(Object.values(textToSpeechOutputFormats));
+const SPEECH_OUTPUT_FORMATS_SUPPORTED = new Set<string>(
+    Object.values(ElevenLabs.TextToSpeechConvertRequestOutputFormat)
+);
 const MEDIA_OUTPUT_FORMAT_ALIASES: Record<string, AllowedOutputFormats> = {
     mp3: "mp3_44100_128",
     mpeg: "mp3_44100_128"
 };
-const MEDIA_OUTPUT_FORMATS_SUPPORTED = new Set<string>(Object.values(mediaOutputFormats));
+const MEDIA_OUTPUT_FORMATS_SUPPORTED = new Set<string>(Object.values(ElevenLabs.AllowedOutputFormats));
 
 const ELEVENLABS_MUSIC_TOOL = "elevenlabs_generate_music";
 const ELEVENLABS_SOUND_EFFECTS_TOOL = "elevenlabs_generate_sound_effects";

@@ -42,7 +42,17 @@ const { convertMock, composeMock, soundEffectsConvertMock, audioIsolationConvert
     });
 
 vi.mock("@elevenlabs/elevenlabs-js", () => ({
-    ElevenLabsClient: elevenLabsClientMock
+    ElevenLabsClient: elevenLabsClientMock,
+    ElevenLabs: {
+        AllowedOutputFormats: {
+            mp3_44100_128: "mp3_44100_128",
+            wav_44100: "wav_44100"
+        },
+        TextToSpeechConvertRequestOutputFormat: {
+            mp3_44100_128: "mp3_44100_128",
+            wav_44100: "wav_44100"
+        }
+    }
 }));
 
 describe("elevenlabs plugin", () => {
