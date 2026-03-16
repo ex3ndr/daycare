@@ -211,4 +211,42 @@ describe("configSettingsParse", () => {
             }
         });
     });
+
+    it("accepts compaction limits with per-model overrides", () => {
+        const parsed = configSettingsParse({
+            agents: {
+                emergencyContextLimit: 200_000,
+                compaction: {
+                    warningLimit: 160_000,
+                    criticalLimit: 190_000,
+                    models: {
+                        "anthropic/claude-opus-4-6": {
+                            emergencyLimit: 1_000_000
+                        },
+                        "anthropic/claude-sonnet-4-6": {
+                            warningLimit: 700_000,
+                            criticalLimit: 850_000
+                        }
+                    }
+                }
+            }
+        });
+
+        expect(parsed.agents).toEqual({
+            emergencyContextLimit: 200_000,
+            compaction: {
+                warningLimit: 160_000,
+                criticalLimit: 190_000,
+                models: {
+                    "anthropic/claude-opus-4-6": {
+                        emergencyLimit: 1_000_000
+                    },
+                    "anthropic/claude-sonnet-4-6": {
+                        warningLimit: 700_000,
+                        criticalLimit: 850_000
+                    }
+                }
+            }
+        });
+    });
 });

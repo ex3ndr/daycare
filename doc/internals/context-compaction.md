@@ -5,8 +5,10 @@ from recent history plus the current system prompt and compacts when thresholds 
 
 ## Strategy
 
-- Warning threshold: 75% of `settings.agents.emergencyContextLimit`.
-- Critical threshold: 90% of `settings.agents.emergencyContextLimit`.
+- Default warning threshold: 75% of the resolved emergency limit.
+- Default critical threshold: 90% of the resolved emergency limit.
+- Global overrides live under `settings.agents.compaction`.
+- Per-model overrides live under `settings.agents.compaction.models["<provider>/<model>"]`.
 - Estimates include history plus heuristic extras (system prompt, tool payloads, incoming raw text).
 - When warning/critical, the agent notifies the user that compaction is starting, runs compaction
   immediately, and resumes inference with the compacted context.

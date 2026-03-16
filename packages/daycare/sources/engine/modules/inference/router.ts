@@ -2,6 +2,7 @@ import type { AssistantMessage, Context } from "@mariozechner/pi-ai";
 import type { AuthStore } from "../../../auth/store.js";
 import { getLogger } from "../../../log.js";
 import { listActiveInferenceProviders } from "../../../providers/catalog.js";
+import { providerSettingsResolveModel } from "../../../providers/providerSettingsResolveModel.js";
 import type { ProviderSettings } from "../../../settings.js";
 import type { ConfigModule } from "../../config/configModule.js";
 import type { InferenceRegistry } from "../inferenceRegistry.js";
@@ -63,48 +64,51 @@ export class InferenceRouter {
             let lastError: unknown = null;
 
             for (const [index, providerConfig] of providers.entries()) {
+                const resolvedProviderConfig = providerSettingsResolveModel(providerConfig);
                 this.logger.debug(
-                    `event: Trying provider providerIndex=${index} providerId=${providerConfig.id} model=${providerConfig.model}`
+                    `event: Trying provider providerIndex=${index} providerId=${resolvedProviderConfig.id} model=${resolvedProviderConfig.model}`
                 );
 
-                const provider = this.registry.get(providerConfig.id);
+                const provider = this.registry.get(resolvedProviderConfig.id);
                 if (!provider) {
-                    this.logger.warn({ provider: providerConfig.id }, "event: Missing inference provider");
-                    this.logger.debug(`skip: Provider not found in registry, skipping providerId=${providerConfig.id}`);
+                    this.logger.warn({ provider: resolvedProviderConfig.id }, "event: Missing inference provider");
+                    this.logger.debug(
+                        `skip: Provider not found in registry, skipping providerId=${resolvedProviderConfig.id}`
+                    );
                     continue;
                 }
 
                 let client: Awaited<ReturnType<typeof provider.createClient>>;
                 try {
                     this.logger.debug(
-                        `event: Creating inference client providerId=${providerConfig.id} model=${providerConfig.model}`
+                        `event: Creating inference client providerId=${resolvedProviderConfig.id} model=${resolvedProviderConfig.model}`
                     );
                     client = await provider.createClient({
-                        model: providerConfig.model,
-                        config: providerConfig.options,
+                        model: resolvedProviderConfig.model,
+                        config: resolvedProviderConfig.options,
                         auth: this.auth,
                         logger: this.logger
                     });
                     this.logger.debug(
-                        `create: Inference client created providerId=${providerConfig.id} modelId=${client.modelId}`
+                        `create: Inference client created providerId=${resolvedProviderConfig.id} modelId=${client.modelId}`
                     );
                 } catch (error) {
                     this.logger.debug(
-                        `error: Failed to create client, falling back providerId=${providerConfig.id} error=${String(error)}`
+                        `error: Failed to create client, falling back providerId=${resolvedProviderConfig.id} error=${String(error)}`
                     );
                     lastError = error;
-                    options?.onFallback?.(providerConfig.id, error);
+                    options?.onFallback?.(resolvedProviderConfig.id, error);
                     continue;
                 }
 
-                options?.onAttempt?.(providerConfig.id, client.modelId);
+                options?.onAttempt?.(resolvedProviderConfig.id, client.modelId);
                 try {
                     this.logger.debug(
-                        `event: Calling client.complete() providerId=${providerConfig.id} modelId=${client.modelId} sessionId=${sessionId}`
+                        `event: Calling client.complete() providerId=${resolvedProviderConfig.id} modelId=${client.modelId} sessionId=${sessionId}`
                     );
                     // Provider API expects `sessionId`; caller owns how this is scoped/rotated.
                     const providerOptions = {
-                        ...(providerConfig.reasoning ? { reasoning: providerConfig.reasoning } : {}),
+                        ...(resolvedProviderConfig.reasoning ? { reasoning: resolvedProviderConfig.reasoning } : {}),
                         ...(options?.providerOptions ?? {}),
                         sessionId,
                         signal: options?.signal
@@ -114,15 +118,15 @@ export class InferenceRouter {
                     });
                     inferenceOutputTokensValidate(message);
                     this.logger.debug(
-                        `event: Inference completed successfully providerId=${providerConfig.id} modelId=${client.modelId} stopReason=${message.stopReason} contentBlocks=${message.content.length} inputTokens=${message.usage?.input} outputTokens=${message.usage?.output}`
+                        `event: Inference completed successfully providerId=${resolvedProviderConfig.id} modelId=${client.modelId} stopReason=${message.stopReason} contentBlocks=${message.content.length} inputTokens=${message.usage?.input} outputTokens=${message.usage?.output}`
                     );
-                    options?.onSuccess?.(providerConfig.id, client.modelId, message);
-                    return { message, providerId: providerConfig.id, modelId: client.modelId };
+                    options?.onSuccess?.(resolvedProviderConfig.id, client.modelId, message);
+                    return { message, providerId: resolvedProviderConfig.id, modelId: client.modelId };
                 } catch (error) {
                     this.logger.debug(
-                        `error: Inference call failed providerId=${providerConfig.id} error=${String(error)}`
+                        `error: Inference call failed providerId=${resolvedProviderConfig.id} error=${String(error)}`
                     );
-                    options?.onFailure?.(providerConfig.id, error);
+                    options?.onFailure?.(resolvedProviderConfig.id, error);
                     throw error;
                 }
             }

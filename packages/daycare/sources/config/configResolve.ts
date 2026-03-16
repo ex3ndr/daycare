@@ -1,9 +1,11 @@
 import path from "node:path";
 
+import { contextCompactionLimitsBuild } from "../engine/agents/ops/contextCompactionLimitsBuild.js";
 import { resolveEngineSocketPath } from "../engine/ipc/socket.js";
 import { DEFAULT_DAYCARE_DIR } from "../paths.js";
 import { sandboxResourceLimitsResolve } from "../sandbox/sandboxResourceLimitsResolve.js";
 import type {
+    AgentCompactionModelConfig,
     DockerSettings,
     OpenSandboxSettings,
     ResolvedSettingsConfig,
@@ -55,7 +57,13 @@ export function configResolve(settings: SettingsConfig, settingsPath: string, ov
 }
 
 function resolveSettingsDefaults(settings: SettingsConfig): ResolvedSettingsConfig {
-    const emergencyContextLimit = settings.agents?.emergencyContextLimit ?? 200_000;
+    const emergencyContextLimit =
+        settings.agents?.compaction?.emergencyLimit ?? settings.agents?.emergencyContextLimit ?? 200_000;
+    const compactionLimits = contextCompactionLimitsBuild({
+        emergencyLimit: emergencyContextLimit,
+        warningLimit: settings.agents?.compaction?.warningLimit,
+        criticalLimit: settings.agents?.compaction?.criticalLimit
+    });
     const appReviewerEnabled = settings.security?.appReviewerEnabled ?? false;
     const docker = resolveDockerDefaults(settings.docker);
     const sandbox = resolveSandboxDefaults(settings.sandbox);
@@ -65,7 +73,11 @@ function resolveSettingsDefaults(settings: SettingsConfig): ResolvedSettingsConf
         ...settings,
         agents: {
             ...settings.agents,
-            emergencyContextLimit
+            emergencyContextLimit: compactionLimits.emergencyLimit,
+            compaction: {
+                ...compactionLimits,
+                models: resolveAgentCompactionModels(settings.agents?.compaction?.models)
+            }
         },
         security: {
             ...settings.security,
@@ -192,4 +204,12 @@ function configStringOrUndefined(input: string | undefined): string | undefined 
     }
     const trimmed = input.trim();
     return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function resolveAgentCompactionModels(models: AgentCompactionModelConfig | undefined): AgentCompactionModelConfig {
+    if (!models) {
+        return {};
+    }
+
+    return Object.fromEntries(Object.entries(models).map(([key, value]) => [key, { ...value }]));
 }

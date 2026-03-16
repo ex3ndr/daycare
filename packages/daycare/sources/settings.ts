@@ -81,8 +81,31 @@ export type ModelFlavorEntry = {
 
 export type ModelFlavorConfig = Record<ModelFlavorKey, ModelFlavorEntry>;
 
+export type AgentCompactionLimitEntry = {
+    emergencyLimit?: number;
+    warningLimit?: number;
+    criticalLimit?: number;
+};
+
+export type AgentCompactionModelConfig = Record<string, AgentCompactionLimitEntry>;
+
+export type AgentCompactionSettings = AgentCompactionLimitEntry & {
+    models?: AgentCompactionModelConfig;
+};
+
+export type ResolvedAgentCompactionLimitEntry = {
+    emergencyLimit: number;
+    warningLimit: number;
+    criticalLimit: number;
+};
+
+export type ResolvedAgentCompactionSettings = ResolvedAgentCompactionLimitEntry & {
+    models: AgentCompactionModelConfig;
+};
+
 export type AgentSettings = {
     emergencyContextLimit?: number;
+    compaction?: AgentCompactionSettings;
 };
 
 export type SecuritySettings = {
@@ -172,7 +195,10 @@ export type ResolvedSettingsConfig = Omit<
     SettingsConfig,
     "agents" | "security" | "docker" | "sandbox" | "opensandbox"
 > & {
-    agents: Required<AgentSettings>;
+    agents: {
+        emergencyContextLimit: number;
+        compaction: ResolvedAgentCompactionSettings;
+    };
     security: Required<SecuritySettings>;
     docker: ResolvedDockerSettings;
     sandbox: ResolvedSandboxSettings;
@@ -356,9 +382,25 @@ function settingsNormalize(settings: SettingsConfig): SettingsConfig {
     const modelFlavors = settings.modelFlavors
         ? Object.fromEntries(Object.entries(settings.modelFlavors).map(([key, value]) => [key, { ...value }]))
         : undefined;
+    const compaction = settings.agents?.compaction
+        ? {
+              ...settings.agents.compaction,
+              models: settings.agents.compaction.models
+                  ? Object.fromEntries(
+                        Object.entries(settings.agents.compaction.models).map(([key, value]) => [key, { ...value }])
+                    )
+                  : undefined
+          }
+        : undefined;
 
     return {
         ...settings,
+        agents: settings.agents
+            ? {
+                  ...settings.agents,
+                  compaction
+              }
+            : undefined,
         models: models as ModelRoleConfig | undefined,
         modelFlavors: modelFlavors as ModelFlavorConfig | undefined,
         providers: settings.providers?.map((provider) => ({ ...provider })),

@@ -60,7 +60,13 @@ describe("agentSandboxBackendConfigBuild", () => {
 function settingsBuild(overrides: Partial<ResolvedSettingsConfig> = {}): ResolvedSettingsConfig {
     return {
         agents: {
-            emergencyContextLimit: 200_000
+            emergencyContextLimit: 200_000,
+            compaction: {
+                emergencyLimit: 200_000,
+                warningLimit: 150_000,
+                criticalLimit: 180_000,
+                models: {}
+            }
         },
         security: {
             appReviewerEnabled: false

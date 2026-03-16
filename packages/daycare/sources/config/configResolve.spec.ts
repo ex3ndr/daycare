@@ -71,6 +71,57 @@ describe("configResolve", () => {
         expect(config.settings.security.appReviewerEnabled).toBe(false);
     });
 
+    it("defaults compaction thresholds from the emergency context limit", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+        const config = configResolve({}, configPath);
+
+        expect(config.settings.agents).toEqual({
+            emergencyContextLimit: 200_000,
+            compaction: {
+                emergencyLimit: 200_000,
+                warningLimit: 150_000,
+                criticalLimit: 180_000,
+                models: {}
+            }
+        });
+    });
+
+    it("resolves explicit compaction settings and preserves model overrides", () => {
+        const configPath = path.join("/tmp/daycare", "settings.json");
+        const config = configResolve(
+            {
+                agents: {
+                    emergencyContextLimit: 250_000,
+                    compaction: {
+                        emergencyLimit: 300_000,
+                        warningLimit: 225_000,
+                        criticalLimit: 280_000,
+                        models: {
+                            "anthropic/claude-opus-4-6": {
+                                emergencyLimit: 1_000_000
+                            }
+                        }
+                    }
+                }
+            },
+            configPath
+        );
+
+        expect(config.settings.agents).toEqual({
+            emergencyContextLimit: 300_000,
+            compaction: {
+                emergencyLimit: 300_000,
+                warningLimit: 225_000,
+                criticalLimit: 280_000,
+                models: {
+                    "anthropic/claude-opus-4-6": {
+                        emergencyLimit: 1_000_000
+                    }
+                }
+            }
+        });
+    });
+
     it("resolves security.appReviewerEnabled from settings", () => {
         const configPath = path.join("/tmp/daycare", "settings.json");
         const config = configResolve({ security: { appReviewerEnabled: false } }, configPath);

@@ -767,6 +767,16 @@ export type SettingsConfig = {
   };
   agents?: {
     emergencyContextLimit?: number;
+    compaction?: {
+      emergencyLimit?: number;
+      warningLimit?: number;
+      criticalLimit?: number;
+      models?: Record<string, {
+        emergencyLimit?: number;
+        warningLimit?: number;
+        criticalLimit?: number;
+      }>;
+    };
   };
   security?: {
     appReviewerEnabled?: boolean;

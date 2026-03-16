@@ -151,11 +151,8 @@ function resolveModelId(providerId: string, models: ProviderModelInfo[], preferr
         return preferred;
     }
 
-    return (
-        models.find((model) => model.id.endsWith("-latest")) ??
-        models.find((model) => model.id.includes("latest")) ??
-        models[0]!
-    ).id;
+    // The curated provider registry is ordered with the intended default model first.
+    return models[0]!.id;
 }
 
 function pickDefaultModel(models: ProviderModelInfo[]): ProviderModelInfo | null {

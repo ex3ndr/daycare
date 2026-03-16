@@ -7,6 +7,7 @@ import type { AgentConfig, AgentKind, AgentPath, Context, MessageContext } from 
 import { getLogger } from "../../log.js";
 import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import { modelRoleApply } from "../../providers/modelRoleApply.js";
+import { providerSettingsResolveModel } from "../../providers/providerSettingsResolveModel.js";
 import { Sandbox } from "../../sandbox/sandbox.js";
 import { cuid2Is } from "../../utils/cuid2Is.js";
 import { channelMessageBuild, channelSignalDataParse } from "../channels/channelMessageBuild.js";
@@ -53,6 +54,7 @@ import type {
 import { agentWrite } from "./ops/agentWrite.js";
 import { bundledExamplesDirResolve } from "./ops/bundledExamplesDirResolve.js";
 import { contextCompact } from "./ops/contextCompact.js";
+import { contextCompactionLimitsResolve } from "./ops/contextCompactionLimitsResolve.js";
 import { contextCompactionStatus } from "./ops/contextCompactionStatus.js";
 import { contextEstimateTokens } from "./ops/contextEstimateTokens.js";
 import { messageContextReset } from "./ops/messageContextReset.js";
@@ -524,7 +526,7 @@ export class Agent {
                 : null;
         const compactionStatus = contextCompactionStatus(
             history,
-            this.agentSystem.config.current.settings.agents.emergencyContextLimit,
+            contextCompactionLimitsResolve(this.agentSystem.config.current, providerSettings),
             {
                 minimumTokens: usagePromptTokens ?? undefined,
                 extras: {
@@ -1483,7 +1485,7 @@ export class Agent {
             this.state.modelOverride,
             providerId,
             this.agentSystem.config.current.settings.modelFlavors
-        );
+        ).map(providerSettingsResolveModel);
         return { providers, providerId };
     }
 

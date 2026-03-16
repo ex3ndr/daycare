@@ -1,12 +1,10 @@
 import type { AgentHistoryRecord } from "./agentTypes.js";
+import type { ContextCompactionLimits } from "./contextCompactionLimitsBuild.js";
 import { contextEstimateTokens } from "./contextEstimateTokens.js";
 import {
     type ContextEstimateTokensExtras,
     contextEstimateTokensWithExtras
 } from "./contextEstimateTokensWithExtras.js";
-
-const WARNING_RATIO = 0.75;
-const CRITICAL_RATIO = 0.9;
 
 export type ContextCompactionStatus = {
     estimatedTokens: number;
@@ -25,11 +23,11 @@ export type ContextCompactionStatusOptions = {
 
 /**
  * Evaluates compaction pressure against the emergency context limit.
- * Expects: emergencyLimit is a positive integer.
+ * Expects: limits are already normalized.
  */
 export function contextCompactionStatus(
     history: AgentHistoryRecord[],
-    emergencyLimit: number,
+    limits: ContextCompactionLimits,
     options: ContextCompactionStatusOptions = {}
 ): ContextCompactionStatus {
     const baseTokens = contextEstimateTokens(history);
@@ -38,8 +36,7 @@ export function contextCompactionStatus(
         minimumTokensNormalize(options.minimumTokens)
     );
     const extraTokens = Math.max(0, estimatedTokens - baseTokens);
-    const warningLimit = Math.max(1, Math.floor(emergencyLimit * WARNING_RATIO));
-    const criticalLimit = Math.max(warningLimit + 1, Math.floor(emergencyLimit * CRITICAL_RATIO));
+    const { emergencyLimit, warningLimit, criticalLimit } = limits;
     const utilization = emergencyLimit > 0 ? Math.min(1, estimatedTokens / emergencyLimit) : 0;
     const severity = estimatedTokens >= criticalLimit ? "critical" : estimatedTokens >= warningLimit ? "warning" : "ok";
 

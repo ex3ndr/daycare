@@ -1,5 +1,6 @@
 import type { AgentHistoryRecord, Config } from "@/types";
-
+import type { ProviderSettings } from "../../../settings.js";
+import { contextCompactionLimitsResolve } from "./contextCompactionLimitsResolve.js";
 import {
     type ContextEstimateTokensExtras,
     contextEstimateTokensWithExtras
@@ -12,8 +13,9 @@ import {
 export function contextNeedsEmergencyReset(
     config: Config,
     history: AgentHistoryRecord[],
-    extras?: ContextEstimateTokensExtras
+    extras?: ContextEstimateTokensExtras,
+    provider?: ProviderSettings | null
 ): boolean {
-    const limit = config.settings.agents.emergencyContextLimit;
+    const limit = contextCompactionLimitsResolve(config, provider).emergencyLimit;
     return contextEstimateTokensWithExtras(history, extras) >= limit;
 }

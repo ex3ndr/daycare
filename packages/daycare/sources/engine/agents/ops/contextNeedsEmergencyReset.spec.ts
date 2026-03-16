@@ -26,4 +26,26 @@ describe("contextNeedsEmergencyReset", () => {
 
         expect(contextNeedsEmergencyReset(config, history, { systemPrompt: "x".repeat(40) })).toBe(true);
     });
+
+    it("uses per-model compaction overrides when a provider is supplied", () => {
+        const config = configResolve(
+            {
+                agents: {
+                    compaction: {
+                        models: {
+                            "anthropic/claude-opus-4-6": {
+                                emergencyLimit: 1_000_000
+                            }
+                        }
+                    }
+                }
+            },
+            path.resolve("/tmp/settings.json")
+        );
+        const history: AgentHistoryRecord[] = [{ type: "user_message", at: 1, text: "x".repeat(24), files: [] }];
+
+        expect(
+            contextNeedsEmergencyReset(config, history, undefined, { id: "anthropic", model: "claude-opus-4-6" })
+        ).toBe(false);
+    });
 });

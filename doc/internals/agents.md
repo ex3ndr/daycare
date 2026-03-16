@@ -165,7 +165,8 @@ flowchart LR
 
 ## Emergency context pruning
 The agent estimates context size from history and compares it to the emergency limit
-(`settings.agents.emergencyContextLimit`, default 200000).
+resolved from `settings.agents.emergencyContextLimit` plus optional
+`settings.agents.compaction` per-model overrides.
 
 ```mermaid
 flowchart LR

@@ -128,7 +128,24 @@ export function configSettingsParse(raw: unknown): SettingsConfig {
                 .optional(),
             agents: z
                 .object({
-                    emergencyContextLimit: z.number().int().positive().optional()
+                    emergencyContextLimit: z.number().int().positive().optional(),
+                    compaction: z
+                        .object({
+                            emergencyLimit: z.number().int().positive().optional(),
+                            warningLimit: z.number().int().positive().optional(),
+                            criticalLimit: z.number().int().positive().optional(),
+                            models: z
+                                .record(
+                                    z.object({
+                                        emergencyLimit: z.number().int().positive().optional(),
+                                        warningLimit: z.number().int().positive().optional(),
+                                        criticalLimit: z.number().int().positive().optional()
+                                    })
+                                )
+                                .optional()
+                        })
+                        .passthrough()
+                        .optional()
                 })
                 .passthrough()
                 .optional(),
