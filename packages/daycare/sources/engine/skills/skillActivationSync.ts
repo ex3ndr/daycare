@@ -7,6 +7,7 @@ import { skillActivationKeyBuild } from "./skillActivationKeyBuild.js";
 import type { AgentSkill } from "./skillTypes.js";
 
 const logger = getLogger("engine.skills");
+const NFS_TEMP_PREFIX = ".nfs";
 
 /**
  * Syncs current skills into a managed active root for sandbox mounting.
@@ -61,8 +62,8 @@ async function skillActivateCopy(skill: AgentSkill, activeRoot: string, activati
     }
 
     try {
-        await fs.rm(targetSkillDir, { recursive: true, force: true });
-        await fs.cp(sourceSkillDir, targetSkillDir, { recursive: true });
+        await directoryResetNfsTolerant(targetSkillDir);
+        await fs.cp(sourceSkillDir, targetSkillDir, { recursive: true, force: true });
     } catch (error) {
         logger.warn({ skillId: skill.id, sourcePath: sourceSkillPath, targetSkillDir, error }, "skip: Copy failed");
     }
@@ -75,7 +76,7 @@ async function skillActivationCleanupStale(activeRoot: string, expectedKeys: Set
             continue;
         }
         const stalePath = path.join(activeRoot, entry.name);
-        await fs.rm(stalePath, { recursive: true, force: true });
+        await pathRemoveNfsTolerant(stalePath);
     }
 }
 
@@ -110,4 +111,62 @@ async function skillFrontmatterHasName(skillPath: string): Promise<boolean> {
 function pathIsWithinRoot(root: string, target: string): boolean {
     const relative = path.relative(root, target);
     return relative.length === 0 || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+// NFS can leave open deleted files behind as transient .nfs* placeholders.
+async function directoryResetNfsTolerant(targetDir: string): Promise<void> {
+    await fs.mkdir(targetDir, { recursive: true });
+    const entries = await fs.readdir(targetDir, { withFileTypes: true });
+    for (const entry of entries) {
+        if (entry.name.startsWith(NFS_TEMP_PREFIX)) {
+            continue;
+        }
+
+        const entryPath = path.join(targetDir, entry.name);
+        if (entry.isDirectory()) {
+            await directoryResetNfsTolerant(entryPath);
+            await directoryRemoveIfEmpty(entryPath);
+            continue;
+        }
+
+        await pathRemoveNfsTolerant(entryPath);
+    }
+}
+
+async function pathRemoveNfsTolerant(targetPath: string): Promise<void> {
+    const stats = await fileStatSafe(targetPath);
+    if (!stats) {
+        return;
+    }
+
+    if (stats.isDirectory()) {
+        await directoryResetNfsTolerant(targetPath);
+        await directoryRemoveIfEmpty(targetPath);
+        return;
+    }
+
+    try {
+        await fs.rm(targetPath, { force: true });
+    } catch (error) {
+        if (path.basename(targetPath).startsWith(NFS_TEMP_PREFIX) && errorCode(error) === "EBUSY") {
+            return;
+        }
+        throw error;
+    }
+}
+
+async function directoryRemoveIfEmpty(targetDir: string): Promise<void> {
+    try {
+        await fs.rmdir(targetDir);
+    } catch (error) {
+        const code = errorCode(error);
+        if (code === "ENOENT" || code === "ENOTEMPTY" || code === "EEXIST") {
+            return;
+        }
+        throw error;
+    }
+}
+
+function errorCode(error: unknown): string | undefined {
+    return (error as NodeJS.ErrnoException).code;
 }

@@ -63,6 +63,34 @@ describe("skillActivationSync", () => {
         }
     });
 
+    it("refreshes a skill even when transient .nfs files exist in the target dir", async () => {
+        const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skill-activation-"));
+        const activeRoot = path.join(baseDir, "active");
+        try {
+            const sourcePath = await skillFileCreate(path.join(baseDir, "skills"), "deploy", "v1");
+            const skill = skillBuild("config:deploy", "deploy", "config", sourcePath);
+            const targetDir = path.join(activeRoot, skillActivationKeyBuild(skill.id));
+            const targetPath = path.join(targetDir, "SKILL.md");
+
+            await skillActivationSync([skill], activeRoot);
+            await fs.writeFile(path.join(targetDir, ".nfs123"), "busy", "utf8");
+
+            const newerAt = new Date(Date.now() + 5_000);
+            await fs.writeFile(
+                sourcePath,
+                await fs.readFile(sourcePath, "utf8").then((content) => content.replace("v1", "v2"))
+            );
+            await fs.utimes(sourcePath, newerAt, newerAt);
+
+            await skillActivationSync([skill], activeRoot);
+
+            await expect(fs.readFile(targetPath, "utf8")).resolves.toContain("v2");
+            await expect(fs.readFile(path.join(targetDir, ".nfs123"), "utf8")).resolves.toBe("busy");
+        } finally {
+            await fs.rm(baseDir, { recursive: true, force: true });
+        }
+    });
+
     it("cleans stale active entries when skills are removed", async () => {
         const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skill-activation-"));
         const activeRoot = path.join(baseDir, "active");
@@ -76,6 +104,24 @@ describe("skillActivationSync", () => {
 
             await skillActivationSync([], activeRoot);
             await expect(fs.stat(path.join(activeRoot, key))).rejects.toThrow();
+        } finally {
+            await fs.rm(baseDir, { recursive: true, force: true });
+        }
+    });
+
+    it("removes stale normal files but leaves transient .nfs files for later cleanup", async () => {
+        const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "daycare-skill-activation-"));
+        const activeRoot = path.join(baseDir, "active");
+        try {
+            const staleDir = path.join(activeRoot, "stale");
+            await fs.mkdir(staleDir, { recursive: true });
+            await fs.writeFile(path.join(staleDir, "SKILL.md"), "old", "utf8");
+            await fs.writeFile(path.join(staleDir, ".nfs123"), "busy", "utf8");
+
+            await skillActivationSync([], activeRoot);
+
+            await expect(fs.stat(path.join(staleDir, "SKILL.md"))).rejects.toThrow();
+            await expect(fs.readFile(path.join(staleDir, ".nfs123"), "utf8")).resolves.toBe("busy");
         } finally {
             await fs.rm(baseDir, { recursive: true, force: true });
         }

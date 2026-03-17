@@ -20,6 +20,7 @@ Before each inference call, `Skills.syncToActive()` copies all listed skills to 
 - unchanged skills are skipped by `mtime` check
 - removed skills are deleted from `skills/active`
 - only skills with valid `name` frontmatter are copied
+- transient `.nfs*` placeholders are ignored during refresh and stale cleanup
 
 ```mermaid
 flowchart TD
@@ -28,8 +29,10 @@ flowchart TD
     C --> D[skillActivationKeyBuild from skill.id]
     D --> E{target SKILL.md mtime >= source?}
     E -->|yes| F[skip copy]
-    E -->|no| G[copy source folder to skills/active/<key>]
-    C --> H[remove stale active entries]
+    E -->|no| G[remove normal target entries]
+    G --> H[keep transient .nfs* placeholders]
+    H --> I[copy source folder to skills/active/<key>]
+    C --> J[remove stale active entries]
 ```
 
 ## Tool Loading
