@@ -1,0 +1,46 @@
+{
+    "name": "foreground-subagent-first",
+    "agent": {
+        "kind": "connector",
+        "path": "telegram"
+    },
+    "turns": [
+        {
+            "role": "user",
+            "text": "Investigate the onboarding failures and report back."
+        }
+    ],
+    "inference": {
+        "type": "scripted",
+        "calls": [
+            {
+                "branches": [
+                    {
+                        "whenSystemPromptIncludes": [
+                            "be subagent-first for almost every non-trivial request",
+                            "use `start_background_agent` before doing the substantive work yourself"
+                        ],
+                        "toolCall": {
+                            "id": "tool-1",
+                            "name": "start_background_agent",
+                            "arguments": {
+                                "name": "onboarding-diagnosis",
+                                "prompt": "Investigate the onboarding failures and report back."
+                            }
+                        }
+                    },
+                    {
+                        "message": "I can investigate inline, but I am not being pushed strongly enough toward a background subagent."
+                    }
+                ]
+            },
+            {
+                "branches": [
+                    {
+                        "message": "Started a background subagent to investigate the onboarding failures and report back."
+                    }
+                ]
+            }
+        ]
+    }
+}

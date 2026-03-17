@@ -118,6 +118,51 @@ Rules:
 - every turn must currently be a user turn
 - every turn must contain non-empty `text`
 
+Optional scripted inference:
+
+- `inference.type: "scripted"` lets a scenario provide deterministic mock model behavior
+- `inference.calls` is the ordered list of inference completions for the run
+- each call contains `branches`, evaluated in order
+- a branch may match on `whenSystemPromptIncludes`
+- a matching branch returns either a text `message` or a `toolCall`
+
+Example:
+
+```json
+{
+    "name": "subagent-first",
+    "agent": {
+        "kind": "connector",
+        "path": "telegram"
+    },
+    "turns": [{ "role": "user", "text": "Investigate the onboarding failures." }],
+    "inference": {
+        "type": "scripted",
+        "calls": [
+            {
+                "branches": [
+                    {
+                        "whenSystemPromptIncludes": [
+                            "be subagent-first for almost every non-trivial request"
+                        ],
+                        "toolCall": {
+                            "id": "tool-1",
+                            "name": "start_background_agent",
+                            "arguments": {
+                                "prompt": "Investigate the onboarding failures."
+                            }
+                        }
+                    },
+                    {
+                        "message": "inline fallback"
+                    }
+                ]
+            }
+        ]
+    }
+}
+```
+
 ### Supported Agent Kinds
 
 The current scenario format supports direct path-addressable kinds only:
@@ -225,7 +270,7 @@ Sections:
 Current mappings:
 
 - `user_message` → `### User`
-- `assistant_message` → `### Assistant`
+- `assistant_message` → `### Assistant` plus rendered tool calls when present
 - `assistant_rewrite` → `#### Assistant Rewrite`
 - `rlm_start` → `#### Code Execution` plus a code fence
 - `rlm_tool_call` → blockquoted tool call line
@@ -342,7 +387,7 @@ DAYCARE_LOG_LEVEL=debug yarn eval path/to/scenario.json
 
 ### I want richer model responses
 
-Programmatic callers can pass a custom `InferenceRouter` into `evalHarnessCreate()`. The CLI uses the default mock router, which returns `"ok"` unless the code is extended to inject custom canned responses.
+Use scenario-defined scripted inference when you want deterministic prompt-sensitive tool use through the CLI. Programmatic callers can still pass a custom `InferenceRouter` into `evalHarnessCreate()` for more complex cases.
 
 ## Future Extensions
 
@@ -350,7 +395,6 @@ Good next steps if the harness grows:
 
 - assertions embedded in scenario files
 - batch scenario execution
-- scenario-defined mock inference outputs
 - richer filtering/formatting for large event logs
 - support for nested agent kinds that require parent context
 - trace diffing between two runs

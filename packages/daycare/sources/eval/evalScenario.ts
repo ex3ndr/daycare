@@ -11,6 +11,46 @@ const evalTurnSchema = z
     })
     .strict();
 
+const evalInferenceToolCallSchema = z
+    .object({
+        id: z.string().trim().min(1, "inference toolCall.id is required"),
+        name: z.string().trim().min(1, "inference toolCall.name is required"),
+        arguments: z.record(z.string(), z.unknown())
+    })
+    .strict();
+
+const evalInferenceBranchSchema = z
+    .object({
+        whenSystemPromptIncludes: z
+            .array(z.string().trim().min(1, "whenSystemPromptIncludes entry is required"))
+            .optional(),
+        message: z.string().trim().min(1, "inference message is required").optional(),
+        toolCall: evalInferenceToolCallSchema.optional()
+    })
+    .strict()
+    .superRefine((branch, ctx) => {
+        const responseCount = (branch.message ? 1 : 0) + (branch.toolCall ? 1 : 0);
+        if (responseCount !== 1) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "each inference branch must define exactly one of message or toolCall"
+            });
+        }
+    });
+
+const evalInferenceCallSchema = z
+    .object({
+        branches: z.array(evalInferenceBranchSchema).min(1, "inference call must contain at least one branch")
+    })
+    .strict();
+
+const evalInferenceSchema = z
+    .object({
+        type: z.literal("scripted"),
+        calls: z.array(evalInferenceCallSchema).min(1, "inference calls must contain at least one step")
+    })
+    .strict();
+
 const evalScenarioSchema = z
     .object({
         name: z
@@ -28,7 +68,8 @@ const evalScenarioSchema = z
                     .refine((value) => !value.includes("/"), "agent.path must not include '/'")
             })
             .strict(),
-        turns: z.array(evalTurnSchema).min(1, "turns must contain at least one turn")
+        turns: z.array(evalTurnSchema).min(1, "turns must contain at least one turn"),
+        inference: evalInferenceSchema.optional()
     })
     .strict();
 
@@ -39,6 +80,23 @@ export type EvalTurn = {
     text: string;
 };
 
+export type EvalInferenceBranch = {
+    whenSystemPromptIncludes?: string[];
+    message?: string;
+    toolCall?: {
+        id: string;
+        name: string;
+        arguments: Record<string, unknown>;
+    };
+};
+
+export type EvalScenarioInference = {
+    type: "scripted";
+    calls: Array<{
+        branches: EvalInferenceBranch[];
+    }>;
+};
+
 export type EvalScenario = {
     name: string;
     agent: {
@@ -46,6 +104,7 @@ export type EvalScenario = {
         path: string;
     };
     turns: EvalTurn[];
+    inference?: EvalScenarioInference;
 };
 
 /**

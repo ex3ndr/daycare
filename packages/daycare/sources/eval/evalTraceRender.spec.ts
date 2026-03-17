@@ -10,6 +10,7 @@ describe("evalTraceRender", () => {
         expect(markdown).toContain("# Eval Trace: render-test");
         expect(markdown).toContain("### User");
         expect(markdown).toContain("### Assistant");
+        expect(markdown).toContain('> Tool Call: start_background_agent({"prompt":"Investigate"})');
         expect(markdown).toContain("#### Assistant Rewrite");
         expect(markdown).toContain("#### Code Execution");
         expect(markdown).toContain('> Tool: run_python({"code":"print(\'hi\')"})');
@@ -81,7 +82,15 @@ function evalTraceFixtureBuild(): EvalTrace {
             {
                 type: "assistant_message",
                 at: 1200,
-                content: [{ type: "text", text: "hi there" }],
+                content: [
+                    { type: "text", text: "hi there" },
+                    {
+                        type: "toolCall",
+                        id: "tool-2",
+                        name: "start_background_agent",
+                        arguments: { prompt: "Investigate" }
+                    }
+                ],
                 tokens: {
                     provider: "openai",
                     model: "gpt-4.1",

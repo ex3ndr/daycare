@@ -1,6 +1,7 @@
 import type { AgentHistoryRecord } from "@/types";
 
 import { messageContentExtractText } from "../engine/messages/messageContentExtractText.js";
+import { messageContentExtractToolCalls } from "../engine/messages/messageContentExtractToolCalls.js";
 import { stringTruncateHeadTail } from "../utils/stringTruncateHeadTail.js";
 import type { EvalTrace } from "./evalRun.js";
 
@@ -63,8 +64,26 @@ function evalHistoryRender(record: AgentHistoryRecord): string[] {
         return ["### User", "", record.text];
     }
     if (record.type === "assistant_message") {
-        const text = messageContentExtractText(record.content) || "_No assistant text content._";
-        return ["### Assistant", "", text];
+        const text = messageContentExtractText(record.content);
+        const toolCalls = messageContentExtractToolCalls(record.content);
+        const lines = ["### Assistant", ""];
+
+        if (text) {
+            lines.push(text);
+        }
+        if (text && toolCalls.length > 0) {
+            lines.push("");
+        }
+        if (toolCalls.length > 0) {
+            lines.push(
+                ...toolCalls.map((toolCall) => `> Tool Call: ${toolCall.name}(${evalJsonInline(toolCall.arguments)})`)
+            );
+        }
+        if (!text && toolCalls.length === 0) {
+            lines.push("_No assistant text content._");
+        }
+
+        return lines;
     }
     if (record.type === "assistant_rewrite") {
         return ["#### Assistant Rewrite", "", `> Reason: ${record.reason}`, `> Text: ${record.text}`];

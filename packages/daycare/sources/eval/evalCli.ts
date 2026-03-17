@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { evalHarnessCreate } from "./evalHarness.js";
+import { evalInferenceRouterScenarioBuild } from "./evalInferenceRouterScenarioBuild.js";
 import { type EvalTrace, evalRun } from "./evalRun.js";
 import { type EvalScenario, evalScenarioParse } from "./evalScenario.js";
 import { evalTraceRender } from "./evalTraceRender.js";
@@ -33,7 +34,8 @@ export async function evalCli(
         baseDir,
         outputPath ?? path.join(path.dirname(resolvedScenarioPath), `${scenario.name}.trace.md`)
     );
-    const harness = await evalHarnessCreate();
+    const inferenceRouter = evalInferenceRouterScenarioBuild(scenario);
+    const harness = await evalHarnessCreate(inferenceRouter ? { inferenceRouter } : {});
 
     try {
         const trace = await evalRun(scenario, harness);
