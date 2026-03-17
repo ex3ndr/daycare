@@ -33,8 +33,6 @@ export function HomeView() {
 const styles = StyleSheet.create((theme) => ({
     root: {
         flex: 1,
-        maxWidth: theme.layout.maxWidth,
-        alignSelf: "center",
         width: "100%"
     },
     topSpacer: {

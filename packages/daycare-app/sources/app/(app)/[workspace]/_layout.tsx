@@ -5,14 +5,12 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-na
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { AppSidebar, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from "@/components/AppSidebar";
-import { CHAT_COLLAPSED_WIDTH, CHAT_PANEL_WIDTH, ChatPanel } from "@/components/ChatPanel";
 import { useConfigStore } from "@/modules/config/configContext";
 import { WorkspaceSync } from "@/modules/sync/WorkspaceSync";
 import { useWorkspace, WorkspaceProvider } from "@/modules/workspaces/workspaceProvider";
 import { useWorkspacesStore } from "@/modules/workspaces/workspacesContext";
 
 const SIDEBAR_KEY = "daycare:sidebar-collapsed";
-const CHAT_KEY = "daycare:chat-collapsed";
 
 function panelStateRead(key: string, fallback: boolean): boolean {
     try {
@@ -48,7 +46,7 @@ export default function WorkspaceLayout() {
     }
 
     const stack = (
-        <Stack screenOptions={{ headerShown: false }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.surface } }}>
             <Stack.Screen name="(tabs)" />
         </Stack>
     );
@@ -62,7 +60,7 @@ export default function WorkspaceLayout() {
     );
 }
 
-/** Desktop: sidebar on left, content in center, chat panel on right. */
+/** Desktop: sidebar on left, content on right. */
 function DesktopShell({ children }: { children: React.ReactNode }) {
     const { theme } = useUnistyles();
     const insets = useSafeAreaInsets();
@@ -87,34 +85,12 @@ function DesktopShell({ children }: { children: React.ReactNode }) {
         width: sidebarWidth.value
     }));
 
-    // Chat panel state
-    const initialChatCollapsed = React.useMemo(() => panelStateRead(CHAT_KEY, true), []);
-    const chatWidth = useSharedValue(initialChatCollapsed ? CHAT_COLLAPSED_WIDTH : CHAT_PANEL_WIDTH);
-    const chatLabelsOpacity = useSharedValue(initialChatCollapsed ? 0 : 1);
-
-    const toggleChat = React.useCallback(() => {
-        const isCollapsed = chatWidth.value <= CHAT_COLLAPSED_WIDTH;
-        panelStateWrite(CHAT_KEY, !isCollapsed);
-        chatWidth.value = withTiming(isCollapsed ? CHAT_PANEL_WIDTH : CHAT_COLLAPSED_WIDTH, { duration: 200 });
-        chatLabelsOpacity.value = withTiming(isCollapsed ? 1 : 0, { duration: 120 });
-    }, [chatWidth, chatLabelsOpacity]);
-
-    const chatAnimatedStyle = useAnimatedStyle(() => ({
-        width: chatWidth.value
-    }));
-
-    const cardMargins = {
-        marginTop: 8 + insets.top,
-        marginBottom: 8 + insets.bottom
-    };
-    const cardShadow = `0px 1px 2px ${theme.colors.shadow}0D, 0px 1px 3px ${theme.colors.shadow}14`;
-
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
             {appReady && (
                 <Animated.View
                     style={[
-                        styles.sidebarCard,
+                        styles.sidebarArea,
                         sidebarAnimatedStyle,
                         { backgroundColor: theme.colors.surfaceContainerLow, paddingTop: insets.top }
                     ]}
@@ -127,29 +103,7 @@ function DesktopShell({ children }: { children: React.ReactNode }) {
                     />
                 </Animated.View>
             )}
-            <View
-                style={[
-                    styles.contentCard,
-                    { ...cardMargins, backgroundColor: theme.colors.surface, boxShadow: cardShadow }
-                ]}
-            >
-                {children}
-            </View>
-            {appReady && (
-                <Animated.View
-                    style={[
-                        styles.chatCard,
-                        chatAnimatedStyle,
-                        {
-                            ...cardMargins,
-                            backgroundColor: theme.colors.surface,
-                            boxShadow: cardShadow
-                        }
-                    ]}
-                >
-                    <ChatPanel onToggleCollapse={toggleChat} labelsOpacity={chatLabelsOpacity} panelWidth={chatWidth} />
-                </Animated.View>
-            )}
+            <View style={[styles.contentArea, { backgroundColor: theme.colors.surface }]}>{children}</View>
         </View>
     );
 }
@@ -166,26 +120,15 @@ const styles = StyleSheet.create({
     root: {
         flexGrow: 1,
         flexBasis: 0,
-        flexDirection: "row",
-        gap: 6,
-        paddingHorizontal: 8
+        flexDirection: "row"
     },
-    sidebarCard: {
+    sidebarArea: {
         overflow: "hidden",
         flexShrink: 0
     },
-    contentCard: {
+    contentArea: {
         flex: 1,
-        borderRadius: 8,
         overflow: "hidden"
-    },
-    chatCard: {
-        borderTopLeftRadius: 8,
-        borderBottomLeftRadius: 8,
-        borderTopRightRadius: 16,
-        borderBottomRightRadius: 16,
-        overflow: "hidden",
-        flexShrink: 0
     },
 
     // Mobile

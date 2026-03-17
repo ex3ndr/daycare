@@ -5,12 +5,14 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 
 export type ChatInputProps = {
     onSend: (text: string) => void;
+    placeholder?: string;
 };
 
 /**
- * Rounded message input with send button.
+ * Chat input with toolbar row — styled after Manus.
+ * Rounded container with text area, plus button, and send button.
  */
-export function ChatInput({ onSend }: ChatInputProps) {
+export function ChatInput({ onSend, placeholder }: ChatInputProps) {
     const { theme } = useUnistyles();
     const [text, setText] = React.useState("");
     const hasText = text.trim().length > 0;
@@ -39,14 +41,14 @@ export function ChatInput({ onSend }: ChatInputProps) {
                 style={[
                     styles.panel,
                     {
-                        backgroundColor: theme.colors.surfaceContainerHigh,
-                        borderColor: theme.colors.outlineVariant
+                        backgroundColor: theme.colors.surfaceContainerLowest,
+                        borderColor: "rgba(0, 0, 0, 0.08)"
                     }
                 ]}
             >
                 <TextInput
                     style={[styles.input, { color: theme.colors.onSurface }]}
-                    placeholder="Message..."
+                    placeholder={placeholder ?? "Ask anything..."}
                     placeholderTextColor={theme.colors.onSurfaceVariant}
                     value={text}
                     onChangeText={setText}
@@ -55,20 +57,30 @@ export function ChatInput({ onSend }: ChatInputProps) {
                     maxLength={10000}
                     submitBehavior="newline"
                 />
-                <Pressable
-                    onPress={handleSend}
-                    disabled={!hasText}
-                    style={[
-                        styles.sendButton,
-                        { backgroundColor: hasText ? theme.colors.primary : theme.colors.outlineVariant }
-                    ]}
-                >
-                    <Octicons
-                        name="arrow-up"
-                        size={14}
-                        color={hasText ? theme.colors.onPrimary : theme.colors.onSurfaceVariant}
-                    />
-                </Pressable>
+                <View style={styles.toolbar}>
+                    <View style={styles.toolbarLeft}>
+                        <Pressable style={styles.toolButton}>
+                            <Octicons name="plus" size={18} color={theme.colors.onSurfaceVariant} />
+                        </Pressable>
+                    </View>
+                    <Pressable
+                        onPress={handleSend}
+                        disabled={!hasText}
+                        style={[
+                            styles.sendButton,
+                            {
+                                backgroundColor: hasText ? theme.colors.onSurface : theme.colors.surfaceContainerHigh,
+                                opacity: hasText ? 1 : 0.5
+                            }
+                        ]}
+                    >
+                        <Octicons
+                            name="arrow-up"
+                            size={14}
+                            color={hasText ? theme.colors.surface : theme.colors.onSurfaceVariant}
+                        />
+                    </Pressable>
+                </View>
             </View>
         </View>
     );
@@ -76,31 +88,54 @@ export function ChatInput({ onSend }: ChatInputProps) {
 
 const styles = StyleSheet.create((theme) => ({
     wrapper: {
-        paddingHorizontal: 12,
-        paddingTop: 8,
-        paddingBottom: theme.layout.isMobileLayout ? 8 : 16
+        maxWidth: 720,
+        width: "100%",
+        alignSelf: "center",
+        paddingHorizontal: 24
     },
     panel: {
-        flexDirection: "row",
-        alignItems: "flex-end",
-        paddingLeft: 16,
-        paddingRight: 6,
-        paddingVertical: 6,
-        borderRadius: 24,
-        borderWidth: 1
+        borderRadius: 22,
+        borderWidth: 1,
+        paddingTop: 14,
+        ...Platform.select({
+            web: {
+                boxShadow: "0px 12px 32px 0px rgba(0, 0, 0, 0.02)"
+            }
+        })
     },
     input: {
-        flex: 1,
-        fontSize: 13,
-        fontFamily: "IBMPlexMono-Regular",
-        maxHeight: 120,
-        paddingVertical: 4,
-        lineHeight: 20
+        fontSize: 15,
+        lineHeight: 24,
+        minHeight: 48,
+        maxHeight: 216,
+        paddingHorizontal: 20,
+        paddingTop: 0,
+        paddingBottom: 0
+    },
+    toolbar: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: 12,
+        paddingTop: 8,
+        paddingBottom: 12
+    },
+    toolbarLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8
+    },
+    toolButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: "center",
+        justifyContent: "center"
     },
     sendButton: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         alignItems: "center",
         justifyContent: "center"
     }
