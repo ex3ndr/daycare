@@ -31,7 +31,7 @@ describe("evalCli", () => {
                 "utf8"
             );
 
-            const result = await evalCli(scenarioPath);
+            const result = await evalCli(scenarioPath, undefined, { mode: "mock" });
             const markdown = await readFile(outputPath, "utf8");
 
             expect(result.outputPath).toBe(outputPath);
@@ -65,7 +65,7 @@ describe("evalCli", () => {
                 "utf8"
             );
 
-            const result = await evalCli(".context/scenario.json", undefined, { cwd: rootDir });
+            const result = await evalCli(".context/scenario.json", undefined, { cwd: rootDir, mode: "mock" });
             const markdown = await readFile(outputPath, "utf8");
 
             expect(result.outputPath).toBe(outputPath);
@@ -100,7 +100,7 @@ describe("evalCli", () => {
                                     {
                                         whenSystemPromptIncludes: [
                                             "be subagent-first for almost every non-trivial request",
-                                            "use `start_background_agent` before doing the substantive work yourself"
+                                            "your first substantive action must be launching `start_background_agent` or `start_background_workflow`"
                                         ],
                                         toolCall: {
                                             id: "tool-1",
@@ -131,7 +131,7 @@ describe("evalCli", () => {
                 "utf8"
             );
 
-            const result = await evalCli(scenarioPath, outputPath);
+            const result = await evalCli(scenarioPath, outputPath, { mode: "mock" });
             const markdown = await readFile(outputPath, "utf8");
 
             expect(markdown).toContain(

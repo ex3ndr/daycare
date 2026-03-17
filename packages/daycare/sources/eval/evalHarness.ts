@@ -9,12 +9,14 @@ import { Channels } from "../engine/channels/channels.js";
 import { ConfigModule } from "../engine/config/configModule.js";
 import { Crons } from "../engine/cron/crons.js";
 import { engineToolsRegister } from "../engine/engineToolsRegister.js";
+import { FileFolder } from "../engine/files/fileFolder.js";
 import { Friends } from "../engine/friends/friends.js";
 import { EngineEventBus } from "../engine/ipc/events.js";
 import { MiniApps } from "../engine/mini-apps/MiniApps.js";
 import { ConnectorRegistry } from "../engine/modules/connectorRegistry.js";
 import { ImageGenerationRegistry } from "../engine/modules/imageGenerationRegistry.js";
-import type { InferenceRouter } from "../engine/modules/inference/router.js";
+import { InferenceRouter } from "../engine/modules/inference/router.js";
+import { InferenceRegistry } from "../engine/modules/inferenceRegistry.js";
 import { MediaAnalysisRegistry } from "../engine/modules/mediaAnalysisRegistry.js";
 import { SpeechGenerationRegistry } from "../engine/modules/speechGenerationRegistry.js";
 import { ToolResolver } from "../engine/modules/toolResolver.js";
@@ -28,7 +30,9 @@ import { userDocumentsEnsure } from "../engine/users/userDocumentsEnsure.js";
 import { userHomeEnsure } from "../engine/users/userHomeEnsure.js";
 import { Webhooks } from "../engine/webhook/webhooks.js";
 import { Workspaces } from "../engine/workspaces/workspaces.js";
+import { ProviderManager } from "../providers/manager.js";
 import { PsqlService } from "../services/psql/PsqlService.js";
+import { readSettingsFile } from "../settings.js";
 import type { Storage } from "../storage/storage.js";
 import { storageOpenTest } from "../storage/storageOpenTest.js";
 
@@ -43,17 +47,21 @@ export type EvalHarness = {
  * Boots an in-process eval harness backed by in-memory PGlite and a mock inference router.
  * Expects: callers await cleanup() because temp runtime directories are created for user homes and auth files.
  */
-export async function evalHarnessCreate(options: { inferenceRouter?: InferenceRouter } = {}): Promise<EvalHarness> {
+export async function evalHarnessCreate(
+    options: { inferenceRouter?: InferenceRouter; liveSettingsPath?: string } = {}
+): Promise<EvalHarness> {
     const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-eval-"));
-    const config = configResolve(
-        {
-            engine: {
-                dataDir: dir
-            },
-            providers: [{ id: "openai", model: "gpt-4.1" }]
-        },
-        path.join(dir, "settings.json")
-    );
+    const config = options.liveSettingsPath
+        ? await evalLiveConfigBuild(dir, options.liveSettingsPath)
+        : configResolve(
+              {
+                  engine: {
+                      dataDir: dir
+                  },
+                  providers: [{ id: "openai", model: "gpt-4.1" }]
+              },
+              path.join(dir, "settings.json")
+          );
     const configModule = new ConfigModule(config);
     const storage = await storageOpenTest();
     const eventBus = new EngineEventBus();
@@ -76,6 +84,7 @@ export async function evalHarnessCreate(options: { inferenceRouter?: InferenceRo
     const imageRegistry = new ImageGenerationRegistry();
     const speechRegistry = new SpeechGenerationRegistry();
     const mediaRegistry = new MediaAnalysisRegistry();
+    const inferenceRegistry = new InferenceRegistry();
     const toolResolver = new ToolResolver();
     const psqlService = new PsqlService({
         usersDir: configModule.current.usersDir,
@@ -86,6 +95,20 @@ export async function evalHarnessCreate(options: { inferenceRouter?: InferenceRo
         usersDir: configModule.current.usersDir,
         observationLog: storage.observationLog
     });
+    const authStore = new AuthStore(config);
+    const liveProviderManager = options.liveSettingsPath
+        ? new ProviderManager({
+              config: configModule,
+              auth: authStore,
+              fileStore: new FileFolder(path.join(configModule.current.dataDir, "files")),
+              inferenceRegistry,
+              imageRegistry
+          })
+        : null;
+
+    if (liveProviderManager) {
+        await liveProviderManager.reload();
+    }
 
     const pluginManager = {
         getSystemPrompts: async () => [],
@@ -101,8 +124,16 @@ export async function evalHarnessCreate(options: { inferenceRouter?: InferenceRo
         mediaRegistry,
         toolResolver,
         pluginManager,
-        inferenceRouter: options.inferenceRouter ?? evalInferenceRouterDefaultBuild(),
-        authStore: new AuthStore(config),
+        inferenceRouter:
+            options.inferenceRouter ??
+            (liveProviderManager
+                ? new InferenceRouter({
+                      registry: inferenceRegistry,
+                      auth: authStore,
+                      config: configModule
+                  })
+                : evalInferenceRouterDefaultBuild()),
+        authStore,
         delayedSignals,
         psqlService,
         secrets
@@ -191,6 +222,20 @@ export async function evalHarnessCreate(options: { inferenceRouter?: InferenceRo
             await evalTempDirRemove(dir);
         }
     };
+}
+
+async function evalLiveConfigBuild(dir: string, settingsPath: string) {
+    const settings = await readSettingsFile(settingsPath);
+    return configResolve(
+        {
+            ...settings,
+            engine: {
+                ...settings.engine,
+                dataDir: dir
+            }
+        },
+        settingsPath
+    );
 }
 
 function evalInferenceRouterDefaultBuild(): InferenceRouter {

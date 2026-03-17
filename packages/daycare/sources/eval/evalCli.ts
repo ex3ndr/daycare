@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { DEFAULT_SETTINGS_PATH } from "../settings.js";
 import { evalHarnessCreate } from "./evalHarness.js";
 import { evalInferenceRouterScenarioBuild } from "./evalInferenceRouterScenarioBuild.js";
 import { type EvalTrace, evalRun } from "./evalRun.js";
@@ -15,6 +16,8 @@ export type EvalCliResult = {
 
 type EvalCliOptions = {
     cwd?: string;
+    mode?: "live" | "mock";
+    settingsPath?: string;
 };
 
 /**
@@ -35,7 +38,14 @@ export async function evalCli(
         outputPath ?? path.join(path.dirname(resolvedScenarioPath), `${scenario.name}.trace.md`)
     );
     const inferenceRouter = evalInferenceRouterScenarioBuild(scenario);
-    const harness = await evalHarnessCreate(inferenceRouter ? { inferenceRouter } : {});
+    const resolvedSettingsPath = path.resolve(baseDir, options.settingsPath ?? DEFAULT_SETTINGS_PATH);
+    const harness = await evalHarnessCreate(
+        inferenceRouter
+            ? { inferenceRouter }
+            : options.mode === "mock"
+              ? {}
+              : { liveSettingsPath: resolvedSettingsPath }
+    );
 
     try {
         const trace = await evalRun(scenario, harness);

@@ -1,0 +1,13 @@
+{
+    "name": "foreground-subagent-first-live",
+    "agent": {
+        "kind": "connector",
+        "path": "telegram"
+    },
+    "turns": [
+        {
+            "role": "user",
+            "text": "Investigate the onboarding failures and report back."
+        }
+    ]
+}

@@ -6,6 +6,7 @@ The eval harness runs scripted conversations against Daycare agents fully in-pro
 - a temp runtime directory for user homes and auth files
 - synchronous message delivery through `AgentSystem.postAndAwait()`
 - trace collection from `agentHistoryLoad()` and `EngineEventBus`
+- live configured providers by default in the CLI path
 
 ## Scenario Format
 
@@ -63,7 +64,7 @@ Scenarios may also define scripted mock inference:
 }
 ```
 
-This keeps prompt-sensitive evals inside the normal `yarn eval` flow without requiring a custom test harness.
+This keeps prompt-sensitive evals inside the normal `yarn eval` flow without requiring a custom test harness. When `inference` is omitted, the CLI uses live configured providers.
 
 ## Usage
 

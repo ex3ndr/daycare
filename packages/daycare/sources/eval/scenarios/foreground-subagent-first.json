@@ -18,7 +18,7 @@
                     {
                         "whenSystemPromptIncludes": [
                             "be subagent-first for almost every non-trivial request",
-                            "use `start_background_agent` before doing the substantive work yourself"
+                            "your first substantive action must be launching `start_background_agent` or `start_background_workflow`"
                         ],
                         "toolCall": {
                             "id": "tool-1",

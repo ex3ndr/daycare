@@ -32,6 +32,7 @@ Default behavior:
 - reads a JSON scenario file
 - resolves relative scenario and output paths from the shell directory where `yarn eval` is invoked
 - boots an in-process `AgentSystem`
+- uses live configured inference providers by default
 - creates or resolves the target agent from the scenario
 - sends all turns synchronously with `postAndAwait()`
 - collects history and engine events
@@ -42,15 +43,15 @@ The script defaults its own log level to `silent` unless `DAYCARE_LOG_LEVEL` or 
 
 ## Design Constraints
 
-The harness intentionally stays small and deterministic:
+The harness intentionally keeps runtime state small and disposable:
 
 - storage uses in-memory PGlite through `storageOpenTest()`
 - the runtime still gets a temp data directory for user homes, auth files, and delayed signal state
 - no HTTP server is started
 - no `portless` proxy is required
-- no external provider is required when using the default mock inference router
+- the CLI uses live configured providers unless a scenario defines scripted inference or a caller explicitly opts into mock mode
 
-This means eval runs are cheap and disposable, but still exercise the real agent system, inbox processing, history persistence, and event emission paths.
+This means eval runs stay isolated, but still exercise the real agent system, live provider routing, inbox processing, history persistence, and event emission paths.
 
 ## Tool Surface
 
@@ -387,7 +388,7 @@ DAYCARE_LOG_LEVEL=debug yarn eval path/to/scenario.json
 
 ### I want richer model responses
 
-Use scenario-defined scripted inference when you want deterministic prompt-sensitive tool use through the CLI. Programmatic callers can still pass a custom `InferenceRouter` into `evalHarnessCreate()` for more complex cases.
+`yarn eval` uses live configured providers by default. Use scenario-defined scripted inference when you want deterministic prompt-sensitive tool use through the CLI, or pass a custom `InferenceRouter` into `evalHarnessCreate()` programmatically for more complex cases.
 
 ## Future Extensions
 
