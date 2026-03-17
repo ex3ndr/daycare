@@ -13,7 +13,7 @@ If one call fails, all remaining `run_python` calls in that response are skipped
 Prefer one multi-line script when possible.
 {{#if isForeground}}
 When `say(...)` is available in the function list, prefer it for user-visible replies.
-After receiving a `run_python` tool result, respond to the user with plain text.
+After receiving a `run_python` tool result, either respond to the user with plain text or, if nothing should be shown, reply with exactly `NO_MESSAGE`. When `run_python` was only used to start background work or to send a user-visible reply via `say(...)`, do not add extra assistant narration around it.
 {{/if}}
 No escaping is needed.
 {{{pythonTools}}}

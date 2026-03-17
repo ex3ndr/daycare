@@ -276,9 +276,35 @@ describe("agentSystemPrompt", () => {
             expect(rendered).toContain("Soul prompt text");
             expect(rendered).toContain("Memory prompt text");
             expect(rendered).toContain("Tools prompt text");
-            expect(rendered).toContain("Start background agents by default for non-trivial work.");
+            expect(rendered).toContain("reply with exactly `NO_MESSAGE` as your entire text response");
+            expect(rendered).toContain("If you intend to say `NO_MESSAGE`, say only `NO_MESSAGE`");
+            expect(rendered).toContain(
+                "Choose exactly one: either send a user-facing message, or reply with `NO_MESSAGE`"
+            );
+            expect(rendered).toContain(
+                'Any status update such as "I started a background agent", "I\'ll report back", or "done" counts as a user-facing message'
+            );
+            expect(rendered).toContain(
+                'if you intend to end with `NO_MESSAGE`, do not include setup narration such as "I\'ll investigate"'
+            );
+            expect(rendered).toContain("Start background agents before inline tool work.");
             expect(rendered).toContain("be subagent-first for almost every non-trivial request");
-            expect(rendered).toContain("use `start_background_agent` before doing the substantive work yourself");
+            expect(rendered).toContain(
+                "your first substantive action must be launching `start_background_agent` or `start_background_workflow`"
+            );
+            expect(rendered).toContain("even when those functions are exposed inside `run_python`");
+            expect(rendered).toContain("make your first `run_python` call launch the background agent or workflow");
+            expect(rendered).toContain(
+                "before any memory search, topology check, filesystem inspection, or other inline investigation"
+            );
+            expect(rendered).toContain("Silent handoffs stay silent.");
+            expect(rendered).toContain(
+                'do not narrate the handoff with text like "I\'ll investigate" or "I\'ll report back"'
+            );
+            expect(rendered).toContain("For investigation-style requests");
+            expect(rendered).toContain(
+                "do not ask the user for more context until a background agent has first checked"
+            );
             expect(rendered).toContain("Prefer reusable workflows over ad-hoc background work.");
             expect(rendered).toContain(
                 "existing core task, reusable task, permanent agent, or skill already fits the job"
