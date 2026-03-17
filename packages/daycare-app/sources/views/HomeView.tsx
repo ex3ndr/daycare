@@ -1,63 +1,56 @@
-import { Octicons } from "@expo/vector-icons";
-import { type Href, useRouter } from "expo-router";
-import { useUnistyles } from "react-native-unistyles";
-import { Item } from "@/components/Item";
-import { ItemGroup } from "@/components/ItemGroup";
-import { ItemList } from "@/components/ItemList";
-import { useWorkspace } from "@/modules/workspaces/workspaceProvider";
-
-type NavItem = {
-    key: string;
-    route: string;
-    icon: React.ComponentProps<typeof Octicons>["name"];
-    label: string;
-};
-
-const navItems: NavItem[] = [
-    { key: "agents", route: "agents", icon: "device-desktop", label: "Agents" },
-    { key: "fragments", route: "fragments", icon: "note", label: "Fragments" },
-    { key: "automations", route: "automations", icon: "clock", label: "Automations" },
-    { key: "files", route: "files", icon: "file-directory", label: "Files" },
-    { key: "vault", route: "vault", icon: "file", label: "Vault" },
-    { key: "skills", route: "skills", icon: "zap", label: "Skills" },
-    { key: "tools", route: "tools", icon: "tools", label: "Tools" },
-    { key: "members", route: "members", icon: "people", label: "Members" },
-    { key: "costs", route: "costs", icon: "credit-card", label: "Costs" }
-];
-
-const devItems: NavItem[] = [{ key: "dev", route: "dev", icon: "code-square", label: "Dev" }];
+import * as React from "react";
+import { Text, View } from "react-native";
+import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ChatInput } from "@/modules/chat/ChatInput";
 
 /**
- * Home dashboard view. On mobile, shows navigation items
- * that mirror the desktop sidebar for quick access.
+ * Home view with a centered chat input.
+ * Not wired to a real chat backend yet — sends are no-ops.
  */
 export function HomeView() {
     const { theme } = useUnistyles();
-    const router = useRouter();
-    const { workspaceId } = useWorkspace();
+
+    const handleSend = React.useCallback((_text: string) => {
+        // Not wired yet
+    }, []);
 
     return (
-        <ItemList>
-            <ItemGroup>
-                {navItems.map((item) => (
-                    <Item
-                        key={item.key}
-                        title={item.label}
-                        icon={<Octicons name={item.icon} size={20} color={theme.colors.onSurfaceVariant} />}
-                        onPress={() => router.push(`/${workspaceId}/${item.route}` as Href)}
-                    />
-                ))}
-            </ItemGroup>
-            <ItemGroup>
-                {devItems.map((item) => (
-                    <Item
-                        key={item.key}
-                        title={item.label}
-                        icon={<Octicons name={item.icon} size={20} color={theme.colors.onSurfaceVariant} />}
-                        onPress={() => router.push(`/${workspaceId}/${item.route}` as Href)}
-                    />
-                ))}
-            </ItemGroup>
-        </ItemList>
+        <View style={styles.root}>
+            {/* Push content to ~40% from top */}
+            <View style={styles.topSpacer} />
+            <View style={styles.center}>
+                <Text style={[styles.greeting, { color: theme.colors.onSurface }]}>What can I do for you?</Text>
+            </View>
+            <View style={styles.inputArea}>
+                <ChatInput onSend={handleSend} />
+            </View>
+            {/* Remaining space below */}
+            <View style={styles.bottomSpacer} />
+        </View>
     );
 }
+
+const styles = StyleSheet.create((theme) => ({
+    root: {
+        flex: 1,
+        maxWidth: theme.layout.maxWidth,
+        alignSelf: "center",
+        width: "100%"
+    },
+    topSpacer: {
+        flex: 3
+    },
+    center: {
+        alignItems: "center",
+        paddingHorizontal: 24,
+        paddingBottom: 16
+    },
+    greeting: {
+        fontSize: 24,
+        fontWeight: "700"
+    },
+    inputArea: {},
+    bottomSpacer: {
+        flex: 5
+    }
+}));
