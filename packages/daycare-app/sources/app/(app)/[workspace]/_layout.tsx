@@ -4,7 +4,7 @@ import { View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { AppSidebar, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH, WorkspaceStrip } from "@/components/AppSidebar";
+import { AppSidebar, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from "@/components/AppSidebar";
 import { CHAT_COLLAPSED_WIDTH, CHAT_PANEL_WIDTH, ChatPanel } from "@/components/ChatPanel";
 import { useConfigStore } from "@/modules/config/configContext";
 import { WorkspaceSync } from "@/modules/sync/WorkspaceSync";
@@ -111,7 +111,6 @@ function DesktopShell({ children }: { children: React.ReactNode }) {
 
     return (
         <View style={[styles.root, { backgroundColor: theme.colors.surfaceContainerLow }]}>
-            <WorkspaceStrip style={{ paddingTop: 10 + insets.top, paddingBottom: 8 + insets.bottom }} />
             {appReady && (
                 <Animated.View
                     style={[

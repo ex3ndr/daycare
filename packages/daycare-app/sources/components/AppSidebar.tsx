@@ -1,10 +1,9 @@
 import { Octicons } from "@expo/vector-icons";
 import { type Href, usePathname, useRouter } from "expo-router";
 import * as React from "react";
-import { Platform, Pressable, ScrollView, type StyleProp, Text, View, type ViewStyle } from "react-native";
+import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { useConfigStore } from "@/modules/config/configContext";
 import { miniAppIconResolve } from "@/modules/mini-apps/miniAppIconResolve";
 import { useMiniAppsStore } from "@/modules/mini-apps/miniAppsContext";
 import { MINI_APPS_EMPTY } from "@/modules/mini-apps/miniAppsStoreCreate";
@@ -41,8 +40,8 @@ const segmentGroups: Segment[][] = [
     ]
 ];
 
-/** Bottom-pinned items shown as icons in the workspace strip. */
-const stripBottomSegments: Segment[] = [
+/** Bottom-pinned sidebar segments. */
+const bottomSegments: Segment[] = [
     { key: "dev", mode: "dev", icon: "code-square", label: "Dev" },
     { key: "settings", mode: "settings", icon: "gear", label: "Settings" }
 ];
@@ -114,158 +113,88 @@ const WorkspaceButton = React.memo<{
     workspace: WorkspaceListItem;
     isActive: boolean;
     onPress: () => void;
-}>(({ workspace, isActive, onPress }) => {
+    labelsOpacity?: SharedValue<number>;
+}>(({ workspace, isActive, onPress, labelsOpacity }) => {
     const { theme } = useUnistyles();
     const label = workspace.emoji ?? workspaceInitials(workspace);
+    const name = workspace.isSelf ? "Personal" : (workspace.firstName ?? workspace.nametag);
+    const labelsAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: labelsOpacity ? labelsOpacity.value : 1
+    }));
     return (
         <Pressable
             onPress={onPress}
             style={[
-                stripStyles.workspaceButton,
+                wsStyles.workspaceRow,
                 {
-                    backgroundColor: isActive ? theme.colors.primaryContainer : theme.colors.surfaceContainerHigh
+                    backgroundColor: isActive ? theme.colors.primaryContainer : undefined
                 }
             ]}
         >
-            <Text
+            <View
                 style={[
-                    workspace.emoji ? stripStyles.workspaceEmoji : stripStyles.workspaceInitials,
-                    !workspace.emoji && {
-                        color: isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant
+                    wsStyles.workspaceAvatar,
+                    {
+                        backgroundColor: isActive ? theme.colors.primaryContainer : theme.colors.surfaceContainerHigh
                     }
                 ]}
             >
-                {label}
-            </Text>
+                <Text
+                    style={[
+                        workspace.emoji ? wsStyles.workspaceEmoji : wsStyles.workspaceInitials,
+                        !workspace.emoji && {
+                            color: isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant
+                        }
+                    ]}
+                >
+                    {label}
+                </Text>
+            </View>
+            <Animated.Text
+                numberOfLines={1}
+                style={[
+                    wsStyles.workspaceName,
+                    {
+                        color: isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant
+                    },
+                    labelsAnimatedStyle
+                ]}
+            >
+                {name}
+            </Animated.Text>
         </Pressable>
     );
 });
 
-export const WORKSPACE_STRIP_WIDTH = 52;
-
-/**
- * Vertical workspace strip with workspace buttons and bottom action icons.
- * Rendered outside the sidebar card on the page background.
- */
-export const WorkspaceStrip = React.memo<{ onNavigate?: () => void; style?: StyleProp<ViewStyle> }>(
-    ({ onNavigate, style }) => {
-        const { theme } = useUnistyles();
-        const router = useRouter();
-        const pathname = usePathname();
-        const workspaces = useWorkspacesStore((s) => s.workspaces);
-        const { workspaceId } = useWorkspace();
-        const appReady = useConfigStore((s) => s.configFor(workspaceId).appReady);
-        const activeMode = extractModeFromPath(pathname);
-        const wsPrefix = workspaceId ? `/${workspaceId}` : "";
-
-        const handleWorkspaceSwitch = React.useCallback(
-            (userId: string) => {
-                router.replace(`/${userId}/home` as Href);
-                onNavigate?.();
-            },
-            [router, onNavigate]
-        );
-
-        const handleModePress = React.useCallback(
-            (mode: AppMode) => {
-                router.replace(`${wsPrefix}/${mode}` as Href);
-                onNavigate?.();
-            },
-            [router, onNavigate, wsPrefix]
-        );
-
-        return (
-            <View style={[stripStyles.strip, style]}>
-                <View style={stripStyles.stripTop}>
-                    {workspaces
-                        .filter((ws) => ws.isSelf)
-                        .map((ws) => (
-                            <WorkspaceButton
-                                key={ws.userId}
-                                workspace={ws}
-                                isActive={ws.userId === workspaceId}
-                                onPress={() => handleWorkspaceSwitch(ws.userId)}
-                            />
-                        ))}
-                    {workspaces.some((ws) => !ws.isSelf) && (
-                        <View style={[stripStyles.divider, { backgroundColor: theme.colors.outlineVariant }]} />
-                    )}
-                    {workspaces
-                        .filter((ws) => !ws.isSelf)
-                        .map((ws) => (
-                            <WorkspaceButton
-                                key={ws.userId}
-                                workspace={ws}
-                                isActive={ws.userId === workspaceId}
-                                onPress={() => handleWorkspaceSwitch(ws.userId)}
-                            />
-                        ))}
-                </View>
-                {appReady && (
-                    <View style={stripStyles.stripBottom}>
-                        {stripBottomSegments.map((seg) => {
-                            const isActive = activeMode === seg.mode;
-                            return (
-                                <Pressable
-                                    key={seg.mode}
-                                    testID={`sidebar-${seg.mode}`}
-                                    onPress={() => handleModePress(seg.mode)}
-                                    style={[
-                                        stripStyles.workspaceButton,
-                                        isActive && { backgroundColor: theme.colors.primaryContainer }
-                                    ]}
-                                >
-                                    <Octicons
-                                        name={seg.icon}
-                                        size={16}
-                                        color={
-                                            isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant
-                                        }
-                                    />
-                                </Pressable>
-                            );
-                        })}
-                    </View>
-                )}
-            </View>
-        );
-    }
-);
-
-const stripStyles = StyleSheet.create({
-    strip: {
-        width: WORKSPACE_STRIP_WIDTH,
+const wsStyles = StyleSheet.create({
+    workspaceRow: {
+        flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between"
-    },
-    stripTop: {
-        alignItems: "center",
-        gap: 4
-    },
-    stripBottom: {
-        alignItems: "center",
-        gap: 4
-    },
-    divider: {
-        width: 24,
-        height: 1,
-        borderRadius: 1,
-        marginVertical: 2
-    },
-    workspaceButton: {
-        width: 36,
+        gap: 10,
+        paddingHorizontal: 12,
         height: 36,
         borderRadius: 8,
+        marginVertical: 1
+    },
+    workspaceAvatar: {
+        width: 24,
+        height: 24,
+        borderRadius: 6,
         alignItems: "center",
         justifyContent: "center"
     },
     workspaceInitials: {
-        fontSize: 13,
+        fontSize: 10,
         fontWeight: "600"
     },
     workspaceEmoji: {
-        fontSize: 18,
+        fontSize: 13,
         ...(Platform.OS === "web" && { fontFamily: "system-ui, -apple-system, sans-serif" })
+    },
+    workspaceName: {
+        fontSize: 14,
+        fontWeight: "400",
+        flex: 1
     }
 });
 
@@ -355,21 +284,28 @@ export const AppSidebar = React.memo<AppSidebarProps>(
             [router, onNavigate, wsPrefix]
         );
 
+        const workspaces = useWorkspacesStore((s) => s.workspaces);
+        const handleWorkspaceSwitch = React.useCallback(
+            (userId: string) => {
+                router.replace(`/${userId}/home` as Href);
+                onNavigate?.();
+            },
+            [router, onNavigate]
+        );
+
         return (
             <View style={[styles.sidebar, { backgroundColor: theme.colors.surfaceContainerLow }]}>
-                {/* Workspace header — entire row is pressable to toggle collapse */}
+                {/* Header — "daycare" logo + collapse toggle */}
                 <Pressable
                     onPress={onToggleCollapse}
                     style={styles.header}
                     onHoverIn={() => (headerHovered.value = withTiming(1, { duration: 150 }))}
                     onHoverOut={() => (headerHovered.value = withTiming(0, { duration: 150 }))}
                 >
-                    <Text style={styles.headerEmoji}>
-                        {activeWorkspace?.isSelf ? "\uD83D\uDD12" : (activeWorkspace?.emoji ?? "\uD83D\uDCE6")}
-                    </Text>
+                    <Octicons name="package" size={18} color={theme.colors.onSurface} />
                     <Animated.View style={[styles.headerLabels, labelsAnimatedStyle]}>
                         <Text style={[styles.title, { color: theme.colors.onSurface }]} numberOfLines={1}>
-                            {activeWorkspace?.isSelf ? "Personal" : (activeWorkspace?.firstName ?? "Workspace")}
+                            daycare
                         </Text>
                     </Animated.View>
                     <Animated.View
@@ -497,6 +433,65 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                         </View>
                     ))}
                 </ScrollView>
+
+                {/* Bottom section: dev/settings + workspace selector */}
+                <View style={styles.bottomSection}>
+                    {bottomSegments.map((seg) => {
+                        const isActive = activeMode === seg.mode;
+                        return (
+                            <Pressable
+                                key={seg.mode}
+                                testID={`sidebar-${seg.mode}`}
+                                onPress={() => handleModePress(seg.mode)}
+                                style={styles.modeRow}
+                            >
+                                {isActive && (
+                                    <Animated.View
+                                        style={[
+                                            styles.activeRowBg,
+                                            { backgroundColor: theme.colors.primaryContainer },
+                                            activeRowBgStyle
+                                        ]}
+                                    />
+                                )}
+                                <Octicons
+                                    name={seg.icon}
+                                    size={16}
+                                    color={isActive ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant}
+                                />
+                                <Animated.View style={[styles.modeLabelRow, labelsAnimatedStyle]}>
+                                    <Text
+                                        style={[
+                                            styles.modeLabel,
+                                            {
+                                                color: isActive
+                                                    ? theme.colors.onPrimaryContainer
+                                                    : theme.colors.onSurfaceVariant
+                                            },
+                                            isActive && styles.modeLabelActive
+                                        ]}
+                                    >
+                                        {seg.label}
+                                    </Text>
+                                </Animated.View>
+                            </Pressable>
+                        );
+                    })}
+                    {workspaces.length > 1 && (
+                        <>
+                            <View style={[styles.bottomDivider, { backgroundColor: theme.colors.outlineVariant }]} />
+                            {workspaces.map((ws) => (
+                                <WorkspaceButton
+                                    key={ws.userId}
+                                    workspace={ws}
+                                    isActive={ws.userId === workspaceId}
+                                    onPress={() => handleWorkspaceSwitch(ws.userId)}
+                                    labelsOpacity={labelsOpacity}
+                                />
+                            ))}
+                        </>
+                    )}
+                </View>
             </View>
         );
     }
@@ -514,10 +509,6 @@ const styles = StyleSheet.create({
         paddingLeft: 20,
         paddingRight: 8,
         height: 56
-    },
-    headerEmoji: {
-        fontSize: 18,
-        ...(Platform.OS === "web" && { fontFamily: "system-ui, -apple-system, sans-serif" })
     },
     title: {
         fontSize: 18,
@@ -599,7 +590,14 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: "400"
     },
-    createIcon: {
-        marginRight: 6
+    bottomSection: {
+        paddingHorizontal: 8,
+        paddingBottom: 8
+    },
+    bottomDivider: {
+        height: 1,
+        borderRadius: 1,
+        marginHorizontal: 12,
+        marginVertical: 4
     }
 });
