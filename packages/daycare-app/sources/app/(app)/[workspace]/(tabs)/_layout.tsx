@@ -20,9 +20,12 @@ export default function TabsLayout() {
             tintColor={theme.colors.primary}
             iconColor={{ default: theme.colors.onSurfaceVariant, selected: theme.colors.primary }}
         >
-            <NativeTabs.Trigger name="home">
-                <NativeTabs.Trigger.Icon sf={{ default: "house", selected: "house.fill" }} md="home" />
-                <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger name="index">
+                <NativeTabs.Trigger.Icon
+                    sf={{ default: "square.and.pencil", selected: "square.and.pencil" }}
+                    md="edit_note"
+                />
+                <NativeTabs.Trigger.Label>New task</NativeTabs.Trigger.Label>
             </NativeTabs.Trigger>
             <NativeTabs.Trigger name="settings">
                 <NativeTabs.Trigger.Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} md="settings" />

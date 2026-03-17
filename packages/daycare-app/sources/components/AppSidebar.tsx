@@ -25,7 +25,7 @@ type Segment = {
 
 /** Sidebar items grouped with visual spacing between groups. */
 const segmentGroups: Segment[][] = [
-    [{ key: "home", mode: "home", icon: "home", label: "Home" }],
+    [{ key: "index", mode: "index", icon: "pencil", label: "New task" }],
     [
         { key: "agents", mode: "agents", icon: "device-desktop", label: "Agents" },
         { key: "voice", mode: "voice", icon: "unmute", label: "Voice" },
@@ -48,7 +48,7 @@ const bottomSegments: Segment[] = [
 
 /** Sub-items for each mode that expand when the mode is active. */
 const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
-    home: [],
+    index: [],
     "mini-apps": [],
     agents: [],
     voice: [],
@@ -79,7 +79,7 @@ function extractModeFromPath(pathname: string): AppMode {
     if (parts[0] && appModes.includes(parts[0] as AppMode)) {
         return parts[0] as AppMode;
     }
-    return "home";
+    return "index";
 }
 
 /**
@@ -270,7 +270,8 @@ export const AppSidebar = React.memo<AppSidebarProps>(
 
         const handleModePress = React.useCallback(
             (mode: AppMode, itemId?: string) => {
-                router.replace((itemId ? `${wsPrefix}/${mode}/${itemId}` : `${wsPrefix}/${mode}`) as Href);
+                const path = mode === "index" ? wsPrefix : `${wsPrefix}/${mode}`;
+                router.replace((itemId ? `${path}/${itemId}` : path) as Href);
                 onNavigate?.();
             },
             [router, onNavigate, wsPrefix]
@@ -287,7 +288,7 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         const workspaces = useWorkspacesStore((s) => s.workspaces);
         const handleWorkspaceSwitch = React.useCallback(
             (userId: string) => {
-                router.replace(`/${userId}/home` as Href);
+                router.replace(`/${userId}` as Href);
                 onNavigate?.();
             },
             [router, onNavigate]

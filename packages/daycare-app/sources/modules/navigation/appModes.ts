@@ -1,5 +1,5 @@
 export type AppMode =
-    | "home"
+    | "index"
     | "mini-apps"
     | "agents"
     | "voice"
@@ -15,7 +15,7 @@ export type AppMode =
     | "settings";
 
 export const appModes: AppMode[] = [
-    "home",
+    "index",
     "mini-apps",
     "agents",
     "voice",

@@ -42,7 +42,7 @@ export default function AppInviteScreen() {
                 throw new Error(result.error);
             }
             await fetchWorkspaces(baseUrl, token);
-            router.replace(`/${result.workspaceId}/home` as never);
+            router.replace(`/${result.workspaceId}` as never);
         } catch (acceptError) {
             setError(acceptError instanceof Error ? acceptError.message : "Failed to join workspace.");
         } finally {

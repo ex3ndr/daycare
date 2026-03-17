@@ -15,5 +15,5 @@ export default function AppIndex() {
     if (!workspaceId) {
         return null;
     }
-    return <Redirect href={`/${workspaceId}/home`} />;
+    return <Redirect href={`/${workspaceId}`} />;
 }
