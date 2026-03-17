@@ -21,7 +21,6 @@ import { Storage } from "../storage/storage.js";
 import { stringSlugify } from "../utils/stringSlugify.js";
 import { InvalidateSync } from "../utils/sync.js";
 import { valueDeepEqual } from "../utils/valueDeepEqual.js";
-import { AcpSessions } from "./acp/acpSessions.js";
 import { AgentSystem } from "./agents/agentSystem.js";
 import { contextForAgent, contextForUser } from "./agents/context.js";
 import { agentHistoryLoad } from "./agents/ops/agentHistoryLoad.js";
@@ -93,7 +92,6 @@ export class Engine {
     readonly delayedSignals: DelayedSignals;
     readonly taskExecutions: TaskExecutions;
     readonly channels: Channels;
-    readonly acpSessions: AcpSessions;
     readonly processes: Processes;
     readonly inferenceRouter: InferenceRouter;
     readonly modelRoles: ModelRoles;
@@ -150,7 +148,6 @@ export class Engine {
             await this.reloadApplyLatest();
         });
         this.authStore = new AuthStore(this.config.current);
-        this.acpSessions = new AcpSessions(getLogger("engine.acp"));
         this.processes = new Processes(this.config.current.dataDir, getLogger("engine.processes"), {
             repository: this.storage.processes,
             docker: this.config.current.docker,
@@ -745,7 +742,6 @@ export class Engine {
             signals: this.signals,
             channels: this.channels,
             secrets: this.secrets,
-            acpSessions: this.acpSessions,
             workspaces: this.workspaces,
             miniApps: this.miniApps,
             friends: this.friends,
@@ -787,7 +783,6 @@ export class Engine {
         this.crons.stop();
         this.webhooks.stop();
         this.delayedSignals.stop();
-        await this.acpSessions.shutdown();
         this.processes.unload();
         await this.pluginManager.unloadAll();
         await databaseClose(this.storage.connection);

@@ -2,11 +2,6 @@
 # yarn lockfile v1
 
 
-"@agentclientprotocol/sdk@0.15.0":
-  version "0.15.0"
-  resolved "https://registry.yarnpkg.com/@agentclientprotocol/sdk/-/sdk-0.15.0.tgz#0e5977affc94faf4dbfbf23f0db4ea94f096fd26"
-  integrity sha512-TH4utu23Ix8ec34srBHmDD4p3HI0cYleS1jN9lghRczPfhFlMBNrQgZWeBBe12DWy27L11eIrtciY2MXFSEiDg==
-
 "@alibaba-group/opensandbox@0.1.4":
   version "0.1.4"
   resolved "https://registry.yarnpkg.com/@alibaba-group/opensandbox/-/opensandbox-0.1.4.tgz#013cd5786d2d8f1aae234332c31d89775b9301ec"

@@ -4,7 +4,6 @@ import path from "node:path";
 
 import { AuthStore } from "../auth/store.js";
 import { configResolve } from "../config/configResolve.js";
-import { AcpSessions } from "../engine/acp/acpSessions.js";
 import { AgentSystem } from "../engine/agents/agentSystem.js";
 import { Channels } from "../engine/channels/channels.js";
 import { ConfigModule } from "../engine/config/configModule.js";
@@ -29,7 +28,6 @@ import { userDocumentsEnsure } from "../engine/users/userDocumentsEnsure.js";
 import { userHomeEnsure } from "../engine/users/userHomeEnsure.js";
 import { Webhooks } from "../engine/webhook/webhooks.js";
 import { Workspaces } from "../engine/workspaces/workspaces.js";
-import { getLogger } from "../log.js";
 import { PsqlService } from "../services/psql/PsqlService.js";
 import type { Storage } from "../storage/storage.js";
 import { storageOpenTest } from "../storage/storageOpenTest.js";
@@ -145,8 +143,6 @@ export async function evalHarnessCreate(options: { inferenceRouter?: InferenceRo
         agentSystem,
         observationLog: storage.observationLog
     });
-    const acpSessions = new AcpSessions(getLogger("engine.acp"));
-
     agentSystem.setCrons(crons);
     agentSystem.setWebhooks(webhooks);
     agentSystem.setSignals(signals);
@@ -166,7 +162,6 @@ export async function evalHarnessCreate(options: { inferenceRouter?: InferenceRo
         signals,
         channels,
         secrets,
-        acpSessions,
         workspaces,
         miniApps,
         friends,
@@ -192,7 +187,6 @@ export async function evalHarnessCreate(options: { inferenceRouter?: InferenceRo
             delayedSignals.stop();
             crons.stop();
             webhooks.stop();
-            await acpSessions.shutdown();
             await storage.connection.close();
             await evalTempDirRemove(dir);
         }

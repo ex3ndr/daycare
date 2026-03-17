@@ -1,7 +1,6 @@
 import type { PsqlService } from "../services/psql/PsqlService.js";
 import { psqlToolsBuild } from "../services/psql/psqlTools.js";
 import type { ObservationLogRepository } from "../storage/observationLogRepository.js";
-import type { AcpSessions } from "./acp/acpSessions.js";
 import type { Channels } from "./channels/channels.js";
 import type { ConfigModule } from "./config/configModule.js";
 import type { Crons } from "./cron/crons.js";
@@ -16,8 +15,6 @@ import type { InferenceRouter } from "./modules/inference/router.js";
 import type { MediaAnalysisRegistry } from "./modules/mediaAnalysisRegistry.js";
 import type { SpeechGenerationRegistry } from "./modules/speechGenerationRegistry.js";
 import type { ToolResolver } from "./modules/toolResolver.js";
-import { acpSessionMessageToolBuild } from "./modules/tools/acpSessionMessageToolBuild.js";
-import { acpSessionStartToolBuild } from "./modules/tools/acpSessionStartToolBuild.js";
 import { agentAskTool } from "./modules/tools/agentAskTool.js";
 import { agentCompactToolBuild } from "./modules/tools/agentCompactTool.js";
 import { agentModelSetToolBuild } from "./modules/tools/agentModelSetToolBuild.js";
@@ -94,7 +91,6 @@ type EngineToolsRegisterOptions = {
     signals: Signals;
     channels: Channels;
     secrets: Secrets;
-    acpSessions: AcpSessions;
     workspaces: Workspaces;
     miniApps: MiniApps;
     friends: Friends;
@@ -120,8 +116,6 @@ export function engineToolsRegister(options: EngineToolsRegisterOptions): void {
     options.toolResolver.register("core", buildStartBackgroundAgentTool());
     options.toolResolver.register("core", startBackgroundWorkflowToolBuild());
     options.toolResolver.register("core", buildSendAgentMessageTool());
-    options.toolResolver.register("core", acpSessionStartToolBuild(options.acpSessions));
-    options.toolResolver.register("core", acpSessionMessageToolBuild(options.acpSessions));
     options.toolResolver.register("core", agentAskTool());
     options.toolResolver.register("core", vaultSearchToolBuild());
     options.toolResolver.register("core", inferenceSummaryToolBuild(options.inferenceRouter, options.config));
@@ -140,7 +134,7 @@ export function engineToolsRegister(options: EngineToolsRegisterOptions): void {
     options.toolResolver.register("core", userProfileUpdateTool());
     options.toolResolver.register(
         "core",
-        topologyTool(options.crons, options.signals, options.channels, options.secrets, options.acpSessions)
+        topologyTool(options.crons, options.signals, options.channels, options.secrets)
     );
     options.toolResolver.register("core", sessionHistoryToolBuild());
     options.toolResolver.register("core", permanentAgentToolBuild());

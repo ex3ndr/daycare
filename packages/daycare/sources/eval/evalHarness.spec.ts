@@ -37,11 +37,9 @@ describe("evalHarnessCreate", () => {
                 .map((tool) => tool.name)
                 .sort((left, right) => left.localeCompare(right));
 
-            expect(toolNames).toHaveLength(75);
+            expect(toolNames).toHaveLength(73);
             expect(toolNames).toEqual(
                 expect.arrayContaining([
-                    "acp_session_message",
-                    "acp_session_start",
                     "agent_ask",
                     "agent_compact",
                     "agent_reset",
