@@ -1,3 +1,4 @@
+import { type Href, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
@@ -22,6 +23,7 @@ export function SettingsView() {
     const logout = useAuthStore((s) => s.logout);
     const { workspaceId } = useWorkspace();
 
+    const router = useRouter();
     const profile = useProfileStore((s) => s.profile);
     const loading = useProfileStore((s) => s.loading);
     const error = useProfileStore((s) => s.error);
@@ -237,6 +239,19 @@ export function SettingsView() {
                             showChevron={false}
                         />
                     ))}
+                </ItemGroup>
+
+                <ItemGroup title="Configuration">
+                    <Item title="Agents" onPress={() => router.push(`/${workspaceId}/agents` as Href)} />
+                    <Item title="Voice" onPress={() => router.push(`/${workspaceId}/voice` as Href)} />
+                    <Item title="Fragments" onPress={() => router.push(`/${workspaceId}/fragments` as Href)} />
+                    <Item title="Automations" onPress={() => router.push(`/${workspaceId}/automations` as Href)} />
+                    <Item title="Files" onPress={() => router.push(`/${workspaceId}/files` as Href)} />
+                    <Item title="Vault" onPress={() => router.push(`/${workspaceId}/vault` as Href)} />
+                    <Item title="Skills" onPress={() => router.push(`/${workspaceId}/skills` as Href)} />
+                    <Item title="Tools" onPress={() => router.push(`/${workspaceId}/tools` as Href)} />
+                    <Item title="Members" onPress={() => router.push(`/${workspaceId}/members` as Href)} />
+                    <Item title="Costs" onPress={() => router.push(`/${workspaceId}/costs` as Href)} />
                 </ItemGroup>
 
                 <ItemGroup>

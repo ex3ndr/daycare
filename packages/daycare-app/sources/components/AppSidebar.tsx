@@ -1,9 +1,12 @@
 import { Octicons } from "@expo/vector-icons";
 import { type Href, usePathname, useRouter } from "expo-router";
 import * as React from "react";
-import { Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Image, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { agentChatsSelect } from "@/modules/agents/agentChatsSelect";
+import { useAgentsStore } from "@/modules/agents/agentsContext";
+import type { AgentLifecycleState } from "@/modules/agents/agentsTypes";
 import { miniAppIconResolve } from "@/modules/mini-apps/miniAppIconResolve";
 import { useMiniAppsStore } from "@/modules/mini-apps/miniAppsContext";
 import { MINI_APPS_EMPTY } from "@/modules/mini-apps/miniAppsStoreCreate";
@@ -24,21 +27,7 @@ type Segment = {
 };
 
 /** Sidebar items grouped with visual spacing between groups. */
-const segmentGroups: Segment[][] = [
-    [{ key: "index", mode: "index", icon: "pencil", label: "New task" }],
-    [
-        { key: "agents", mode: "agents", icon: "device-desktop", label: "Agents" },
-        { key: "voice", mode: "voice", icon: "unmute", label: "Voice" },
-        { key: "fragments", mode: "fragments", icon: "note", label: "Fragments" },
-        { key: "automations", mode: "automations", icon: "clock", label: "Automations" },
-        { key: "files", mode: "files", icon: "file-directory", label: "Files" },
-        { key: "vault", mode: "vault", icon: "file", label: "Vault" },
-        { key: "skills", mode: "skills", icon: "zap", label: "Skills" },
-        { key: "tools", mode: "tools", icon: "tools", label: "Tools" },
-        { key: "members", mode: "members", icon: "people", label: "Members" },
-        { key: "costs", mode: "costs", icon: "credit-card", label: "Costs" }
-    ]
-];
+const segmentGroups: Segment[][] = [[{ key: "index", mode: "index", icon: "pencil", label: "New task" }], []];
 
 /** Bottom-pinned sidebar segments. */
 const bottomSegments: Segment[] = [
@@ -49,6 +38,7 @@ const bottomSegments: Segment[] = [
 /** Sub-items for each mode that expand when the mode is active. */
 const modeItems: Record<AppMode, Array<{ id: string; title: string }>> = {
     index: [],
+    chat: [],
     "mini-apps": [],
     agents: [],
     voice: [],
@@ -107,6 +97,12 @@ function workspaceInitials(ws: WorkspaceListItem): string {
         return ws.firstName.slice(0, 2).toUpperCase();
     }
     return ws.nametag.slice(0, 2).toUpperCase();
+}
+
+function statusDotColor(lifecycle: AgentLifecycleState, colors: { active: string; idle: string; dead: string }) {
+    if (lifecycle === "active") return colors.active;
+    if (lifecycle === "dead") return colors.dead;
+    return colors.idle;
 }
 
 const WorkspaceButton = React.memo<{
@@ -250,6 +246,8 @@ export const AppSidebar = React.memo<AppSidebarProps>(
         const selectedItem = extractItemFromPath(pathname);
         const { workspaceId, workspace: activeWorkspace } = useWorkspace();
         const miniApps = useMiniAppsStore((state) => state.appsByWorkspace[workspaceId] ?? MINI_APPS_EMPTY);
+        const agents = useAgentsStore((s) => s.agents);
+        const chats = React.useMemo(() => agentChatsSelect(agents), [agents]);
         const visibleSegmentGroups = React.useMemo(() => {
             const staticGroups = segmentGroups.map((group) =>
                 group.filter((segment) => !(segment.mode === "members" && activeWorkspace?.isSelf === true))
@@ -303,7 +301,10 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                     onHoverIn={() => (headerHovered.value = withTiming(1, { duration: 150 }))}
                     onHoverOut={() => (headerHovered.value = withTiming(0, { duration: 150 }))}
                 >
-                    <Octicons name="package" size={18} color={theme.colors.onSurface} />
+                    <Image
+                        source={require("@/assets/images/favicon.png")}
+                        style={{ width: 18, height: 18, marginTop: 4, tintColor: theme.colors.onSurface }}
+                    />
                     <Animated.View style={[styles.headerLabels, labelsAnimatedStyle]}>
                         <Text style={[styles.title, { color: theme.colors.onSurface }]} numberOfLines={1}>
                             daycare
@@ -433,6 +434,54 @@ export const AppSidebar = React.memo<AppSidebarProps>(
                             })}
                         </View>
                     ))}
+
+                    {/* Direct chats */}
+                    {chats.length > 0 && (
+                        <View style={styles.groupSpacer}>
+                            {chats.map((chat) => {
+                                const isChatActive = activeMode === "chat" && selectedItem === chat.agentId;
+                                const dotColor = statusDotColor(chat.lifecycle, {
+                                    active: theme.colors.primary,
+                                    idle: theme.colors.outlineVariant,
+                                    dead: theme.colors.error
+                                });
+                                return (
+                                    <Pressable
+                                        key={chat.agentId}
+                                        testID={`sidebar-chat-${chat.agentId}`}
+                                        onPress={() => handleItemPress("chat", chat.agentId)}
+                                        style={styles.modeRow}
+                                    >
+                                        {isChatActive && (
+                                            <Animated.View
+                                                style={[
+                                                    styles.activeRowBg,
+                                                    { backgroundColor: theme.colors.primaryContainer },
+                                                    activeRowBgStyle
+                                                ]}
+                                            />
+                                        )}
+                                        <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
+                                        <Animated.View style={[styles.modeLabelRow, labelsAnimatedStyle]}>
+                                            <Text
+                                                numberOfLines={1}
+                                                style={[
+                                                    styles.modeLabel,
+                                                    {
+                                                        color: isChatActive
+                                                            ? theme.colors.onPrimaryContainer
+                                                            : theme.colors.onSurfaceVariant
+                                                    }
+                                                ]}
+                                            >
+                                                {chat.name ?? "Untitled chat"}
+                                            </Text>
+                                        </Animated.View>
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+                    )}
                 </ScrollView>
 
                 {/* Bottom section: dev/settings + workspace selector */}
@@ -590,6 +639,11 @@ const styles = StyleSheet.create({
     subItemLabel: {
         fontSize: 13,
         fontWeight: "400"
+    },
+    statusDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3
     },
     bottomSection: {
         paddingHorizontal: 8,
