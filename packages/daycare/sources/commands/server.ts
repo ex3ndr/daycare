@@ -1,11 +1,11 @@
 import path from "node:path";
-import { configLoad } from "sources/config/configLoad";
-import { Engine } from "sources/engine/engine";
-import { EngineEventBus } from "sources/engine/ipc/events";
-import { getLogger } from "sources/log";
-import { DEFAULT_SETTINGS_PATH } from "sources/settings";
-import { rolesCurrentList } from "sources/utils/hasRole";
-import { awaitShutdown, onShutdown } from "sources/utils/shutdown";
+import { configLoad } from "../config/configLoad.js";
+import { Engine } from "../engine/engine.js";
+import { EngineEventBus } from "../engine/ipc/events.js";
+import { getLogger } from "../log.js";
+import { DEFAULT_SETTINGS_PATH } from "../settings.js";
+import { rolesCurrentList } from "../utils/hasRole.js";
+import { awaitShutdown, onShutdown } from "../utils/shutdown.js";
 
 export type ServerOptions = {
     settings?: string;
