@@ -18,7 +18,6 @@ export type DurableFunctionDefinition<TName extends string, TInput, TOutput> = {
     event: string;
     functionId: string;
     enabledRoles?: readonly DaycareRole[];
-    dedupeKey?: (ctx: Context, input: TInput) => string | null;
     handler: (context: DurableFunctionHandlerContext<TInput>) => Promise<TOutput>;
 };
 
@@ -29,7 +28,6 @@ export const durableFunctionDefinitions = {
         event: "daycare/durable.delayed-signal-deliver",
         functionId: "durable-delayed-signal-deliver",
         enabledRoles: ["api", "agents", "signals"],
-        dedupeKey: (ctx, input) => `${ctx.userId}:${input.delayedSignalId}`,
         handler: async ({ ctx, input, services }) => {
             await services.delayedSignals.deliver(ctx, input.delayedSignalId);
             return null;
@@ -79,18 +77,6 @@ export function durableFunctionEnabled<TName extends DurableFunctionName>(
         return true;
     }
     return enabledRoles.some((role) => roles.includes(role));
-}
-
-/**
- * Returns a stable dedupe key for a durable function schedule when available.
- * Expects: callers pass the same `ctx` and input for duplicate schedule attempts.
- */
-export function durableFunctionKey<TName extends DurableFunctionName>(
-    ctx: Context,
-    name: TName,
-    input: DurableFunctionInput<TName>
-): string | null {
-    return durableFunctionDefinitions[name].dedupeKey?.(ctx, input) ?? null;
 }
 
 function durableFunctionDefine<TName extends string, TInput, TOutput>(

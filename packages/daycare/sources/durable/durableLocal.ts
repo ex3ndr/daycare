@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
@@ -10,8 +9,7 @@ import {
     type DurableFunctionInput,
     type DurableFunctionName,
     type DurableFunctionOutput,
-    durableFunctionEnabled,
-    durableFunctionKey
+    durableFunctionEnabled
 } from "./durableFunctions.js";
 import type { Durable, DurableExecute } from "./durableTypes.js";
 
@@ -84,11 +82,6 @@ export class DurableLocal implements Durable {
 
         const job = this.jobBuild(ctx, name, input);
         const pendingPath = this.pendingPath(job.id);
-        const activePath = this.activePath(job.id);
-
-        if ((await fileExists(pendingPath)) || (await fileExists(activePath))) {
-            return;
-        }
 
         await writeJsonAtomic(pendingPath, job);
         this.triggerDrain(0);
@@ -282,24 +275,12 @@ export class DurableLocal implements Durable {
             attempts: 0,
             createdAt: now,
             ctx: contextToJSON(ctx),
-            id: this.jobId(ctx, name, input),
+            id: createId(),
             input,
             name,
             nextRunAt: now,
             updatedAt: now
         };
-    }
-
-    private jobId<TName extends DurableFunctionName>(
-        ctx: Context,
-        name: TName,
-        input: DurableFunctionInput<TName>
-    ): string {
-        const key = durableFunctionKey(ctx, name, input);
-        if (!key) {
-            return createId();
-        }
-        return createHash("sha1").update(`${name}\u0000${key}`).digest("hex");
     }
 
     private pendingPath(id: string): string {

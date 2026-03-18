@@ -13,7 +13,6 @@ import {
     type DurableFunctionOutput,
     durableFunctionDefinitions,
     durableFunctionEnabled,
-    durableFunctionKey,
     durableFunctionNamesForRoles
 } from "./durableFunctions.js";
 import type { Durable, DurableExecute } from "./durableTypes.js";
@@ -140,13 +139,14 @@ export class DurableInngest implements Durable {
             async ({ event, step }) => {
                 const payload = event.data as DurableEnvelope<TName>;
                 const ctx = Context.fromJSON(payload.ctx);
+                let invokeIndex = 0;
                 const durableCtx = durableContextBind(ctx, this.kind, async (callCtx, callName, callInput) => {
                     this.functionRequireEnabled(callName);
                     const target = this.functionsByName[callName];
                     if (!target) {
                         throw new Error(`Durable function "${callName}" is not registered in this runtime.`);
                     }
-                    return step.invoke(this.stepIdBuild(callCtx, callName, callInput), {
+                    return step.invoke(`durable:${callName}:${invokeIndex++}`, {
                         data: {
                             ctx: contextToJSON(callCtx),
                             input: callInput
@@ -157,15 +157,6 @@ export class DurableInngest implements Durable {
                 return this.executeRequireEnabled(durableCtx, name, payload.input);
             }
         );
-    }
-
-    private stepIdBuild<TName extends DurableFunctionName>(
-        ctx: Context,
-        name: TName,
-        input: DurableFunctionInput<TName>
-    ): string {
-        const key = durableFunctionKey(ctx, name, input);
-        return key ? `durable:${name}:${key}` : `durable:${name}`;
     }
 
     private executeRequireEnabled<TName extends DurableFunctionName>(
