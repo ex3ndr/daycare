@@ -4,6 +4,7 @@
 - Switched the container runtime entrypoint from `daycare start` to `daycare server`.
 - Made the Kubernetes `Deployment` command explicit so cluster startup does not depend on image defaults.
 - Fixed the `Service` selector to target `app: daycare-server`, matching the pod labels.
+- Set `settings.appServer.host` to `0.0.0.0` in the deployment `ConfigMap` so the app server binds on the container interface.
 
 ## Why
 - `start` is the local desktop/runtime mode and expects the Docker-backed sandbox image plus the local IPC server path.
