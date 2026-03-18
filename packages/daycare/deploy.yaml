@@ -91,6 +91,8 @@ spec:
           env:
             - name: DAYCARE_ROOT_DIR
               value: /var/lib/daycare
+            - name: INNGEST_ENDPOINT
+              value: ws://daycare-inngest:8289/v0/connect
           envFrom:
             - secretRef:
                 name: daycare-server-secrets
