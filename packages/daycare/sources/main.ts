@@ -37,6 +37,12 @@ program
     .option("-v, --verbose", "Show tool calls and responses in channel")
     .action(startCommand);
 
+program
+    .command("server")
+    .description("Launch the daycare as server")
+    .option("-s, --settings <path>", "Path to settings file", DEFAULT_SETTINGS_PATH)
+    .action(startCommand);
+
 program.command("status").description("Show bot status").action(statusCommand);
 
 program
