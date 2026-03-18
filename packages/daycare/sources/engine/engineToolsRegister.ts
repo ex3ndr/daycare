@@ -36,7 +36,6 @@ import { buildImageGenerationTool } from "./modules/tools/image-generation.js";
 import { inferenceClassifyToolBuild } from "./modules/tools/inference/inferenceClassifyToolBuild.js";
 import { inferenceSummaryToolBuild } from "./modules/tools/inference/inferenceSummaryToolBuild.js";
 import { buildMediaAnalysisTool } from "./modules/tools/media-analysis.js";
-import { buildMermaidPngTool } from "./modules/tools/mermaid-png.js";
 import { nowTool } from "./modules/tools/nowTool.js";
 import { pdfProcessTool } from "./modules/tools/pdf-process.js";
 import { permanentAgentToolBuild } from "./modules/tools/permanentAgentToolBuild.js";
@@ -156,7 +155,6 @@ export function engineToolsRegister(options: EngineToolsRegisterOptions): void {
     options.toolResolver.register("core", buildVoiceListTool(options.speechRegistry));
     options.toolResolver.register("core", voiceAgentCreateToolBuild());
     options.toolResolver.register("core", buildMediaAnalysisTool(options.mediaRegistry));
-    options.toolResolver.register("core", buildMermaidPngTool());
     options.toolResolver.register("core", buildReactionTool());
     options.toolResolver.register("core", nowTool());
     options.toolResolver.register("core", sayTool());

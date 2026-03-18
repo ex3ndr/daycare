@@ -1,5 +1,4 @@
 import { fileURLToPath } from "node:url";
-
 import { skillListFromRoot } from "./skillListFromRoot.js";
 import type { AgentSkill } from "./skillTypes.js";
 

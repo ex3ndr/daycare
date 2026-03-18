@@ -28,11 +28,7 @@
  * - Keep names human-readable and consistent with existing style.
  */
 
-import type { KnownProvider } from "@mariozechner/pi-ai";
-
 import type { ProviderModelInfo } from "./types.js";
-
-type ProviderModelRegistry = { [K in KnownProvider]: ProviderModelInfo[] };
 
 export const PROVIDER_MODELS = {
     "amazon-bedrock": [
@@ -475,11 +471,6 @@ export const PROVIDER_MODELS = {
         { id: "kimi-k2.5", name: "Kimi K2.5", size: "normal" },
         { id: "minimax-m2.1", name: "MiniMax M2.1", size: "normal" },
         { id: "big-pickle", name: "Big Pickle", size: "normal" }
-    ],
-    "opencode-go": [
-        { id: "glm-5", name: "GLM-5", size: "normal" },
-        { id: "kimi-k2.5", name: "Kimi K2.5", size: "normal" },
-        { id: "minimax-m2.5", name: "MiniMax M2.5", size: "normal" }
     ],
     openrouter: [
         { id: "anthropic/claude-opus-4.6", name: "Anthropic: Claude Opus 4.6", size: "large" },
@@ -972,14 +963,9 @@ export const PROVIDER_MODELS = {
         { id: "glm-4.5-flash", name: "GLM-4.5-Flash", size: "normal", deprecated: true },
         { id: "glm-4.5v", name: "GLM-4.5V", size: "normal" }
     ]
-} as const satisfies ProviderModelRegistry;
-
-type ProviderModelKeys = keyof typeof PROVIDER_MODELS;
-type ExtraProviderKeys = Exclude<ProviderModelKeys, KnownProvider>;
-const _assertNoExtraProviders: ExtraProviderKeys extends never ? true : never = true;
-void _assertNoExtraProviders;
+} as const satisfies Record<string, readonly ProviderModelInfo[]>;
 
 export function listProviderModels(providerId: string): ProviderModelInfo[] {
-    const models = (PROVIDER_MODELS as Record<string, ProviderModelInfo[]>)[providerId] ?? [];
+    const models = (PROVIDER_MODELS as Record<string, readonly ProviderModelInfo[]>)[providerId] ?? [];
     return [...models];
 }

@@ -37,7 +37,7 @@ describe("evalHarnessCreate", () => {
                 .map((tool) => tool.name)
                 .sort((left, right) => left.localeCompare(right));
 
-            expect(toolNames).toHaveLength(73);
+            expect(toolNames).toHaveLength(72);
             expect(toolNames).toEqual(
                 expect.arrayContaining([
                     "agent_ask",
@@ -58,7 +58,6 @@ describe("evalHarnessCreate", () => {
                     "fragment_read",
                     "fragment_update",
                     "generate_image",
-                    "generate_mermaid_png",
                     "generate_signal",
                     "generate_speech",
                     "inference_classify",

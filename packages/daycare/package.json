@@ -35,7 +35,7 @@
   },
   "scripts": {
     "build": "yarn --cwd ../daycare-dashboard build:export && tsc -p tsconfig.json && yarn build:assets",
-    "build:assets": "tsx sources/build/buildAssetsSync.ts",
+    "build:assets": "node ./dist/build/buildAssetsSync.js",
     "dev": "tsx sources/main.ts",
     "eval": "node --import tsx ./scripts/evalRun.mjs",
     "release": "tsx sources/release/releaseRun.ts",
@@ -75,7 +75,6 @@
     "pg": "^8.19.0",
     "pino": "^10.3.0",
     "pino-pretty": "^11.0.0",
-    "playwright": "^1.58.2",
     "privacy-kit": "^0.0.25",
     "qrcode-terminal": "^0.12.0",
     "unique-username-generator": "^1.5.1",
