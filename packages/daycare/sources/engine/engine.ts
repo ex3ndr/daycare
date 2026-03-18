@@ -7,6 +7,7 @@ import type { AgentPath, Config, ConnectorMessage, ConnectorTarget, Context, Mes
 import { AppServer } from "../api/app-server/appServer.js";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
+import { durableExecute } from "../durable/durableExecute.js";
 import { durableResolve } from "../durable/durableResolve.js";
 import type { Durable } from "../durable/durableTypes.js";
 import { getLogger } from "../log.js";
@@ -119,7 +120,6 @@ export class Engine {
         );
         this.config = new ConfigModule(options.config);
         this.server = options.server === true;
-        this.durable = durableResolve(process.env, { server: this.server });
         this.processRoles = rolesCurrentList();
         const dbTarget = this.config.current.db.url
             ? { kind: "postgres" as const, url: this.config.current.db.url }
@@ -157,6 +157,18 @@ export class Engine {
             signals: this.signals,
             delayedSignals: this.storage.delayedSignals
         });
+        this.durable = durableResolve(process.env, {
+            dataDir: this.config.current.dataDir,
+            execute: (ctx, name, input) =>
+                durableExecute({
+                    ctx,
+                    delayedSignals: this.delayedSignals,
+                    input,
+                    name
+                }),
+            server: this.server
+        });
+        this.delayedSignals.setDurable(this.durable);
         this.reloadSync = new InvalidateSync(async () => {
             await this.reloadApplyLatest();
         });

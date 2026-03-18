@@ -21,6 +21,8 @@ import type {
 } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
+import { durableExecute } from "../../durable/durableExecute.js";
+import { DurableLocal } from "../../durable/durableLocal.js";
 import { sessionHistoryTable } from "../../schema.js";
 import { storageOpen } from "../../storage/storageOpen.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
@@ -3157,12 +3159,32 @@ async function delayedSignalsBuild(
     signals: Signals
 ): Promise<DelayedSignals> {
     const storage = await storageOpenTest();
-    return new DelayedSignals({
+    let delayed!: DelayedSignals;
+    const durable = new DurableLocal({
+        execute: (ctx, name, input) =>
+            durableExecute({
+                ctx,
+                delayedSignals: delayed,
+                input,
+                name
+            }),
+        retryBaseMs: 20,
+        rootDir: path.join(config.current.dataDir, "durable")
+    });
+    delayed = new DelayedSignals({
         config,
         eventBus,
         signals,
-        delayedSignals: storage.delayedSignals
+        delayedSignals: storage.delayedSignals,
+        durable
     });
+    await durable.start();
+    const delayedStop = delayed.stop.bind(delayed);
+    delayed.stop = () => {
+        delayedStop();
+        void durable.stop();
+    };
+    return delayed;
 }
 
 function historyHasSignalText(records: Array<{ type: string; text?: string }>): boolean {

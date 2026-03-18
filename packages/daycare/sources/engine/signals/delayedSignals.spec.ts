@@ -2,10 +2,12 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Signal, SignalGenerateInput } from "@/types";
 import { configResolve } from "../../config/configResolve.js";
+import { durableExecute } from "../../durable/durableExecute.js";
+import { DurableLocal } from "../../durable/durableLocal.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
 import { ConfigModule } from "../config/configModule.js";
 import { EngineEventBus } from "../ipc/events.js";
@@ -28,7 +30,14 @@ describe("DelayedSignals", () => {
                 })
             };
 
-            const delayed = new DelayedSignals({ config, eventBus, signals, delayedSignals: storage.delayedSignals });
+            const harness = await delayedSignalsBuild({
+                config,
+                dataDir: dir,
+                delayedSignals: storage.delayedSignals,
+                eventBus,
+                signals
+            });
+            const { delayed, durable } = harness;
             await delayed.ensureDir();
             const first = await delayed.schedule({
                 type: "reminder",
@@ -47,7 +56,14 @@ describe("DelayedSignals", () => {
             expect(delayed.list()).toHaveLength(1);
             expect(delayed.list()[0]?.id).toBe(second.id);
 
-            const restored = new DelayedSignals({ config, eventBus, signals, delayedSignals: storage.delayedSignals });
+            const restoredHarness = await delayedSignalsBuild({
+                config,
+                dataDir: dir,
+                delayedSignals: storage.delayedSignals,
+                eventBus,
+                signals
+            });
+            const { delayed: restored, durable: restoredDurable } = restoredHarness;
             await restored.ensureDir();
             expect(restored.list()).toHaveLength(1);
             expect(restored.list()[0]?.id).toBe(second.id);
@@ -58,6 +74,8 @@ describe("DelayedSignals", () => {
             });
             expect(removed).toBe(1);
             expect(restored.list()).toEqual([]);
+            await durable.stop();
+            await restoredDurable.stop();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -69,8 +87,10 @@ describe("DelayedSignals", () => {
             const config = configModuleBuild(dir);
             const storage = await storageOpenTest();
             let attempts = 0;
-            const delayed = new DelayedSignals({
+            const harness = await delayedSignalsBuild({
                 config,
+                dataDir: dir,
+                delayedSignals: storage.delayedSignals,
                 eventBus: new EngineEventBus(),
                 signals: {
                     generate: async () => {
@@ -78,9 +98,9 @@ describe("DelayedSignals", () => {
                         throw new Error("delivery failed");
                     }
                 },
-                delayedSignals: storage.delayedSignals,
                 failureRetryMs: 20
             });
+            const { delayed, durable } = harness;
             await delayed.start();
             await delayed.schedule({
                 type: "notify.fail",
@@ -88,12 +108,14 @@ describe("DelayedSignals", () => {
                 source: { type: "system", userId: "user-1" }
             });
 
-            await wait(35);
+            await vi.waitFor(() => {
+                expect(attempts).toBeGreaterThan(0);
+            });
             delayed.stop();
 
-            expect(attempts).toBeGreaterThan(0);
             expect(delayed.list()).toHaveLength(1);
             expect(delayed.list()[0]?.type).toBe("notify.fail");
+            await durable.stop();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -105,8 +127,10 @@ describe("DelayedSignals", () => {
             const config = configModuleBuild(dir);
             const storage = await storageOpenTest();
             const delivered: SignalGenerateInput[] = [];
-            const delayed = new DelayedSignals({
+            const harness = await delayedSignalsBuild({
                 config,
+                dataDir: dir,
+                delayedSignals: storage.delayedSignals,
                 eventBus: new EngineEventBus(),
                 signals: {
                     generate: async (input) => {
@@ -120,9 +144,9 @@ describe("DelayedSignals", () => {
                         };
                     }
                 },
-                delayedSignals: storage.delayedSignals,
                 failureRetryMs: 20
             });
+            const { delayed, durable } = harness;
             await delayed.start();
             await delayed.schedule({
                 type: "notify.ok",
@@ -131,12 +155,14 @@ describe("DelayedSignals", () => {
                 data: { ok: true }
             });
 
-            await wait(35);
+            await vi.waitFor(() => {
+                expect(delivered).toHaveLength(1);
+            });
             delayed.stop();
 
-            expect(delivered).toHaveLength(1);
             expect(delivered[0]?.type).toBe("notify.ok");
             expect(delayed.list()).toEqual([]);
+            await durable.stop();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -146,8 +172,10 @@ describe("DelayedSignals", () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-delayed-signals-"));
         try {
             const storage = await storageOpenTest();
-            const delayed = new DelayedSignals({
+            const harness = await delayedSignalsBuild({
                 config: configModuleBuild(dir),
+                dataDir: dir,
+                delayedSignals: storage.delayedSignals,
                 eventBus: new EngineEventBus(),
                 signals: {
                     generate: async (input) => ({
@@ -157,9 +185,9 @@ describe("DelayedSignals", () => {
                         data: input.data,
                         createdAt: Date.now()
                     })
-                },
-                delayedSignals: storage.delayedSignals
+                }
             });
+            const { delayed, durable } = harness;
             await delayed.ensureDir();
 
             await expect(
@@ -169,6 +197,7 @@ describe("DelayedSignals", () => {
                     source: { type: "system" } as unknown as Signal["source"]
                 })
             ).rejects.toThrow("Signal source userId is required");
+            await durable.stop();
         } finally {
             await rm(dir, { recursive: true, force: true });
         }
@@ -177,6 +206,40 @@ describe("DelayedSignals", () => {
 
 function configModuleBuild(dataDir: string): ConfigModule {
     return new ConfigModule(configResolve({ engine: { dataDir } }, path.join(dataDir, "settings.json")));
+}
+
+async function delayedSignalsBuild(options: {
+    config: ConfigModule;
+    dataDir: string;
+    delayedSignals: Awaited<ReturnType<typeof storageOpenTest>>["delayedSignals"];
+    eventBus: EngineEventBus;
+    failureRetryMs?: number;
+    signals: {
+        generate: (input: SignalGenerateInput) => Promise<Signal>;
+    };
+}): Promise<{ delayed: DelayedSignals; durable: DurableLocal }> {
+    let delayed!: DelayedSignals;
+    const durable = new DurableLocal({
+        execute: (ctx, name, input) =>
+            durableExecute({
+                ctx,
+                delayedSignals: delayed,
+                input,
+                name
+            }),
+        retryBaseMs: options.failureRetryMs ?? 20,
+        rootDir: path.join(options.dataDir, "durable")
+    });
+    delayed = new DelayedSignals({
+        config: options.config,
+        delayedSignals: options.delayedSignals,
+        durable,
+        eventBus: options.eventBus,
+        failureRetryMs: options.failureRetryMs,
+        signals: options.signals
+    });
+    await durable.start();
+    return { delayed, durable };
 }
 
 async function wait(ms: number): Promise<void> {

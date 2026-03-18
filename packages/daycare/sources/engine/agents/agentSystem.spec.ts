@@ -14,6 +14,8 @@ import type {
 } from "@/types";
 import { AuthStore } from "../../auth/store.js";
 import { configResolve } from "../../config/configResolve.js";
+import { durableExecute } from "../../durable/durableExecute.js";
+import { DurableLocal } from "../../durable/durableLocal.js";
 import type { Storage } from "../../storage/storage.js";
 import { storageOpen } from "../../storage/storageOpen.js";
 import { ConfigModule } from "../config/configModule.js";
@@ -926,6 +928,24 @@ async function harnessCreate(
         signals,
         delayedSignals: storage.delayedSignals
     });
+    const durable = new DurableLocal({
+        execute: (ctx, name, input) =>
+            durableExecute({
+                ctx,
+                delayedSignals,
+                input,
+                name
+            }),
+        retryBaseMs: 20,
+        rootDir: path.join(dir, "durable")
+    });
+    delayedSignals.setDurable(durable);
+    await durable.start();
+    const delayedSignalsStop = delayedSignals.stop.bind(delayedSignals);
+    delayedSignals.stop = () => {
+        delayedSignalsStop();
+        void durable.stop();
+    };
     await delayedSignals.ensureDir();
     const pluginManager = {
         getSystemPrompts: async () => [],

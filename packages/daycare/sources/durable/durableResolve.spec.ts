@@ -5,12 +5,14 @@ import { DurableLocal } from "./durableLocal.js";
 import { durableResolve } from "./durableResolve.js";
 
 describe("durableResolve", () => {
+    const execute = vi.fn(async () => null);
+
     it("returns local runtime outside server mode", () => {
         const result = durableResolve(
             {
                 INNGEST_ENDPOINT: "wss://inngest.example/connect"
             },
-            { server: false }
+            { dataDir: "/tmp/daycare-durable-test", execute, server: false }
         );
 
         expect(result).toBeInstanceOf(DurableLocal);
@@ -18,7 +20,7 @@ describe("durableResolve", () => {
     });
 
     it("returns local runtime in server mode when Inngest env is missing", () => {
-        const result = durableResolve({}, { server: true });
+        const result = durableResolve({}, { dataDir: "/tmp/daycare-durable-test", execute, server: true });
 
         expect(result).toBeInstanceOf(DurableLocal);
         expect(result.kind).toBe("local");
@@ -29,7 +31,7 @@ describe("durableResolve", () => {
             {
                 INNGEST_ENDPOINT: "wss://inngest.example/connect"
             },
-            { server: true }
+            { dataDir: "/tmp/daycare-durable-test", execute, server: true }
         );
 
         expect(result).toBeInstanceOf(DurableInngest);
@@ -48,7 +50,12 @@ describe("durableResolve", () => {
             {
                 INNGEST_ENDPOINT: "wss://inngest.example/connect"
             },
-            { inngest: { connectRun: connectRun as never }, server: true }
+            {
+                dataDir: "/tmp/daycare-durable-test",
+                execute,
+                inngest: { connectRun: connectRun as never },
+                server: true
+            }
         );
 
         await result.start();

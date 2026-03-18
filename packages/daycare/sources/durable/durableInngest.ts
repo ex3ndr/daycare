@@ -1,15 +1,31 @@
 import os from "node:os";
-import { Inngest } from "inngest";
+import { Inngest, type InngestFunction, invoke, staticSchema } from "inngest";
 import { connect, type WorkerConnection } from "inngest/connect";
 
+import type { Context } from "@/types";
 import { getLogger } from "../log.js";
+import { durableCallScopeCurrent, durableCallScopeRun } from "./durableCallScope.js";
 import type { DurableConfig } from "./durableConfigResolve.js";
-import type { Durable } from "./durableTypes.js";
+import {
+    type DurableContextSnapshot,
+    durableContextRestore,
+    durableContextSnapshot
+} from "./durableContextSnapshot.js";
+import {
+    type DurableFunctionInput,
+    type DurableFunctionName,
+    type DurableFunctionOutput,
+    durableFunctionDefinitions,
+    durableFunctionKey
+} from "./durableFunctions.js";
+import type { Durable, DurableExecute } from "./durableTypes.js";
 
 const logger = getLogger("durable.inngest");
 
 export type DurableInngestOptions = {
     connectRun?: typeof connect;
+    env?: NodeJS.ProcessEnv;
+    execute: DurableExecute;
 };
 
 /**
@@ -20,12 +36,66 @@ export class DurableInngest implements Durable {
     readonly kind = "inngest" as const;
     private readonly config: DurableConfig;
     private readonly connectRun: typeof connect;
+    private readonly env: NodeJS.ProcessEnv;
+    private readonly execute: DurableExecute;
+    private readonly client: Inngest;
+    private readonly functionsByName: Record<DurableFunctionName, InngestFunction.Any>;
     private connection: WorkerConnection | null = null;
     private started = false;
 
-    constructor(config: DurableConfig, options: DurableInngestOptions = {}) {
+    constructor(config: DurableConfig, options: DurableInngestOptions) {
         this.config = config;
         this.connectRun = options.connectRun ?? connect;
+        this.env = options.env ?? process.env;
+        this.execute = options.execute;
+        this.client = new Inngest({
+            baseUrl: this.config.apiBaseUrl,
+            id: "daycare-durable",
+            internalLogger: logger,
+            logger,
+            ...(this.env.INNGEST_DEV !== undefined || this.env.INNGEST_EVENT_KEY === undefined ? { isDev: true } : {})
+        });
+        this.functionsByName = {
+            delayedSignalDeliver: this.functionBuild("delayedSignalDeliver")
+        };
+    }
+
+    async invoke<TName extends DurableFunctionName>(
+        ctx: Context,
+        name: TName,
+        input: DurableFunctionInput<TName>
+    ): Promise<DurableFunctionOutput<TName> | undefined> {
+        const scope = durableCallScopeCurrent();
+        if (scope) {
+            return scope.call(ctx, name, input);
+        }
+        await this.schedule(ctx, name, input);
+    }
+
+    async call<TName extends DurableFunctionName>(
+        ctx: Context,
+        name: TName,
+        input: DurableFunctionInput<TName>
+    ): Promise<DurableFunctionOutput<TName>> {
+        const scope = durableCallScopeCurrent();
+        if (!scope) {
+            throw new Error("Durable call requires a durable execution context.");
+        }
+        return scope.call(ctx, name, input);
+    }
+
+    async schedule<TName extends DurableFunctionName>(
+        ctx: Context,
+        name: TName,
+        input: DurableFunctionInput<TName>
+    ): Promise<void> {
+        await this.client.send({
+            name: durableFunctionDefinitions[name].event,
+            data: {
+                ctx: durableContextSnapshot(ctx),
+                input
+            }
+        });
     }
 
     async start(): Promise<void> {
@@ -36,15 +106,8 @@ export class DurableInngest implements Durable {
 
         logger.info({ endpoint: this.config.endpoint }, "start: Starting durable runtime via Inngest connect()");
 
-        const client = new Inngest({
-            baseUrl: this.config.apiBaseUrl,
-            id: "daycare-durable",
-            internalLogger: logger,
-            logger
-        });
-
         this.connection = await this.connectRun({
-            apps: [{ client, functions: [] }],
+            apps: [{ client: this.client, functions: Object.values(this.functionsByName) }],
             gatewayUrl: this.config.endpoint,
             handleShutdownSignals: [],
             instanceId: `${os.hostname()}-${process.pid}`
@@ -69,4 +132,47 @@ export class DurableInngest implements Durable {
         this.connection = null;
         await connection.close();
     }
+
+    private functionBuild<TName extends DurableFunctionName>(name: TName): InngestFunction.Any {
+        const definition = durableFunctionDefinitions[name];
+        return this.client.createFunction(
+            {
+                id: definition.functionId,
+                triggers: [{ event: definition.event }, invoke(staticSchema<DurableEnvelope<TName>>())]
+            },
+            async ({ event, step }) => {
+                const payload = event.data as DurableEnvelope<TName>;
+                const ctx = durableContextRestore(payload.ctx);
+                return durableCallScopeRun(
+                    {
+                        kind: this.kind,
+                        call: async (callCtx, callName, callInput) => {
+                            return step.invoke(this.stepIdBuild(callCtx, callName, callInput), {
+                                data: {
+                                    ctx: durableContextSnapshot(callCtx),
+                                    input: callInput
+                                },
+                                function: this.functionsByName[callName]
+                            }) as Promise<DurableFunctionOutput<typeof callName>>;
+                        }
+                    },
+                    async () => this.execute(ctx, name, payload.input)
+                );
+            }
+        );
+    }
+
+    private stepIdBuild<TName extends DurableFunctionName>(
+        ctx: Context,
+        name: TName,
+        input: DurableFunctionInput<TName>
+    ): string {
+        const key = durableFunctionKey(ctx, name, input);
+        return key ? `durable:${name}:${key}` : `durable:${name}`;
+    }
 }
+
+type DurableEnvelope<TName extends DurableFunctionName> = {
+    ctx: DurableContextSnapshot;
+    input: DurableFunctionInput<TName>;
+};

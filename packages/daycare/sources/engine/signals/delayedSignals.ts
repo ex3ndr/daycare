@@ -1,15 +1,18 @@
 import { createId } from "@paralleldrive/cuid2";
 import type {
+    Context,
     DelayedSignal,
     DelayedSignalCancelRepeatKeyInput,
     DelayedSignalScheduleInput,
     SignalGenerateInput,
     SignalSource
 } from "@/types";
+import type { Durable } from "../../durable/durableTypes.js";
 import { getLogger } from "../../log.js";
 import type { DelayedSignalDbRecord } from "../../storage/databaseTypes.js";
 import type { DelayedSignalsRepository } from "../../storage/delayedSignalsRepository.js";
 import { AsyncLock } from "../../utils/lock.js";
+import { contextForUser } from "../agents/context.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import type { Signals } from "./signals.js";
@@ -18,11 +21,15 @@ const logger = getLogger("signal.delayed");
 type DelayedRuntimeSignal = DelayedSignal & { userId: string };
 
 type DelayedSignalsRepositoryOptions = {
-    delayedSignals: Pick<DelayedSignalsRepository, "create" | "findDue" | "findAll" | "delete" | "deleteByRepeatKey">;
+    delayedSignals: Pick<
+        DelayedSignalsRepository,
+        "create" | "delete" | "deleteByRepeatKey" | "findAll" | "findById" | "findDue"
+    >;
 };
 
 export type DelayedSignalsOptions = {
     config: ConfigModule;
+    durable?: Pick<Durable, "invoke"> | null;
     eventBus: EngineEventBus;
     signals: Pick<Signals, "generate">;
     failureRetryMs?: number;
@@ -39,12 +46,14 @@ export class DelayedSignals {
     private readonly signals: Pick<Signals, "generate">;
     private readonly delayedSignals: Pick<
         DelayedSignalsRepository,
-        "create" | "findDue" | "findAll" | "delete" | "deleteByRepeatKey"
+        "create" | "delete" | "deleteByRepeatKey" | "findAll" | "findById" | "findDue"
     >;
     private readonly failureRetryMs: number;
     private readonly maxTimerMs: number;
     private readonly lock = new AsyncLock();
     private readonly events = new Map<string, DelayedRuntimeSignal>();
+    private readonly pendingDurable = new Set<string>();
+    private durable: Pick<Durable, "invoke"> | null;
     private loaded = false;
     private timer: NodeJS.Timeout | null = null;
     private started = false;
@@ -56,8 +65,13 @@ export class DelayedSignals {
         this.eventBus = options.eventBus;
         this.signals = options.signals;
         this.delayedSignals = options.delayedSignals;
+        this.durable = options.durable ?? null;
         this.failureRetryMs = Math.max(10, Math.floor(options.failureRetryMs ?? 1_000));
         this.maxTimerMs = Math.max(1_000, Math.floor(options.maxTimerMs ?? 60_000));
+    }
+
+    setDurable(durable: Pick<Durable, "invoke">): void {
+        this.durable = durable;
     }
 
     async ensureDir(): Promise<void> {
@@ -221,6 +235,11 @@ export class DelayedSignals {
     }
 
     private async deliverDue(): Promise<boolean> {
+        if (!this.durable) {
+            logger.warn("error: Delayed signal delivery skipped because durable runtime is not configured");
+            return true;
+        }
+
         const now = Date.now();
         const dueRecords = await this.delayedSignals.findDue(now);
         const due = dueRecords.map((record) => delayedSignalRuntimeBuild(record));
@@ -230,29 +249,65 @@ export class DelayedSignals {
 
         let retryNeeded = false;
         for (const delayed of due) {
+            if (this.pendingDurable.has(delayed.id)) {
+                continue;
+            }
+            this.pendingDurable.add(delayed.id);
+
+            try {
+                await this.durable.invoke(contextForUser({ userId: delayed.userId }), "delayedSignalDeliver", {
+                    delayedSignalId: delayed.id
+                });
+            } catch (error) {
+                this.pendingDurable.delete(delayed.id);
+                retryNeeded = true;
+                logger.warn(
+                    { delayedSignalId: delayed.id, type: delayed.type, error },
+                    "error: Failed to schedule delayed signal delivery"
+                );
+            }
+        }
+
+        return retryNeeded;
+    }
+
+    /**
+     * Delivers one scheduled delayed signal by durable job id.
+     * Expects: `ctx.userId` matches the delayed signal owner.
+     */
+    async deliver(ctx: Context, delayedSignalId: string): Promise<boolean> {
+        const normalizedId = delayedSignalId.trim();
+        if (!normalizedId) {
+            throw new Error("Delayed signal id is required");
+        }
+
+        try {
+            const record = await this.delayedSignals.findById(normalizedId);
+            if (!record) {
+                return false;
+            }
+            if (record.userId !== ctx.userId) {
+                throw new Error(`Delayed signal ${normalizedId} does not belong to ctx.userId=${ctx.userId}`);
+            }
+
+            const delayed = delayedSignalRuntimeBuild(record);
+            if (delayed.deliverAt > Date.now()) {
+                return false;
+            }
+
             const input: SignalGenerateInput = {
                 type: delayed.type,
                 source: delayed.source,
                 ...(delayed.data === undefined ? {} : { data: delayed.data })
             };
-            try {
-                await this.signals.generate(input);
-            } catch (error) {
-                retryNeeded = true;
-                logger.warn(
-                    { delayedSignalId: delayed.id, type: delayed.type, error },
-                    "error: Delayed signal delivery failed"
-                );
-                continue;
-            }
+            await this.signals.generate(input);
 
             let removed = false;
             await this.lock.inLock(async () => {
                 const current = this.events.get(delayed.id);
-                if (!current || current.deliverAt > now) {
-                    return;
+                if (current && current.deliverAt <= Date.now()) {
+                    this.events.delete(delayed.id);
                 }
-                this.events.delete(delayed.id);
                 removed = await this.delayedSignals.delete(delayed.id);
             });
 
@@ -264,9 +319,12 @@ export class DelayedSignals {
                     deliverAt: delayed.deliverAt
                 });
             }
-        }
 
-        return retryNeeded;
+            return removed;
+        } finally {
+            this.pendingDurable.delete(normalizedId);
+            this.scheduleNext(0);
+        }
     }
 
     private async loadUnlocked(): Promise<void> {
