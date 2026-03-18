@@ -14,16 +14,28 @@ export type Durable = {
     kind: DurableRuntimeKind;
     start(): Promise<void>;
     stop(): Promise<void>;
+    /**
+     * Executes immediately only when `ctx.durable` is active for this runtime.
+     * Otherwise the function is scheduled asynchronously and returns `undefined`.
+     */
     invoke<TName extends DurableFunctionName>(
         ctx: Context,
         name: TName,
         input: DurableFunctionInput<TName>
     ): Promise<DurableFunctionOutput<TName> | undefined>;
+    /**
+     * Executes immediately and awaits the durable result.
+     * Expects: `ctx.durable` is active for this runtime; throws otherwise.
+     */
     call<TName extends DurableFunctionName>(
         ctx: Context,
         name: TName,
         input: DurableFunctionInput<TName>
     ): Promise<DurableFunctionOutput<TName>>;
+    /**
+     * Schedules the durable function asynchronously without waiting for completion.
+     * Expects: callers treat this as fire-and-forget durable work.
+     */
     schedule<TName extends DurableFunctionName>(
         ctx: Context,
         name: TName,

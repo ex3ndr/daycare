@@ -2,14 +2,9 @@ import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
-import type { Context } from "@/types";
 import { getLogger } from "../log.js";
-import { durableCallScopeCurrent, durableCallScopeRun } from "./durableCallScope.js";
-import {
-    type DurableContextSnapshot,
-    durableContextRestore,
-    durableContextSnapshot
-} from "./durableContextSnapshot.js";
+import { Context, type ContextJson, contextToJSON } from "../types.js";
+import { durableContextBind, durableContextCallGet } from "./durableContext.js";
 import {
     type DurableFunctionInput,
     type DurableFunctionName,
@@ -29,7 +24,7 @@ type DurableLocalOptions = {
 type DurableLocalJob = {
     attempts: number;
     createdAt: number;
-    ctx: DurableContextSnapshot;
+    ctx: ContextJson;
     id: string;
     input: unknown;
     name: DurableFunctionName;
@@ -66,9 +61,9 @@ export class DurableLocal implements Durable {
         name: TName,
         input: DurableFunctionInput<TName>
     ): Promise<DurableFunctionOutput<TName> | undefined> {
-        const scope = durableCallScopeCurrent();
-        if (scope) {
-            return scope.call(ctx, name, input);
+        const call = durableContextCallGet(ctx, this.kind);
+        if (call) {
+            return call(ctx, name, input);
         }
         await this.schedule(ctx, name, input);
     }
@@ -78,11 +73,11 @@ export class DurableLocal implements Durable {
         name: TName,
         input: DurableFunctionInput<TName>
     ): Promise<DurableFunctionOutput<TName>> {
-        const scope = durableCallScopeCurrent();
-        if (!scope) {
+        const call = durableContextCallGet(ctx, this.kind);
+        if (!call) {
             throw new Error("Durable call requires a durable execution context.");
         }
-        return scope.call(ctx, name, input);
+        return call(ctx, name, input);
     }
 
     async schedule<TName extends DurableFunctionName>(
@@ -219,17 +214,12 @@ export class DurableLocal implements Durable {
             return;
         }
 
-        const ctx = durableContextRestore(job.ctx);
+        const ctx = Context.fromJSON(job.ctx);
         try {
-            await durableCallScopeRun(
-                {
-                    kind: this.kind,
-                    call: (callCtx, callName, callInput) => this.execute(callCtx, callName, callInput)
-                },
-                async () => {
-                    await this.execute(ctx, job.name, jobInputCast(job.name, job.input));
-                }
+            const durableCtx = durableContextBind(ctx, this.kind, (callCtx, callName, callInput) =>
+                this.execute(callCtx, callName, callInput)
             );
+            await this.execute(durableCtx, job.name, jobInputCast(job.name, job.input));
             await fs.unlink(activePath).catch(() => undefined);
         } catch (error) {
             const nextAttempt = job.attempts + 1;
@@ -296,7 +286,7 @@ export class DurableLocal implements Durable {
         return {
             attempts: 0,
             createdAt: now,
-            ctx: durableContextSnapshot(ctx),
+            ctx: contextToJSON(ctx),
             id: this.jobId(ctx, name, input),
             input,
             name,

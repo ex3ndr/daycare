@@ -241,9 +241,3 @@ async function delayedSignalsBuild(options: {
     await durable.start();
     return { delayed, durable };
 }
-
-async function wait(ms: number): Promise<void> {
-    await new Promise<void>((resolve) => {
-        setTimeout(resolve, ms);
-    });
-}

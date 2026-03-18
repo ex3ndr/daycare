@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { Context, contextForAgent, contextForUser } from "./context.js";
+import { Context, contextForAgent, contextForUser, contextToJSON } from "./context.js";
 
 describe("Context", () => {
     it("builds a user-only context", () => {
@@ -37,5 +37,26 @@ describe("Context", () => {
         expect(context.agentId).toBe("agent-1");
         expect(context.userId).toBe("user-1");
         expect(context.personUserId).toBe("person-1");
+    });
+
+    it("serializes and restores durable state", () => {
+        const context = new Context({
+            userId: "user-1",
+            personUserId: "person-1",
+            agentId: "agent-1",
+            durable: {
+                active: true,
+                kind: "local"
+            }
+        });
+
+        const restored = Context.fromJSON(contextToJSON(context));
+        expect(restored.userId).toBe("user-1");
+        expect(restored.personUserId).toBe("person-1");
+        expect(restored.agentId).toBe("agent-1");
+        expect(restored.durable).toEqual({
+            active: true,
+            kind: "local"
+        });
     });
 });

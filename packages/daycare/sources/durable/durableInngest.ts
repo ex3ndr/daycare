@@ -2,15 +2,10 @@ import os from "node:os";
 import { Inngest, type InngestFunction, invoke, staticSchema } from "inngest";
 import { connect, type WorkerConnection } from "inngest/connect";
 
-import type { Context } from "@/types";
 import { getLogger } from "../log.js";
-import { durableCallScopeCurrent, durableCallScopeRun } from "./durableCallScope.js";
+import { Context, type ContextJson, contextToJSON } from "../types.js";
 import type { DurableConfig } from "./durableConfigResolve.js";
-import {
-    type DurableContextSnapshot,
-    durableContextRestore,
-    durableContextSnapshot
-} from "./durableContextSnapshot.js";
+import { durableContextBind, durableContextCallGet } from "./durableContext.js";
 import {
     type DurableFunctionInput,
     type DurableFunctionName,
@@ -65,9 +60,9 @@ export class DurableInngest implements Durable {
         name: TName,
         input: DurableFunctionInput<TName>
     ): Promise<DurableFunctionOutput<TName> | undefined> {
-        const scope = durableCallScopeCurrent();
-        if (scope) {
-            return scope.call(ctx, name, input);
+        const call = durableContextCallGet(ctx, this.kind);
+        if (call) {
+            return call(ctx, name, input);
         }
         await this.schedule(ctx, name, input);
     }
@@ -77,11 +72,11 @@ export class DurableInngest implements Durable {
         name: TName,
         input: DurableFunctionInput<TName>
     ): Promise<DurableFunctionOutput<TName>> {
-        const scope = durableCallScopeCurrent();
-        if (!scope) {
+        const call = durableContextCallGet(ctx, this.kind);
+        if (!call) {
             throw new Error("Durable call requires a durable execution context.");
         }
-        return scope.call(ctx, name, input);
+        return call(ctx, name, input);
     }
 
     async schedule<TName extends DurableFunctionName>(
@@ -92,7 +87,7 @@ export class DurableInngest implements Durable {
         await this.client.send({
             name: durableFunctionDefinitions[name].event,
             data: {
-                ctx: durableContextSnapshot(ctx),
+                ctx: contextToJSON(ctx),
                 input
             }
         });
@@ -142,22 +137,17 @@ export class DurableInngest implements Durable {
             },
             async ({ event, step }) => {
                 const payload = event.data as DurableEnvelope<TName>;
-                const ctx = durableContextRestore(payload.ctx);
-                return durableCallScopeRun(
-                    {
-                        kind: this.kind,
-                        call: async (callCtx, callName, callInput) => {
-                            return step.invoke(this.stepIdBuild(callCtx, callName, callInput), {
-                                data: {
-                                    ctx: durableContextSnapshot(callCtx),
-                                    input: callInput
-                                },
-                                function: this.functionsByName[callName]
-                            }) as Promise<DurableFunctionOutput<typeof callName>>;
-                        }
-                    },
-                    async () => this.execute(ctx, name, payload.input)
-                );
+                const ctx = Context.fromJSON(payload.ctx);
+                const durableCtx = durableContextBind(ctx, this.kind, async (callCtx, callName, callInput) => {
+                    return step.invoke(this.stepIdBuild(callCtx, callName, callInput), {
+                        data: {
+                            ctx: contextToJSON(callCtx),
+                            input: callInput
+                        },
+                        function: this.functionsByName[callName]
+                    }) as Promise<DurableFunctionOutput<typeof callName>>;
+                });
+                return this.execute(durableCtx, name, payload.input);
             }
         );
     }
@@ -173,6 +163,6 @@ export class DurableInngest implements Durable {
 }
 
 type DurableEnvelope<TName extends DurableFunctionName> = {
-    ctx: DurableContextSnapshot;
+    ctx: ContextJson;
     input: DurableFunctionInput<TName>;
 };

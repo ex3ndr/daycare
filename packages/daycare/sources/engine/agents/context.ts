@@ -1,4 +1,18 @@
+import type { DurableRuntimeKind } from "../../durable/durableTypes.js";
+
 const contextAgentIds = new WeakMap<Context, string | null>();
+
+export type ContextDurableState = {
+    active: true;
+    kind: DurableRuntimeKind;
+};
+
+export type ContextJson = {
+    userId: string;
+    personUserId?: string;
+    agentId?: string;
+    durable?: ContextDurableState;
+};
 
 /**
  * Readonly context carrying agent and user identity.
@@ -7,12 +21,14 @@ const contextAgentIds = new WeakMap<Context, string | null>();
 export class Context {
     readonly userId: string;
     readonly personUserId?: string;
+    readonly durable?: ContextDurableState;
     readonly hasAgentId?: boolean;
 
-    constructor(input: { userId: string; personUserId?: string; agentId?: string }) {
+    constructor(input: ContextJson) {
         this.userId = requiredId(input.userId, "Context userId");
         this.personUserId =
             input.personUserId === undefined ? undefined : requiredId(input.personUserId, "Context personUserId");
+        this.durable = contextDurableBuild(input.durable);
         const agentId = input.agentId === undefined ? null : requiredId(input.agentId, "Context agentId");
         contextAgentIds.set(this, agentId);
         Object.defineProperty(this, "hasAgentId", {
@@ -30,6 +46,14 @@ export class Context {
             throw new Error("Context has no agentId");
         }
         return agentId;
+    }
+
+    /**
+     * Restores a Context instance from serialized JSON state.
+     * Expects: `input` was produced by `contextToJSON()` or matches that shape.
+     */
+    static fromJSON(input: ContextJson): Context {
+        return new Context(input);
     }
 }
 
@@ -49,10 +73,36 @@ export function contextForAgent(input: { userId: string; personUserId?: string; 
     return new Context({ userId: input.userId, personUserId: input.personUserId, agentId: input.agentId });
 }
 
+/**
+ * Serializes context state for persistence or transport across durable boundaries.
+ * Expects: callers treat the returned object as immutable.
+ */
+export function contextToJSON(ctx: Context): ContextJson {
+    return {
+        userId: ctx.userId,
+        ...(ctx.personUserId ? { personUserId: ctx.personUserId } : {}),
+        ...(ctx.hasAgentId ? { agentId: ctx.agentId } : {}),
+        ...(ctx.durable ? { durable: ctx.durable } : {})
+    };
+}
+
 function requiredId(value: string, field: string): string {
     const normalized = value.trim();
     if (!normalized) {
         throw new Error(`${field} is required.`);
     }
     return normalized;
+}
+
+function contextDurableBuild(input: ContextDurableState | undefined): ContextDurableState | undefined {
+    if (input === undefined) {
+        return undefined;
+    }
+    if (input.active !== true) {
+        throw new Error("Context durable state must be active.");
+    }
+    return Object.freeze({
+        active: true,
+        kind: requiredId(input.kind, "Context durable kind") as DurableRuntimeKind
+    });
 }
