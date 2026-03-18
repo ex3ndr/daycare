@@ -92,7 +92,7 @@ spec:
               value: /var/lib/daycare
           envFrom:
             - secretRef:
-                name: daycare-server
+                name: daycare-server-secrets
           ports:
             - containerPort: 7332
           volumeMounts:
