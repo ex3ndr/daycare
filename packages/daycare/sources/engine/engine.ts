@@ -7,6 +7,8 @@ import type { AgentPath, Config, ConnectorMessage, ConnectorTarget, Context, Mes
 import { AppServer } from "../api/app-server/appServer.js";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
+import { durableResolve } from "../durable/durableResolve.js";
+import type { Durable } from "../durable/durableTypes.js";
 import { getLogger } from "../log.js";
 import { getProviderDefinition } from "../providers/catalog.js";
 import { ProviderManager } from "../providers/manager.js";
@@ -103,6 +105,7 @@ export class Engine {
     readonly miniApps: MiniApps;
     readonly secrets: Secrets;
     readonly friends: Friends;
+    readonly durable: Durable;
     readonly processRoles: DaycareRole[];
     readonly server: boolean;
     private readonly memoryWorker: MemoryWorker;
@@ -116,6 +119,7 @@ export class Engine {
         );
         this.config = new ConfigModule(options.config);
         this.server = options.server === true;
+        this.durable = durableResolve(process.env, { server: this.server });
         this.processRoles = rolesCurrentList();
         const dbTarget = this.config.current.db.url
             ? { kind: "postgres" as const, url: this.config.current.db.url }
@@ -808,6 +812,7 @@ export class Engine {
         } else {
             logger.info("skip: Signals role disabled; skipping delayed signal scheduler");
         }
+        await this.durable.start();
         await this.pluginManager.postStartAll();
         logger.debug("start: Engine.start() complete");
     }
@@ -824,6 +829,7 @@ export class Engine {
         this.crons.stop();
         this.webhooks.stop();
         this.delayedSignals.stop();
+        await this.durable.stop();
         this.processes.unload();
         await this.pluginManager.unloadAll();
         await databaseClose(this.storage.connection);

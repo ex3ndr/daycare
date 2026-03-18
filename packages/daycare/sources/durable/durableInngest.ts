@@ -4,24 +4,26 @@ import { connect, type WorkerConnection } from "inngest/connect";
 
 import { getLogger } from "../log.js";
 import type { DurableConfig } from "./durableConfigResolve.js";
+import type { Durable } from "./durableTypes.js";
 
-const logger = getLogger("durable.runtime");
+const logger = getLogger("durable.inngest");
 
-export type DurableRuntimeOptions = {
+export type DurableInngestOptions = {
     connectRun?: typeof connect;
 };
 
 /**
- * Starts the official Inngest durable worker connection for server mode.
- * Expects: config token is a valid Inngest signing token for the configured endpoint.
+ * Durable runtime backed by the official Inngest SDK connect worker.
+ * Expects: config token is a valid signing key for the configured endpoint.
  */
-export class DurableRuntime {
-    private readonly config: DurableConfig | null;
+export class DurableInngest implements Durable {
+    readonly kind = "inngest" as const;
+    private readonly config: DurableConfig;
     private readonly connectRun: typeof connect;
     private connection: WorkerConnection | null = null;
     private started = false;
 
-    constructor(config: DurableConfig | null, options: DurableRuntimeOptions = {}) {
+    constructor(config: DurableConfig, options: DurableInngestOptions = {}) {
         this.config = config;
         this.connectRun = options.connectRun ?? connect;
     }
@@ -31,11 +33,6 @@ export class DurableRuntime {
             return;
         }
         this.started = true;
-
-        if (!this.config) {
-            logger.info("skip: Durable runtime disabled because Inngest env is not configured");
-            return;
-        }
 
         logger.info(
             { endpoint: this.config.endpoint, gatewayUrl: this.config.gatewayUrl },
@@ -58,7 +55,7 @@ export class DurableRuntime {
         });
 
         void this.connection.closed.then(() => {
-            logger.warn({ endpoint: this.config?.endpoint }, "event: Durable runtime connection closed");
+            logger.warn({ endpoint: this.config.endpoint }, "event: Durable runtime connection closed");
         });
 
         logger.info(
