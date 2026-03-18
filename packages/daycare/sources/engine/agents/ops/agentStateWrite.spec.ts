@@ -44,7 +44,7 @@ describe("agentStateWrite", () => {
                 state: "sleeping"
             });
 
-            const observations = await storage.observationLog.findMany({ userId, agentId });
+            const observations = await storage.observationLog.findMany(contextForAgent({ userId, agentId }));
             expect(observations.map((entry) => entry.type)).toEqual(expect.arrayContaining(["agent:lifecycle"]));
             const lifecycleEntry = observations.find((entry) => entry.type === "agent:lifecycle");
             expect(lifecycleEntry?.data).toEqual({

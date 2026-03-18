@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Context } from "@/types";
+import { type Context, contextForAgent } from "../engine/agents/context.js";
 import { ObservationLogRepository } from "./observationLogRepository.js";
 import { storageOpenTest } from "./storageOpenTest.js";
 
@@ -245,7 +245,7 @@ describe("ObservationLogRepository", () => {
 });
 
 function ctx(userId: string): Context {
-    return { agentId: "test-agent", userId };
+    return contextForAgent({ userId, agentId: "test-agent" });
 }
 
 function makeObs(

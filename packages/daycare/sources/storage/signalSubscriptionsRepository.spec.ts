@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Context } from "@/types";
+import { type Context, contextForAgent } from "../engine/agents/context.js";
 
 import { SignalSubscriptionsRepository } from "./signalSubscriptionsRepository.js";
 import { storageOpenTest } from "./storageOpenTest.js";
@@ -117,5 +117,5 @@ describe("SignalSubscriptionsRepository", () => {
 });
 
 function ctxBuild(userId: string, agentId = "test-agent"): Context {
-    return { agentId, userId };
+    return contextForAgent({ userId, agentId });
 }

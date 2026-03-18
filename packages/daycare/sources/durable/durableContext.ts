@@ -15,12 +15,9 @@ const durableContextCalls = new WeakMap<Context, DurableScopedCall>();
  * Expects: callers pass the context that was deserialized for the current durable handler.
  */
 export function durableContextBind(ctx: Context, kind: DurableRuntimeKind, call: DurableScopedCall): Context {
-    const next = new Context({
-        ...contextToJSON(ctx),
-        durable: {
-            active: true,
-            kind
-        }
+    const next = Context.fromJSON(contextToJSON(ctx)).with("durable", {
+        active: true,
+        kind
     });
     durableContextCalls.set(next, call);
     return next;

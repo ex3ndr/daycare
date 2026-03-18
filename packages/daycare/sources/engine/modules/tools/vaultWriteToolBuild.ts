@@ -147,11 +147,11 @@ export function vaultWriteToolBuild(): ToolDefinition {
 }
 
 async function parentIdFromPathResolve(
-    ctx: { userId: string; agentId: string },
+    ctx: ToolExecutionContext["ctx"],
     parentPath: string | undefined,
     documents: {
         findBySlugAndParent: (
-            ctx: { userId: string; agentId: string },
+            ctx: ToolExecutionContext["ctx"],
             slug: string,
             parentId: string | null
         ) => Promise<{ id: string } | null>;

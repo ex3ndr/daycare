@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-    Context,
-    contextForAgent,
-    contextForUser,
-    contextNamespaceCreate,
-    contextSerialize,
-    contextToJSON
-} from "./context.js";
+import { Context, contextForAgent, contextForUser, contextSerialize, contextToJSON } from "./context.js";
 
 describe("Context", () => {
     it("builds a user-only context", () => {
@@ -31,7 +24,13 @@ describe("Context", () => {
     });
 
     it("is readonly", () => {
-        const context = new Context({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" });
+        const context = new Context({
+            userId: "user-1",
+            contexts: {
+                agentId: "agent-1",
+                personUserId: "person-1"
+            }
+        });
         const readonlyAssertion = (value: Context): void => {
             // @ts-expect-error Context fields are readonly
             value.agentId = "agent-2";
@@ -47,15 +46,13 @@ describe("Context", () => {
     });
 
     it("serializes and restores durable state", () => {
-        const context = new Context({
-            userId: "user-1",
-            personUserId: "person-1",
-            agentId: "agent-1",
-            durable: {
+        const context = contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" }).with(
+            "durable",
+            {
                 active: true,
                 kind: "local"
             }
-        });
+        );
 
         const restored = Context.fromJSON(contextToJSON(context));
         expect(restored.userId).toBe("user-1");
@@ -65,19 +62,22 @@ describe("Context", () => {
             active: true,
             kind: "local"
         });
+        expect(contextToJSON(restored).contexts).toEqual({
+            agentId: "agent-1",
+            durable: {
+                active: true,
+                kind: "local"
+            },
+            personUserId: "person-1"
+        });
     });
 
     it("serializes and restores from a string", () => {
-        const traceNamespace = contextNamespaceCreate({
-            id: "request.trace",
-            defaultValue: {
-                spanId: "span-default"
-            }
-        });
-        const context = traceNamespace.set(
-            contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" }),
+        const context = contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" }).with(
+            "durable",
             {
-                spanId: "span-1"
+                active: true,
+                kind: "inngest"
             }
         );
 
@@ -85,42 +85,35 @@ describe("Context", () => {
         expect(restored.userId).toBe("user-1");
         expect(restored.personUserId).toBe("person-1");
         expect(restored.agentId).toBe("agent-1");
-        expect(traceNamespace.get(restored)).toEqual({
-            spanId: "span-1"
+        expect(restored.durable).toEqual({
+            active: true,
+            kind: "inngest"
         });
     });
 
-    it("keeps namespace extras immutable and isolated from built-in fields", () => {
-        const localeNamespace = contextNamespaceCreate({
-            id: "request.locale",
-            defaultValue: "en"
-        });
-        const traceNamespace = contextNamespaceCreate({
-            id: "request.trace",
-            defaultValue: {
-                flags: ["root"]
+    it("stores typed context values in the contexts map", () => {
+        const context = contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" }).with(
+            "durable",
+            {
+                active: true,
+                kind: "local"
             }
-        });
+        );
 
-        const base = contextForUser({ userId: "user-1" });
-        const localized = localeNamespace.set(base, "fr");
-        const traced = traceNamespace.set(localized, {
-            flags: ["child"]
+        expect(context.get("personUserId")).toBe("person-1");
+        expect(context.get("durable")).toEqual({
+            active: true,
+            kind: "local"
         });
-
-        expect(localeNamespace.get(base)).toBe("en");
-        expect(localeNamespace.get(localized)).toBe("fr");
-        expect(localeNamespace.get(traced)).toBe("fr");
-        expect(traceNamespace.get(traced)).toEqual({
-            flags: ["child"]
-        });
-        expect(contextToJSON(traced)).toEqual({
+        expect(contextToJSON(context)).toEqual({
             userId: "user-1",
-            namespaces: {
-                "request.locale": "fr",
-                "request.trace": {
-                    flags: ["child"]
-                }
+            contexts: {
+                agentId: "agent-1",
+                durable: {
+                    active: true,
+                    kind: "local"
+                },
+                personUserId: "person-1"
             }
         });
     });

@@ -6,6 +6,7 @@ import type { CronTaskDbRecord } from "../../../storage/databaseTypes.js";
 import type { TasksRepository } from "../../../storage/tasksRepository.js";
 import type { UsersRepository } from "../../../storage/usersRepository.js";
 import { taskIdIsSafe } from "../../../utils/taskIdIsSafe.js";
+import { contextForAgent } from "../../agents/context.js";
 import type { ConfigModule } from "../../config/configModule.js";
 import { taskParameterInputsNormalize } from "../../modules/tasks/taskParameterInputsNormalize.js";
 import type { TaskParameter } from "../../modules/tasks/taskParameterTypes.js";
@@ -347,7 +348,7 @@ export class CronScheduler {
         task: CronTaskDbRecord
     ): Promise<{ taskId: string; taskVersion: number; taskTitle: string; parameterSchema: TaskParameter[] | null }> {
         const linkedTask = await this.tasksRepository.findById(
-            { userId: task.userId, agentId: task.agentId ?? "system:cron" },
+            contextForAgent({ userId: task.userId, agentId: task.agentId ?? "system:cron" }),
             task.taskId
         );
         if (!linkedTask) {

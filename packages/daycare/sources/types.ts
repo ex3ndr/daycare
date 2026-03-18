@@ -6,17 +6,13 @@ export type { Config } from "./config/configTypes.js";
 export type {
     ContextDurableState,
     ContextJson,
-    ContextJsonValue,
-    ContextNamespace,
-    ContextNamespaceValues,
-    ContextNamespaceValueWiden,
-    ContextSerialized
+    ContextSerialized,
+    Contexts
 } from "./engine/agents/context.js";
 export {
     Context,
     contextForAgent,
     contextForUser,
-    contextNamespaceCreate,
     contextSerialize,
     contextToJSON
 } from "./engine/agents/context.js";

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ToolExecutionContext } from "@/types";
 import { storageOpenTest } from "../../../storage/storageOpenTest.js";
+import { contextForAgent } from "../../agents/context.js";
 import { EngineEventBus } from "../../ipc/events.js";
 import { Signals } from "../../signals/signals.js";
 import { buildSignalUnsubscribeTool } from "./signalUnsubscribeToolBuild.js";
@@ -24,7 +25,7 @@ describe("buildSignalUnsubscribeTool", () => {
                 signalSubscriptions: storage.signalSubscriptions
             });
             await signals.subscribe({
-                ctx: { userId: "user-source", agentId: "agent-target" },
+                ctx: contextForAgent({ userId: "user-source", agentId: "agent-target" }),
                 pattern: "build:*:done",
                 silent: true
             });
@@ -131,19 +132,16 @@ function contextBuild(agentId: string, exists: boolean, targetUserId: string): T
         logger: console as unknown as ToolExecutionContext["logger"],
         assistant: null,
         agent: { id: agentId } as unknown as ToolExecutionContext["agent"],
-        ctx: {
-            agentId,
-            userId: "user-source"
-        } as unknown as ToolExecutionContext["ctx"],
+        ctx: contextForAgent({ userId: "user-source", agentId }) as unknown as ToolExecutionContext["ctx"],
         source: "test",
         messageContext: {},
         agentSystem: {
             contextForAgentId: async (targetAgentId: string) =>
                 exists
-                    ? ({
-                          agentId: targetAgentId,
-                          userId: targetUserId
-                      } as unknown as ToolExecutionContext["ctx"])
+                    ? (contextForAgent({
+                          userId: targetUserId,
+                          agentId: targetAgentId
+                      }) as unknown as ToolExecutionContext["ctx"])
                     : null
         } as unknown as ToolExecutionContext["agentSystem"]
     };

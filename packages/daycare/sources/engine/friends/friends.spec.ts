@@ -17,12 +17,16 @@ describe("Friends", () => {
             await friends.add(contextForAgent({ userId: bob.id, agentId: "agent-b" }), { nametag: alice.nametag });
             await friends.remove(contextForAgent({ userId: alice.id, agentId: "agent-a" }), { nametag: bob.nametag });
 
-            const aliceObservations = await storage.observationLog.findMany({ userId: alice.id, agentId: "agent-a" });
+            const aliceObservations = await storage.observationLog.findMany(
+                contextForAgent({ userId: alice.id, agentId: "agent-a" })
+            );
             expect(aliceObservations.map((entry) => entry.type)).toEqual(
                 expect.arrayContaining(["friend:requested", "friend:removed"])
             );
 
-            const bobObservations = await storage.observationLog.findMany({ userId: bob.id, agentId: "agent-b" });
+            const bobObservations = await storage.observationLog.findMany(
+                contextForAgent({ userId: bob.id, agentId: "agent-b" })
+            );
             expect(bobObservations.map((entry) => entry.type)).toContain("friend:accepted");
             expect(postToUserAgents).toHaveBeenCalled();
         } finally {

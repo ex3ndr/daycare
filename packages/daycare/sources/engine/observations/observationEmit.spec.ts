@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ObservationLogRepository } from "../../storage/observationLogRepository.js";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
+import { contextForAgent } from "../agents/context.js";
 import { observationEmit } from "./observationEmit.js";
 
 describe("observationEmit", () => {
@@ -27,7 +28,7 @@ describe("observationEmit", () => {
             expect(record.source).toBe("agent:a1");
             expect(record.message).toBe("Task created");
 
-            const found = await repo.findMany({ userId: "user-a", agentId: "test" });
+            const found = await repo.findMany(contextForAgent({ userId: "user-a", agentId: "test" }));
             expect(found).toHaveLength(1);
             expect(found[0]!.id).toBe(record.id);
         } finally {
@@ -51,7 +52,7 @@ describe("observationEmit", () => {
             expect(record.data).toBeNull();
             expect(record.scopeIds).toEqual([]);
 
-            const found = await repo.findMany({ userId: "user-a", agentId: "test" });
+            const found = await repo.findMany(contextForAgent({ userId: "user-a", agentId: "test" }));
             expect(found).toHaveLength(1);
             expect(found[0]!.scopeIds).toEqual([]);
         } finally {

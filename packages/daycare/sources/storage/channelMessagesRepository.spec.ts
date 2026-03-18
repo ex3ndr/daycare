@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Context } from "@/types";
+import { type Context, contextForAgent } from "../engine/agents/context.js";
 import { channelsTable } from "../schema.js";
 
 import { ChannelMessagesRepository } from "./channelMessagesRepository.js";
@@ -46,5 +46,5 @@ describe("ChannelMessagesRepository", () => {
 });
 
 function ctxBuild(userId: string): Context {
-    return { agentId: "test-agent", userId };
+    return contextForAgent({ userId, agentId: "test-agent" });
 }

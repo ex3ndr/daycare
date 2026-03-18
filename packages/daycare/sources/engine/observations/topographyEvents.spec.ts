@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
+import { contextForAgent } from "../agents/context.js";
 import {
     TOPO_EVENT_TYPES,
     TOPO_SOURCE_AGENTS,
@@ -352,7 +353,9 @@ describe("topographyObservationEmit", () => {
                 });
             }
 
-            const observations = await storage.observationLog.findMany({ userId: "user-1", agentId: "agent-1" });
+            const observations = await storage.observationLog.findMany(
+                contextForAgent({ userId: "user-1", agentId: "agent-1" })
+            );
             expect(observations).toHaveLength(cases.length);
 
             for (const event of cases) {

@@ -2,7 +2,7 @@ import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
-import { contextForUser } from "../../agents/context.js";
+import { contextForAgent, contextForUser } from "../../agents/context.js";
 import { agentPathAgent } from "../../agents/ops/agentPathBuild.js";
 import { messageBuildUserFacing } from "../../messages/messageBuildUserFacing.js";
 
@@ -152,7 +152,7 @@ export function sendUserMessageToolBuild(): ToolDefinition {
         executeDeferred: async (payload: unknown, context: ToolExecutionContext) => {
             const p = payload as SendUserMessageDeferredPayload;
             await context.agentSystem.post(
-                { userId: p.ctxUserId, agentId: context.agent.ctx.agentId },
+                contextForAgent({ userId: p.ctxUserId, agentId: context.agent.ctx.agentId }),
                 { agentId: p.resolvedTarget },
                 {
                     type: "system_message",

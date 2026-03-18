@@ -311,7 +311,7 @@ function subscriptionParse(row: {
     };
 }
 
-function subscriptionKeyBuild(ctx: Context, pattern: string): string {
+function subscriptionKeyBuild(ctx: { userId: string; agentId: string }, pattern: string): string {
     return `${ctx.userId}::${ctx.agentId}::${pattern}`;
 }
 

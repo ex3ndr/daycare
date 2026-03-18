@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Context } from "@/types";
+import { type Context, contextForAgent } from "../engine/agents/context.js";
 import { KeyValuesRepository } from "./keyValuesRepository.js";
 import { storageOpenTest } from "./storageOpenTest.js";
 
@@ -84,5 +84,5 @@ describe("KeyValuesRepository", () => {
 });
 
 function ctxBuild(userId: string): Context {
-    return { agentId: "test-agent", userId };
+    return contextForAgent({ userId, agentId: "test-agent" });
 }

@@ -6,6 +6,7 @@ import type { SignalEventDbRecord, SignalSubscriptionDbRecord } from "../../stor
 import type { ObservationLogRepository } from "../../storage/observationLogRepository.js";
 import type { SignalEventsRepository } from "../../storage/signalEventsRepository.js";
 import type { SignalSubscriptionsRepository } from "../../storage/signalSubscriptionsRepository.js";
+import { contextForAgent } from "../agents/context.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import { TOPO_EVENT_TYPES, TOPO_SOURCE_SIGNALS, topographyObservationEmit } from "../observations/topographyEvents.js";
 import type {
@@ -107,10 +108,7 @@ export class Signals {
                   updatedAt: now
               }
             : {
-                  ctx: {
-                      userId: ctx.userId,
-                      agentId: ctx.agentId
-                  },
+                  ctx: contextForAgent({ userId: ctx.userId, agentId: ctx.agentId }),
                   pattern,
                   silent: input.silent ?? true,
                   createdAt: now,
@@ -275,10 +273,7 @@ function signalRecordBuild(signal: Signal, userId: string): SignalEventDbRecord 
 
 function signalSubscriptionBuild(record: SignalSubscriptionDbRecord): SignalSubscription {
     return {
-        ctx: {
-            userId: record.userId,
-            agentId: record.agentId
-        },
+        ctx: contextForAgent({ userId: record.userId, agentId: record.agentId }),
         pattern: record.pattern,
         silent: record.silent,
         createdAt: record.createdAt,
@@ -308,7 +303,7 @@ function signalSubscriptionInputNormalize(input: { ctx: Context; pattern: string
     if (!agentId) {
         throw new Error("Signal subscription agentId is required");
     }
-    return { ctx: { userId, agentId }, pattern };
+    return { ctx: contextForAgent({ userId, agentId }), pattern };
 }
 
 function signalSourceUserIdNormalize(userId: unknown): string {
@@ -323,5 +318,5 @@ function signalSourceUserIdNormalize(userId: unknown): string {
 }
 
 function contextFromUserId(userId: string): Context {
-    return { agentId: "signal", userId: signalSourceUserIdNormalize(userId) };
+    return contextForAgent({ userId: signalSourceUserIdNormalize(userId), agentId: "signal" });
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Context } from "@/types";
+import { type Context, contextForAgent } from "../engine/agents/context.js";
 
 import { DelayedSignalsRepository } from "./delayedSignalsRepository.js";
 import { storageOpenTest } from "./storageOpenTest.js";
@@ -52,7 +52,7 @@ describe("DelayedSignalsRepository", () => {
 
             const removed = await repository.delete("delay-1");
             const cancelled = await repository.deleteByRepeatKey(
-                { agentId: "test-agent", userId: "user-a" },
+                contextForAgent({ userId: "user-a", agentId: "test-agent" }),
                 "notify:repeat",
                 "r1"
             );
@@ -68,5 +68,5 @@ describe("DelayedSignalsRepository", () => {
 });
 
 function ctxBuild(userId: string): Context {
-    return { agentId: "test-agent", userId };
+    return contextForAgent({ userId, agentId: "test-agent" });
 }

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Signal } from "@/types";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
+import { contextForAgent } from "../agents/context.js";
 import { EngineEventBus } from "../ipc/events.js";
 import { Signals } from "./signals.js";
 
@@ -134,16 +135,19 @@ describe("Signals", () => {
             });
 
             await signals.subscribe({
-                ctx: { userId: "user-1", agentId: "agent-a" },
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-a" }),
                 pattern: "build:*:done",
                 silent: true
             });
             await signals.subscribe({
-                ctx: { userId: "user-1", agentId: "agent-b" },
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-b" }),
                 pattern: "build:*:done",
                 silent: false
             });
-            await signals.subscribe({ ctx: { userId: "user-2", agentId: "agent-c" }, pattern: "other:*" });
+            await signals.subscribe({
+                ctx: contextForAgent({ userId: "user-2", agentId: "agent-c" }),
+                pattern: "other:*"
+            });
 
             await signals.generate({
                 type: "build:alpha:done",
@@ -177,12 +181,12 @@ describe("Signals", () => {
             });
 
             await signals.subscribe({
-                ctx: { userId: "user-1", agentId: "agent-a" },
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-a" }),
                 pattern: "build:*:done",
                 silent: true
             });
             const removed = await signals.unsubscribe({
-                ctx: { userId: "user-1", agentId: "agent-a" },
+                ctx: contextForAgent({ userId: "user-1", agentId: "agent-a" }),
                 pattern: "build:*:done"
             });
             expect(removed).toBe(true);
@@ -194,9 +198,14 @@ describe("Signals", () => {
 
             expect(delivered).toEqual([]);
             await expect(
-                signals.unsubscribe({ ctx: { userId: "user-1", agentId: "agent-a" }, pattern: "build:*:done" })
+                signals.unsubscribe({
+                    ctx: contextForAgent({ userId: "user-1", agentId: "agent-a" }),
+                    pattern: "build:*:done"
+                })
             ).resolves.toBe(false);
-            const observations = await storage.observationLog.findMany({ userId: "user-1", agentId: "agent-a" });
+            const observations = await storage.observationLog.findMany(
+                contextForAgent({ userId: "user-1", agentId: "agent-a" })
+            );
             expect(observations.map((entry) => entry.type)).toEqual(
                 expect.arrayContaining(["signal:subscribed", "signal:unsubscribed"])
             );
@@ -226,12 +235,12 @@ describe("Signals", () => {
             });
 
             await signals.subscribe({
-                ctx: { userId: "user-a", agentId: "agent-a" },
+                ctx: contextForAgent({ userId: "user-a", agentId: "agent-a" }),
                 pattern: "build:*",
                 silent: true
             });
             await signals.subscribe({
-                ctx: { userId: "user-b", agentId: "agent-b" },
+                ctx: contextForAgent({ userId: "user-b", agentId: "agent-b" }),
                 pattern: "build:*",
                 silent: true
             });

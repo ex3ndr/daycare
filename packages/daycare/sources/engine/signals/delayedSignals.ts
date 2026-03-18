@@ -12,7 +12,7 @@ import { getLogger } from "../../log.js";
 import type { DelayedSignalDbRecord } from "../../storage/databaseTypes.js";
 import type { DelayedSignalsRepository } from "../../storage/delayedSignalsRepository.js";
 import { AsyncLock } from "../../utils/lock.js";
-import { contextForUser } from "../agents/context.js";
+import { contextForAgent, contextForUser } from "../agents/context.js";
 import type { ConfigModule } from "../config/configModule.js";
 import type { EngineEventBus } from "../ipc/events.js";
 import type { Signals } from "./signals.js";
@@ -119,7 +119,7 @@ export class DelayedSignals {
 
             if (normalized.repeatKey) {
                 await this.delayedSignals.deleteByRepeatKey(
-                    { agentId: "signal-delayed", userId },
+                    contextForAgent({ userId, agentId: "signal-delayed" }),
                     normalized.type,
                     normalized.repeatKey
                 );

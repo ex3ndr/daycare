@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
-import { contextForUser } from "../agents/context.js";
+import { contextForAgent, contextForUser } from "../agents/context.js";
 import { agentPathTask } from "../agents/ops/agentPathBuild.js";
 import type { WebhooksOptions } from "./webhooks.js";
 import { Webhooks } from "./webhooks.js";
@@ -44,7 +44,9 @@ describe("Webhooks", () => {
                 userId: "user-a"
             });
             expect(dispatch).not.toHaveBeenCalled();
-            const observations = await storage.observationLog.findMany({ userId: "user-a", agentId: "agent-1" });
+            const observations = await storage.observationLog.findMany(
+                contextForAgent({ userId: "user-a", agentId: "agent-1" })
+            );
             expect(observations.map((entry) => entry.type)).toEqual(
                 expect.arrayContaining(["webhook:added", "webhook:deleted"])
             );

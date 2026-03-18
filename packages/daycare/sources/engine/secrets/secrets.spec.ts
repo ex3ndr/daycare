@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
-import { contextForUser } from "../agents/context.js";
+import { contextForAgent, contextForUser } from "../agents/context.js";
 import { Secrets } from "./secrets.js";
 
 describe("Secrets", () => {
@@ -42,7 +42,9 @@ describe("Secrets", () => {
                 variables: { OPENAI_API_KEY: "sk-1" }
             }
         ]);
-        const observations = await storage.observationLog.findMany({ userId: "user-1", agentId: "agent-1" });
+        const observations = await storage.observationLog.findMany(
+            contextForAgent({ userId: "user-1", agentId: "agent-1" })
+        );
         expect(observations.map((entry) => entry.type)).toEqual(expect.arrayContaining(["secret:added"]));
     });
 
@@ -94,7 +96,9 @@ describe("Secrets", () => {
         await expect(secrets.remove(ctx, "aws-prod")).resolves.toBe(true);
         await expect(secrets.remove(ctx, "missing")).resolves.toBe(false);
         await expect(secrets.list(ctx)).resolves.toEqual([]);
-        const observations = await storage.observationLog.findMany({ userId: "user-1", agentId: "agent-1" });
+        const observations = await storage.observationLog.findMany(
+            contextForAgent({ userId: "user-1", agentId: "agent-1" })
+        );
         expect(observations.map((entry) => entry.type)).toEqual(expect.arrayContaining(["secret:removed"]));
     });
 

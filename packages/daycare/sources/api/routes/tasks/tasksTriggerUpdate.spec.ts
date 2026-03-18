@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { contextForAgent } from "../../../engine/agents/context.js";
 import { tasksTriggerUpdate } from "./tasksTriggerUpdate.js";
 
 describe("tasksTriggerUpdate", () => {
@@ -18,7 +19,7 @@ describe("tasksTriggerUpdate", () => {
         }));
 
         const result = await tasksTriggerUpdate({
-            ctx: { userId: "user-1", agentId: "agent-1" },
+            ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
             taskId: "task-1",
             triggerId: "cron-1",
             body: { enabled: false },
@@ -42,14 +43,19 @@ describe("tasksTriggerUpdate", () => {
                 updatedAt: 2
             }
         });
-        expect(cronTriggerUpdate).toHaveBeenCalledWith({ userId: "user-1", agentId: "agent-1" }, "task-1", "cron-1", {
-            enabled: false
-        });
+        expect(cronTriggerUpdate).toHaveBeenCalledWith(
+            contextForAgent({ userId: "user-1", agentId: "agent-1" }),
+            "task-1",
+            "cron-1",
+            {
+                enabled: false
+            }
+        );
     });
 
     it("rejects invalid enabled values", async () => {
         const result = await tasksTriggerUpdate({
-            ctx: { userId: "user-1", agentId: "agent-1" },
+            ctx: contextForAgent({ userId: "user-1", agentId: "agent-1" }),
             taskId: "task-1",
             triggerId: "cron-1",
             body: { enabled: "nope" },

@@ -1672,12 +1672,15 @@ describe("Agent", () => {
                 throw new Error("Missing agent context");
             }
             await signals.subscribe({
-                ctx: { userId: ctx.userId, agentId },
+                ctx: contextForAgent({ userId: ctx.userId, agentId }),
                 pattern: "build:*:done",
                 silent: true
             });
             await signals.generate({ type: "build:alpha:done", source: { type: "system", userId: ctx.userId } });
-            await signals.unsubscribe({ ctx: { userId: ctx.userId, agentId }, pattern: "build:*:done" });
+            await signals.unsubscribe({
+                ctx: contextForAgent({ userId: ctx.userId, agentId }),
+                pattern: "build:*:done"
+            });
 
             await agentSystem.start();
             await postAndAwait(agentSystem, { agentId }, { type: "reset", message: "flush queue" });
@@ -1726,14 +1729,17 @@ describe("Agent", () => {
                 throw new Error("Missing agent context");
             }
             await signals.subscribe({
-                ctx: { userId: ctx.userId, agentId },
+                ctx: contextForAgent({ userId: ctx.userId, agentId }),
                 pattern: "build:*:done",
                 silent: true
             });
             await signals.generate({ type: "build:alpha:done", source: { type: "system", userId: ctx.userId } });
-            await signals.unsubscribe({ ctx: { userId: ctx.userId, agentId }, pattern: "build:*:done" });
+            await signals.unsubscribe({
+                ctx: contextForAgent({ userId: ctx.userId, agentId }),
+                pattern: "build:*:done"
+            });
             await signals.subscribe({
-                ctx: { userId: ctx.userId, agentId },
+                ctx: contextForAgent({ userId: ctx.userId, agentId }),
                 pattern: "build:*:done",
                 silent: true
             });
@@ -1798,12 +1804,12 @@ describe("Agent", () => {
                 throw new Error("Missing signal test agent contexts");
             }
             await signals.subscribe({
-                ctx: { userId: sourceCtx.userId, agentId: sourceAgentId },
+                ctx: contextForAgent({ userId: sourceCtx.userId, agentId: sourceAgentId }),
                 pattern: "build:*:done",
                 silent: true
             });
             await signals.subscribe({
-                ctx: { userId: peerCtx.userId, agentId: peerAgentId },
+                ctx: contextForAgent({ userId: peerCtx.userId, agentId: peerAgentId }),
                 pattern: "build:*:done",
                 silent: true
             });

@@ -50,7 +50,9 @@ describe("Crons", () => {
 
             await expect(crons.deleteTask(ctxB, task.id)).resolves.toBe(false);
             await expect(crons.deleteTask(ctxA, task.id)).resolves.toBe(true);
-            const observations = await storage.observationLog.findMany({ userId: "user-a", agentId: "agent-1" });
+            const observations = await storage.observationLog.findMany(
+                contextForAgent({ userId: "user-a", agentId: "agent-1" })
+            );
             expect(observations.map((entry) => entry.type)).toEqual(
                 expect.arrayContaining(["cron:added", "cron:deleted"])
             );
@@ -88,7 +90,9 @@ describe("Crons", () => {
             });
             await expect(crons.disableTask(ctx, created.id)).resolves.toBe(true);
             await expect(crons.enableTask(ctx, created.id)).resolves.toBe(true);
-            const observations = await storage.observationLog.findMany({ userId: "user-a", agentId: "agent-1" });
+            const observations = await storage.observationLog.findMany(
+                contextForAgent({ userId: "user-a", agentId: "agent-1" })
+            );
             expect(observations.map((entry) => entry.type)).toEqual(
                 expect.arrayContaining(["cron:disabled", "cron:enabled"])
             );

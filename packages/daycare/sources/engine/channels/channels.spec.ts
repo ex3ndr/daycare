@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
+import { contextForAgent } from "../agents/context.js";
 import { Channels } from "./channels.js";
 
 describe("Channels", () => {
@@ -20,21 +21,22 @@ describe("Channels", () => {
                 observationLog: storage.observationLog,
                 agentSystem: {
                     agentExists: async (agentId: string) => agentId !== "missing",
-                    contextForAgentId: async (agentId: string) => ({
-                        agentId,
-                        userId: "user-1"
-                    }),
+                    contextForAgentId: async (agentId: string) => contextForAgent({ userId: "user-1", agentId }),
                     post: vi.fn(async () => undefined)
                 } as never
             });
 
             await channels.ensureDir();
-            const created = await channels.create({ userId: "user-1", agentId: "agent-caller" }, "dev", "leader-agent");
+            const created = await channels.create(
+                contextForAgent({ userId: "user-1", agentId: "agent-caller" }),
+                "dev",
+                "leader-agent"
+            );
             expect(created.name).toBe("dev");
             expect(created.leader).toBe("leader-agent");
 
-            await channels.addMember("dev", { agentId: "agent-alice", userId: "user-1" }, "Alice");
-            await channels.addMember("dev", { agentId: "agent-bob", userId: "user-1" }, "bob");
+            await channels.addMember("dev", contextForAgent({ userId: "user-1", agentId: "agent-alice" }), "Alice");
+            await channels.addMember("dev", contextForAgent({ userId: "user-1", agentId: "agent-bob" }), "bob");
             expect(subscribe).toHaveBeenCalledTimes(2);
             expect(subscribe).toHaveBeenCalledWith({
                 ctx: expect.objectContaining({ userId: "user-1", agentId: "agent-alice" }),
@@ -42,14 +44,19 @@ describe("Channels", () => {
                 silent: false
             });
 
-            const removed = await channels.removeMember("dev", { agentId: "agent-bob", userId: "user-1" });
+            const removed = await channels.removeMember(
+                "dev",
+                contextForAgent({ userId: "user-1", agentId: "agent-bob" })
+            );
             expect(removed).toBe(true);
             expect(unsubscribe).toHaveBeenCalledWith({
                 ctx: expect.objectContaining({ userId: "user-1", agentId: "agent-bob" }),
                 pattern: "channel.dev:*"
             });
             await expect(channels.delete("dev")).resolves.toBe(true);
-            const observations = await storage.observationLog.findMany({ userId: "user-1", agentId: "agent-caller" });
+            const observations = await storage.observationLog.findMany(
+                contextForAgent({ userId: "user-1", agentId: "agent-caller" })
+            );
             expect(observations.map((entry) => entry.type)).toEqual(
                 expect.arrayContaining([
                     "channel:created",
@@ -78,21 +85,22 @@ describe("Channels", () => {
                 observationLog: storage.observationLog,
                 agentSystem: {
                     agentExists: async () => true,
-                    contextForAgentId: async (agentId: string) => ({
-                        agentId,
-                        userId: "user-1"
-                    }),
+                    contextForAgentId: async (agentId: string) => contextForAgent({ userId: "user-1", agentId }),
                     post
                 } as never
             });
 
             await channels.ensureDir();
-            await channels.create({ userId: "user-1", agentId: "agent-caller" }, "dev", "agent-leader");
-            await channels.addMember("dev", { agentId: "agent-alice", userId: "user-1" }, "alice");
-            await channels.addMember("dev", { agentId: "agent-bob", userId: "user-1" }, "bob");
+            await channels.create(
+                contextForAgent({ userId: "user-1", agentId: "agent-caller" }),
+                "dev",
+                "agent-leader"
+            );
+            await channels.addMember("dev", contextForAgent({ userId: "user-1", agentId: "agent-alice" }), "alice");
+            await channels.addMember("dev", contextForAgent({ userId: "user-1", agentId: "agent-bob" }), "bob");
 
             const mentioned = await channels.send(
-                { userId: "user-1", agentId: "agent-caller" },
+                contextForAgent({ userId: "user-1", agentId: "agent-caller" }),
                 "dev",
                 "alice",
                 "check this",
@@ -103,7 +111,7 @@ describe("Channels", () => {
 
             post.mockClear();
             const unaddressed = await channels.send(
-                { userId: "user-1", agentId: "agent-caller" },
+                contextForAgent({ userId: "user-1", agentId: "agent-caller" }),
                 "dev",
                 "alice",
                 "what next?",
@@ -129,7 +137,10 @@ describe("Channels", () => {
                 })
             );
 
-            const history = await channels.getHistory({ userId: "user-1", agentId: "agent-caller" }, "dev");
+            const history = await channels.getHistory(
+                contextForAgent({ userId: "user-1", agentId: "agent-caller" }),
+                "dev"
+            );
             expect(history).toHaveLength(2);
             expect(history.map((entry) => entry.text).sort()).toEqual(["check this", "what next?"]);
         } finally {
@@ -151,16 +162,13 @@ describe("Channels", () => {
                 observationLog: storage.observationLog,
                 agentSystem: {
                     agentExists: async () => true,
-                    contextForAgentId: async (agentId: string) => ({
-                        agentId,
-                        userId: "user-1"
-                    }),
+                    contextForAgentId: async (agentId: string) => contextForAgent({ userId: "user-1", agentId }),
                     post: vi.fn(async () => undefined)
                 } as never
             });
             await first.ensureDir();
-            await first.create({ userId: "user-1", agentId: "agent-caller" }, "ops", "agent-leader");
-            await first.addMember("ops", { agentId: "agent-a", userId: "user-1" }, "alice");
+            await first.create(contextForAgent({ userId: "user-1", agentId: "agent-caller" }), "ops", "agent-leader");
+            await first.addMember("ops", contextForAgent({ userId: "user-1", agentId: "agent-a" }), "alice");
 
             const subscribe = vi.fn();
             const second = new Channels({
@@ -173,10 +181,7 @@ describe("Channels", () => {
                 observationLog: storage.observationLog,
                 agentSystem: {
                     agentExists: async () => true,
-                    contextForAgentId: async (agentId: string) => ({
-                        agentId,
-                        userId: "user-1"
-                    }),
+                    contextForAgentId: async (agentId: string) => contextForAgent({ userId: "user-1", agentId }),
                     post: vi.fn(async () => undefined)
                 } as never
             });

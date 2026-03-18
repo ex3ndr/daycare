@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { type Context, contextForUser } from "../engine/agents/context.js";
+import { type Context, contextForAgent, contextForUser } from "../engine/agents/context.js";
 import { agentsTable, usersTable } from "../schema.js";
 import { storageOpenTest } from "./storageOpenTest.js";
 import { TokenStatsRepository } from "./tokenStatsRepository.js";
@@ -232,5 +232,5 @@ describe("TokenStatsRepository", () => {
 });
 
 function ctxBuild(userId: string, agentId: string): Context {
-    return { userId, agentId };
+    return contextForAgent({ userId, agentId });
 }

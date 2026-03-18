@@ -4,6 +4,7 @@ import { type Static, Type } from "@sinclair/typebox";
 
 import type { ToolDefinition, ToolExecutionContext, ToolResultContract } from "@/types";
 import { buildWriteOutputTool } from "../../../plugins/shell/writeOutputTool.js";
+import { contextForAgent } from "../../agents/context.js";
 import { agentPathChildAllocate } from "../../agents/ops/agentPathChildAllocate.js";
 import { backgroundModelOverrideResolve } from "./backgroundModelOverrideResolve.js";
 
@@ -260,7 +261,10 @@ export function buildSendAgentMessageTool(): ToolDefinition {
         },
         executeDeferred: async (payload: unknown, context: ToolExecutionContext) => {
             const p = payload as SendAgentMessageDeferredPayload;
-            const deliveryContext = { userId: p.deliveryContextUserId, agentId: context.agent.ctx.agentId };
+            const deliveryContext = contextForAgent({
+                userId: p.deliveryContextUserId,
+                agentId: context.agent.ctx.agentId
+            });
             await context.agentSystem.post(
                 deliveryContext,
                 { agentId: p.resolvedTarget },

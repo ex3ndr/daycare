@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { SessionPermissions } from "@/types";
 import { storageOpenTest } from "../../storage/storageOpenTest.js";
-import { Context } from "../agents/context.js";
+import { contextForAgent } from "../agents/context.js";
 import type { InferenceRouter } from "../modules/inference/router.js";
 import { memorySessionObserve } from "./memorySessionObserve.js";
 
@@ -65,7 +65,7 @@ describe("memorySessionObserve", () => {
                 files: []
             });
 
-            const ctx = new Context({ userId: owner.id, agentId: "agent-1" });
+            const ctx = contextForAgent({ userId: owner.id, agentId: "agent-1" });
             const records = await storage.history.findBySessionId(sessionId);
             const xml =
                 "<observations>\n<observation><text>The person wanted to push their latest changes to production as part of the release cycle</text><context>During a release planning session, the person asked to deploy to production. They seemed confident the changes were ready and wanted to move forward quickly.</context></observation>\n</observations>";
@@ -119,7 +119,7 @@ describe("memorySessionObserve", () => {
                 files: []
             });
 
-            const ctx = new Context({ userId: owner.id, agentId: "agent-bg" });
+            const ctx = contextForAgent({ userId: owner.id, agentId: "agent-bg" });
             const records = await storage.history.findBySessionId(sessionId);
             const xml = "<observations></observations>";
             const router = mockInferenceRouter(xml);
@@ -155,7 +155,7 @@ describe("memorySessionObserve", () => {
             if (!owner) {
                 throw new Error("Owner user missing");
             }
-            const ctx = new Context({ userId: owner.id, agentId: "agent-1" });
+            const ctx = contextForAgent({ userId: owner.id, agentId: "agent-1" });
             const router = mockInferenceRouter("<observations></observations>");
 
             const observations = await memorySessionObserve({
