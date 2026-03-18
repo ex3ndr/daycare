@@ -8,9 +8,10 @@ import { buildCompiledFileIs } from "./buildCompiledFileIs.js";
 import { buildSpecArtifactFileIs } from "./buildSpecArtifactFileIs.js";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const sourcesRoot = path.resolve(currentDir, "..");
-const distRoot = path.resolve(currentDir, "../../dist");
-const dashboardOutRoot = path.resolve(currentDir, "../../../daycare-dashboard/out");
+const packageRoot = path.resolve(currentDir, "../..");
+const sourcesRoot = path.resolve(packageRoot, "sources");
+const distRoot = path.resolve(packageRoot, "dist");
+const dashboardOutRoot = path.resolve(packageRoot, "../daycare-dashboard/out");
 const dashboardSiteRoot = path.resolve(distRoot, "plugins/dashboard/site");
 
 /**
