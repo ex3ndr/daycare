@@ -1,0 +1,124 @@
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: happy-list-secrets
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: SecretStore
+  target:
+    name: happy-list-secrets
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: /list-database
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: daycare-tokens
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: SecretStore
+  target:
+    name: daycare-tokens
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: /daycare-tokens
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: daycare-settings
+data:
+  settings.json: |
+    {
+      "appServer": {
+        "enabled": true,
+        "port": 7332
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: daycare-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: daycare-server
+  template:
+    metadata:
+      labels:
+        app: daycare-server
+    spec:
+      containers:
+        - name: daycare-server
+          image: docker.korshakov.com/daycare-server:{version}
+          env:
+            - name: DAYCARE_ROOT_DIR
+              value: /var/lib/daycare
+          envFrom:
+            - secretRef:
+                name: happy-list-secrets
+          ports:
+            - containerPort: 7332
+          volumeMounts:
+            - name: daycare-settings
+              mountPath: /var/lib/daycare/settings.json
+              subPath: settings.json
+              readOnly: true
+            - name: daycare-tokens
+              mountPath: /var/lib/daycare/auth.json
+              subPath: auth.json
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 7332
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 7332
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          startupProbe:
+            httpGet:
+              path: /
+              port: 7332
+            periodSeconds: 10
+            failureThreshold: 3
+      volumes:
+        - name: daycare-settings
+          configMap:
+            name: daycare-settings
+            items:
+              - key: settings.json
+                path: settings.json
+        - name: daycare-tokens
+          secret:
+            secretName: daycare-tokens
+            items:
+              - key: auth.json
+                path: auth.json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: daycare-app
+spec:
+  selector:
+    app: daycare-app
+  ports:
+    - port: 3000
+      targetPort: 7332
+  type: ClusterIP

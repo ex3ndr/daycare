@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { ThinkingLevel } from "@mariozechner/pi-ai";
 
+import { configSettingsEnvironmentApply } from "./config/configSettingsEnvironmentApply.js";
 import type { CronTaskDefinition as CronTaskConfig } from "./engine/cron/cronTypes.js";
 import { resolveDaycarePath } from "./paths.js";
 
@@ -250,10 +251,10 @@ export async function readSettingsFile(filePath: string = DEFAULT_SETTINGS_PATH)
 
     try {
         const raw = await fs.readFile(resolvedPath, "utf8");
-        return settingsNormalize(JSON.parse(raw) as SettingsConfig);
+        return configSettingsEnvironmentApply(settingsNormalize(JSON.parse(raw) as SettingsConfig));
     } catch (error) {
         if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-            return {};
+            return configSettingsEnvironmentApply({});
         }
         throw error;
     }

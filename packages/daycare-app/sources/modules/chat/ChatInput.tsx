@@ -86,7 +86,7 @@ export function ChatInput({ onSend, placeholder }: ChatInputProps) {
     );
 }
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     wrapper: {
         maxWidth: 720,
         width: "100%",

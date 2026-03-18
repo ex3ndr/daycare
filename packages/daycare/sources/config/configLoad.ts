@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { DEFAULT_SETTINGS_PATH } from "../settings.js";
 import { configResolve } from "./configResolve.js";
+import { configSettingsEnvironmentApply } from "./configSettingsEnvironmentApply.js";
 import { configSettingsParse } from "./configSettingsParse.js";
 import type { Config, ConfigOverrides } from "./configTypes.js";
 
@@ -26,6 +27,6 @@ export async function configLoad(
         }
     }
 
-    const settings = configSettingsParse(raw);
+    const settings = configSettingsEnvironmentApply(configSettingsParse(raw));
     return configResolve(settings, resolvedPath, overrides);
 }

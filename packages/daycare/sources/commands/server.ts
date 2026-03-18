@@ -1,6 +1,5 @@
 import { getLogger } from "sources/log";
 import { awaitShutdown } from "sources/utils/shutdown";
-import { delay } from "sources/utils/time";
 
 export type ServerOptions = {
     settings?: string;
@@ -8,12 +7,10 @@ export type ServerOptions = {
 
 const logger = getLogger("boot");
 
-export async function serverCommand(options: ServerOptions): Promise<void> {
-
+export async function serverCommand(_options: ServerOptions): Promise<void> {
     //
     // TODO: Implement server boot
     //
-
 
     //
     // Await exit

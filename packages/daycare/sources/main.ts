@@ -15,12 +15,12 @@ import { modelsCommand } from "./commands/models.js";
 import { loadPluginCommand, unloadPluginCommand } from "./commands/plugins.js";
 import { setDefaultProviderCommand } from "./commands/providers.js";
 import { removeCommand } from "./commands/remove.js";
+import { serverCommand } from "./commands/server.js";
 import { startCommand } from "./commands/start.js";
 import { statusCommand } from "./commands/status.js";
 import { upgradeCommand } from "./commands/upgrade.js";
 import { initLogging } from "./log.js";
 import { DEFAULT_SETTINGS_PATH } from "./settings.js";
-import { serverCommand } from "./commands/server.js";
 
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
 

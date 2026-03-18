@@ -30,7 +30,7 @@ export function HomeView() {
     );
 }
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((_theme) => ({
     root: {
         flex: 1,
         width: "100%"
