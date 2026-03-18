@@ -15,15 +15,6 @@ export type Durable = {
     start(): Promise<void>;
     stop(): Promise<void>;
     /**
-     * Executes immediately only when `ctx.durable` is active for this runtime.
-     * Otherwise the function is scheduled asynchronously and returns `undefined`.
-     */
-    invoke<TName extends DurableFunctionName>(
-        ctx: Context,
-        name: TName,
-        input: DurableFunctionInput<TName>
-    ): Promise<DurableFunctionOutput<TName> | undefined>;
-    /**
      * Executes immediately and awaits the durable result.
      * Expects: `ctx.durable` is active for this runtime; throws otherwise.
      */

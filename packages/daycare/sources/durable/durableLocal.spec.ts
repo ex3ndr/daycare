@@ -42,7 +42,7 @@ describe("DurableLocal", () => {
         }
     });
 
-    it("schedules outside durable context, invokes inline inside durable context, and rejects direct call outside durable scope", async () => {
+    it("schedules outside durable context, calls inline inside durable context, and rejects direct call outside durable scope", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-durable-local-"));
         try {
             const delivered: string[] = [];
@@ -52,7 +52,7 @@ describe("DurableLocal", () => {
                 execute: (async (callCtx, name, input) => {
                     const durableInput = input as { delayedSignalId: string };
                     if (durableInput.delayedSignalId === "parent") {
-                        await runtime.invoke(callCtx, name, { delayedSignalId: "child" });
+                        await runtime.call(callCtx, name, { delayedSignalId: "child" });
                     }
                     delivered.push(durableInput.delayedSignalId);
                     return null;
@@ -62,9 +62,7 @@ describe("DurableLocal", () => {
             });
             await runtime.start();
 
-            await expect(
-                runtime.invoke(ctx, "delayedSignalDeliver", { delayedSignalId: "scheduled" })
-            ).resolves.toBeUndefined();
+            await runtime.schedule(ctx, "delayedSignalDeliver", { delayedSignalId: "scheduled" });
 
             await expect(
                 runtime.call(ctx, "delayedSignalDeliver", {

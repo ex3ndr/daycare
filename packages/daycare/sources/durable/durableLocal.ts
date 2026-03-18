@@ -61,18 +61,6 @@ export class DurableLocal implements Durable {
         this.activeDir = path.join(this.rootDir, "active");
     }
 
-    async invoke<TName extends DurableFunctionName>(
-        ctx: Context,
-        name: TName,
-        input: DurableFunctionInput<TName>
-    ): Promise<DurableFunctionOutput<TName> | undefined> {
-        const call = durableContextCallGet(ctx, this.kind);
-        if (call) {
-            return call(ctx, name, input);
-        }
-        await this.schedule(ctx, name, input);
-    }
-
     async call<TName extends DurableFunctionName>(
         ctx: Context,
         name: TName,
