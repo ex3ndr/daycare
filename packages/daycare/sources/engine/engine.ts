@@ -18,6 +18,7 @@ import { databaseClose } from "../storage/databaseClose.js";
 import { databaseMigrate } from "../storage/databaseMigrate.js";
 import { databaseOpen } from "../storage/databaseOpen.js";
 import { Storage } from "../storage/storage.js";
+import { type DaycareRole, hasRole, rolesCurrentList } from "../utils/hasRole.js";
 import { stringSlugify } from "../utils/stringSlugify.js";
 import { InvalidateSync } from "../utils/sync.js";
 import { valueDeepEqual } from "../utils/valueDeepEqual.js";
@@ -69,10 +70,12 @@ import { Workspaces } from "./workspaces/workspaces.js";
 const logger = getLogger("engine.runtime");
 const DAYCARE_RUNTIME_IMAGE_REF = "daycare-runtime:latest";
 const INCOMING_MESSAGES_DEBOUNCE_MS = 100;
+const SERVER_DEFAULT_ROLES = new Set<DaycareRole>(["api", "agents"]);
 
 export type EngineOptions = {
     config: Config;
     eventBus: EngineEventBus;
+    server?: boolean;
 };
 
 export class Engine {
@@ -100,14 +103,20 @@ export class Engine {
     readonly miniApps: MiniApps;
     readonly secrets: Secrets;
     readonly friends: Friends;
+    readonly processRoles: DaycareRole[];
+    readonly server: boolean;
     private readonly memoryWorker: MemoryWorker;
     private readonly reloadSync: InvalidateSync;
     private readonly incomingMessages: IncomingMessages;
     private readonly migrationReady: Promise<void>;
 
     constructor(options: EngineOptions) {
-        logger.debug(`init: Engine constructor starting, dataDir=${options.config.dataDir}`);
+        logger.debug(
+            `init: Engine constructor starting, dataDir=${options.config.dataDir} server=${options.server === true}`
+        );
         this.config = new ConfigModule(options.config);
+        this.server = options.server === true;
+        this.processRoles = rolesCurrentList();
         const dbTarget = this.config.current.db.url
             ? { kind: "postgres" as const, url: this.config.current.db.url }
             : this.config.current.db.path;
@@ -147,7 +156,7 @@ export class Engine {
         this.reloadSync = new InvalidateSync(async () => {
             await this.reloadApplyLatest();
         });
-        this.authStore = new AuthStore(this.config.current);
+        this.authStore = new AuthStore(this.config.current, { cacheReads: this.server });
         this.processes = new Processes(this.config.current.dataDir, getLogger("engine.processes"), {
             repository: this.storage.processes,
             docker: this.config.current.docker,
@@ -681,6 +690,10 @@ export class Engine {
     async start(): Promise<void> {
         logger.debug("start: Engine.start() beginning");
         await this.migrationReady;
+        if (this.server) {
+            // Server mode keeps auth.json in memory after the initial boot read.
+            await this.authStore.read();
+        }
         await this.workspaces.ensureSystem();
         const ownerCtx = await this.agentSystem.ownerCtxEnsure();
         const users = await this.storage.users.findMany();
@@ -690,24 +703,28 @@ export class Engine {
                 soulBody: user.isWorkspace && user.systemPrompt ? `${user.systemPrompt}\n` : undefined
             });
         }
-        const docker = this.config.current.docker.socketPath
-            ? new Docker({ socketPath: this.config.current.docker.socketPath })
-            : new Docker();
-        try {
-            await dockerImageIdResolve(docker);
-        } catch (error) {
-            throw new Error(
-                `Required Docker image ${DAYCARE_RUNTIME_IMAGE_REF} is missing. Build or pull it before starting Daycare.`,
-                { cause: error }
-            );
-        }
-        try {
-            await dockerContainersStaleRemove(docker, DAYCARE_RUNTIME_IMAGE_REF);
-        } catch (error) {
-            logger.warn(
-                { imageRef: DAYCARE_RUNTIME_IMAGE_REF, error },
-                "stale: Failed to remove stale Docker sandbox containers on startup"
-            );
+        if (this.server) {
+            logger.info("start: Server mode enabled; skipping Docker runtime image startup checks.");
+        } else {
+            const docker = this.config.current.docker.socketPath
+                ? new Docker({ socketPath: this.config.current.docker.socketPath })
+                : new Docker();
+            try {
+                await dockerImageIdResolve(docker);
+            } catch (error) {
+                throw new Error(
+                    `Required Docker image ${DAYCARE_RUNTIME_IMAGE_REF} is missing. Build or pull it before starting Daycare.`,
+                    { cause: error }
+                );
+            }
+            try {
+                await dockerContainersStaleRemove(docker, DAYCARE_RUNTIME_IMAGE_REF);
+            } catch (error) {
+                logger.warn(
+                    { imageRef: DAYCARE_RUNTIME_IMAGE_REF, error },
+                    "stale: Failed to remove stale Docker sandbox containers on startup"
+                );
+            }
         }
         await this.workspaces.discover(ownerCtx.userId);
 
@@ -718,18 +735,30 @@ export class Engine {
         logger.debug("load: Loading agents");
         await this.agentSystem.load();
         logger.debug("load: Agents loaded");
-        await taskSystemMemoryCompactorEnsure(this.storage, this.agentSystem);
+        if (this.roleEnabled("tasks")) {
+            await taskSystemMemoryCompactorEnsure(this.storage, this.agentSystem);
+        } else {
+            logger.info("skip: Task scheduler role disabled; skipping system task scheduling bootstrap");
+        }
 
         logger.debug("reload: Reloading provider manager with current config");
         await this.providerManager.reload();
         logger.debug("reload: Provider manager reload complete");
-        logger.debug("load: Loading durable process manager");
-        await this.processes.load();
-        logger.debug("load: Durable process manager loaded");
+        if (this.roleEnabled("processes")) {
+            logger.debug("load: Loading durable process manager");
+            await this.processes.load();
+            logger.debug("load: Durable process manager loaded");
+        } else {
+            logger.info("skip: Processes role disabled; skipping durable process monitor");
+        }
         logger.debug("reload: Reloading plugins with current config");
         await this.pluginManager.reload();
         logger.debug("reload: Plugin reload complete");
-        await this.appServer.start();
+        if (this.roleEnabled("api")) {
+            await this.appServer.start();
+        } else {
+            logger.info("skip: API role disabled; skipping app server startup");
+        }
 
         await this.channels.load();
 
@@ -757,16 +786,28 @@ export class Engine {
 
         await this.pluginManager.preStartAll();
 
-        logger.debug("start: Starting agent system");
-        await this.agentSystem.start();
-        logger.debug("start: Agent system started");
+        if (this.roleEnabled("agents")) {
+            logger.debug("start: Starting agent system");
+            await this.agentSystem.start();
+            logger.debug("start: Agent system started");
+        } else {
+            logger.info("skip: Agents role disabled; skipping agent runtime startup");
+        }
 
-        logger.debug("start: Starting cron scheduler");
-        await this.crons.start();
-        logger.debug("start: Starting delayed signal scheduler");
-        await this.delayedSignals.start();
-        logger.debug("start: Starting memory worker");
-        this.memoryWorker.start();
+        if (this.roleEnabled("tasks")) {
+            logger.debug("start: Starting cron scheduler");
+            await this.crons.start();
+            logger.debug("start: Starting memory worker");
+            this.memoryWorker.start();
+        } else {
+            logger.info("skip: Tasks role disabled; skipping cron and memory schedulers");
+        }
+        if (this.roleEnabled("signals")) {
+            logger.debug("start: Starting delayed signal scheduler");
+            await this.delayedSignals.start();
+        } else {
+            logger.info("skip: Signals role disabled; skipping delayed signal scheduler");
+        }
         await this.pluginManager.postStartAll();
         logger.debug("start: Engine.start() complete");
     }
@@ -786,6 +827,16 @@ export class Engine {
         this.processes.unload();
         await this.pluginManager.unloadAll();
         await databaseClose(this.storage.connection);
+    }
+
+    private roleEnabled(role: DaycareRole): boolean {
+        if (!this.server) {
+            return true;
+        }
+        if (this.processRoles.length === 0) {
+            return SERVER_DEFAULT_ROLES.has(role);
+        }
+        return hasRole(role);
     }
 
     getStatus() {

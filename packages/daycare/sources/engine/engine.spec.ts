@@ -10,6 +10,7 @@ import { configResolve } from "../config/configResolve.js";
 import * as dockerContainersStaleRemoveModule from "../sandbox/docker/dockerContainersStaleRemove.js";
 import * as dockerImageIdResolveModule from "../sandbox/docker/dockerImageIdResolve.js";
 import { storageOpen } from "../storage/storageOpen.js";
+import * as rolesModule from "../utils/hasRole.js";
 import { contextForUser } from "./agents/context.js";
 import { agentPathConnector } from "./agents/ops/agentPathBuild.js";
 import { Engine } from "./engine.js";
@@ -405,6 +406,44 @@ describe("Engine startup plugin hooks", () => {
 });
 
 describe("Engine Docker stale container cleanup", () => {
+    it("skips docker startup checks in server mode", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+        const staleRemoveSpy = vi.spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove");
+        const imageIdSpy = vi.spyOn(dockerImageIdResolveModule, "dockerImageIdResolve");
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const engine = new Engine({ config, eventBus: new EngineEventBus(), server: true });
+            vi.spyOn(engine.workspaces, "ensureSystem").mockResolvedValue();
+            vi.spyOn(engine.agentSystem, "ownerCtxEnsure").mockResolvedValue(contextForUser({ userId: "system" }));
+            vi.spyOn(engine.workspaces, "discover").mockResolvedValue([]);
+            vi.spyOn(engine.modelRoles, "load").mockResolvedValue();
+            vi.spyOn(engine.agentSystem, "load").mockResolvedValue();
+            vi.spyOn(engine.providerManager, "reload").mockResolvedValue();
+            vi.spyOn(engine.processes, "load").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "reload").mockResolvedValue();
+            vi.spyOn(engine.appServer, "start").mockResolvedValue();
+            vi.spyOn(engine.channels, "load").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "preStartAll").mockResolvedValue();
+            vi.spyOn(engine.agentSystem, "start").mockResolvedValue();
+            vi.spyOn(engine.crons, "start").mockResolvedValue();
+            vi.spyOn(engine.delayedSignals, "start").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "postStartAll").mockResolvedValue();
+            vi.spyOn(engine.appServer, "stop").mockResolvedValue();
+            vi.spyOn(engine.modules.connectors, "unregisterAll").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "unloadAll").mockResolvedValue();
+            await engine.start();
+
+            expect(imageIdSpy).not.toHaveBeenCalled();
+            expect(staleRemoveSpy).not.toHaveBeenCalled();
+
+            await engine.shutdown();
+        } finally {
+            imageIdSpy.mockRestore();
+            staleRemoveSpy.mockRestore();
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it("runs startup stale scan when docker image is available", async () => {
         const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
         const staleRemoveSpy = vi
@@ -442,6 +481,110 @@ describe("Engine Docker stale container cleanup", () => {
             await expect(engine.start()).rejects.toThrow("Required Docker image daycare-runtime:latest is missing.");
             expect(staleRemoveSpy).not.toHaveBeenCalled();
         } finally {
+            imageIdSpy.mockRestore();
+            staleRemoveSpy.mockRestore();
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("Engine server role startup", () => {
+    it("keeps api and agents enabled by default in server mode while schedulers stay off", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+        const staleRemoveSpy = vi.spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove");
+        const imageIdSpy = vi.spyOn(dockerImageIdResolveModule, "dockerImageIdResolve");
+        const rolesListSpy = vi.spyOn(rolesModule, "rolesCurrentList").mockReturnValue([]);
+        const hasRoleSpy = vi.spyOn(rolesModule, "hasRole").mockReturnValue(false);
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const engine = new Engine({ config, eventBus: new EngineEventBus(), server: true });
+            const memoryWorker = engine as unknown as { memoryWorker: { start: () => void } };
+
+            vi.spyOn(engine.workspaces, "ensureSystem").mockResolvedValue();
+            vi.spyOn(engine.agentSystem, "ownerCtxEnsure").mockResolvedValue(contextForUser({ userId: "system" }));
+            vi.spyOn(engine.workspaces, "discover").mockResolvedValue([]);
+            vi.spyOn(engine.modelRoles, "load").mockResolvedValue();
+            vi.spyOn(engine.agentSystem, "load").mockResolvedValue();
+            vi.spyOn(engine.providerManager, "reload").mockResolvedValue();
+            const processesLoadSpy = vi.spyOn(engine.processes, "load").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "reload").mockResolvedValue();
+            const appServerStartSpy = vi.spyOn(engine.appServer, "start").mockResolvedValue();
+            vi.spyOn(engine.channels, "load").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "preStartAll").mockResolvedValue();
+            const agentSystemStartSpy = vi.spyOn(engine.agentSystem, "start").mockResolvedValue();
+            const cronsStartSpy = vi.spyOn(engine.crons, "start").mockResolvedValue();
+            const delayedSignalsStartSpy = vi.spyOn(engine.delayedSignals, "start").mockResolvedValue();
+            const memoryWorkerStartSpy = vi.spyOn(memoryWorker.memoryWorker, "start").mockImplementation(() => {});
+            vi.spyOn(engine.pluginManager, "postStartAll").mockResolvedValue();
+            vi.spyOn(engine.appServer, "stop").mockResolvedValue();
+            vi.spyOn(engine.modules.connectors, "unregisterAll").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "unloadAll").mockResolvedValue();
+
+            await engine.start();
+
+            expect(appServerStartSpy).toHaveBeenCalledTimes(1);
+            expect(agentSystemStartSpy).toHaveBeenCalledTimes(1);
+            expect(processesLoadSpy).not.toHaveBeenCalled();
+            expect(cronsStartSpy).not.toHaveBeenCalled();
+            expect(delayedSignalsStartSpy).not.toHaveBeenCalled();
+            expect(memoryWorkerStartSpy).not.toHaveBeenCalled();
+
+            await engine.shutdown();
+        } finally {
+            hasRoleSpy.mockRestore();
+            rolesListSpy.mockRestore();
+            imageIdSpy.mockRestore();
+            staleRemoveSpy.mockRestore();
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("starts only the explicitly assigned server roles", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-engine-"));
+        const staleRemoveSpy = vi.spyOn(dockerContainersStaleRemoveModule, "dockerContainersStaleRemove");
+        const imageIdSpy = vi.spyOn(dockerImageIdResolveModule, "dockerImageIdResolve");
+        const rolesListSpy = vi.spyOn(rolesModule, "rolesCurrentList").mockReturnValue(["api", "tasks"]);
+        const hasRoleSpy = vi
+            .spyOn(rolesModule, "hasRole")
+            .mockImplementation((role) => role === "api" || role === "tasks");
+        try {
+            const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
+            const engine = new Engine({ config, eventBus: new EngineEventBus(), server: true });
+            const memoryWorker = engine as unknown as { memoryWorker: { start: () => void } };
+
+            vi.spyOn(engine.workspaces, "ensureSystem").mockResolvedValue();
+            vi.spyOn(engine.agentSystem, "ownerCtxEnsure").mockResolvedValue(contextForUser({ userId: "system" }));
+            vi.spyOn(engine.workspaces, "discover").mockResolvedValue([]);
+            vi.spyOn(engine.modelRoles, "load").mockResolvedValue();
+            vi.spyOn(engine.agentSystem, "load").mockResolvedValue();
+            vi.spyOn(engine.providerManager, "reload").mockResolvedValue();
+            const processesLoadSpy = vi.spyOn(engine.processes, "load").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "reload").mockResolvedValue();
+            const appServerStartSpy = vi.spyOn(engine.appServer, "start").mockResolvedValue();
+            vi.spyOn(engine.channels, "load").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "preStartAll").mockResolvedValue();
+            const agentSystemStartSpy = vi.spyOn(engine.agentSystem, "start").mockResolvedValue();
+            const cronsStartSpy = vi.spyOn(engine.crons, "start").mockResolvedValue();
+            const delayedSignalsStartSpy = vi.spyOn(engine.delayedSignals, "start").mockResolvedValue();
+            const memoryWorkerStartSpy = vi.spyOn(memoryWorker.memoryWorker, "start").mockImplementation(() => {});
+            vi.spyOn(engine.pluginManager, "postStartAll").mockResolvedValue();
+            vi.spyOn(engine.appServer, "stop").mockResolvedValue();
+            vi.spyOn(engine.modules.connectors, "unregisterAll").mockResolvedValue();
+            vi.spyOn(engine.pluginManager, "unloadAll").mockResolvedValue();
+
+            await engine.start();
+
+            expect(appServerStartSpy).toHaveBeenCalledTimes(1);
+            expect(agentSystemStartSpy).not.toHaveBeenCalled();
+            expect(processesLoadSpy).not.toHaveBeenCalled();
+            expect(cronsStartSpy).toHaveBeenCalledTimes(1);
+            expect(delayedSignalsStartSpy).not.toHaveBeenCalled();
+            expect(memoryWorkerStartSpy).toHaveBeenCalledTimes(1);
+
+            await engine.shutdown();
+        } finally {
+            hasRoleSpy.mockRestore();
+            rolesListSpy.mockRestore();
             imageIdSpy.mockRestore();
             staleRemoveSpy.mockRestore();
             await rm(dir, { recursive: true, force: true });

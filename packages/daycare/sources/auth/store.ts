@@ -12,14 +12,48 @@ export type AuthEntry = {
 
 export type AuthConfig = Record<string, AuthEntry>;
 
-export class AuthStore {
-    private filePath: string;
+export type AuthStoreOptions = {
+    cacheReads?: boolean;
+};
 
-    constructor(config: Config) {
+export class AuthStore {
+    private readonly filePath: string;
+    private readonly cacheReads: boolean;
+    private cachedConfig: AuthConfig | null = null;
+
+    constructor(config: Config, options: AuthStoreOptions = {}) {
         this.filePath = config.authPath;
+        this.cacheReads = options.cacheReads ?? false;
     }
 
     async read(): Promise<AuthConfig> {
+        if (this.cacheReads && this.cachedConfig) {
+            return structuredClone(this.cachedConfig);
+        }
+
+        const parsed = await this.readFromDisk();
+        if (this.cacheReads) {
+            this.cachedConfig = structuredClone(parsed);
+        }
+        return structuredClone(parsed);
+    }
+
+    async write(config: AuthConfig): Promise<void> {
+        const resolvedPath = path.resolve(this.filePath);
+        const dir = path.dirname(resolvedPath);
+        if (dir && dir !== ".") {
+            await fs.mkdir(dir, { recursive: true });
+        }
+
+        const nextConfig = structuredClone(config);
+        const payload = `${JSON.stringify(nextConfig, null, 2)}\n`;
+        await fs.writeFile(resolvedPath, payload, { mode: 0o600 });
+        if (this.cacheReads) {
+            this.cachedConfig = nextConfig;
+        }
+    }
+
+    private async readFromDisk(): Promise<AuthConfig> {
         const resolvedPath = path.resolve(this.filePath);
         try {
             const raw = await fs.readFile(resolvedPath, "utf8");
@@ -31,16 +65,6 @@ export class AuthStore {
             }
             throw error;
         }
-    }
-
-    async write(config: AuthConfig): Promise<void> {
-        const resolvedPath = path.resolve(this.filePath);
-        const dir = path.dirname(resolvedPath);
-        if (dir && dir !== ".") {
-            await fs.mkdir(dir, { recursive: true });
-        }
-        const payload = `${JSON.stringify(config, null, 2)}\n`;
-        await fs.writeFile(resolvedPath, payload, { mode: 0o600 });
     }
 
     async getEntry(id: string): Promise<AuthEntry | null> {
