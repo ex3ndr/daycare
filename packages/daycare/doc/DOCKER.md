@@ -17,6 +17,7 @@ docker run --rm -it \
 ```
 
 The image uses the package’s normal build flow with `yarn workspace daycare-cli run build`, which compiles TypeScript and runs asset sync from compiled `dist/` via `node`, then starts the built CLI with `node ./packages/daycare/dist/main.js start`.
+The runtime command is `node ./packages/daycare/dist/main.js server`, which is the deployment-safe mode and does not require a local Docker socket.
 
 `7331` is the dashboard plugin default port and `7332` is the app server default port. They are only used when those features are enabled in Daycare settings.
 
@@ -27,5 +28,5 @@ flowchart LR
     B --> D[node_modules]
     C --> E[runner]
     D --> E
-    E -->|node dist/main.js start| F[/var/lib/daycare volume/]
+    E -->|node dist/main.js server| F[/var/lib/daycare volume/]
 ```

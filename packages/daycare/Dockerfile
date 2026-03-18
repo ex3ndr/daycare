@@ -48,4 +48,4 @@ VOLUME ["/var/lib/daycare"]
 EXPOSE 7331 7332
 
 ENTRYPOINT ["tini", "--"]
-CMD ["node", "./packages/daycare/dist/main.js", "start"]
+CMD ["node", "./packages/daycare/dist/main.js", "server"]

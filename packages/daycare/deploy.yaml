@@ -60,6 +60,10 @@ spec:
       containers:
         - name: daycare-server
           image: docker.korshakov.com/daycare-server:{version}
+          command:
+            - node
+            - /app/packages/daycare/dist/main.js
+            - server
           env:
             - name: DAYCARE_ROOT_DIR
               value: /var/lib/daycare
@@ -117,7 +121,7 @@ metadata:
   name: daycare-app
 spec:
   selector:
-    app: daycare-app
+    app: daycare-server
   ports:
     - port: 3000
       targetPort: 7332
