@@ -92,7 +92,7 @@ spec:
               value: /var/lib/daycare
           envFrom:
             - secretRef:
-                name: happy-list-secrets
+                name: daycare-server
           ports:
             - containerPort: 7332
           volumeMounts:
@@ -143,6 +143,32 @@ spec:
         - name: daycare-data
           persistentVolumeClaim:
             claimName: daycare-data-pvc
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: daycare-server-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: daycare-server
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: daycare-server-secrets
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: SecretStore
+  target:
+    name: daycare-server-secrets
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: /daycare-server
 ---
 apiVersion: v1
 kind: Service
