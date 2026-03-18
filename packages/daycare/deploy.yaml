@@ -37,6 +37,29 @@ metadata:
 data:
   settings.json: |
     {
+     "engine": {
+        "db": {
+          "autoMigrate": false
+        },
+        "dataDir": "/data/daycare"
+      },
+      "providers": [
+        {
+          "id": "openai-codex",
+          "enabled": true,
+          "model": "gpt-5.4"
+        },
+        {
+          "id": "anthropic",
+          "enabled": true,
+          "model": "claude-opus-4-6"
+        },
+        {
+          "id": "google",
+          "enabled": true,
+          "model": "gemini-3.1-pro-preview"
+        }
+      ],
       "appServer": {
         "enabled": true,
         "port": 7332
@@ -81,6 +104,9 @@ spec:
               mountPath: /var/lib/daycare/auth.json
               subPath: auth.json
               readOnly: true
+            - name: daycare-data
+              mountPath: /data
+              readOnly: false
           livenessProbe:
             httpGet:
               path: /
@@ -114,6 +140,9 @@ spec:
             items:
               - key: auth.json
                 path: auth.json
+        - name: daycare-data
+          persistentVolumeClaim:
+            claimName: daycare-data-pvc
 ---
 apiVersion: v1
 kind: Service
