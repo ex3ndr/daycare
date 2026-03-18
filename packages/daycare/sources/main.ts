@@ -20,6 +20,7 @@ import { statusCommand } from "./commands/status.js";
 import { upgradeCommand } from "./commands/upgrade.js";
 import { initLogging } from "./log.js";
 import { DEFAULT_SETTINGS_PATH } from "./settings.js";
+import { serverCommand } from "./commands/server.js";
 
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
 
@@ -41,7 +42,7 @@ program
     .command("server")
     .description("Launch the daycare as server")
     .option("-s, --settings <path>", "Path to settings file", DEFAULT_SETTINGS_PATH)
-    .action(startCommand);
+    .action(serverCommand);
 
 program.command("status").description("Show bot status").action(statusCommand);
 
