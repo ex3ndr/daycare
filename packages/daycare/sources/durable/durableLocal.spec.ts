@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { contextForUser } from "../types.js";
 import { DurableLocal } from "./durableLocal.js";
+import type { DurableExecute } from "./durableTypes.js";
 
 describe("DurableLocal", () => {
     it("replays scheduled jobs from disk after restart", async () => {
@@ -13,20 +14,20 @@ describe("DurableLocal", () => {
             const delivered: string[] = [];
             const ctx = contextForUser({ userId: "user-1" });
             const runtime = new DurableLocal({
-                execute: async (_ctx, _name, input) => {
-                    delivered.push(input.delayedSignalId);
+                execute: (async (_ctx, _name, input) => {
+                    delivered.push((input as { delayedSignalId: string }).delayedSignalId);
                     return null;
-                },
+                }) as DurableExecute,
                 retryBaseMs: 10,
                 rootDir: path.join(dir, "durable")
             });
             await runtime.schedule(ctx, "delayedSignalDeliver", { delayedSignalId: "job-1" });
 
             const restored = new DurableLocal({
-                execute: async (_ctx, _name, input) => {
-                    delivered.push(input.delayedSignalId);
+                execute: (async (_ctx, _name, input) => {
+                    delivered.push((input as { delayedSignalId: string }).delayedSignalId);
                     return null;
-                },
+                }) as DurableExecute,
                 retryBaseMs: 10,
                 rootDir: path.join(dir, "durable")
             });
@@ -48,13 +49,14 @@ describe("DurableLocal", () => {
             const ctx = contextForUser({ userId: "user-1" });
             let runtime!: DurableLocal;
             runtime = new DurableLocal({
-                execute: async (callCtx, name, input) => {
-                    if (input.delayedSignalId === "parent") {
+                execute: (async (callCtx, name, input) => {
+                    const durableInput = input as { delayedSignalId: string };
+                    if (durableInput.delayedSignalId === "parent") {
                         await runtime.invoke(callCtx, name, { delayedSignalId: "child" });
                     }
-                    delivered.push(input.delayedSignalId);
+                    delivered.push(durableInput.delayedSignalId);
                     return null;
-                },
+                }) as DurableExecute,
                 retryBaseMs: 10,
                 rootDir: path.join(dir, "durable")
             });
@@ -76,6 +78,26 @@ describe("DurableLocal", () => {
                 expect(delivered).toEqual(["scheduled", "child", "parent"]);
             });
             await runtime.stop();
+        } finally {
+            await rm(dir, { force: true, recursive: true });
+        }
+    });
+
+    it("rejects locally scheduled durable work when the function is disabled for current roles", async () => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), "daycare-durable-local-"));
+        try {
+            const runtime = new DurableLocal({
+                execute: (async () => null) as DurableExecute,
+                roles: ["tasks"],
+                retryBaseMs: 10,
+                rootDir: path.join(dir, "durable")
+            });
+
+            await expect(
+                runtime.schedule(contextForUser({ userId: "user-1" }), "delayedSignalDeliver", {
+                    delayedSignalId: "job-1"
+                })
+            ).rejects.toThrow('Durable function "delayedSignalDeliver" is disabled for roles: tasks.');
         } finally {
             await rm(dir, { force: true, recursive: true });
         }

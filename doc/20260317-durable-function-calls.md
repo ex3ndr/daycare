@@ -2,6 +2,7 @@
 
 ## Summary
 - Added a shared durable function catalog in `packages/daycare/sources/durable/durableFunctions.ts`.
+- Durable functions are defined like tool definitions: `name`, `description`, typed input/output, role gating, dedupe, and handler live together.
 - Durable calls now have two modes:
   - `ctx.durable` missing: schedule and return immediately
   - `ctx.durable.active === true`: invoke durably and await the result
@@ -32,7 +33,7 @@ flowchart TD
 ```
 
 ## Notes
-- The durable catalog owns function ids, event names, and schedule dedupe keys.
+- The durable catalog owns function ids, event names, descriptions, role gating, handlers, and schedule dedupe keys.
 - Local durability recovers jobs by moving in-flight files back to pending on startup.
 - `Context` is serialized directly with `contextToJSON()` / `Context.fromJSON()`; there is no separate durable snapshot type.
 - Inngest durability reuses the same executor and supports nested calls via `step.invoke()`.

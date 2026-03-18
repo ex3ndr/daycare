@@ -1,0 +1,29 @@
+import { describe, expect, it } from "vitest";
+
+import {
+    durableFunctionDefinitionGet,
+    durableFunctionEnabled,
+    durableFunctionNamesForRoles
+} from "./durableFunctions.js";
+
+describe("durableFunctions", () => {
+    it("exposes tool-like durable metadata", () => {
+        const definition = durableFunctionDefinitionGet("delayedSignalDeliver");
+
+        expect(definition.name).toBe("delayedSignalDeliver");
+        expect(definition.description).toContain("delayed signal");
+        expect(definition.functionId).toBe("durable-delayed-signal-deliver");
+        expect(definition.event).toBe("daycare/durable.delayed-signal-deliver");
+    });
+
+    it("filters functions by runtime role", () => {
+        expect(durableFunctionEnabled("delayedSignalDeliver", ["signals"])).toBe(true);
+        expect(durableFunctionEnabled("delayedSignalDeliver", ["tasks"])).toBe(false);
+        expect(durableFunctionNamesForRoles(["tasks"])).toEqual([]);
+    });
+
+    it("keeps functions enabled when no role filter is provided", () => {
+        expect(durableFunctionEnabled("delayedSignalDeliver", [])).toBe(true);
+        expect(durableFunctionNamesForRoles([])).toEqual(["delayedSignalDeliver"]);
+    });
+});

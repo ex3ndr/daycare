@@ -3,9 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import { DurableInngest } from "./durableInngest.js";
 import { DurableLocal } from "./durableLocal.js";
 import { durableResolve } from "./durableResolve.js";
+import type { DurableExecute } from "./durableTypes.js";
 
 describe("durableResolve", () => {
-    const execute = vi.fn(async () => null);
+    const execute = vi.fn(async () => null) as DurableExecute;
 
     it("returns local runtime outside server mode", () => {
         const result = durableResolve(

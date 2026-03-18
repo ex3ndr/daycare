@@ -4,11 +4,13 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { getLogger } from "../log.js";
 import { Context, type ContextJson, contextToJSON } from "../types.js";
+import type { DaycareRole } from "../utils/hasRole.js";
 import { durableContextBind, durableContextCallGet } from "./durableContext.js";
 import {
     type DurableFunctionInput,
     type DurableFunctionName,
     type DurableFunctionOutput,
+    durableFunctionEnabled,
     durableFunctionKey
 } from "./durableFunctions.js";
 import type { Durable, DurableExecute } from "./durableTypes.js";
@@ -17,6 +19,7 @@ const logger = getLogger("durable.local");
 
 type DurableLocalOptions = {
     execute: DurableExecute;
+    roles?: readonly DaycareRole[];
     retryBaseMs?: number;
     rootDir: string;
 };
@@ -39,6 +42,7 @@ type DurableLocalJob = {
 export class DurableLocal implements Durable {
     readonly kind = "local" as const;
     private readonly execute: DurableExecute;
+    private readonly roles: readonly DaycareRole[];
     private readonly retryBaseMs: number;
     private readonly rootDir: string;
     private readonly pendingDir: string;
@@ -50,6 +54,7 @@ export class DurableLocal implements Durable {
 
     constructor(options: DurableLocalOptions) {
         this.execute = options.execute;
+        this.roles = options.roles ?? [];
         this.retryBaseMs = Math.max(25, Math.floor(options.retryBaseMs ?? 250));
         this.rootDir = options.rootDir;
         this.pendingDir = path.join(this.rootDir, "pending");
@@ -73,6 +78,7 @@ export class DurableLocal implements Durable {
         name: TName,
         input: DurableFunctionInput<TName>
     ): Promise<DurableFunctionOutput<TName>> {
+        this.functionRequireEnabled(name);
         const call = durableContextCallGet(ctx, this.kind);
         if (!call) {
             throw new Error("Durable call requires a durable execution context.");
@@ -85,6 +91,7 @@ export class DurableLocal implements Durable {
         name: TName,
         input: DurableFunctionInput<TName>
     ): Promise<void> {
+        this.functionRequireEnabled(name);
         await this.ensureDirs();
 
         const job = this.jobBuild(ctx, name, input);
@@ -217,9 +224,9 @@ export class DurableLocal implements Durable {
         const ctx = Context.fromJSON(job.ctx);
         try {
             const durableCtx = durableContextBind(ctx, this.kind, (callCtx, callName, callInput) =>
-                this.execute(callCtx, callName, callInput)
+                this.executeRequireEnabled(callCtx, callName, callInput)
             );
-            await this.execute(durableCtx, job.name, jobInputCast(job.name, job.input));
+            await this.executeRequireEnabled(durableCtx, job.name, jobInputCast(job.name, job.input));
             await fs.unlink(activePath).catch(() => undefined);
         } catch (error) {
             const nextAttempt = job.attempts + 1;
@@ -313,6 +320,23 @@ export class DurableLocal implements Durable {
 
     private activePath(id: string): string {
         return path.join(this.activeDir, `${id}.json`);
+    }
+
+    private executeRequireEnabled<TName extends DurableFunctionName>(
+        ctx: Context,
+        name: TName,
+        input: DurableFunctionInput<TName>
+    ): Promise<DurableFunctionOutput<TName>> {
+        this.functionRequireEnabled(name);
+        return this.execute(ctx, name, input);
+    }
+
+    private functionRequireEnabled(name: DurableFunctionName): void {
+        if (durableFunctionEnabled(name, this.roles)) {
+            return;
+        }
+        const roleLabel = this.roles.length === 0 ? "none" : this.roles.join(", ");
+        throw new Error(`Durable function "${name}" is disabled for roles: ${roleLabel}.`);
     }
 }
 

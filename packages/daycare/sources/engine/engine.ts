@@ -166,6 +166,7 @@ export class Engine {
                     input,
                     name
                 }),
+            roles: this.runtimeRolesResolve(),
             server: this.server
         });
         this.delayedSignals.setDurable(this.durable);
@@ -855,6 +856,16 @@ export class Engine {
             return SERVER_DEFAULT_ROLES.has(role);
         }
         return hasRole(role);
+    }
+
+    private runtimeRolesResolve(): DaycareRole[] {
+        if (!this.server) {
+            return [];
+        }
+        if (this.processRoles.length === 0) {
+            return Array.from(SERVER_DEFAULT_ROLES);
+        }
+        return [...this.processRoles];
     }
 
     getStatus() {

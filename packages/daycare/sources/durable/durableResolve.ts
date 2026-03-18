@@ -1,4 +1,5 @@
 import path from "node:path";
+import type { DaycareRole } from "../utils/hasRole.js";
 import { durableConfigResolve } from "./durableConfigResolve.js";
 import { DurableInngest, type DurableInngestOptions } from "./durableInngest.js";
 import { DurableLocal } from "./durableLocal.js";
@@ -8,6 +9,7 @@ export type DurableResolveOptions = {
     dataDir: string;
     execute: DurableExecute;
     inngest?: Omit<DurableInngestOptions, "env" | "execute">;
+    roles?: readonly DaycareRole[];
     server?: boolean;
 };
 
@@ -19,6 +21,7 @@ export function durableResolve(env: NodeJS.ProcessEnv, options: DurableResolveOp
     if (options.server !== true) {
         return new DurableLocal({
             execute: options.execute,
+            roles: options.roles,
             rootDir: path.join(options.dataDir, "durable")
         });
     }
@@ -27,6 +30,7 @@ export function durableResolve(env: NodeJS.ProcessEnv, options: DurableResolveOp
     if (!config) {
         return new DurableLocal({
             execute: options.execute,
+            roles: options.roles,
             rootDir: path.join(options.dataDir, "durable")
         });
     }
