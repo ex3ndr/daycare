@@ -7,6 +7,7 @@
 - It uses the official Inngest TypeScript SDK v4 `connect()` worker runtime.
 - `INNGEST_ENDPOINT` is the websocket endpoint used directly by `connect()`.
 - Daycare derives the SDK API base URL from that websocket host so the initial handshake targets the same Inngest deployment.
+- For self-hosted Inngest, a gateway endpoint on port `8289` automatically maps the SDK API base URL to port `8288`.
 - The endpoint is used as-is; query parameters are preserved and not interpreted by Daycare.
 
 ## Flow

@@ -29,6 +29,16 @@ export function durableConfigResolve(env: NodeJS.ProcessEnv): DurableConfig | nu
 }
 
 function durableApiBaseUrlResolve(url: URL): string {
-    const protocol = url.protocol === "wss:" ? "https:" : "http:";
-    return `${protocol}//${url.host}/`;
+    const apiUrl = new URL(url.toString());
+    apiUrl.protocol = url.protocol === "wss:" ? "https:" : "http:";
+    apiUrl.pathname = "/";
+    apiUrl.search = "";
+    apiUrl.hash = "";
+
+    // Inngest self-hosting uses 8289 for the websocket gateway and 8288 for the HTTP API.
+    if (apiUrl.port === "8289") {
+        apiUrl.port = "8288";
+    }
+
+    return apiUrl.toString();
 }

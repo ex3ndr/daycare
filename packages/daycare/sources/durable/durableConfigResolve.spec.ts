@@ -38,6 +38,17 @@ describe("durableConfigResolve", () => {
         });
     });
 
+    it("maps the self-hosted connect gateway port to the api port", () => {
+        const result = durableConfigResolve({
+            INNGEST_ENDPOINT: "ws://daycare-inngest:8289/v0/connect"
+        });
+
+        expect(result).toEqual({
+            apiBaseUrl: "http://daycare-inngest:8288/",
+            endpoint: "ws://daycare-inngest:8289/v0/connect"
+        });
+    });
+
     it("rejects non-websocket endpoint protocols", () => {
         expect(() =>
             durableConfigResolve({
