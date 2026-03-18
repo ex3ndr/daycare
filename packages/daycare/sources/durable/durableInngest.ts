@@ -14,7 +14,7 @@ export type DurableInngestOptions = {
 
 /**
  * Durable runtime backed by the official Inngest SDK connect worker.
- * Expects: config token is a valid signing key for the configured endpoint.
+ * Expects: endpoint is already the websocket gateway URL used for connect().
  */
 export class DurableInngest implements Durable {
     readonly kind = "inngest" as const;
@@ -34,22 +34,17 @@ export class DurableInngest implements Durable {
         }
         this.started = true;
 
-        logger.info(
-            { endpoint: this.config.endpoint, gatewayUrl: this.config.gatewayUrl },
-            "start: Starting durable runtime via Inngest connect()"
-        );
+        logger.info({ endpoint: this.config.endpoint }, "start: Starting durable runtime via Inngest connect()");
 
         const client = new Inngest({
             id: "daycare-durable",
-            baseUrl: this.config.apiUrl,
             internalLogger: logger,
-            logger,
-            signingKey: this.config.token
+            logger
         });
 
         this.connection = await this.connectRun({
             apps: [{ client, functions: [] }],
-            gatewayUrl: this.config.gatewayUrl,
+            gatewayUrl: this.config.endpoint,
             handleShutdownSignals: [],
             instanceId: `${os.hostname()}-${process.pid}`
         });

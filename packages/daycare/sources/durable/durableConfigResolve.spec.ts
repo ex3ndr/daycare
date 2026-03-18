@@ -7,32 +7,29 @@ describe("durableConfigResolve", () => {
         expect(durableConfigResolve({})).toBeNull();
     });
 
-    it("normalizes http endpoints to websocket urls", () => {
+    it("accepts websocket endpoints as-is", () => {
         const result = durableConfigResolve({
-            INNGEST_ENDPOINT: "https://inngest.example/connect",
-            INNGEST_TOKEN: "secret-token"
+            INNGEST_ENDPOINT: "wss://inngest.example/connect?token=secret-token"
         });
 
         expect(result).toEqual({
-            endpoint: "https://inngest.example/connect",
-            token: "secret-token",
-            apiUrl: "https://inngest.example/connect",
-            gatewayUrl: "wss://inngest.example/connect"
+            endpoint: "wss://inngest.example/connect?token=secret-token"
         });
     });
 
-    it("requires both endpoint and token", () => {
-        expect(() => durableConfigResolve({ INNGEST_ENDPOINT: "https://inngest.example/connect" })).toThrow(
-            "INNGEST_ENDPOINT and INNGEST_TOKEN must both be set to enable durable runtime."
-        );
+    it("accepts insecure websocket endpoints when explicitly provided", () => {
+        const result = durableConfigResolve({ INNGEST_ENDPOINT: "ws://inngest.example/connect" });
+
+        expect(result).toEqual({
+            endpoint: "ws://inngest.example/connect"
+        });
     });
 
-    it("rejects unsupported endpoint protocols", () => {
+    it("rejects non-websocket endpoint protocols", () => {
         expect(() =>
             durableConfigResolve({
-                INNGEST_ENDPOINT: "ftp://inngest.example/connect",
-                INNGEST_TOKEN: "secret-token"
+                INNGEST_ENDPOINT: "https://inngest.example/connect"
             })
-        ).toThrow("INNGEST_ENDPOINT must use http, https, ws, or wss.");
+        ).toThrow("INNGEST_ENDPOINT must use ws or wss.");
     });
 });

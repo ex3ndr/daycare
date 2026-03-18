@@ -8,8 +8,7 @@ describe("durableResolve", () => {
     it("returns local runtime outside server mode", () => {
         const result = durableResolve(
             {
-                INNGEST_ENDPOINT: "https://inngest.example/connect",
-                INNGEST_TOKEN: "secret"
+                INNGEST_ENDPOINT: "wss://inngest.example/connect"
             },
             { server: false }
         );
@@ -28,8 +27,7 @@ describe("durableResolve", () => {
     it("returns Inngest runtime in server mode when configured", () => {
         const result = durableResolve(
             {
-                INNGEST_ENDPOINT: "https://inngest.example/connect",
-                INNGEST_TOKEN: "secret"
+                INNGEST_ENDPOINT: "wss://inngest.example/connect"
             },
             { server: true }
         );
@@ -48,8 +46,7 @@ describe("durableResolve", () => {
         }));
         const result = durableResolve(
             {
-                INNGEST_ENDPOINT: "https://inngest.example/connect",
-                INNGEST_TOKEN: "secret"
+                INNGEST_ENDPOINT: "wss://inngest.example/connect"
             },
             { inngest: { connectRun: connectRun as never }, server: true }
         );
