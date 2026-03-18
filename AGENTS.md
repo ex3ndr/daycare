@@ -54,6 +54,7 @@
 - Add brief code comments for tricky or non-obvious logic.
 - Keep files concise; extract helpers instead of "V2" copies.
 - Aim to keep files under ~700 LOC; guideline only (not a hard guardrail). Split/refactor when it improves clarity or testability.
+- Never use `AsyncLocalStorage`.
 - Naming: use **Daycare** for product/app/docs headings; use `daycare` for CLI command, package/binary, paths, and config keys.
 - Prefer repo-wide naming consistency over perfectly precise grammar when the two conflict.
 - Function naming: do not use the `Build` suffix. Prefer direct names such as `contextForAgent` (not `contextForAgentBuild`).
