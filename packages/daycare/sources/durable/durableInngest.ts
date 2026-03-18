@@ -37,6 +37,7 @@ export class DurableInngest implements Durable {
         logger.info({ endpoint: this.config.endpoint }, "start: Starting durable runtime via Inngest connect()");
 
         const client = new Inngest({
+            baseUrl: this.config.apiBaseUrl,
             id: "daycare-durable",
             internalLogger: logger,
             logger

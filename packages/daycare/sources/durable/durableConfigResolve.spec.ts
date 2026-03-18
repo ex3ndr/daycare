@@ -13,6 +13,7 @@ describe("durableConfigResolve", () => {
         });
 
         expect(result).toEqual({
+            apiBaseUrl: "https://inngest.example/",
             endpoint: "wss://inngest.example/connect?token=secret-token"
         });
     });
@@ -21,7 +22,19 @@ describe("durableConfigResolve", () => {
         const result = durableConfigResolve({ INNGEST_ENDPOINT: "ws://inngest.example/connect" });
 
         expect(result).toEqual({
+            apiBaseUrl: "http://inngest.example/",
             endpoint: "ws://inngest.example/connect"
+        });
+    });
+
+    it("derives api base url from websocket host even when the endpoint has a nested path", () => {
+        const result = durableConfigResolve({
+            INNGEST_ENDPOINT: "wss://inngest.example:8288/gateway/v0/connect?token=secret-token"
+        });
+
+        expect(result).toEqual({
+            apiBaseUrl: "https://inngest.example:8288/",
+            endpoint: "wss://inngest.example:8288/gateway/v0/connect?token=secret-token"
         });
     });
 

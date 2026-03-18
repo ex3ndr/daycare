@@ -6,6 +6,7 @@
 - The durable runtime enables the `inngest` implementation only in server mode and only when `INNGEST_ENDPOINT` is present in the process environment.
 - It uses the official Inngest TypeScript SDK v4 `connect()` worker runtime.
 - `INNGEST_ENDPOINT` is the websocket endpoint used directly by `connect()`.
+- Daycare derives the SDK API base URL from that websocket host so the initial handshake targets the same Inngest deployment.
 - The endpoint is used as-is; query parameters are preserved and not interpreted by Daycare.
 
 ## Flow
@@ -18,8 +19,9 @@ flowchart TD
     D --> E{endpoint set?}
     E -->|no| C
     E -->|yes| F[use inngest durable runtime]
-    F --> G[start official connect worker with websocket endpoint]
+    F --> G[derive api base url from websocket host]
+    G --> H[start official connect worker with websocket endpoint]
     C --> I[Engine.start calls durable.start]
-    G --> I
+    H --> I
     I --> J[Engine.shutdown calls durable.stop]
 ```

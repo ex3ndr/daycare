@@ -1,6 +1,7 @@
 export const INNGEST_ENDPOINT_ENV = "INNGEST_ENDPOINT";
 
 export type DurableConfig = {
+    apiBaseUrl: string;
     endpoint: string;
 };
 
@@ -19,9 +20,15 @@ export function durableConfigResolve(env: NodeJS.ProcessEnv): DurableConfig | nu
 
     if (url.protocol === "ws:" || url.protocol === "wss:") {
         return {
+            apiBaseUrl: durableApiBaseUrlResolve(url),
             endpoint: url.toString()
         };
     }
 
     throw new Error("INNGEST_ENDPOINT must use ws or wss.");
+}
+
+function durableApiBaseUrlResolve(url: URL): string {
+    const protocol = url.protocol === "wss:" ? "https:" : "http:";
+    return `${protocol}//${url.host}/`;
 }
