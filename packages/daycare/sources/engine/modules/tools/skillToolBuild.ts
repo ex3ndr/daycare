@@ -3,6 +3,7 @@ import type { Tool, ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
 import matter from "gray-matter";
 import type { ToolDefinition, ToolResultContract } from "@/types";
+import { connectorSend } from "../../../durable/connectorSend.js";
 import type { SandboxReadResult } from "../../../sandbox/sandboxTypes.js";
 import { agentPathChildAllocate } from "../../agents/ops/agentPathChildAllocate.js";
 import { agentRecipientResolve } from "../../agents/ops/agentRecipientResolve.js";
@@ -398,7 +399,7 @@ async function skillNotifyConnector(skillName: string, toolContext: ToolExecutio
         if (!connector?.capabilities.sendText) {
             return;
         }
-        await connector.sendMessage(target, { text: `⚡ Skill loaded: ${skillName}` });
+        await connectorSend(toolContext.ctx, target.name, target, { text: `⚡ Skill loaded: ${skillName}` });
     } catch {
         // Best-effort notification; do not break skill execution
     }

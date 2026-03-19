@@ -1,7 +1,8 @@
 import type { AssistantMessage, Context, Tool } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Connector, ToolExecutionResult } from "@/types";
+import { connectorSend as connectorSendDurable } from "../../../durable/connectorSend.js";
 import type { InferenceRouter } from "../../modules/inference/router.js";
 import type { ToolResolverApi } from "../../modules/toolResolver.js";
 import { type AgentLegacyDescriptor, agentPathFromLegacyDescriptor } from "../agentLegacyDescriptorTestUtils.js";
@@ -9,7 +10,17 @@ import { contextForAgent } from "../context.js";
 import { agentLoopRun } from "./agentLoopRun.js";
 import type { AgentMessage } from "./agentTypes.js";
 
+vi.mock("../../../durable/connectorSend.js", () => ({
+    connectorSend: vi.fn(async () => undefined)
+}));
+
+const connectorSendMock = vi.mocked(connectorSendDurable);
+
 describe("agentLoopRun", () => {
+    beforeEach(() => {
+        connectorSendMock.mockClear();
+    });
+
     it("exposes run_python as the only inference tool and does not set stop sequences", async () => {
         const connectorSend = vi.fn(async () => undefined);
         const connector = connectorBuild(connectorSend);
@@ -58,8 +69,10 @@ describe("agentLoopRun", () => {
                     message.role === "toolResult" && message.toolCallId === "tool-1"
             )
         ).toBe(true);
-        expect(connectorSend).toHaveBeenCalledTimes(1);
-        expect(connectorSend).toHaveBeenCalledWith(
+        expect(connectorSendMock).toHaveBeenCalledTimes(1);
+        expect(connectorSendMock).toHaveBeenCalledWith(
+            expect.anything(),
+            "telegram",
             { name: "telegram", key: "channel-1" },
             expect.objectContaining({ text: "Finished" })
         );
@@ -399,7 +412,9 @@ describe("agentLoopRun", () => {
 
         expect(sawNonErrorComplete).toBe(true);
         expect(execute).not.toHaveBeenCalled();
-        expect(connectorSend).toHaveBeenCalledWith(
+        expect(connectorSendMock).toHaveBeenCalledWith(
+            expect.anything(),
+            "telegram",
             { name: "telegram", key: "channel-1" },
             expect.objectContaining({ text: "Finished" })
         );
@@ -528,7 +543,7 @@ describe("agentLoopRun", () => {
         expect(result.responseText).toBeNull();
         expect(deferredHandler).toHaveBeenCalledTimes(1);
         expect(deferredHandler).toHaveBeenCalledWith({ queued: true }, expect.anything());
-        expect(connectorSend).not.toHaveBeenCalled();
+        expect(connectorSendMock).not.toHaveBeenCalled();
     });
 
     it("suppresses NO_MESSAGE output when there are no tool calls", async () => {
@@ -544,7 +559,7 @@ describe("agentLoopRun", () => {
         );
 
         expect(result.responseText).toBeNull();
-        expect(connectorSend).not.toHaveBeenCalled();
+        expect(connectorSendMock).not.toHaveBeenCalled();
         const assistant = result.historyRecords.find(
             (record): record is Extract<(typeof result.historyRecords)[number], { type: "assistant_message" }> =>
                 record.type === "assistant_message"

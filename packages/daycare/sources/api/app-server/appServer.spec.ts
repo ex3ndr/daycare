@@ -199,6 +199,8 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         })
     };
 
+    const connectorSendSpy = vi.fn(async () => {});
+
     const appServer = new AppServer({
         config,
         db: storage.db,
@@ -243,7 +245,8 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
                 return null;
             }
             return { name: connector, key: userId };
-        }
+        },
+        connectorSend: connectorSendSpy
     });
 
     await appServer.start();
@@ -257,7 +260,8 @@ async function appServerCreateForTests(options: AppServerCreateTestOptions = {})
         miniApps,
         commands: modules.commands,
         tools: modules.tools,
-        connectors: modules.connectors
+        connectors: modules.connectors,
+        connectorSendSpy
     };
 }
 
@@ -367,10 +371,14 @@ describe("AppServer auth endpoints", () => {
             agentPathConnector("123", "telegram")
         );
 
-        expect(sendMessage).toHaveBeenCalledTimes(1);
-        const sentCall = sendMessage.mock.calls[0];
+        expect(built.connectorSendSpy).toHaveBeenCalledTimes(1);
+        const sentCall = built.connectorSendSpy.mock.calls[0];
         expect(sentCall).toBeTruthy();
-        const sent = sentCall![1];
+        const sent = (sentCall as unknown as unknown[])[2] as {
+            text: string;
+            replyToMessageId?: string;
+            buttons?: Array<{ type: string; text: string; url?: string; openMode?: string }>;
+        };
         expect(sent.text).toBe("Open your Daycare app using the button below.");
         expect(sent.text).not.toContain("http");
         expect(sent.replyToMessageId).toBe("42");

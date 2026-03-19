@@ -4,6 +4,7 @@ import path from "node:path";
 import type { Context as InferenceContext } from "@mariozechner/pi-ai";
 import { createId } from "@paralleldrive/cuid2";
 import type { AgentConfig, AgentKind, AgentPath, Context, MessageContext } from "@/types";
+import { connectorSend } from "../../durable/connectorSend.js";
 import { getLogger } from "../../log.js";
 import { listActiveInferenceProviders } from "../../providers/catalog.js";
 import { modelRoleApply } from "../../providers/modelRoleApply.js";
@@ -403,7 +404,7 @@ export class Agent {
             return;
         }
         try {
-            await connector.sendMessage(target, {
+            await connectorSend(this.ctx, target.name, target, {
                 text: "Unexpected error",
                 replyToMessageId: item.context.messageId
             });
@@ -539,7 +540,7 @@ export class Agent {
         if (compactionStatus.severity !== "ok") {
             const target = agentRecipientResolve(this.config);
             if (agentKind === "foreground" && connector?.capabilities.sendText && target) {
-                await connector.sendMessage(target, {
+                await connectorSend(this.ctx, target.name, target, {
                     text: messageContextReset({ kind: "compaction" }),
                     replyToMessageId: entry.context.messageId
                 });
@@ -1125,7 +1126,7 @@ export class Agent {
         }
 
         try {
-            await connector.sendMessage(target, {
+            await connectorSend(this.ctx, target.name, target, {
                 text: messageContextReset({ kind: "manual" }),
                 replyToMessageId: item.context?.messageId
             });
@@ -1150,7 +1151,7 @@ export class Agent {
         }
         const text = this.compactionResultText(result);
         try {
-            await connector.sendMessage(target, {
+            await connectorSend(this.ctx, target.name, target, {
                 text,
                 replyToMessageId: item.context?.messageId
             });
@@ -1195,7 +1196,7 @@ export class Agent {
         }
 
         try {
-            await connector.sendMessage(target, {
+            await connectorSend(this.ctx, target.name, target, {
                 text: messageContextReset({ kind: "overflow", estimatedTokens }),
                 replyToMessageId: entry.context.messageId
             });
@@ -1239,7 +1240,7 @@ export class Agent {
             return;
         }
         try {
-            await connector.sendMessage(target, { text });
+            await connectorSend(this.ctx, target.name, target, { text });
         } catch (error) {
             logger.warn({ agentId: this.id, error }, "error: Failed to send restore failure notification");
         }

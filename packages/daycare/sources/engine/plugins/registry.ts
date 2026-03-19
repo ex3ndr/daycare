@@ -48,6 +48,11 @@ export class PluginRegistrar {
     private mediaAnalysisRegistry: MediaAnalysisRegistry;
     private toolResolver: ToolResolver;
     private connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorIdentity | null>;
+    private connectorSendFn: (
+        connectorName: string,
+        recipient: ConnectorIdentity,
+        message: ConnectorMessage
+    ) => Promise<void>;
     private registrations: PluginRegistrations;
 
     constructor(
@@ -60,7 +65,12 @@ export class PluginRegistrar {
         voiceRegistry: VoiceAgentRegistry,
         mediaAnalysisRegistry: MediaAnalysisRegistry,
         toolResolver: ToolResolver,
-        connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorIdentity | null>
+        connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorIdentity | null>,
+        connectorSendFn: (
+            connectorName: string,
+            recipient: ConnectorIdentity,
+            message: ConnectorMessage
+        ) => Promise<void>
     ) {
         this.pluginId = pluginId;
         this.commandRegistry = commandRegistry;
@@ -72,6 +82,7 @@ export class PluginRegistrar {
         this.mediaAnalysisRegistry = mediaAnalysisRegistry;
         this.toolResolver = toolResolver;
         this.connectorRecipientResolve = connectorRecipientResolve;
+        this.connectorSendFn = connectorSendFn;
         this.registrations = {
             connectors: new Set(),
             providers: new Set(),
@@ -100,11 +111,7 @@ export class PluginRegistrar {
         if (!target) {
             return;
         }
-        const connector = this.connectorRegistry.get(target.name);
-        if (!connector?.capabilities.sendText) {
-            return;
-        }
-        await connector.sendMessage(target, {
+        await this.connectorSendFn(target.name, target, {
             ...message,
             replyToMessageId: context.messageId
         });
@@ -241,10 +248,20 @@ export class PluginRegistry {
     private mediaAnalysisRegistry: MediaAnalysisRegistry;
     private toolResolver: ToolResolver;
     private connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorIdentity | null>;
+    private connectorSendFn: (
+        connectorName: string,
+        recipient: ConnectorIdentity,
+        message: ConnectorMessage
+    ) => Promise<void>;
 
     constructor(
         modules: ModuleRegistry,
-        connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorIdentity | null>
+        connectorRecipientResolve: (path: AgentPath) => Promise<ConnectorIdentity | null>,
+        connectorSendFn: (
+            connectorName: string,
+            recipient: ConnectorIdentity,
+            message: ConnectorMessage
+        ) => Promise<void>
     ) {
         this.commandRegistry = modules.commands;
         this.connectorRegistry = modules.connectors;
@@ -255,6 +272,7 @@ export class PluginRegistry {
         this.mediaAnalysisRegistry = modules.mediaAnalysis;
         this.toolResolver = modules.tools;
         this.connectorRecipientResolve = connectorRecipientResolve;
+        this.connectorSendFn = connectorSendFn;
     }
 
     createRegistrar(pluginId: string): PluginRegistrar {
@@ -268,7 +286,8 @@ export class PluginRegistry {
             this.voiceRegistry,
             this.mediaAnalysisRegistry,
             this.toolResolver,
-            this.connectorRecipientResolve
+            this.connectorRecipientResolve,
+            this.connectorSendFn
         );
     }
 }

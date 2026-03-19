@@ -71,6 +71,7 @@ export class DurableInngest implements Durable {
         }
         durableInstanceRegister(this.instanceId, {
             call: (ctx, id, name, input) => this.call(ctx, id, name, input),
+            schedule: (ctx, name, input) => this.schedule(ctx, name, input),
             step: (ctx, id, execute) => this.step(ctx, id, execute)
         });
     }
@@ -178,6 +179,21 @@ export class DurableInngest implements Durable {
                 function: target
             });
         }
+        await this.client.send({
+            name: durableFunctionEvent(name),
+            data: {
+                ctx: contextToJSON(ctx),
+                input
+            }
+        });
+    }
+
+    private async schedule<TName extends DurableFunctionName>(
+        ctx: Context,
+        name: TName,
+        input: DurableFunctionInput<TName>
+    ): Promise<void> {
+        this.functionRequireEnabled(name);
         await this.client.send({
             name: durableFunctionEvent(name),
             data: {

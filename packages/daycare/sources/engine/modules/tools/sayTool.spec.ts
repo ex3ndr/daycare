@@ -1,13 +1,24 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../../durable/connectorSend.js", () => ({
+    connectorSend: vi.fn(async () => undefined)
+}));
 
 import type { ToolExecutionContext } from "@/types";
+import { connectorSend } from "../../../durable/connectorSend.js";
 import { contextForAgent } from "../../agents/context.js";
 import { sayTool } from "./sayTool.js";
+
+const connectorSendMock = vi.mocked(connectorSend);
 
 const toolCall = { id: "tool-1", name: "say" };
 const recipient = { name: "telegram", key: "channel-1" };
 
 describe("sayTool", () => {
+    beforeEach(() => {
+        connectorSendMock.mockClear();
+    });
+
     it("sends text to the current foreground target", async () => {
         const sendMessage = vi.fn(async () => undefined);
         const tool = sayTool();
@@ -15,7 +26,7 @@ describe("sayTool", () => {
 
         const result = await tool.execute({ text: "Hello user" }, context, toolCall);
 
-        expect(sendMessage).toHaveBeenCalledWith(recipient, {
+        expect(connectorSendMock).toHaveBeenCalledWith(expect.anything(), recipient.name, recipient, {
             text: "Hello user",
             replyToMessageId: "message-1",
             buttons: undefined,
@@ -38,7 +49,9 @@ describe("sayTool", () => {
             toolCall
         );
 
-        expect(sendMessage).toHaveBeenCalledWith(
+        expect(connectorSendMock).toHaveBeenCalledWith(
+            expect.anything(),
+            recipient.name,
             recipient,
             expect.objectContaining({
                 text: "Open the app.",
@@ -61,7 +74,9 @@ describe("sayTool", () => {
             toolCall
         );
 
-        expect(sendMessage).toHaveBeenCalledWith(
+        expect(connectorSendMock).toHaveBeenCalledWith(
+            expect.anything(),
+            recipient.name,
             recipient,
             expect.objectContaining({
                 buttons: [{ type: "callback", text: "Retry", callback: "retry_action" }]
@@ -84,7 +99,7 @@ describe("sayTool", () => {
             toolCall
         );
 
-        expect(sendMessage).not.toHaveBeenCalled();
+        expect(connectorSendMock).not.toHaveBeenCalled();
         expect(result.deferredPayload).toEqual({
             connector: recipient,
             recipient,
@@ -104,7 +119,7 @@ describe("sayTool", () => {
 
         const result = await tool.execute({ text: "Urgent", now: true }, context, toolCall);
 
-        expect(sendMessage).toHaveBeenCalledWith(recipient, {
+        expect(connectorSendMock).toHaveBeenCalledWith(expect.anything(), recipient.name, recipient, {
             text: "Urgent",
             replyToMessageId: "message-1",
             buttons: undefined,
@@ -142,7 +157,9 @@ describe("sayTool", () => {
             toolCall
         );
 
-        expect(sendMessage).toHaveBeenCalledWith(
+        expect(connectorSendMock).toHaveBeenCalledWith(
+            expect.anything(),
+            recipient.name,
             recipient,
             expect.objectContaining({
                 text: "See attachment.",
@@ -196,11 +213,9 @@ describe("sayTool", () => {
             toolCall
         );
 
-        expect(sendMessage).toHaveBeenCalledTimes(1);
-        const calls = sendMessage.mock.calls as unknown as Array<
-            [string, { files?: Array<{ name?: string; mimeType?: string; sendAs?: string }> }]
-        >;
-        const message = calls[0]?.[1];
+        expect(connectorSendMock).toHaveBeenCalledTimes(1);
+        const calls = connectorSendMock.mock.calls;
+        const message = calls[0]?.[3] as { files?: Array<{ name?: string; mimeType?: string; sendAs?: string }> };
         expect(message?.files).toHaveLength(2);
         expect(message?.files?.[0]).toMatchObject({
             name: "photo-1.png",
@@ -231,11 +246,9 @@ describe("sayTool", () => {
             toolCall
         );
 
-        expect(sendMessage).toHaveBeenCalledTimes(1);
-        const calls = sendMessage.mock.calls as unknown as Array<
-            [string, { text: string; buttons?: unknown[]; files?: unknown[] }]
-        >;
-        const message = calls[0]?.[1];
+        expect(connectorSendMock).toHaveBeenCalledTimes(1);
+        const calls = connectorSendMock.mock.calls;
+        const message = calls[0]?.[3] as { text: string; buttons?: unknown[]; files?: unknown[] };
         expect(message).toBeDefined();
         const payload = message as {
             text: string;
@@ -277,7 +290,7 @@ describe("sayTool", () => {
             toolCall
         );
 
-        expect(sendMessage).not.toHaveBeenCalled();
+        expect(connectorSendMock).not.toHaveBeenCalled();
         expect(result.deferredPayload).toMatchObject({
             connector: recipient,
             recipient,
@@ -323,7 +336,7 @@ describe("sayTool", () => {
             context
         );
 
-        expect(sendMessage).toHaveBeenCalledWith(recipient, {
+        expect(connectorSendMock).toHaveBeenCalledWith(expect.anything(), recipient.name, recipient, {
             text: "deferred msg",
             replyToMessageId: "msg-1",
             buttons: [{ type: "callback", text: "Ack", callback: "ack" }],

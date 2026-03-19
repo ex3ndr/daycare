@@ -57,6 +57,7 @@ export class DurableLocal implements Durable {
         this.activeDir = path.join(this.rootDir, "active");
         durableInstanceRegister(this.instanceId, {
             call: (ctx, id, name, input) => this.call(ctx, id, name, input),
+            schedule: (ctx, name, input) => this.jobSchedule(ctx, name, input),
             step: (_ctx, _id, execute) => Promise.resolve(execute())
         });
     }

@@ -1,11 +1,23 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../../durable/connectorSend.js", () => ({
+    connectorSend: vi.fn(async () => undefined)
+}));
+
 import type { ToolExecutionContext } from "@/types";
+import { connectorSend } from "../../../durable/connectorSend.js";
 import { contextForAgent } from "../../agents/context.js";
 import { buildSendFileTool } from "./send-file.js";
+
+const connectorSendMock = vi.mocked(connectorSend);
 
 const toolCall = { id: "tool-1", name: "send_file" };
 
 describe("buildSendFileTool", () => {
+    beforeEach(() => {
+        connectorSendMock.mockClear();
+    });
+
     it("forwards voice send mode when connector supports it", async () => {
         const sendMessage = vi.fn(async () => undefined);
         const tool = buildSendFileTool();
@@ -31,8 +43,10 @@ describe("buildSendFileTool", () => {
             toolCall
         );
 
-        expect(sendMessage).toHaveBeenCalledTimes(1);
-        expect(sendMessage).toHaveBeenCalledWith(
+        expect(connectorSendMock).toHaveBeenCalledTimes(1);
+        expect(connectorSendMock).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.any(String),
             { name: "telegram", key: "123" },
             expect.objectContaining({
                 files: [
@@ -61,7 +75,7 @@ describe("buildSendFileTool", () => {
 
         const result = await tool.execute({ path: "/tmp/voice-note.ogg", mimeType: "audio/ogg" }, ctx, toolCall);
 
-        expect(sendMessage).not.toHaveBeenCalled();
+        expect(connectorSendMock).not.toHaveBeenCalled();
         expect(result.deferredPayload).toBeDefined();
         expect(result.toolMessage.isError).toBe(false);
     });
@@ -86,7 +100,7 @@ describe("buildSendFileTool", () => {
             toolCall
         );
 
-        expect(sendMessage).toHaveBeenCalled();
+        expect(connectorSendMock).toHaveBeenCalled();
         expect(result.deferredPayload).toBeUndefined();
     });
 
@@ -116,7 +130,7 @@ describe("buildSendFileTool", () => {
                 toolCall
             )
         ).rejects.toThrow("Connector does not support voice mode");
-        expect(sendMessage).not.toHaveBeenCalled();
+        expect(connectorSendMock).not.toHaveBeenCalled();
     });
 
     it("falls back to the most-recent foreground connector for cron agents", async () => {
@@ -165,8 +179,10 @@ describe("buildSendFileTool", () => {
 
         await tool.execute({ path: "/tmp/report.csv", mimeType: "text/csv" }, ctx, toolCall);
 
-        expect(sendMessage).toHaveBeenCalledTimes(1);
-        expect(sendMessage).toHaveBeenCalledWith(
+        expect(connectorSendMock).toHaveBeenCalledTimes(1);
+        expect(connectorSendMock).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.any(String),
             { name: "telegram", key: "456" },
             expect.objectContaining({
                 files: [

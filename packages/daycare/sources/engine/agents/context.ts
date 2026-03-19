@@ -3,7 +3,12 @@ import type {
     DurableFunctionName,
     DurableFunctionOutput
 } from "../../durable/durableFunctions.js";
-import { durableInstanceCall, durableInstanceCurrentGet, durableInstanceStep } from "../../durable/durableRegistry.js";
+import {
+    durableInstanceCall,
+    durableInstanceCurrentGet,
+    durableInstanceSchedule,
+    durableInstanceStep
+} from "../../durable/durableRegistry.js";
 import type { DurableRuntimeKind } from "../../durable/durableTypes.js";
 
 const CONTEXT_BRAND = Symbol("Context.brand");
@@ -90,6 +95,21 @@ export class Context {
             throw new Error("Durable step requires a durable execution context.");
         }
         return durableInstanceStep(durable.instanceId, this, requiredId(id, "Durable step id"), execute);
+    }
+
+    /**
+     * Pushes a durable function call to the executor without waiting for completion.
+     * Expects: a durable runtime is active.
+     */
+    async durableSchedule<TName extends DurableFunctionName>(
+        name: TName,
+        input: DurableFunctionInput<TName>
+    ): Promise<void> {
+        const instanceId = this.durable?.instanceId ?? durableInstanceCurrentGet();
+        if (!instanceId) {
+            throw new Error("Durable runtime is not bound to context.");
+        }
+        return durableInstanceSchedule(instanceId, this, name, input);
     }
 
     async durableCall<TName extends DurableFunctionName>(

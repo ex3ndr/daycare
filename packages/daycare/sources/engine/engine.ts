@@ -15,8 +15,8 @@ import type {
 import { AppServer } from "../api/app-server/appServer.js";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
+import { connectorSend } from "../durable/connectorSend.js";
 import { durableExecute } from "../durable/durableExecute.js";
-import { durableInstanceCurrentGet } from "../durable/durableRegistry.js";
 import { durableResolve } from "../durable/durableResolve.js";
 import type { Durable } from "../durable/durableTypes.js";
 import { getLogger } from "../log.js";
@@ -302,7 +302,11 @@ export class Engine {
         });
         const stagingFileStore = new FileFolder(path.join(this.config.current.dataDir, "tmp", "staging"));
 
-        this.pluginRegistry = new PluginRegistry(this.modules, (path) => this.connectorRecipientResolve(path));
+        this.pluginRegistry = new PluginRegistry(
+            this.modules,
+            (path) => this.connectorRecipientResolve(path),
+            (connectorName, recipient, message) => this.connectorSendByRecipient(connectorName, recipient, message)
+        );
 
         this.pluginManager = new PluginManager({
             config: this.config,
@@ -701,7 +705,9 @@ export class Engine {
             psql: this.psqlService,
             observationLog: this.storage.observationLog,
             secrets: this.secrets,
-            connectorRecipientResolve: (path) => this.connectorRecipientResolve(path)
+            connectorRecipientResolve: (path) => this.connectorRecipientResolve(path),
+            connectorSend: (connectorName, recipient, message) =>
+                this.connectorSendByRecipient(connectorName, recipient, message)
         });
         this.channels = new Channels({
             channels: this.storage.channels,
@@ -776,6 +782,9 @@ export class Engine {
         } else {
             logger.info("skip: Processes role disabled; skipping durable process monitor");
         }
+        // Start durable runtime before connectors so all messaging routes through durable functions
+        await this.durable.start();
+
         if (this.roleEnabled("connectors")) {
             logger.debug("reload: Reloading plugins with current config");
             await this.pluginManager.reload();
@@ -839,7 +848,6 @@ export class Engine {
         } else {
             logger.info("skip: Signals role disabled; skipping delayed signal scheduler");
         }
-        await this.durable.start();
         if (this.roleEnabled("connectors")) {
             await this.pluginManager.postStartAll();
         }
@@ -875,8 +883,22 @@ export class Engine {
     }
 
     /**
-     * Routes an incoming connector message to the agent inbox.
-     * Uses the durable function when a runtime is active (cross-role), falls back to direct post.
+     * Sends a message through a connector via durable function, resolving the userId from the recipient.
+     * Expects: durable runtime is active.
+     */
+    private async connectorSendByRecipient(
+        connectorName: string,
+        recipient: ConnectorRecipient,
+        message: ConnectorMessage
+    ): Promise<void> {
+        const user = await this.storage.resolveUserByConnector(recipient);
+        const ctx = contextForUser({ userId: user.id });
+        await connectorSend(ctx, connectorName, recipient, message);
+    }
+
+    /**
+     * Routes an incoming connector message to the agent inbox via durable function.
+     * Uses durableExecute directly so the handler runs synchronously within the engine process.
      */
     private async connectorReceive(
         ctx: Context,
@@ -885,22 +907,14 @@ export class Engine {
         context: MessageContext,
         connector: ConnectorRecipient | null
     ): Promise<void> {
-        const durableActive = ctx.durable?.instanceId ?? durableInstanceCurrentGet();
-        if (durableActive) {
-            await ctx.durableCall(`connectorReceive:${targetPath}:${Date.now()}`, "connectorReceiveMessage", {
-                path: targetPath,
-                message,
-                context,
-                connector
-            });
-        } else {
-            await this.agentSystem.post(
-                ctx,
-                { path: targetPath },
-                { type: "message", message, context },
-                { kind: "connector", foreground: true, connector }
-            );
-        }
+        await durableExecute({
+            ctx,
+            name: "connectorReceiveMessage",
+            input: { path: targetPath, message, context, connector },
+            delayedSignals: this.delayedSignals,
+            connectorRegistry: this.modules.connectors,
+            agentPost: (postCtx, target, item, config) => this.agentSystem.post(postCtx, target, item, config)
+        });
     }
 
     private runtimeRolesResolve(): DaycareRole[] {
@@ -980,7 +994,7 @@ export class Engine {
         const contextLimit = this.config.current.settings.agents.emergencyContextLimit;
         const text = messageContextStatus({ usedTokens, contextLimit });
         try {
-            await connector.sendMessage(target, {
+            await connectorSend(ctx, target.name, target, {
                 text,
                 replyToMessageId: context.messageId
             });
@@ -1038,7 +1052,7 @@ export class Engine {
         const aborted = agentId ? this.agentSystem.abortInferenceForTarget({ agentId }) : false;
         const text = aborted ? "Stopped current inference." : "No active inference to stop.";
         try {
-            await connector.sendMessage(target, {
+            await connectorSend(ctx, target.name, target, {
                 text,
                 replyToMessageId: context.messageId
             });

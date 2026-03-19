@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { AgentPath, Connector } from "@/types";
+import type { AgentPath } from "@/types";
 import { ModuleRegistry } from "../modules/moduleRegistry.js";
 import { PluginRegistry } from "./registry.js";
 
@@ -19,7 +19,7 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules, connectorRecipientResolve);
+        const registry = new PluginRegistry(modules, connectorRecipientResolve, async () => {});
         const registrar = registry.createRegistrar("upgrade-instance");
         const handler = vi.fn(async () => undefined);
 
@@ -44,7 +44,7 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules, connectorRecipientResolve);
+        const registry = new PluginRegistry(modules, connectorRecipientResolve, async () => {});
         const registrar = registry.createRegistrar("upgrade-instance");
 
         registrar.registerCommand({
@@ -67,19 +67,14 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules, connectorRecipientResolve);
+        const connectorSendFn = vi.fn(async () => {});
+        const registry = new PluginRegistry(modules, connectorRecipientResolve, connectorSendFn);
         const registrar = registry.createRegistrar("upgrade-instance");
-        const sendMessage = vi.fn(async () => undefined);
-        const connector: Connector = {
-            capabilities: { sendText: true },
-            onMessage: () => () => undefined,
-            sendMessage
-        };
-        modules.connectors.register("telegram", connector);
 
         await registrar.sendMessage("/123/telegram" as AgentPath, { messageId: "77" }, { text: "Upgrading..." });
 
-        expect(sendMessage).toHaveBeenCalledWith(
+        expect(connectorSendFn).toHaveBeenCalledWith(
+            "telegram",
             { name: "telegram", key: "123" },
             {
                 text: "Upgrading...",
@@ -92,7 +87,7 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules, connectorRecipientResolve);
+        const registry = new PluginRegistry(modules, connectorRecipientResolve, async () => {});
         const registrar = registry.createRegistrar("media-instance");
 
         registrar.registerMediaAnalysisProvider({
@@ -117,7 +112,7 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules, connectorRecipientResolve);
+        const registry = new PluginRegistry(modules, connectorRecipientResolve, async () => {});
         const registrar = registry.createRegistrar("speech-instance");
 
         registrar.registerSpeechProvider({
@@ -140,7 +135,7 @@ describe("PluginRegistrar command registration", () => {
         const modules = new ModuleRegistry({
             onMessage: async () => undefined
         });
-        const registry = new PluginRegistry(modules, connectorRecipientResolve);
+        const registry = new PluginRegistry(modules, connectorRecipientResolve, async () => {});
         const registrar = registry.createRegistrar("voice-instance");
 
         registrar.registerVoiceAgentProvider({

@@ -44,15 +44,13 @@ export const durableFunctionDefinitions = {
         name: "connectorSendMessage",
         description: "Send a message through a named connector.",
         enabledRoles: ["connectors"],
-        handler: async ({ ctx, input, services }) => {
-            return ctx.durableStep("send", async () => {
-                const connector = services.connectorRegistry.get(input.connectorName);
-                if (!connector) {
-                    throw new Error(`Connector not loaded: ${input.connectorName}`);
-                }
-                await connector.sendMessage(input.recipient, input.message);
-                return null;
-            });
+        handler: async ({ input, services }) => {
+            const connector = services.connectorRegistry.get(input.connectorName);
+            if (!connector) {
+                throw new Error(`Connector not loaded: ${input.connectorName}`);
+            }
+            await connector.sendMessage(input.recipient, input.message);
+            return null;
         }
     } satisfies DurableFunctionDefinition<
         "connectorSendMessage",
@@ -65,15 +63,13 @@ export const durableFunctionDefinitions = {
         description: "Append an incoming connector message to an agent inbox.",
         enabledRoles: ["agents"],
         handler: async ({ ctx, input, services }) => {
-            return ctx.durableStep("receive", async () => {
-                await services.agentPost(
-                    ctx,
-                    { path: input.path },
-                    { type: "message", message: input.message, context: input.context },
-                    { kind: "connector", foreground: true, connector: input.connector }
-                );
-                return null;
-            });
+            await services.agentPost(
+                ctx,
+                { path: input.path },
+                { type: "message", message: input.message, context: input.context },
+                { kind: "connector", foreground: true, connector: input.connector }
+            );
+            return null;
         }
     } satisfies DurableFunctionDefinition<
         "connectorReceiveMessage",

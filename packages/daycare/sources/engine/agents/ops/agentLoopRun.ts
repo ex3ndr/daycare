@@ -4,6 +4,7 @@ import { Type } from "@sinclair/typebox";
 import type { Logger } from "pino";
 import type { AgentSkill, Connector, ConnectorDraft, ToolExecutionContext, ToolVisibilityContext } from "@/types";
 import type { AuthStore } from "../../../auth/store.js";
+import { connectorSend } from "../../../durable/connectorSend.js";
 import type { AssistantSettings, ProviderSettings } from "../../../settings.js";
 import { cuid2Is } from "../../../utils/cuid2Is.js";
 import type { EngineEventBus } from "../../ipc/events.js";
@@ -734,7 +735,7 @@ export async function agentLoopRun(options: AgentLoopRunOptions): Promise<AgentL
                     }
                     if (hasResponseText && connector && recipient && !lastResponseTextSent) {
                         try {
-                            await connector.sendMessage(recipient, {
+                            await connectorSend(agent.ctx, source, recipient, {
                                 text: effectiveResponseText,
                                 replyToMessageId: entry.context.messageId
                             });
@@ -1219,7 +1220,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                     draftEntryPush(message, "error");
                     await draftFinish();
                 } else {
-                    await connector.sendMessage(recipient, {
+                    await connectorSend(agent.ctx, source, recipient, {
                         text: message,
                         replyToMessageId: entry.context.messageId
                     });
@@ -1285,7 +1286,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                     draftEntryPush(message, "error");
                     await draftFinish();
                 } else {
-                    await connector.sendMessage(recipient, {
+                    await connectorSend(agent.ctx, source, recipient, {
                         text: message,
                         replyToMessageId: entry.context.messageId
                     });
@@ -1322,7 +1323,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
                         draftEntryPush(message, "error");
                         await draftFinish();
                     } else {
-                        await connector.sendMessage(recipient, {
+                        await connectorSend(agent.ctx, source, recipient, {
                             text: message,
                             replyToMessageId: entry.context.messageId
                         });
@@ -1353,7 +1354,7 @@ Message from ${steering.origin ?? "system"}: ${steering.text}
     );
     try {
         if (connector && recipient && outgoingText) {
-            await connector.sendMessage(recipient, {
+            await connectorSend(agent.ctx, source, recipient, {
                 text: outgoingText,
                 replyToMessageId: entry.context.messageId
             });

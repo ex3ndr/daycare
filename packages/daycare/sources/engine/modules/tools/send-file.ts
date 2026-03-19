@@ -1,6 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Type } from "@sinclair/typebox";
-
 import type {
     ConnectorFileDisposition,
     ConnectorRecipient,
@@ -9,6 +8,7 @@ import type {
     ToolExecutionContext,
     ToolResultContract
 } from "@/types";
+import { connectorSend } from "../../../durable/connectorSend.js";
 import { agentRecipientResolve } from "../../agents/ops/agentRecipientResolve.js";
 import { fileResolve } from "./fileResolve.js";
 
@@ -164,7 +164,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
                 };
             }
 
-            await connector.sendMessage(recipient, {
+            await connectorSend(context.ctx, source, recipient, {
                 text: messageText,
                 files: [{ ...file, sendAs }]
             });
@@ -204,11 +204,7 @@ export function buildSendFileTool(): ToolDefinition<typeof schema> {
         },
         executeDeferred: async (payload: unknown, context: ToolExecutionContext) => {
             const p = payload as SendFileDeferredPayload;
-            const connector = context.connectorRegistry.get(p.source);
-            if (!connector) {
-                throw new Error(`Connector not loaded: ${p.source}`);
-            }
-            await connector.sendMessage(p.recipient, {
+            await connectorSend(context.ctx, p.source, p.recipient, {
                 text: p.text,
                 files: [{ ...p.file, sendAs: p.sendAs }]
             });

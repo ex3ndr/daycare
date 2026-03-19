@@ -5,8 +5,13 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("../durable/connectorSend.js", () => ({
+    connectorSend: vi.fn(async () => undefined)
+}));
+
 import type { AgentPath, Connector, ConnectorMessage, Context, MessageContext } from "@/types";
 import { configResolve } from "../config/configResolve.js";
+import { connectorSend as connectorSendDurable } from "../durable/connectorSend.js";
 import * as dockerContainersStaleRemoveModule from "../sandbox/docker/dockerContainersStaleRemove.js";
 import * as dockerImageIdResolveModule from "../sandbox/docker/dockerImageIdResolve.js";
 import { storageOpen } from "../storage/storageOpen.js";
@@ -15,6 +20,8 @@ import { contextForUser } from "./agents/context.js";
 import { agentPathConnector } from "./agents/ops/agentPathBuild.js";
 import { Engine } from "./engine.js";
 import { EngineEventBus } from "./ipc/events.js";
+
+const connectorSendMock = vi.mocked(connectorSendDurable);
 
 describe("Engine reset command", () => {
     it("posts reset with message context for user commands", async () => {
@@ -233,6 +240,7 @@ describe("Engine timezone mismatch handling", () => {
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            await engine.durable.start();
             const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
             const state: {
                 messageHandler?: (
@@ -856,7 +864,9 @@ describe("Engine abort command", () => {
             expect(engine.agentSystem.abortInferenceForTarget).toHaveBeenCalledWith({
                 agentId: "agent-1"
             });
-            expect(sendMessage).toHaveBeenCalledWith(
+            expect(connectorSendMock).toHaveBeenCalledWith(
+                expect.anything(),
+                "telegram",
                 { name: "telegram", key: "123" },
                 {
                     text: "Stopped current inference.",
@@ -1001,6 +1011,7 @@ describe("Engine message batching", () => {
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            await engine.durable.start();
             const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
             const messageState: {
                 handler?: (
@@ -1064,6 +1075,7 @@ describe("Engine message batching", () => {
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            await engine.durable.start();
             const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
             const messageState: {
                 handler?: (
@@ -1122,6 +1134,7 @@ describe("Engine message batching", () => {
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            await engine.durable.start();
             const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
             const messageState: {
                 handler?: (
@@ -1179,6 +1192,7 @@ describe("Engine message batching", () => {
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            await engine.durable.start();
             const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
             const messageState: {
                 handler?: (
@@ -1223,6 +1237,7 @@ describe("Engine message batching", () => {
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
+            await engine.durable.start();
             const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
             const messageState: {
                 handler?: (

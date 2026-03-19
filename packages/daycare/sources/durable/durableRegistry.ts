@@ -8,6 +8,11 @@ export type DurableInstance = {
         name: TName,
         input: DurableFunctionInput<TName>
     ): Promise<DurableFunctionOutput<TName> | undefined>;
+    schedule<TName extends DurableFunctionName>(
+        ctx: Context,
+        name: TName,
+        input: DurableFunctionInput<TName>
+    ): Promise<void>;
     step<TValue>(ctx: Context, id: string, execute: () => Promise<TValue> | TValue): Promise<TValue>;
 };
 
@@ -41,6 +46,15 @@ export function durableInstanceCall<TName extends DurableFunctionName>(
     input: DurableFunctionInput<TName>
 ): Promise<DurableFunctionOutput<TName> | undefined> {
     return durableInstanceGet(instanceId).call(ctx, id, name, input);
+}
+
+export function durableInstanceSchedule<TName extends DurableFunctionName>(
+    instanceId: string,
+    ctx: Context,
+    name: TName,
+    input: DurableFunctionInput<TName>
+): Promise<void> {
+    return durableInstanceGet(instanceId).schedule(ctx, name, input);
 }
 
 export function durableInstanceStep<TValue>(

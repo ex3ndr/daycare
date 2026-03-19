@@ -1,6 +1,5 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { type Static, Type } from "@sinclair/typebox";
-
 import type {
     ConnectorFile,
     ConnectorFileMode,
@@ -10,6 +9,7 @@ import type {
     ToolExecutionContext,
     ToolResultContract
 } from "@/types";
+import { connectorSend } from "../../../durable/connectorSend.js";
 import { agentRecipientResolve } from "../../agents/ops/agentRecipientResolve.js";
 import { fileResolve } from "./fileResolve.js";
 
@@ -149,7 +149,7 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
                 };
             }
 
-            await connector.sendMessage(target, {
+            await connectorSend(context.ctx, target.name, target, {
                 text,
                 replyToMessageId: context.messageContext.messageId,
                 buttons,
@@ -176,11 +176,7 @@ export function sayTool(): ToolDefinition<typeof schema, SayResult> {
         },
         executeDeferred: async (payload: unknown, context: ToolExecutionContext) => {
             const p = payload as SayDeferredPayload;
-            const connector = context.connectorRegistry.get(p.connector.name);
-            if (!connector) {
-                throw new Error(`Connector not loaded: ${p.connector.name}`);
-            }
-            await connector.sendMessage(p.recipient, {
+            await connectorSend(context.ctx, p.connector.name, p.recipient, {
                 text: p.text,
                 replyToMessageId: p.replyToMessageId,
                 buttons: p.buttons,

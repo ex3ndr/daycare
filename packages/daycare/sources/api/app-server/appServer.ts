@@ -94,6 +94,11 @@ export type AppServerOptions = {
         remove: (ctx: Context, name: string) => Promise<boolean>;
     } | null;
     connectorRecipientResolve: (path: AgentPath) => Promise<NonNullable<MessageContext["connector"]> | null>;
+    connectorSend: (
+        connectorName: string,
+        recipient: NonNullable<MessageContext["connector"]>,
+        message: ConnectorMessage
+    ) => Promise<void>;
 };
 
 /**
@@ -129,6 +134,7 @@ export class AppServer {
     private readonly miniApps: MiniApps | null;
     private readonly secrets: AppServerOptions["secrets"];
     private readonly connectorRecipientResolve: AppServerOptions["connectorRecipientResolve"];
+    private readonly connectorSendFn: AppServerOptions["connectorSend"];
     private readonly logger = getLogger("api.app-server");
 
     private server: http.Server | null = null;
@@ -165,6 +171,7 @@ export class AppServer {
         this.miniApps = options.miniApps ?? null;
         this.secrets = options.secrets;
         this.connectorRecipientResolve = options.connectorRecipientResolve;
+        this.connectorSendFn = options.connectorSend;
     }
 
     async start(): Promise<void> {
@@ -692,11 +699,7 @@ export class AppServer {
         if (!target) {
             return;
         }
-        const connector = this.connectorRegistry.get(target.name);
-        if (!connector?.capabilities.sendText) {
-            return;
-        }
-        await connector.sendMessage(target, {
+        await this.connectorSendFn(target.name, target, {
             ...message,
             replyToMessageId: context.messageId
         });
