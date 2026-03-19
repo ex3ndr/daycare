@@ -15,8 +15,6 @@ export type DurableFunctionHandlerContext<TInput> = {
 export type DurableFunctionDefinition<TName extends string, TInput, TOutput> = {
     name: TName;
     description: string;
-    event: string;
-    functionId: string;
     enabledRoles?: readonly DaycareRole[];
     handler: (context: DurableFunctionHandlerContext<TInput>) => Promise<TOutput>;
 };
@@ -25,12 +23,12 @@ export const durableFunctionDefinitions = {
     delayedSignalDeliver: durableFunctionDefine<"delayedSignalDeliver", { delayedSignalId: string }, null>({
         name: "delayedSignalDeliver",
         description: "Deliver a persisted delayed signal by id.",
-        event: "daycare/durable.delayed-signal-deliver",
-        functionId: "durable-delayed-signal-deliver",
         enabledRoles: ["api", "agents", "signals"],
         handler: async ({ ctx, input, services }) => {
-            await services.delayedSignals.deliver(ctx, input.delayedSignalId);
-            return null;
+            return ctx.durableStep("deliver", async () => {
+                await services.delayedSignals.deliver(ctx, input.delayedSignalId);
+                return null;
+            });
         }
     })
 } as const;

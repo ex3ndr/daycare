@@ -1,3 +1,9 @@
+import type {
+    DurableFunctionInput,
+    DurableFunctionName,
+    DurableFunctionOutput
+} from "../../durable/durableFunctions.js";
+import { durableInstanceCall, durableInstanceCurrentGet, durableInstanceStep } from "../../durable/durableRegistry.js";
 import type { DurableRuntimeKind } from "../../durable/durableTypes.js";
 
 const CONTEXT_BRAND = Symbol("Context.brand");
@@ -17,6 +23,8 @@ export type ContextSerialized = string;
 
 export type ContextDurableState = {
     active: true;
+    executionId: string;
+    instanceId: string;
     kind: DurableRuntimeKind;
 };
 
@@ -64,6 +72,26 @@ export class Context {
             throw new Error("Context has no agentId");
         }
         return requiredId(agentId, "Context agentId");
+    }
+
+    async durableStep<TValue>(id: string, execute: () => Promise<TValue> | TValue): Promise<TValue> {
+        const durable = this.durable;
+        if (durable?.active !== true) {
+            throw new Error("Durable step requires a durable execution context.");
+        }
+        return durableInstanceStep(durable.instanceId, this, requiredId(id, "Durable step id"), execute);
+    }
+
+    async durableCall<TName extends DurableFunctionName>(
+        id: string,
+        name: TName,
+        input: DurableFunctionInput<TName>
+    ): Promise<DurableFunctionOutput<TName> | undefined> {
+        const instanceId = this.durable?.instanceId ?? durableInstanceCurrentGet();
+        if (!instanceId) {
+            throw new Error("Durable runtime is not bound to context.");
+        }
+        return durableInstanceCall(instanceId, this, requiredId(id, "Durable call id"), name, input);
     }
 
     toJSON(): ContextJson {
@@ -154,6 +182,8 @@ function contextDurableBuild(input: ContextDurableState): ContextDurableState {
     }
     return Object.freeze({
         active: true,
+        executionId: requiredId(input.executionId, "Context durable executionId"),
+        instanceId: requiredId(input.instanceId, "Context durable instanceId"),
         kind: requiredId(input.kind, "Context durable kind") as DurableRuntimeKind
     });
 }

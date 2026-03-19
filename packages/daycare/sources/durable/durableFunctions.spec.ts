@@ -12,8 +12,7 @@ describe("durableFunctions", () => {
 
         expect(definition.name).toBe("delayedSignalDeliver");
         expect(definition.description).toContain("delayed signal");
-        expect(definition.functionId).toBe("durable-delayed-signal-deliver");
-        expect(definition.event).toBe("daycare/durable.delayed-signal-deliver");
+        expect(definition.enabledRoles).toEqual(["api", "agents", "signals"]);
     });
 
     it("filters functions by runtime role", () => {

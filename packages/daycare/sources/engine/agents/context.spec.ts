@@ -32,6 +32,14 @@ describe("Context", () => {
         expect(() => context.agentId).toThrow("Context has no agentId");
     });
 
+    it("rejects durable calls when no runtime is active", async () => {
+        await expect(
+            contextForUser({ userId: "user-1" }).durableCall("job-1", "delayedSignalDeliver", {
+                delayedSignalId: "job-1"
+            })
+        ).rejects.toThrow("Durable runtime is not bound to context.");
+    });
+
     it("is readonly", () => {
         const context = contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" });
         const readonlyAssertion = (value: Context): void => {
@@ -53,6 +61,8 @@ describe("Context", () => {
             contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" }),
             {
                 active: true,
+                executionId: "job-1",
+                instanceId: "local-1",
                 kind: "local"
             }
         );
@@ -63,6 +73,8 @@ describe("Context", () => {
         expect(restored.agentId).toBe("agent-1");
         expect(restored.durable).toEqual({
             active: true,
+            executionId: "job-1",
+            instanceId: "local-1",
             kind: "local"
         });
         expect(contextToJSON(restored)).toEqual({
@@ -71,6 +83,8 @@ describe("Context", () => {
             agentId: "agent-1",
             durable: {
                 active: true,
+                executionId: "job-1",
+                instanceId: "local-1",
                 kind: "local"
             }
         });
@@ -81,6 +95,8 @@ describe("Context", () => {
             contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" }),
             {
                 active: true,
+                executionId: "run-1",
+                instanceId: "inngest-1",
                 kind: "inngest"
             }
         );
@@ -91,6 +107,8 @@ describe("Context", () => {
         expect(restored.agentId).toBe("agent-1");
         expect(restored.durable).toEqual({
             active: true,
+            executionId: "run-1",
+            instanceId: "inngest-1",
             kind: "inngest"
         });
     });

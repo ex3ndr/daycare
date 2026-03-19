@@ -2,15 +2,15 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { getLogger } from "../log.js";
-import { Context, type ContextJson, contextToJSON } from "../types.js";
+import { Context, type ContextJson, contexts, contextToJSON } from "../types.js";
 import type { DaycareRole } from "../utils/hasRole.js";
-import { durableContextBind, durableContextCallGet } from "./durableContext.js";
 import {
     type DurableFunctionInput,
     type DurableFunctionName,
     type DurableFunctionOutput,
     durableFunctionEnabled
 } from "./durableFunctions.js";
+import { durableInstanceCurrentSet, durableInstanceRegister, durableInstanceUnregister } from "./durableRegistry.js";
 import type { Durable, DurableExecute } from "./durableTypes.js";
 
 const logger = getLogger("durable.local");
@@ -39,6 +39,7 @@ type DurableLocalJob = {
  */
 export class DurableLocal implements Durable {
     readonly kind = "local" as const;
+    readonly instanceId: string;
     private readonly execute: DurableExecute;
     private readonly roles: readonly DaycareRole[];
     private readonly retryBaseMs: number;
@@ -51,28 +52,55 @@ export class DurableLocal implements Durable {
     private stopped = false;
 
     constructor(options: DurableLocalOptions) {
+        this.instanceId = `local:${createId()}`;
         this.execute = options.execute;
         this.roles = options.roles ?? [];
         this.retryBaseMs = Math.max(25, Math.floor(options.retryBaseMs ?? 250));
         this.rootDir = options.rootDir;
         this.pendingDir = path.join(this.rootDir, "pending");
         this.activeDir = path.join(this.rootDir, "active");
+        durableInstanceRegister(this.instanceId, {
+            call: (ctx, id, name, input) => this.call(ctx, id, name, input),
+            step: (_ctx, _id, execute) => Promise.resolve(execute())
+        });
     }
 
-    async call<TName extends DurableFunctionName>(
+    async start(): Promise<void> {
+        if (this.started || this.stopped) {
+            return;
+        }
+        await this.ensureDirs();
+        await this.recoverActiveJobs();
+        this.started = true;
+        durableInstanceCurrentSet(this.instanceId);
+        logger.info("skip: Durable runtime using local implementation");
+        this.triggerDrain(0);
+    }
+
+    async stop(): Promise<void> {
+        this.stopped = true;
+        this.started = false;
+        if (this.timer) {
+            clearTimeout(this.timer);
+            this.timer = null;
+        }
+        durableInstanceUnregister(this.instanceId);
+    }
+
+    private async call<TName extends DurableFunctionName>(
         ctx: Context,
+        _id: string,
         name: TName,
         input: DurableFunctionInput<TName>
-    ): Promise<DurableFunctionOutput<TName>> {
+    ): Promise<DurableFunctionOutput<TName> | undefined> {
         this.functionRequireEnabled(name);
-        const call = durableContextCallGet(ctx, this.kind);
-        if (!call) {
-            throw new Error("Durable call requires a durable execution context.");
+        if (ctx.durable?.active === true) {
+            return this.executeRequireEnabled(ctx, name, input);
         }
-        return call(ctx, name, input);
+        await this.jobSchedule(ctx, name, input);
     }
 
-    async schedule<TName extends DurableFunctionName>(
+    private async jobSchedule<TName extends DurableFunctionName>(
         ctx: Context,
         name: TName,
         input: DurableFunctionInput<TName>
@@ -85,26 +113,6 @@ export class DurableLocal implements Durable {
 
         await writeJsonAtomic(pendingPath, job);
         this.triggerDrain(0);
-    }
-
-    async start(): Promise<void> {
-        if (this.started || this.stopped) {
-            return;
-        }
-        await this.ensureDirs();
-        await this.recoverActiveJobs();
-        this.started = true;
-        logger.info("skip: Durable runtime using local implementation");
-        this.triggerDrain(0);
-    }
-
-    async stop(): Promise<void> {
-        this.stopped = true;
-        this.started = false;
-        if (this.timer) {
-            clearTimeout(this.timer);
-            this.timer = null;
-        }
     }
 
     private async ensureDirs(): Promise<void> {
@@ -202,12 +210,14 @@ export class DurableLocal implements Durable {
             return;
         }
 
-        const ctx = Context.fromJSON(job.ctx);
+        const ctx = contexts.durable.set(Context.fromJSON(job.ctx), {
+            active: true,
+            executionId: job.id,
+            instanceId: this.instanceId,
+            kind: this.kind
+        });
         try {
-            const durableCtx = durableContextBind(ctx, this.kind, (callCtx, callName, callInput) =>
-                this.executeRequireEnabled(callCtx, callName, callInput)
-            );
-            await this.executeRequireEnabled(durableCtx, job.name, jobInputCast(job.name, job.input));
+            await this.executeRequireEnabled(ctx, job.name, jobInputCast(job.name, job.input));
             await fs.unlink(activePath).catch(() => undefined);
         } catch (error) {
             const nextAttempt = job.attempts + 1;

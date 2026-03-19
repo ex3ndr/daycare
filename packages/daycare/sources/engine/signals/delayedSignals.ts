@@ -29,7 +29,7 @@ type DelayedSignalsRepositoryOptions = {
 
 export type DelayedSignalsOptions = {
     config: ConfigModule;
-    durable?: Pick<Durable, "schedule"> | null;
+    durable?: Durable | null;
     eventBus: EngineEventBus;
     signals: Pick<Signals, "generate">;
     failureRetryMs?: number;
@@ -53,7 +53,7 @@ export class DelayedSignals {
     private readonly lock = new AsyncLock();
     private readonly events = new Map<string, DelayedRuntimeSignal>();
     private readonly pendingDurable = new Set<string>();
-    private durable: Pick<Durable, "schedule"> | null;
+    private durable: Durable | null;
     private loaded = false;
     private timer: NodeJS.Timeout | null = null;
     private started = false;
@@ -70,7 +70,7 @@ export class DelayedSignals {
         this.maxTimerMs = Math.max(1_000, Math.floor(options.maxTimerMs ?? 60_000));
     }
 
-    setDurable(durable: Pick<Durable, "schedule">): void {
+    setDurable(durable: Durable): void {
         this.durable = durable;
     }
 
@@ -255,9 +255,13 @@ export class DelayedSignals {
             this.pendingDurable.add(delayed.id);
 
             try {
-                await this.durable.schedule(contextForUser({ userId: delayed.userId }), "delayedSignalDeliver", {
-                    delayedSignalId: delayed.id
-                });
+                await contextForUser({ userId: delayed.userId }).durableCall(
+                    `delayedSignalDeliver:${delayed.id}`,
+                    "delayedSignalDeliver",
+                    {
+                        delayedSignalId: delayed.id
+                    }
+                );
             } catch (error) {
                 this.pendingDurable.delete(delayed.id);
                 retryNeeded = true;

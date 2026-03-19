@@ -1,23 +1,34 @@
 import os from "node:os";
+import { createId } from "@paralleldrive/cuid2";
 import { Inngest, type InngestFunction, invoke, staticSchema } from "inngest";
 import { connect, type WorkerConnection } from "inngest/connect";
 
 import { getLogger } from "../log.js";
-import { Context, type ContextJson, contextToJSON } from "../types.js";
+import { Context, type ContextJson, contexts, contextToJSON } from "../types.js";
 import type { DaycareRole } from "../utils/hasRole.js";
 import type { DurableConfig } from "./durableConfigResolve.js";
-import { durableContextBind, durableContextCallGet } from "./durableContext.js";
 import {
     type DurableFunctionInput,
     type DurableFunctionName,
     type DurableFunctionOutput,
-    durableFunctionDefinitions,
     durableFunctionEnabled,
     durableFunctionNamesForRoles
 } from "./durableFunctions.js";
+import { durableInstanceCurrentSet, durableInstanceRegister, durableInstanceUnregister } from "./durableRegistry.js";
 import type { Durable, DurableExecute } from "./durableTypes.js";
 
 const logger = getLogger("durable.inngest");
+
+type DurableInngestStepContext = {
+    invoke<TValue>(
+        id: string,
+        options: {
+            data: unknown;
+            function: InngestFunction.Any;
+        }
+    ): Promise<TValue>;
+    run<TValue>(id: string, fn: () => Promise<TValue> | TValue): Promise<TValue>;
+};
 
 export type DurableInngestOptions = {
     connectRun?: typeof connect;
@@ -32,6 +43,7 @@ export type DurableInngestOptions = {
  */
 export class DurableInngest implements Durable {
     readonly kind = "inngest" as const;
+    readonly instanceId: string;
     private readonly config: DurableConfig;
     private readonly connectRun: typeof connect;
     private readonly env: NodeJS.ProcessEnv;
@@ -39,10 +51,12 @@ export class DurableInngest implements Durable {
     private readonly client: Inngest;
     private readonly functionsByName: Partial<Record<DurableFunctionName, InngestFunction.Any>>;
     private readonly roles: readonly DaycareRole[];
+    private readonly stepsByExecutionId = new Map<string, DurableInngestStepContext>();
     private connection: WorkerConnection | null = null;
     private started = false;
 
     constructor(config: DurableConfig, options: DurableInngestOptions) {
+        this.instanceId = `inngest:${createId()}`;
         this.config = config;
         this.connectRun = options.connectRun ?? connect;
         this.env = options.env ?? process.env;
@@ -59,32 +73,9 @@ export class DurableInngest implements Durable {
         for (const name of durableFunctionNamesForRoles(this.roles)) {
             this.functionsByName[name] = this.functionBuild(name);
         }
-    }
-
-    async call<TName extends DurableFunctionName>(
-        ctx: Context,
-        name: TName,
-        input: DurableFunctionInput<TName>
-    ): Promise<DurableFunctionOutput<TName>> {
-        this.functionRequireEnabled(name);
-        const call = durableContextCallGet(ctx, this.kind);
-        if (!call) {
-            throw new Error("Durable call requires a durable execution context.");
-        }
-        return call(ctx, name, input);
-    }
-
-    async schedule<TName extends DurableFunctionName>(
-        ctx: Context,
-        name: TName,
-        input: DurableFunctionInput<TName>
-    ): Promise<void> {
-        await this.client.send({
-            name: durableFunctionDefinitions[name].event,
-            data: {
-                ctx: contextToJSON(ctx),
-                input
-            }
+        durableInstanceRegister(this.instanceId, {
+            call: (ctx, id, name, input) => this.call(ctx, id, name, input),
+            step: (ctx, id, execute) => this.step(ctx, id, execute)
         });
     }
 
@@ -93,6 +84,7 @@ export class DurableInngest implements Durable {
             return;
         }
         this.started = true;
+        durableInstanceCurrentSet(this.instanceId);
 
         const functions = Object.values(this.functionsByName);
         if (functions.length === 0) {
@@ -121,40 +113,38 @@ export class DurableInngest implements Durable {
 
     async stop(): Promise<void> {
         if (!this.connection) {
+            durableInstanceUnregister(this.instanceId);
             return;
         }
 
         const connection = this.connection;
         this.connection = null;
         await connection.close();
+        durableInstanceUnregister(this.instanceId);
     }
 
     private functionBuild<TName extends DurableFunctionName>(name: TName): InngestFunction.Any {
-        const definition = durableFunctionDefinitions[name];
+        const eventName = durableFunctionEvent(name);
         return this.client.createFunction(
             {
-                id: definition.functionId,
-                triggers: [{ event: definition.event }, invoke(staticSchema<DurableEnvelope<TName>>())]
+                id: durableFunctionId(name),
+                triggers: [{ event: eventName }, invoke(staticSchema<DurableEnvelope<TName>>())]
             },
             async ({ event, step }) => {
                 const payload = event.data as DurableEnvelope<TName>;
-                const ctx = Context.fromJSON(payload.ctx);
-                let invokeIndex = 0;
-                const durableCtx = durableContextBind(ctx, this.kind, async (callCtx, callName, callInput) => {
-                    this.functionRequireEnabled(callName);
-                    const target = this.functionsByName[callName];
-                    if (!target) {
-                        throw new Error(`Durable function "${callName}" is not registered in this runtime.`);
-                    }
-                    return step.invoke(`durable:${callName}:${invokeIndex++}`, {
-                        data: {
-                            ctx: contextToJSON(callCtx),
-                            input: callInput
-                        },
-                        function: target
-                    }) as Promise<DurableFunctionOutput<typeof callName>>;
+                const executionId = createId();
+                const ctx = contexts.durable.set(Context.fromJSON(payload.ctx), {
+                    active: true,
+                    executionId,
+                    instanceId: this.instanceId,
+                    kind: this.kind
                 });
-                return this.executeRequireEnabled(durableCtx, name, payload.input);
+                this.stepsByExecutionId.set(executionId, step);
+                try {
+                    return await this.executeRequireEnabled(ctx, name, payload.input);
+                } finally {
+                    this.stepsByExecutionId.delete(executionId);
+                }
             }
         );
     }
@@ -166,6 +156,55 @@ export class DurableInngest implements Durable {
     ): Promise<DurableFunctionOutput<TName>> {
         this.functionRequireEnabled(name);
         return this.execute(ctx, name, input);
+    }
+
+    private async call<TName extends DurableFunctionName>(
+        ctx: Context,
+        id: string,
+        name: TName,
+        input: DurableFunctionInput<TName>
+    ): Promise<DurableFunctionOutput<TName> | undefined> {
+        this.functionRequireEnabled(name);
+        if (ctx.durable?.active === true) {
+            const step = this.stepContextGet(ctx);
+            if (!step) {
+                throw new Error("Durable Inngest call requires an active step context.");
+            }
+            const target = this.functionsByName[name];
+            if (!target) {
+                throw new Error(`Durable function "${name}" is not registered in this runtime.`);
+            }
+            return step.invoke<DurableFunctionOutput<TName>>(id, {
+                data: {
+                    ctx: contextToJSON(ctx),
+                    input
+                },
+                function: target
+            });
+        }
+        await this.client.send({
+            name: durableFunctionEvent(name),
+            data: {
+                ctx: contextToJSON(ctx),
+                input
+            }
+        });
+    }
+
+    private step<TValue>(_ctx: Context, id: string, execute: () => Promise<TValue> | TValue): Promise<TValue> {
+        const step = this.stepContextGet(_ctx);
+        if (!step) {
+            throw new Error("Durable Inngest step requires an active step context.");
+        }
+        return step.run(id, execute);
+    }
+
+    private stepContextGet(ctx: Context): DurableInngestStepContext | null {
+        const executionId = ctx.durable?.executionId;
+        if (!executionId) {
+            return null;
+        }
+        return this.stepsByExecutionId.get(executionId) ?? null;
     }
 
     private functionRequireEnabled(name: DurableFunctionName): void {
@@ -181,3 +220,11 @@ type DurableEnvelope<TName extends DurableFunctionName> = {
     ctx: ContextJson;
     input: DurableFunctionInput<TName>;
 };
+
+function durableFunctionEvent(name: DurableFunctionName): string {
+    return `daycare/durable.${name}`;
+}
+
+function durableFunctionId(name: DurableFunctionName): string {
+    return `durable-${name}`;
+}
