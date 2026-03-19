@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import {
-    durableFunctionDefinitionGet,
-    durableFunctionEnabled,
-    durableFunctionNamesForRoles
-} from "./durableFunctions.js";
+import { durableFunctionDefinitionGet } from "./durableFunctionDefinitionGet.js";
+import { durableFunctionEnabled } from "./durableFunctionEnabled.js";
+import { durableFunctionNamesForRoles } from "./durableFunctionNamesForRoles.js";
 
 describe("durableFunctions", () => {
     it("exposes tool-like durable metadata", () => {

@@ -1,10 +1,10 @@
 import type { Context } from "@/types";
-import {
-    type DurableFunctionInput,
-    type DurableFunctionName,
-    type DurableFunctionOutput,
-    type DurableFunctionServices,
-    durableFunctionDefinitionGet
+import { durableFunctionDefinitionGet } from "./durableFunctionDefinitionGet.js";
+import type {
+    DurableFunctionInput,
+    DurableFunctionName,
+    DurableFunctionOutput,
+    DurableFunctionServices
 } from "./durableFunctions.js";
 
 export type DurableExecuteOptions<TName extends DurableFunctionName> = {

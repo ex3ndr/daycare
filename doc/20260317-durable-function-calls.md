@@ -3,6 +3,7 @@
 ## Summary
 - Added a shared durable function catalog in `packages/daycare/sources/durable/durableFunctions.ts`.
 - Durable functions now keep only `name`, `description`, role gating, and the typed handler.
+- Helper lookups and role filtering live outside the catalog in dedicated durable helper files.
 - Inngest event names and function ids are derived from the durable function name instead of being stored in the catalog.
 - Durable execution is now routed through two context methods:
   - `await ctx.durableCall(id, name, input)` schedules outside durable execution and invokes inline inside durable execution

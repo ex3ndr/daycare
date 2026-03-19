@@ -20,7 +20,7 @@ export type DurableFunctionDefinition<TName extends string, TInput, TOutput> = {
 };
 
 export const durableFunctionDefinitions = {
-    delayedSignalDeliver: durableFunctionDefine<"delayedSignalDeliver", { delayedSignalId: string }, null>({
+    delayedSignalDeliver: {
         name: "delayedSignalDeliver",
         description: "Deliver a persisted delayed signal by id.",
         enabledRoles: ["api", "agents", "signals"],
@@ -30,11 +30,10 @@ export const durableFunctionDefinitions = {
                 return null;
             });
         }
-    })
+    } satisfies DurableFunctionDefinition<"delayedSignalDeliver", { delayedSignalId: string }, null>
 } as const;
 
 export type DurableFunctionName = keyof typeof durableFunctionDefinitions;
-export const DURABLE_FUNCTION_NAMES = Object.keys(durableFunctionDefinitions) as DurableFunctionName[];
 
 export type DurableFunctionInput<TName extends DurableFunctionName> = Parameters<
     (typeof durableFunctionDefinitions)[TName]["handler"]
@@ -43,42 +42,3 @@ export type DurableFunctionInput<TName extends DurableFunctionName> = Parameters
 export type DurableFunctionOutput<TName extends DurableFunctionName> = Awaited<
     ReturnType<(typeof durableFunctionDefinitions)[TName]["handler"]>
 >;
-
-/**
- * Returns the durable function definition for the given catalog name.
- * Expects: `name` matches one of the definitions exported from this module.
- */
-export function durableFunctionDefinitionGet<TName extends DurableFunctionName>(
-    name: TName
-): (typeof durableFunctionDefinitions)[TName] {
-    return durableFunctionDefinitions[name];
-}
-
-/**
- * Returns the durable functions enabled for the provided runtime roles.
- * Expects: an empty role list means "no role filter" to preserve local/dev behavior.
- */
-export function durableFunctionNamesForRoles(roles: readonly DaycareRole[]): DurableFunctionName[] {
-    return DURABLE_FUNCTION_NAMES.filter((name) => durableFunctionEnabled(name, roles));
-}
-
-/**
- * Returns whether a durable function is enabled for the provided runtime roles.
- * Expects: an empty role list means "no role filter" to preserve local/dev behavior.
- */
-export function durableFunctionEnabled<TName extends DurableFunctionName>(
-    name: TName,
-    roles: readonly DaycareRole[]
-): boolean {
-    const enabledRoles = durableFunctionDefinitions[name].enabledRoles;
-    if (!enabledRoles || enabledRoles.length === 0 || roles.length === 0) {
-        return true;
-    }
-    return enabledRoles.some((role) => roles.includes(role));
-}
-
-function durableFunctionDefine<TName extends string, TInput, TOutput>(
-    definition: DurableFunctionDefinition<TName, TInput, TOutput>
-): DurableFunctionDefinition<TName, TInput, TOutput> {
-    return definition;
-}

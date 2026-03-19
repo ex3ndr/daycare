@@ -4,12 +4,8 @@ import { createId } from "@paralleldrive/cuid2";
 import { getLogger } from "../log.js";
 import { Context, type ContextJson, contexts, contextToJSON } from "../types.js";
 import type { DaycareRole } from "../utils/hasRole.js";
-import {
-    type DurableFunctionInput,
-    type DurableFunctionName,
-    type DurableFunctionOutput,
-    durableFunctionEnabled
-} from "./durableFunctions.js";
+import { durableFunctionEnabled } from "./durableFunctionEnabled.js";
+import type { DurableFunctionInput, DurableFunctionName, DurableFunctionOutput } from "./durableFunctions.js";
 import { durableInstanceCurrentSet, durableInstanceRegister, durableInstanceUnregister } from "./durableRegistry.js";
 import type { Durable, DurableExecute } from "./durableTypes.js";
 
