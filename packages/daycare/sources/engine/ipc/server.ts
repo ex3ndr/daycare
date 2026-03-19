@@ -397,7 +397,7 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
             return;
         }
         try {
-            const ctx = await options.runtime.agentSystem.contextForAgentId(payload.agentId);
+            const ctx = await options.runtime.agentSystem!.contextForAgentId(payload.agentId);
             if (!ctx) {
                 return reply.status(404).send({ ok: false, error: `Agent not found: ${payload.agentId}` });
             }
@@ -417,7 +417,7 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
             return;
         }
         try {
-            const ctx = await options.runtime.agentSystem.contextForAgentId(payload.agentId);
+            const ctx = await options.runtime.agentSystem!.contextForAgentId(payload.agentId);
             if (!ctx) {
                 return reply.status(404).send({ ok: false, error: `Agent not found: ${payload.agentId}` });
             }
@@ -512,7 +512,7 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
         const records = sessionId
             ? await options.runtime.storage.history.findBySessionId(sessionId)
             : await (async () => {
-                  const ctx = await options.runtime.agentSystem.contextForAgentId(agentId);
+                  const ctx = await options.runtime.agentSystem!.contextForAgentId(agentId);
                   if (!ctx) {
                       return [];
                   }
@@ -525,12 +525,12 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
     app.post("/v1/engine/agents/:agentId/reset", async (request, reply) => {
         const agentId = (request.params as { agentId: string }).agentId;
         logger.debug(`event: POST /v1/engine/agents/:agentId/reset agentId=${agentId}`);
-        const targetCtx = await options.runtime.agentSystem.contextForAgentId(agentId);
+        const targetCtx = await options.runtime.agentSystem!.contextForAgentId(agentId);
         if (!targetCtx) {
             logger.debug(`error: Agent reset failed agentId=${agentId}`);
             return reply.status(404).send({ ok: false, error: "Agent not found" });
         }
-        await options.runtime.agentSystem.post(
+        await options.runtime.agentSystem!.post(
             contextForUser({ userId: targetCtx.userId }),
             { agentId },
             { type: "reset", message: "Manual reset requested by the user." }
@@ -554,10 +554,10 @@ export async function startEngineServer(options: EngineServerOptions): Promise<E
             };
             const awaitResponse = payload.awaitResponse !== false;
             if (!awaitResponse) {
-                await options.runtime.agentSystem.post(target.ctx, { agentId: target.agentId }, item);
+                await options.runtime.agentSystem!.post(target.ctx, { agentId: target.agentId }, item);
                 return reply.send({ ok: true, agentId: target.agentId });
             }
-            const result = await options.runtime.agentSystem.postAndAwait(
+            const result = await options.runtime.agentSystem!.postAndAwait(
                 target.ctx,
                 { agentId: target.agentId },
                 item
@@ -994,7 +994,7 @@ async function messageTargetResolve(
     payload: z.infer<typeof agentMessageSchema>
 ): Promise<{ ctx: Context; agentId: string }> {
     if (payload.agentId) {
-        const targetContext = await runtime.agentSystem.contextForAgentId(payload.agentId);
+        const targetContext = await runtime.agentSystem!.contextForAgentId(payload.agentId);
         if (!targetContext) {
             throw new Error(`Agent not found: ${payload.agentId}`);
         }
@@ -1013,6 +1013,6 @@ async function messageTargetResolve(
     }
     const ctx = contextForUser({ userId });
     const creationConfig = payload.creationConfig;
-    const agentId = await runtime.agentSystem.agentIdForTarget(ctx, { path }, creationConfig);
+    const agentId = await runtime.agentSystem!.agentIdForTarget(ctx, { path }, creationConfig);
     return { ctx, agentId };
 }

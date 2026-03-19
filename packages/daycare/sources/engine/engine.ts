@@ -99,7 +99,7 @@ export class Engine {
     readonly providerManager: ProviderManager;
     readonly storage: Storage;
     readonly psqlService: PsqlService;
-    readonly agentSystem: AgentSystem;
+    readonly agentSystem: AgentSystem | null;
     readonly crons: Crons;
     readonly webhooks: Webhooks;
     readonly appServer: AppServer;
@@ -157,7 +157,7 @@ export class Engine {
             signalEvents: this.storage.signalEvents,
             signalSubscriptions: this.storage.signalSubscriptions,
             onDeliver: async (signal, subscriptions) => {
-                await this.agentSystem.signalDeliver(signal, subscriptions);
+                await this.agentSystemRequire().signalDeliver(signal, subscriptions);
             }
         });
         this.delayedSignals = new DelayedSignals({
@@ -173,7 +173,8 @@ export class Engine {
                     ctx,
                     delayedSignals: this.delayedSignals,
                     connectorRegistry: this.modules.connectors,
-                    agentPost: (postCtx, target, item, config) => this.agentSystem.post(postCtx, target, item, config),
+                    agentPost: (postCtx, target, item, config) =>
+                        this.agentSystemRequire().post(postCtx, target, item, config),
                     input,
                     name
                 }),
@@ -318,7 +319,7 @@ export class Engine {
             processes: this.processes,
             engineEvents: this.eventBus,
             onEvent: (event) => {
-                this.agentSystem.eventBus.emit("plugin.event", event);
+                this.agentSystem?.eventBus.emit("plugin.event", event);
             }
         });
 
@@ -337,56 +338,68 @@ export class Engine {
             repository: this.storage.modelRoleRules
         });
 
-        this.agentSystem = new AgentSystem({
-            config: this.config,
-            eventBus: this.eventBus,
-            storage: this.storage,
-            connectorRegistry: this.modules.connectors,
-            imageRegistry: this.modules.images,
-            mediaRegistry: this.modules.mediaAnalysis,
-            toolResolver: this.modules.tools,
-            pluginManager: this.pluginManager,
-            inferenceRouter: this.inferenceRouter,
-            authStore: this.authStore,
-            secrets: this.secrets,
-            delayedSignals: this.delayedSignals,
-            modelRoles: this.modelRoles,
-            psqlService: this.psqlService
-        });
+        if (this.roleEnabled("agents")) {
+            this.agentSystem = new AgentSystem({
+                config: this.config,
+                eventBus: this.eventBus,
+                storage: this.storage,
+                connectorRegistry: this.modules.connectors,
+                imageRegistry: this.modules.images,
+                mediaRegistry: this.modules.mediaAnalysis,
+                toolResolver: this.modules.tools,
+                pluginManager: this.pluginManager,
+                inferenceRouter: this.inferenceRouter,
+                authStore: this.authStore,
+                secrets: this.secrets,
+                delayedSignals: this.delayedSignals,
+                modelRoles: this.modelRoles,
+                psqlService: this.psqlService
+            });
+        } else {
+            this.agentSystem = null;
+        }
         this.friends = new Friends({
             storage: this.storage,
-            postToUserAgents: (userId, item) => this.agentSystem.postToUserAgents(userId, item)
+            postToUserAgents: (userId, item) => this.agentSystemRequire().postToUserAgents(userId, item)
         });
         this.workspaces = new Workspaces({
             storage: this.storage,
-            userHomeForUserId: (userId) => this.agentSystem.userHomeForUserId(userId)
+            userHomeForUserId: (userId) => this.agentSystemRequire().userHomeForUserId(userId)
         });
-        this.agentSystem.setExtraMountsForUserId((userId) => this.workspaces.mountsForOwner(userId));
+        if (this.agentSystem) {
+            this.agentSystem.setExtraMountsForUserId((userId) => this.workspaces.mountsForOwner(userId));
+        }
 
         this.memoryWorker.setPostFn((ctx, target, item, creationConfig) =>
-            this.agentSystem.post(ctx, target, item, creationConfig)
+            this.agentSystemRequire().post(ctx, target, item, creationConfig)
         );
         const taskExecutionRunner = new TaskExecutionRunner({
-            agentSystem: this.agentSystem
+            agentSystem: this.agentSystem as AgentSystem
         });
         this.taskExecutions = new TaskExecutions({
             runner: taskExecutionRunner
         });
-        this.agentSystem.setTaskExecutions(this.taskExecutions);
+        if (this.agentSystem) {
+            this.agentSystem.setTaskExecutions(this.taskExecutions);
+        }
 
         this.crons = new Crons({
             config: this.config,
             storage: this.storage,
             eventBus: this.eventBus,
-            agentSystem: this.agentSystem
+            agentSystem: this.agentSystem as AgentSystem
         });
-        this.agentSystem.setCrons(this.crons);
-        this.agentSystem.setSignals(this.signals);
+        if (this.agentSystem) {
+            this.agentSystem.setCrons(this.crons);
+            this.agentSystem.setSignals(this.signals);
+        }
         this.webhooks = new Webhooks({
             storage: this.storage,
-            agentSystem: this.agentSystem
+            agentSystem: this.agentSystem as AgentSystem
         });
-        this.agentSystem.setWebhooks(this.webhooks);
+        if (this.agentSystem) {
+            this.agentSystem.setWebhooks(this.webhooks);
+        }
         this.pluginManager.setWebhooks(this.webhooks);
         this.appServer = new AppServer({
             config: this.config,
@@ -448,7 +461,7 @@ export class Engine {
                     const name = input.name?.trim() ? input.name.trim() : null;
                     const description = input.description?.trim() ? input.description.trim() : null;
                     const targetPath = agentPathApp(ctx.userId, createId());
-                    const agentId = await this.agentSystem.agentIdForTarget(
+                    const agentId = await this.agentSystemRequire().agentIdForTarget(
                         ctx,
                         { path: targetPath },
                         {
@@ -468,11 +481,11 @@ export class Engine {
                         initializedAt: created.createdAt
                     };
                 },
-                agentKill: (ctx, agentId) => this.agentSystem.kill(ctx, agentId),
-                agentPost: (ctx, target, item) => this.agentSystem.post(ctx, target, item),
+                agentKill: (ctx, agentId) => this.agentSystemRequire().kill(ctx, agentId),
+                agentPost: (ctx, target, item) => this.agentSystemRequire().post(ctx, target, item),
                 agentDirectResolve: async (ctx) => {
                     const directPath = agentPathDirect(ctx.userId, ctx.userId);
-                    return this.agentSystem.agentIdForTarget(
+                    return this.agentSystemRequire().agentIdForTarget(
                         ctx,
                         { path: directPath },
                         {
@@ -484,7 +497,7 @@ export class Engine {
                 },
                 agentSupervisorResolve: async (ctx) => {
                     const supervisorPath = agentPathSupervisor(ctx.userId);
-                    return this.agentSystem.agentIdForTarget(
+                    return this.agentSystemRequire().agentIdForTarget(
                         ctx,
                         { path: supervisorPath },
                         {
@@ -498,7 +511,7 @@ export class Engine {
             },
             eventBus: this.eventBus,
             skills: async (ctx) => {
-                const userHome = this.agentSystem.userHomeForUserId(ctx.userId);
+                const userHome = this.agentSystemRequire().userHomeForUserId(ctx.userId);
                 const configSkillsRoot = path.join(this.config.current.configDir, "skills");
                 const skills = new Skills({
                     configRoot: configSkillsRoot,
@@ -713,7 +726,7 @@ export class Engine {
             channels: this.storage.channels,
             channelMessages: this.storage.channelMessages,
             signals: this.signals,
-            agentSystem: this.agentSystem,
+            agentSystem: this.agentSystem as AgentSystem,
             observationLog: this.storage.observationLog
         });
     }
@@ -726,13 +739,16 @@ export class Engine {
             await this.authStore.read();
         }
         await this.workspaces.ensureSystem();
-        const ownerCtx = await this.agentSystem.ownerCtxEnsure();
-        const users = await this.storage.users.findMany();
-        for (const user of users) {
-            await userHomeEnsure(this.agentSystem.userHomeForUserId(user.id));
-            await userDocumentsEnsure(contextForUser({ userId: user.id }), this.storage, {
-                soulBody: user.isWorkspace && user.systemPrompt ? `${user.systemPrompt}\n` : undefined
-            });
+        let ownerCtx: Context | null = null;
+        if (this.agentSystem) {
+            ownerCtx = await this.agentSystem.ownerCtxEnsure();
+            const users = await this.storage.users.findMany();
+            for (const user of users) {
+                await userHomeEnsure(this.agentSystem.userHomeForUserId(user.id));
+                await userDocumentsEnsure(contextForUser({ userId: user.id }), this.storage, {
+                    soulBody: user.isWorkspace && user.systemPrompt ? `${user.systemPrompt}\n` : undefined
+                });
+            }
         }
         if (this.server) {
             logger.info("start: Server mode enabled; skipping Docker runtime image startup checks.");
@@ -757,17 +773,23 @@ export class Engine {
                 );
             }
         }
-        await this.workspaces.discover(ownerCtx.userId);
+        if (ownerCtx) {
+            await this.workspaces.discover(ownerCtx.userId);
+        }
 
         logger.debug("load: Loading model role rules");
         await this.modelRoles.load();
         logger.debug("load: Model role rules loaded");
 
-        logger.debug("load: Loading agents");
-        await this.agentSystem.load();
-        logger.debug("load: Agents loaded");
-        if (this.roleEnabled("tasks")) {
+        if (this.agentSystem) {
+            logger.debug("load: Loading agents");
+            await this.agentSystem.load();
+            logger.debug("load: Agents loaded");
+        }
+        if (this.roleEnabled("tasks") && this.agentSystem) {
             await taskSystemMemoryCompactorEnsure(this.storage, this.agentSystem);
+        } else if (this.roleEnabled("tasks")) {
+            logger.info("skip: Tasks role enabled but agents role disabled; skipping system task bootstrap");
         } else {
             logger.info("skip: Task scheduler role disabled; skipping system task scheduling bootstrap");
         }
@@ -826,7 +848,7 @@ export class Engine {
             await this.pluginManager.preStartAll();
         }
 
-        if (this.roleEnabled("agents")) {
+        if (this.agentSystem) {
             logger.debug("start: Starting agent system");
             await this.agentSystem.start();
             logger.debug("start: Agent system started");
@@ -872,6 +894,13 @@ export class Engine {
         await databaseClose(this.storage.connection);
     }
 
+    private agentSystemRequire(): AgentSystem {
+        if (!this.agentSystem) {
+            throw new Error("AgentSystem is not available: agents role is not enabled.");
+        }
+        return this.agentSystem;
+    }
+
     private roleEnabled(role: DaycareRole): boolean {
         if (!this.server) {
             return true;
@@ -913,7 +942,7 @@ export class Engine {
             input: { path: targetPath, message, context, connector },
             delayedSignals: this.delayedSignals,
             connectorRegistry: this.modules.connectors,
-            agentPost: (postCtx, target, item, config) => this.agentSystem.post(postCtx, target, item, config)
+            agentPost: (postCtx, target, item, config) => this.agentSystemRequire().post(postCtx, target, item, config)
         });
     }
 
@@ -979,7 +1008,7 @@ export class Engine {
         }
         let usedTokens: number | null = null;
         try {
-            const agentId = await this.agentSystem.existingAgentIdForTarget(
+            const agentId = await this.agentSystemRequire().existingAgentIdForTarget(
                 ctx,
                 { path },
                 connectorCreationConfigResolve(context)
@@ -1004,7 +1033,7 @@ export class Engine {
     }
 
     private async handleCompactCommand(ctx: Context, path: AgentPath, context: MessageContext): Promise<void> {
-        const agentId = await this.agentSystem.existingAgentIdForTarget(
+        const agentId = await this.agentSystemRequire().existingAgentIdForTarget(
             ctx,
             { path },
             connectorCreationConfigResolve(context)
@@ -1012,7 +1041,7 @@ export class Engine {
         if (!agentId) {
             return;
         }
-        await this.agentSystem.post(ctx, { agentId }, { type: "compact", context });
+        await this.agentSystemRequire().post(ctx, { agentId }, { type: "compact", context });
     }
 
     private async handleResetCommand(ctx: Context, path: AgentPath, context: MessageContext): Promise<void> {
@@ -1020,7 +1049,7 @@ export class Engine {
         if (dropped > 0) {
             logger.debug({ dropped }, "event: Dropped pending connector messages before reset");
         }
-        const agentId = await this.agentSystem.existingAgentIdForTarget(
+        const agentId = await this.agentSystemRequire().existingAgentIdForTarget(
             ctx,
             { path },
             connectorCreationConfigResolve(context)
@@ -1028,7 +1057,7 @@ export class Engine {
         if (!agentId) {
             return;
         }
-        await this.agentSystem.post(
+        await this.agentSystemRequire().post(
             ctx,
             { agentId },
             { type: "reset", message: "Manual reset requested by the user.", context }
@@ -1044,12 +1073,12 @@ export class Engine {
         if (!connector?.capabilities.sendText) {
             return;
         }
-        const agentId = await this.agentSystem.existingAgentIdForTarget(
+        const agentId = await this.agentSystemRequire().existingAgentIdForTarget(
             ctx,
             { path },
             connectorCreationConfigResolve(context)
         );
-        const aborted = agentId ? this.agentSystem.abortInferenceForTarget({ agentId }) : false;
+        const aborted = agentId ? this.agentSystemRequire().abortInferenceForTarget({ agentId }) : false;
         const text = aborted ? "Stopped current inference." : "No active inference to stop.";
         try {
             await connectorSend(ctx, target.name, target, {
@@ -1142,7 +1171,7 @@ export class Engine {
             return message;
         }
 
-        const userHome = this.agentSystem.userHomeForUserId(ctx.userId);
+        const userHome = this.agentSystemRequire().userHomeForUserId(ctx.userId);
         await userHomeEnsure(userHome);
         const downloadsDir = path.resolve(userHome.downloads);
         const stagingDir = path.resolve(this.config.current.dataDir, "tmp", "staging");
@@ -1208,8 +1237,10 @@ export class Engine {
                 return;
             }
             this.config.configSet(latest);
-            const ownerCtx = await this.agentSystem.ownerCtxEnsure();
-            await userHomeEnsure(this.agentSystem.userHomeForUserId(ownerCtx.userId));
+            if (this.agentSystem) {
+                const ownerCtx = await this.agentSystem.ownerCtxEnsure();
+                await userHomeEnsure(this.agentSystem.userHomeForUserId(ownerCtx.userId));
+            }
             await this.providerManager.reload();
             await this.pluginManager.reload();
             await this.appServer.reload();

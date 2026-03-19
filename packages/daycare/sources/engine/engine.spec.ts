@@ -29,9 +29,9 @@ describe("Engine reset command", () => {
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
-            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const postSpy = vi.spyOn(engine.agentSystem!, "post").mockResolvedValue(undefined);
             const existingAgentIdForTargetSpy = vi
-                .spyOn(engine.agentSystem, "existingAgentIdForTarget")
+                .spyOn(engine.agentSystem!, "existingAgentIdForTarget")
                 .mockResolvedValue("agent-1");
 
             const sendMessage = vi.fn(async () => undefined);
@@ -101,9 +101,9 @@ describe("Engine reset command", () => {
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
-            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const postSpy = vi.spyOn(engine.agentSystem!, "post").mockResolvedValue(undefined);
             const existingAgentIdForTargetSpy = vi
-                .spyOn(engine.agentSystem, "existingAgentIdForTarget")
+                .spyOn(engine.agentSystem!, "existingAgentIdForTarget")
                 .mockResolvedValue("agent-1");
             const state: {
                 messageHandler?: (
@@ -241,7 +241,7 @@ describe("Engine timezone mismatch handling", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             await engine.durable.start();
-            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const postSpy = vi.spyOn(engine.agentSystem!, "post").mockResolvedValue(undefined);
             const state: {
                 messageHandler?: (
                     message: ConnectorMessage,
@@ -340,7 +340,7 @@ describe("Engine startup plugin hooks", () => {
             vi.spyOn(engine.pluginManager, "preStartAll").mockImplementation(async () => {
                 order.push("preStart");
             });
-            vi.spyOn(engine.agentSystem, "start").mockImplementation(async () => {
+            vi.spyOn(engine.agentSystem!, "start").mockImplementation(async () => {
                 order.push("agentSystem.start");
             });
             vi.spyOn(engine.crons, "start").mockImplementation(async () => {
@@ -382,14 +382,14 @@ describe("Engine startup plugin hooks", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             const discoverSpy = vi.spyOn(engine.workspaces, "discover").mockResolvedValue([]);
-            const loadSpy = vi.spyOn(engine.agentSystem, "load").mockResolvedValue();
+            const loadSpy = vi.spyOn(engine.agentSystem!, "load").mockResolvedValue();
             vi.spyOn(engine.providerManager, "reload").mockResolvedValue();
             vi.spyOn(engine.processes, "load").mockResolvedValue();
             vi.spyOn(engine.pluginManager, "reload").mockResolvedValue();
             vi.spyOn(engine.appServer, "start").mockResolvedValue();
             vi.spyOn(engine.channels, "load").mockResolvedValue();
             vi.spyOn(engine.pluginManager, "preStartAll").mockResolvedValue();
-            vi.spyOn(engine.agentSystem, "start").mockResolvedValue();
+            vi.spyOn(engine.agentSystem!, "start").mockResolvedValue();
             vi.spyOn(engine.crons, "start").mockResolvedValue();
             vi.spyOn(engine.delayedSignals, "start").mockResolvedValue();
             vi.spyOn(engine.pluginManager, "postStartAll").mockResolvedValue();
@@ -422,17 +422,17 @@ describe("Engine Docker stale container cleanup", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus(), server: true });
             vi.spyOn(engine.workspaces, "ensureSystem").mockResolvedValue();
-            vi.spyOn(engine.agentSystem, "ownerCtxEnsure").mockResolvedValue(contextForUser({ userId: "system" }));
+            vi.spyOn(engine.agentSystem!, "ownerCtxEnsure").mockResolvedValue(contextForUser({ userId: "system" }));
             vi.spyOn(engine.workspaces, "discover").mockResolvedValue([]);
             vi.spyOn(engine.modelRoles, "load").mockResolvedValue();
-            vi.spyOn(engine.agentSystem, "load").mockResolvedValue();
+            vi.spyOn(engine.agentSystem!, "load").mockResolvedValue();
             vi.spyOn(engine.providerManager, "reload").mockResolvedValue();
             vi.spyOn(engine.processes, "load").mockResolvedValue();
             vi.spyOn(engine.pluginManager, "reload").mockResolvedValue();
             vi.spyOn(engine.appServer, "start").mockResolvedValue();
             vi.spyOn(engine.channels, "load").mockResolvedValue();
             vi.spyOn(engine.pluginManager, "preStartAll").mockResolvedValue();
-            vi.spyOn(engine.agentSystem, "start").mockResolvedValue();
+            vi.spyOn(engine.agentSystem!, "start").mockResolvedValue();
             vi.spyOn(engine.crons, "start").mockResolvedValue();
             vi.spyOn(engine.delayedSignals, "start").mockResolvedValue();
             vi.spyOn(engine.pluginManager, "postStartAll").mockResolvedValue();
@@ -509,17 +509,17 @@ describe("Engine server role startup", () => {
             const memoryWorker = engine as unknown as { memoryWorker: { start: () => void } };
 
             vi.spyOn(engine.workspaces, "ensureSystem").mockResolvedValue();
-            vi.spyOn(engine.agentSystem, "ownerCtxEnsure").mockResolvedValue(contextForUser({ userId: "system" }));
+            vi.spyOn(engine.agentSystem!, "ownerCtxEnsure").mockResolvedValue(contextForUser({ userId: "system" }));
             vi.spyOn(engine.workspaces, "discover").mockResolvedValue([]);
             vi.spyOn(engine.modelRoles, "load").mockResolvedValue();
-            vi.spyOn(engine.agentSystem, "load").mockResolvedValue();
+            vi.spyOn(engine.agentSystem!, "load").mockResolvedValue();
             vi.spyOn(engine.providerManager, "reload").mockResolvedValue();
             const processesLoadSpy = vi.spyOn(engine.processes, "load").mockResolvedValue();
             vi.spyOn(engine.pluginManager, "reload").mockResolvedValue();
             const appServerStartSpy = vi.spyOn(engine.appServer, "start").mockResolvedValue();
             vi.spyOn(engine.channels, "load").mockResolvedValue();
             vi.spyOn(engine.pluginManager, "preStartAll").mockResolvedValue();
-            const agentSystemStartSpy = vi.spyOn(engine.agentSystem, "start").mockResolvedValue();
+            const agentSystemStartSpy = vi.spyOn(engine.agentSystem!, "start").mockResolvedValue();
             const cronsStartSpy = vi.spyOn(engine.crons, "start").mockResolvedValue();
             const delayedSignalsStartSpy = vi.spyOn(engine.delayedSignals, "start").mockResolvedValue();
             const memoryWorkerStartSpy = vi.spyOn(memoryWorker.memoryWorker, "start").mockImplementation(() => {});
@@ -560,18 +560,17 @@ describe("Engine server role startup", () => {
             const engine = new Engine({ config, eventBus: new EngineEventBus(), server: true });
             const memoryWorker = engine as unknown as { memoryWorker: { start: () => void } };
 
+            expect(engine.agentSystem).toBeNull();
+
             vi.spyOn(engine.workspaces, "ensureSystem").mockResolvedValue();
-            vi.spyOn(engine.agentSystem, "ownerCtxEnsure").mockResolvedValue(contextForUser({ userId: "system" }));
             vi.spyOn(engine.workspaces, "discover").mockResolvedValue([]);
             vi.spyOn(engine.modelRoles, "load").mockResolvedValue();
-            vi.spyOn(engine.agentSystem, "load").mockResolvedValue();
             vi.spyOn(engine.providerManager, "reload").mockResolvedValue();
             const processesLoadSpy = vi.spyOn(engine.processes, "load").mockResolvedValue();
             vi.spyOn(engine.pluginManager, "reload").mockResolvedValue();
             const appServerStartSpy = vi.spyOn(engine.appServer, "start").mockResolvedValue();
             vi.spyOn(engine.channels, "load").mockResolvedValue();
             vi.spyOn(engine.pluginManager, "preStartAll").mockResolvedValue();
-            const agentSystemStartSpy = vi.spyOn(engine.agentSystem, "start").mockResolvedValue();
             const cronsStartSpy = vi.spyOn(engine.crons, "start").mockResolvedValue();
             const delayedSignalsStartSpy = vi.spyOn(engine.delayedSignals, "start").mockResolvedValue();
             const memoryWorkerStartSpy = vi.spyOn(memoryWorker.memoryWorker, "start").mockImplementation(() => {});
@@ -583,7 +582,6 @@ describe("Engine server role startup", () => {
             await engine.start();
 
             expect(appServerStartSpy).toHaveBeenCalledTimes(1);
-            expect(agentSystemStartSpy).not.toHaveBeenCalled();
             expect(processesLoadSpy).not.toHaveBeenCalled();
             expect(cronsStartSpy).toHaveBeenCalledTimes(1);
             expect(delayedSignalsStartSpy).not.toHaveBeenCalled();
@@ -830,9 +828,9 @@ describe("Engine abort command", () => {
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
-            vi.spyOn(engine.agentSystem, "abortInferenceForTarget").mockReturnValue(true);
-            vi.spyOn(engine.agentSystem, "existingAgentIdForTarget").mockResolvedValue("agent-1");
-            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            vi.spyOn(engine.agentSystem!, "abortInferenceForTarget").mockReturnValue(true);
+            vi.spyOn(engine.agentSystem!, "existingAgentIdForTarget").mockResolvedValue("agent-1");
+            const postSpy = vi.spyOn(engine.agentSystem!, "post").mockResolvedValue(undefined);
 
             const sendMessage = vi.fn(async () => undefined);
             const commandState: {
@@ -861,7 +859,7 @@ describe("Engine abort command", () => {
 
             await commandHandler("/abort", context, target);
 
-            expect(engine.agentSystem.abortInferenceForTarget).toHaveBeenCalledWith({
+            expect(engine.agentSystem!.abortInferenceForTarget).toHaveBeenCalledWith({
                 agentId: "agent-1"
             });
             expect(connectorSendMock).toHaveBeenCalledWith(
@@ -889,9 +887,9 @@ describe("Engine compact command", () => {
         try {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
-            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const postSpy = vi.spyOn(engine.agentSystem!, "post").mockResolvedValue(undefined);
             const existingAgentIdForTargetSpy = vi
-                .spyOn(engine.agentSystem, "existingAgentIdForTarget")
+                .spyOn(engine.agentSystem!, "existingAgentIdForTarget")
                 .mockResolvedValue("agent-1");
 
             const sendMessage = vi.fn(async () => undefined);
@@ -1012,7 +1010,7 @@ describe("Engine message batching", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             await engine.durable.start();
-            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const postSpy = vi.spyOn(engine.agentSystem!, "post").mockResolvedValue(undefined);
             const messageState: {
                 handler?: (
                     message: ConnectorMessage,
@@ -1076,7 +1074,7 @@ describe("Engine message batching", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             await engine.durable.start();
-            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const postSpy = vi.spyOn(engine.agentSystem!, "post").mockResolvedValue(undefined);
             const messageState: {
                 handler?: (
                     message: ConnectorMessage,
@@ -1135,7 +1133,7 @@ describe("Engine message batching", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             await engine.durable.start();
-            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const postSpy = vi.spyOn(engine.agentSystem!, "post").mockResolvedValue(undefined);
             const messageState: {
                 handler?: (
                     message: ConnectorMessage,
@@ -1193,7 +1191,7 @@ describe("Engine message batching", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             await engine.durable.start();
-            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const postSpy = vi.spyOn(engine.agentSystem!, "post").mockResolvedValue(undefined);
             const messageState: {
                 handler?: (
                     message: ConnectorMessage,
@@ -1238,7 +1236,7 @@ describe("Engine message batching", () => {
             const config = configResolve({ engine: { dataDir: dir } }, path.join(dir, "settings.json"));
             const engine = new Engine({ config, eventBus: new EngineEventBus() });
             await engine.durable.start();
-            const postSpy = vi.spyOn(engine.agentSystem, "post").mockResolvedValue(undefined);
+            const postSpy = vi.spyOn(engine.agentSystem!, "post").mockResolvedValue(undefined);
             const messageState: {
                 handler?: (
                     message: ConnectorMessage,
