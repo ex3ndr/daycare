@@ -2,218 +2,150 @@ import type { DurableRuntimeKind } from "../../durable/durableTypes.js";
 
 const CONTEXT_BRAND = Symbol("Context.brand");
 const CONTEXT_DATA = Symbol("Context.data");
-const EMPTY_CONTEXTS: Readonly<Partial<Contexts>> = Object.freeze({});
+const EMPTY_CONTEXT_DATA: Readonly<ContextJson> = Object.freeze({});
+
+export type ContextJsonValue =
+    | null
+    | boolean
+    | number
+    | string
+    | ContextJsonValue[]
+    | { [key: string]: ContextJsonValue };
+
+export type ContextJson = Record<string, ContextJsonValue>;
+export type ContextSerialized = string;
 
 export type ContextDurableState = {
     active: true;
     kind: DurableRuntimeKind;
 };
 
-export type Contexts = {
-    agentId: string;
-    durable: ContextDurableState;
-    personUserId: string;
-};
-
-export type ContextJson = {
-    userId: string;
-    contexts?: Partial<Contexts>;
-};
-
-export type ContextSerialized = {
-    version: 1;
-    context: ContextJson;
-};
-
-type ContextData = {
-    userId: string;
-    contexts: Readonly<Partial<Contexts>>;
+export type ContextNamespace<TValue extends ContextJsonValue> = {
+    readonly id: string;
+    readonly defaultValue: TValue;
+    get(ctx: Context): TValue;
+    set(ctx: Context, value: TValue): Context;
 };
 
 /**
- * Readonly branded context carrying user identity plus a small fixed set of typed context values.
+ * Readonly branded context carrying values in immutable namespaces.
  * Passed explicitly across tools, durable boundaries, and repositories.
  */
 export class Context {
     private readonly [CONTEXT_BRAND] = true;
-    private readonly [CONTEXT_DATA]: ContextData;
+    readonly [CONTEXT_DATA]: Readonly<ContextJson>;
 
-    constructor(input: ContextJson) {
-        this[CONTEXT_DATA] = Object.freeze({
-            userId: requiredId(input.userId, "Context userId"),
-            contexts: contextValuesBuild(input.contexts)
-        });
+    constructor(input: ContextJson = EMPTY_CONTEXT_DATA) {
+        this[CONTEXT_DATA] = contextRecordFreeze(input);
         Object.freeze(this);
     }
 
     get userId(): string {
-        return this[CONTEXT_DATA].userId;
+        return requiredId(contexts.userId.get(this), "Context userId");
     }
 
     get personUserId(): string | undefined {
-        return this.get("personUserId");
+        const personUserId = contexts.personUserId.get(this);
+        return personUserId === null ? undefined : requiredId(personUserId, "Context personUserId");
     }
 
     get durable(): ContextDurableState | undefined {
-        return this.get("durable");
+        const durable = contexts.durable.get(this);
+        return durable === null ? undefined : contextDurableBuild(durable);
     }
 
     get hasAgentId(): boolean {
-        return this.get("agentId") !== undefined;
+        return contexts.agentId.get(this) !== null;
     }
 
     get agentId(): string {
-        const agentId = this.get("agentId");
-        if (!agentId) {
+        const agentId = contexts.agentId.get(this);
+        if (agentId === null) {
             throw new Error("Context has no agentId");
         }
-        return agentId;
+        return requiredId(agentId, "Context agentId");
     }
 
-    /**
-     * Reads a typed context value from the fixed Contexts map.
-     * Expects: `key` is one of the keys declared in `Contexts`.
-     */
-    get<TKey extends keyof Contexts>(key: TKey): Contexts[TKey] | undefined {
-        return this[CONTEXT_DATA].contexts[key] as Contexts[TKey] | undefined;
-    }
-
-    /**
-     * Returns a new Context with one typed context value replaced.
-     * Expects: `key` is declared in `Contexts` and `value` matches its type.
-     */
-    with<TKey extends keyof Contexts>(key: TKey, value: Contexts[TKey]): Context {
-        return new Context({
-            userId: this.userId,
-            contexts: {
-                ...this[CONTEXT_DATA].contexts,
-                [key]: contextValueBuild(key, value)
-            }
-        });
-    }
-
-    /**
-     * Serializes the Context into a plain transport shape.
-     * Expects: callers treat the returned object as immutable.
-     */
     toJSON(): ContextJson {
-        const contexts = this[CONTEXT_DATA].contexts;
-        return {
-            userId: this.userId,
-            ...(Object.keys(contexts).length > 0 ? { contexts: { ...contexts } } : {})
-        };
+        return { ...this[CONTEXT_DATA] };
     }
 
-    /**
-     * Serializes the Context into a versioned string envelope.
-     * Expects: the resulting string is stored or transported verbatim.
-     */
-    serialize(): string {
-        const payload: ContextSerialized = {
-            version: 1,
-            context: this.toJSON()
-        };
-        return JSON.stringify(payload);
+    serialize(): ContextSerialized {
+        return JSON.stringify(this[CONTEXT_DATA]);
     }
 
-    /**
-     * Restores a Context instance from structured JSON state.
-     * Expects: `input` was produced by `contextToJSON()` or matches that shape.
-     */
     static fromJSON(input: ContextJson): Context {
         return new Context(input);
     }
 
-    /**
-     * Restores a Context instance from serialized string state.
-     * Expects: `serialized` was produced by `contextSerialize()` or `Context.serialize()`.
-     */
-    static deserialize(serialized: string): Context {
+    static deserialize(serialized: ContextSerialized): Context {
         let parsed: unknown;
         try {
             parsed = JSON.parse(serialized);
         } catch (error) {
             throw new Error(`Invalid serialized Context: ${error instanceof Error ? error.message : String(error)}`);
         }
-
-        if (!isRecord(parsed) || parsed.version !== 1 || !("context" in parsed) || !isRecord(parsed.context)) {
-            throw new Error("Invalid serialized Context envelope.");
+        if (!isRecord(parsed)) {
+            throw new Error("Serialized Context must be a JSON object.");
         }
-
-        return new Context(parsed.context as ContextJson);
+        return new Context(parsed as ContextJson);
     }
 }
 
-/**
- * Creates a user-scoped context without an agent identity.
- * Expects: userId is already validated by caller.
- */
+export const emptyContext = new Context();
+
+export function createContextNamespace<TValue extends ContextJsonValue>(
+    id: string,
+    defaultValue: TValue
+): ContextNamespace<TValue> {
+    const normalizedId = requiredId(id, "Context namespace id");
+    const frozenDefaultValue = contextValueFreeze(defaultValue);
+    return Object.freeze({
+        id: normalizedId,
+        defaultValue: frozenDefaultValue,
+        get(ctx: Context): TValue {
+            const value = ctx[CONTEXT_DATA][normalizedId];
+            return value === undefined ? frozenDefaultValue : (value as TValue);
+        },
+        set(ctx: Context, value: TValue): Context {
+            return new Context({
+                ...ctx[CONTEXT_DATA],
+                [normalizedId]: contextValueFreeze(value)
+            });
+        }
+    });
+}
+
+export const contexts = {
+    userId: createContextNamespace<string>("userId", ""),
+    agentId: createContextNamespace<string | null>("agentId", null),
+    personUserId: createContextNamespace<string | null>("personUserId", null),
+    durable: createContextNamespace<ContextDurableState | null>("durable", null)
+} as const;
+
+export type Contexts = typeof contexts;
+
 export function contextForUser(input: { userId: string; personUserId?: string }): Context {
-    let context = new Context({ userId: input.userId });
+    let ctx = contexts.userId.set(emptyContext, input.userId);
     if (input.personUserId !== undefined) {
-        context = context.with("personUserId", input.personUserId);
+        ctx = contexts.personUserId.set(ctx, input.personUserId);
     }
-    return context;
+    return ctx;
 }
 
-/**
- * Creates an agent-scoped context with both user and agent identity.
- * Expects: userId and agentId are already validated by caller.
- */
 export function contextForAgent(input: { userId: string; personUserId?: string; agentId: string }): Context {
-    return contextForUser({ userId: input.userId, personUserId: input.personUserId }).with("agentId", input.agentId);
+    return contexts.agentId.set(
+        contextForUser({ userId: input.userId, personUserId: input.personUserId }),
+        input.agentId
+    );
 }
 
-/**
- * Serializes context state for persistence or transport across durable boundaries.
- * Expects: callers treat the returned object as immutable.
- */
 export function contextToJSON(ctx: Context): ContextJson {
     return ctx.toJSON();
 }
 
-/**
- * Serializes a Context instance into a versioned string envelope.
- * Expects: the resulting string is stored or transported verbatim.
- */
-export function contextSerialize(ctx: Context): string {
+export function contextSerialize(ctx: Context): ContextSerialized {
     return ctx.serialize();
-}
-
-function contextValuesBuild(input: Partial<Contexts> | undefined): Readonly<Partial<Contexts>> {
-    if (input === undefined) {
-        return EMPTY_CONTEXTS;
-    }
-
-    const next: Partial<Contexts> = {};
-    for (const key of Object.keys(input)) {
-        if (!isContextKey(key)) {
-            throw new Error(`Unknown Context value "${key}".`);
-        }
-    }
-    if (input.agentId !== undefined) {
-        next.agentId = contextValueBuild("agentId", input.agentId);
-    }
-    if (input.personUserId !== undefined) {
-        next.personUserId = contextValueBuild("personUserId", input.personUserId);
-    }
-    if (input.durable !== undefined) {
-        next.durable = contextValueBuild("durable", input.durable);
-    }
-    return Object.freeze(next);
-}
-
-function contextValueBuild<TKey extends keyof Contexts>(key: TKey, value: Contexts[TKey]): Contexts[TKey] {
-    if (key === "agentId") {
-        return requiredId(value as string, "Context agentId") as Contexts[TKey];
-    }
-    if (key === "personUserId") {
-        return requiredId(value as string, "Context personUserId") as Contexts[TKey];
-    }
-    if (key === "durable") {
-        return contextDurableBuild(value as ContextDurableState) as Contexts[TKey];
-    }
-    throw new Error(`Unsupported Context value "${String(key)}".`);
 }
 
 function contextDurableBuild(input: ContextDurableState): ContextDurableState {
@@ -226,12 +158,30 @@ function contextDurableBuild(input: ContextDurableState): ContextDurableState {
     });
 }
 
-function isContextKey(value: string): value is keyof Contexts {
-    return value === "agentId" || value === "durable" || value === "personUserId";
+function contextRecordFreeze(input: ContextJson): Readonly<ContextJson> {
+    const next: ContextJson = {};
+    for (const [key, value] of Object.entries(input)) {
+        next[requiredId(key, "Context namespace id")] = contextValueFreeze(value);
+    }
+    return Object.freeze(next);
+}
+
+function contextValueFreeze<TValue extends ContextJsonValue>(value: TValue): TValue {
+    if (Array.isArray(value)) {
+        return Object.freeze(value.map((entry) => contextValueFreeze(entry))) as TValue;
+    }
+    if (isRecord(value)) {
+        const next: Record<string, ContextJsonValue> = {};
+        for (const [key, entry] of Object.entries(value)) {
+            next[key] = contextValueFreeze(entry as ContextJsonValue);
+        }
+        return Object.freeze(next) as TValue;
+    }
+    return value;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null;
+    return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function requiredId(value: string, field: string): string {

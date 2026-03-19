@@ -1,4 +1,4 @@
-import { Context, contextToJSON } from "../engine/agents/context.js";
+import { Context, contexts, contextToJSON } from "../engine/agents/context.js";
 import type { DurableFunctionInput, DurableFunctionName, DurableFunctionOutput } from "./durableFunctions.js";
 import type { DurableRuntimeKind } from "./durableTypes.js";
 
@@ -15,7 +15,7 @@ const durableContextCalls = new WeakMap<Context, DurableScopedCall>();
  * Expects: callers pass the context that was deserialized for the current durable handler.
  */
 export function durableContextBind(ctx: Context, kind: DurableRuntimeKind, call: DurableScopedCall): Context {
-    const next = Context.fromJSON(contextToJSON(ctx)).with("durable", {
+    const next = contexts.durable.set(Context.fromJSON(contextToJSON(ctx)), {
         active: true,
         kind
     });

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { Context, contextForAgent, contextForUser, contextSerialize, contextToJSON } from "./context.js";
+import {
+    Context,
+    contextForAgent,
+    contextForUser,
+    contextSerialize,
+    contexts,
+    contextToJSON,
+    createContextNamespace,
+    emptyContext
+} from "./context.js";
 
 describe("Context", () => {
     it("builds a user-only context", () => {
@@ -24,13 +33,7 @@ describe("Context", () => {
     });
 
     it("is readonly", () => {
-        const context = new Context({
-            userId: "user-1",
-            contexts: {
-                agentId: "agent-1",
-                personUserId: "person-1"
-            }
-        });
+        const context = contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" });
         const readonlyAssertion = (value: Context): void => {
             // @ts-expect-error Context fields are readonly
             value.agentId = "agent-2";
@@ -46,8 +49,8 @@ describe("Context", () => {
     });
 
     it("serializes and restores durable state", () => {
-        const context = contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" }).with(
-            "durable",
+        const context = contexts.durable.set(
+            contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" }),
             {
                 active: true,
                 kind: "local"
@@ -62,19 +65,20 @@ describe("Context", () => {
             active: true,
             kind: "local"
         });
-        expect(contextToJSON(restored).contexts).toEqual({
+        expect(contextToJSON(restored)).toEqual({
+            userId: "user-1",
+            personUserId: "person-1",
             agentId: "agent-1",
             durable: {
                 active: true,
                 kind: "local"
-            },
-            personUserId: "person-1"
+            }
         });
     });
 
     it("serializes and restores from a string", () => {
-        const context = contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" }).with(
-            "durable",
+        const context = contexts.durable.set(
+            contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" }),
             {
                 active: true,
                 kind: "inngest"
@@ -91,30 +95,14 @@ describe("Context", () => {
         });
     });
 
-    it("stores typed context values in the contexts map", () => {
-        const context = contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" }).with(
-            "durable",
-            {
-                active: true,
-                kind: "local"
-            }
-        );
+    it("stores typed values through namespaces", () => {
+        const logNamespace = createContextNamespace<string>("log", "main");
+        let context = logNamespace.set(emptyContext, "root");
+        context = logNamespace.set(context, "request");
 
-        expect(context.get("personUserId")).toBe("person-1");
-        expect(context.get("durable")).toEqual({
-            active: true,
-            kind: "local"
-        });
+        expect(logNamespace.get(context)).toBe("request");
         expect(contextToJSON(context)).toEqual({
-            userId: "user-1",
-            contexts: {
-                agentId: "agent-1",
-                durable: {
-                    active: true,
-                    kind: "local"
-                },
-                personUserId: "person-1"
-            }
+            log: "request"
         });
     });
 });
