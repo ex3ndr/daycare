@@ -9,6 +9,7 @@ import type { DurableRuntimeKind } from "../../durable/durableTypes.js";
 const CONTEXT_BRAND = Symbol("Context.brand");
 const CONTEXT_DATA = Symbol("Context.data");
 const EMPTY_CONTEXT_DATA: Readonly<ContextJson> = Object.freeze({});
+const EMPTY_CONTEXT_RUNTIME: Readonly<Record<string, unknown>> = Object.freeze({});
 
 export type ContextJsonValue =
     | null
@@ -28,9 +29,15 @@ export type ContextDurableState = {
     kind: DurableRuntimeKind;
 };
 
-export type ContextNamespace<TValue extends ContextJsonValue> = {
+type ContextData = {
+    runtime: Readonly<Record<string, unknown>>;
+    serializable: Readonly<ContextJson>;
+};
+
+export type ContextNamespace<TValue> = {
     readonly id: string;
     readonly defaultValue: TValue;
+    readonly serializable: boolean;
     get(ctx: Context): TValue;
     set(ctx: Context, value: TValue): Context;
 };
@@ -41,10 +48,13 @@ export type ContextNamespace<TValue extends ContextJsonValue> = {
  */
 export class Context {
     private readonly [CONTEXT_BRAND] = true;
-    readonly [CONTEXT_DATA]: Readonly<ContextJson>;
+    readonly [CONTEXT_DATA]: ContextData;
 
-    constructor(input: ContextJson = EMPTY_CONTEXT_DATA) {
-        this[CONTEXT_DATA] = contextRecordFreeze(input);
+    constructor(input: ContextJson = EMPTY_CONTEXT_DATA, runtime: Record<string, unknown> = EMPTY_CONTEXT_RUNTIME) {
+        this[CONTEXT_DATA] = Object.freeze({
+            runtime: contextRuntimeFreeze(runtime),
+            serializable: contextRecordFreeze(input)
+        });
         Object.freeze(this);
     }
 
@@ -95,11 +105,11 @@ export class Context {
     }
 
     toJSON(): ContextJson {
-        return { ...this[CONTEXT_DATA] };
+        return { ...this[CONTEXT_DATA].serializable };
     }
 
     serialize(): ContextSerialized {
-        return JSON.stringify(this[CONTEXT_DATA]);
+        return JSON.stringify(this[CONTEXT_DATA].serializable);
     }
 
     static fromJSON(input: ContextJson): Context {
@@ -124,31 +134,57 @@ export const emptyContext = new Context();
 
 export function createContextNamespace<TValue extends ContextJsonValue>(
     id: string,
-    defaultValue: TValue
+    defaultValue: TValue,
+    options?: { serializable?: true }
+): ContextNamespace<TValue>;
+export function createContextNamespace<TValue>(
+    id: string,
+    defaultValue: TValue,
+    options: { serializable: false }
+): ContextNamespace<TValue>;
+export function createContextNamespace<TValue>(
+    id: string,
+    defaultValue: TValue,
+    options?: { serializable?: boolean }
 ): ContextNamespace<TValue> {
     const normalizedId = requiredId(id, "Context namespace id");
-    const frozenDefaultValue = contextValueFreeze(defaultValue);
+    const serializable = options?.serializable !== false;
+    const frozenDefaultValue = (
+        serializable ? contextValueFreeze(defaultValue as ContextJsonValue) : contextRuntimeFreezeValue(defaultValue)
+    ) as TValue;
     return Object.freeze({
         id: normalizedId,
+        serializable,
         defaultValue: frozenDefaultValue,
         get(ctx: Context): TValue {
-            const value = ctx[CONTEXT_DATA][normalizedId];
+            const value = serializable
+                ? ctx[CONTEXT_DATA].serializable[normalizedId]
+                : ctx[CONTEXT_DATA].runtime[normalizedId];
             return value === undefined ? frozenDefaultValue : (value as TValue);
         },
         set(ctx: Context, value: TValue): Context {
-            return new Context({
-                ...ctx[CONTEXT_DATA],
-                [normalizedId]: contextValueFreeze(value)
-            });
+            const nextSerializable = serializable
+                ? {
+                      ...ctx[CONTEXT_DATA].serializable,
+                      [normalizedId]: contextValueFreeze(value as ContextJsonValue)
+                  }
+                : ctx[CONTEXT_DATA].serializable;
+            const nextRuntime = serializable
+                ? ctx[CONTEXT_DATA].runtime
+                : {
+                      ...ctx[CONTEXT_DATA].runtime,
+                      [normalizedId]: contextRuntimeFreezeValue(value)
+                  };
+            return new Context(nextSerializable, nextRuntime);
         }
-    });
+    }) as ContextNamespace<TValue>;
 }
 
 export const contexts = {
     userId: createContextNamespace<string>("userId", ""),
     agentId: createContextNamespace<string | null>("agentId", null),
     personUserId: createContextNamespace<string | null>("personUserId", null),
-    durable: createContextNamespace<ContextDurableState | null>("durable", null)
+    durable: createContextNamespace<ContextDurableState | null>("durable", null, { serializable: false })
 } as const;
 
 export type Contexts = typeof contexts;
@@ -196,6 +232,14 @@ function contextRecordFreeze(input: ContextJson): Readonly<ContextJson> {
     return Object.freeze(next);
 }
 
+function contextRuntimeFreeze(input: Record<string, unknown>): Readonly<Record<string, unknown>> {
+    const next: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(input)) {
+        next[requiredId(key, "Context namespace id")] = contextRuntimeFreezeValue(value);
+    }
+    return Object.freeze(next);
+}
+
 function contextValueFreeze<TValue extends ContextJsonValue>(value: TValue): TValue {
     if (Array.isArray(value)) {
         return Object.freeze(value.map((entry) => contextValueFreeze(entry))) as TValue;
@@ -204,6 +248,20 @@ function contextValueFreeze<TValue extends ContextJsonValue>(value: TValue): TVa
         const next: Record<string, ContextJsonValue> = {};
         for (const [key, entry] of Object.entries(value)) {
             next[key] = contextValueFreeze(entry as ContextJsonValue);
+        }
+        return Object.freeze(next) as TValue;
+    }
+    return value;
+}
+
+function contextRuntimeFreezeValue<TValue>(value: TValue): TValue {
+    if (Array.isArray(value)) {
+        return Object.freeze(value.map((entry) => contextRuntimeFreezeValue(entry))) as TValue;
+    }
+    if (isRecord(value)) {
+        const next: Record<string, unknown> = {};
+        for (const [key, entry] of Object.entries(value)) {
+            next[key] = contextRuntimeFreezeValue(entry);
         }
         return Object.freeze(next) as TValue;
     }

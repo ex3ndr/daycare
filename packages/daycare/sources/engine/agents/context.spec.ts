@@ -56,7 +56,7 @@ describe("Context", () => {
         expect(context.personUserId).toBe("person-1");
     });
 
-    it("serializes and restores durable state", () => {
+    it("keeps durable state runtime-only", () => {
         const context = contexts.durable.set(
             contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" }),
             {
@@ -71,26 +71,15 @@ describe("Context", () => {
         expect(restored.userId).toBe("user-1");
         expect(restored.personUserId).toBe("person-1");
         expect(restored.agentId).toBe("agent-1");
-        expect(restored.durable).toEqual({
-            active: true,
-            executionId: "job-1",
-            instanceId: "local-1",
-            kind: "local"
-        });
+        expect(restored.durable).toBeUndefined();
         expect(contextToJSON(restored)).toEqual({
             userId: "user-1",
             personUserId: "person-1",
-            agentId: "agent-1",
-            durable: {
-                active: true,
-                executionId: "job-1",
-                instanceId: "local-1",
-                kind: "local"
-            }
+            agentId: "agent-1"
         });
     });
 
-    it("serializes and restores from a string", () => {
+    it("does not serialize durable state into strings", () => {
         const context = contexts.durable.set(
             contextForAgent({ userId: "user-1", personUserId: "person-1", agentId: "agent-1" }),
             {
@@ -105,12 +94,7 @@ describe("Context", () => {
         expect(restored.userId).toBe("user-1");
         expect(restored.personUserId).toBe("person-1");
         expect(restored.agentId).toBe("agent-1");
-        expect(restored.durable).toEqual({
-            active: true,
-            executionId: "run-1",
-            instanceId: "inngest-1",
-            kind: "inngest"
-        });
+        expect(restored.durable).toBeUndefined();
     });
 
     it("stores typed values through namespaces", () => {
@@ -122,5 +106,16 @@ describe("Context", () => {
         expect(contextToJSON(context)).toEqual({
             log: "request"
         });
+    });
+
+    it("supports non-serializable namespaces", () => {
+        const runtimeNamespace = createContextNamespace<{ value: string } | null>("runtime", null, {
+            serializable: false
+        });
+        const context = runtimeNamespace.set(emptyContext, { value: "live" });
+
+        expect(runtimeNamespace.get(context)).toEqual({ value: "live" });
+        expect(contextToJSON(context)).toEqual({});
+        expect(Context.fromJSON(contextToJSON(context)).serialize()).toBe("{}");
     });
 });

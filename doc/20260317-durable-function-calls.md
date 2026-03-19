@@ -10,7 +10,7 @@
 - Added a file-backed local durable queue with retry and restart recovery.
 - Added Inngest-backed durable function execution using the same catalog and handlers.
 - Routed delayed signal delivery through the durable layer as the smallest existing async boundary.
-- `Context.durable` now carries runtime state (`kind`, `instanceId`, `executionId`) only for active durable executions.
+- `Context.durable` now carries runtime state (`kind`, `instanceId`, `executionId`) only for active durable executions and is not serialized.
 
 ## Flow
 
