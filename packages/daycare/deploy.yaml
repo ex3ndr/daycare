@@ -67,22 +67,39 @@ data:
       }
     }
 ---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: daycare-server-secrets
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: SecretStore
+  target:
+    name: daycare-server-secrets
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: /daycare-server
+---
+# ── API role ──────────────────────────────────────────────────────────
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: daycare-server
+  name: daycare-api
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
-      app: daycare-server
+      app: daycare-api
   template:
     metadata:
       labels:
-        app: daycare-server
+        app: daycare-api
     spec:
       containers:
-        - name: daycare-server
+        - name: daycare-api
           image: docker.korshakov.com/daycare-server:{version}
           command:
             - node
@@ -91,6 +108,8 @@ spec:
           env:
             - name: DAYCARE_ROOT_DIR
               value: /var/lib/daycare
+            - name: DAYCARE_ROLES
+              value: api
             - name: INNGEST_ENDPOINT
               value: ws://daycare-inngest:8289/v0/connect
           envFrom:
@@ -98,6 +117,7 @@ spec:
                 name: daycare-server-secrets
           ports:
             - containerPort: 7332
+            - containerPort: 7333
           volumeMounts:
             - name: daycare-settings
               mountPath: /var/lib/daycare/settings.json
@@ -150,28 +170,12 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: daycare-server-pdb
+  name: daycare-api-pdb
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: daycare-server
----
-apiVersion: external-secrets.io/v1beta1
-kind: ExternalSecret
-metadata:
-  name: daycare-server-secrets
-spec:
-  refreshInterval: 1h
-  secretStoreRef:
-    name: vault-backend
-    kind: SecretStore
-  target:
-    name: daycare-server-secrets
-    creationPolicy: Owner
-  dataFrom:
-    - extract:
-        key: /daycare-server
+      app: daycare-api
 ---
 apiVersion: v1
 kind: Service
@@ -179,8 +183,194 @@ metadata:
   name: daycare-app
 spec:
   selector:
-    app: daycare-server
+    app: daycare-api
   ports:
     - port: 3000
       targetPort: 7332
   type: ClusterIP
+---
+# ── Agents role ───────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: daycare-agents
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: daycare-agents
+  template:
+    metadata:
+      labels:
+        app: daycare-agents
+    spec:
+      containers:
+        - name: daycare-agents
+          image: docker.korshakov.com/daycare-server:{version}
+          command:
+            - node
+            - /app/packages/daycare/dist/main.js
+            - server
+          env:
+            - name: DAYCARE_ROOT_DIR
+              value: /var/lib/daycare
+            - name: DAYCARE_ROLES
+              value: agents,tasks,signals,processes
+            - name: INNGEST_ENDPOINT
+              value: ws://daycare-inngest:8289/v0/connect
+          envFrom:
+            - secretRef:
+                name: daycare-server-secrets
+          ports:
+            - containerPort: 7333
+          volumeMounts:
+            - name: daycare-settings
+              mountPath: /var/lib/daycare/settings.json
+              subPath: settings.json
+              readOnly: true
+            - name: daycare-tokens
+              mountPath: /var/lib/daycare/auth.json
+              subPath: auth.json
+              readOnly: true
+            - name: daycare-data
+              mountPath: /data
+              readOnly: false
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 7333
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 7333
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          startupProbe:
+            httpGet:
+              path: /
+              port: 7333
+            periodSeconds: 10
+            failureThreshold: 3
+      volumes:
+        - name: daycare-settings
+          configMap:
+            name: daycare-settings
+            items:
+              - key: settings.json
+                path: settings.json
+        - name: daycare-tokens
+          secret:
+            secretName: daycare-tokens
+            items:
+              - key: auth.json
+                path: auth.json
+        - name: daycare-data
+          persistentVolumeClaim:
+            claimName: daycare-data-pvc
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: daycare-agents-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: daycare-agents
+---
+# ── Connectors role (StatefulSet, single pod) ─────────────────────────
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: daycare-connectors
+spec:
+  replicas: 1
+  serviceName: daycare-connectors
+  selector:
+    matchLabels:
+      app: daycare-connectors
+  template:
+    metadata:
+      labels:
+        app: daycare-connectors
+    spec:
+      containers:
+        - name: daycare-connectors
+          image: docker.korshakov.com/daycare-server:{version}
+          command:
+            - node
+            - /app/packages/daycare/dist/main.js
+            - server
+          env:
+            - name: DAYCARE_ROOT_DIR
+              value: /var/lib/daycare
+            - name: DAYCARE_ROLES
+              value: connectors
+            - name: INNGEST_ENDPOINT
+              value: ws://daycare-inngest:8289/v0/connect
+          envFrom:
+            - secretRef:
+                name: daycare-server-secrets
+          ports:
+            - containerPort: 7333
+          volumeMounts:
+            - name: daycare-settings
+              mountPath: /var/lib/daycare/settings.json
+              subPath: settings.json
+              readOnly: true
+            - name: daycare-tokens
+              mountPath: /var/lib/daycare/auth.json
+              subPath: auth.json
+              readOnly: true
+            - name: daycare-data
+              mountPath: /data
+              readOnly: false
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 7333
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 7333
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          startupProbe:
+            httpGet:
+              path: /
+              port: 7333
+            periodSeconds: 10
+            failureThreshold: 3
+      volumes:
+        - name: daycare-settings
+          configMap:
+            name: daycare-settings
+            items:
+              - key: settings.json
+                path: settings.json
+        - name: daycare-tokens
+          secret:
+            secretName: daycare-tokens
+            items:
+              - key: auth.json
+                path: auth.json
+        - name: daycare-data
+          persistentVolumeClaim:
+            claimName: daycare-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: daycare-connectors
+spec:
+  selector:
+    app: daycare-connectors
+  clusterIP: None
