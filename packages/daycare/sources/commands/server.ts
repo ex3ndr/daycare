@@ -1,4 +1,5 @@
 import path from "node:path";
+import { HealthcheckServer } from "../api/healthcheck.js";
 import { configLoad } from "../config/configLoad.js";
 import { Engine } from "../engine/engine.js";
 import { EngineEventBus } from "../engine/ipc/events.js";
@@ -31,6 +32,12 @@ export async function serverCommand(_options: ServerOptions): Promise<void> {
     await runtime.start();
     onShutdown("server-runtime", () => {
         void runtime.shutdown();
+    });
+
+    const healthcheck = new HealthcheckServer();
+    await healthcheck.start();
+    onShutdown("server-healthcheck", () => {
+        void healthcheck.stop();
     });
 
     logger.info("Ready. Listening for messages.");

@@ -45,7 +45,7 @@ USER node
 
 VOLUME ["/var/lib/daycare"]
 
-EXPOSE 7331 7332
+EXPOSE 7331 7332 7333
 
 ENTRYPOINT ["tini", "--"]
 CMD ["node", "./packages/daycare/dist/main.js", "server"]
