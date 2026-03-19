@@ -195,7 +195,7 @@ kind: Deployment
 metadata:
   name: daycare-agents
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: daycare-agents
@@ -271,16 +271,6 @@ spec:
         - name: daycare-data
           persistentVolumeClaim:
             claimName: daycare-data-pvc
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: daycare-agents-pdb
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app: daycare-agents
 ---
 # ── Connectors role (StatefulSet, single pod) ─────────────────────────
 apiVersion: apps/v1
