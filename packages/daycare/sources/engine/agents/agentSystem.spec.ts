@@ -933,6 +933,8 @@ async function harnessCreate(
             durableExecute({
                 ctx,
                 delayedSignals,
+                connectorRegistry: { get: () => null },
+                agentPost: async () => {},
                 input,
                 name
             }),

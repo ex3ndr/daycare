@@ -1,5 +1,5 @@
 const DAYCARE_ROLES_ENV = "DAYCARE_ROLES";
-export const DAYCARE_ROLE_VALUES = ["api", "agents", "signals", "processes", "tasks"] as const;
+export const DAYCARE_ROLE_VALUES = ["api", "agents", "connectors", "signals", "processes", "tasks"] as const;
 export type DaycareRole = (typeof DAYCARE_ROLE_VALUES)[number];
 const DAYCARE_ROLE_SET = new Set<string>(DAYCARE_ROLE_VALUES);
 const PROCESS_ROLES = rolesResolve(process.env);

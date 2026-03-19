@@ -21,6 +21,38 @@ describe("durableFunctions", () => {
 
     it("keeps functions enabled when no role filter is provided", () => {
         expect(durableFunctionEnabled("delayedSignalDeliver", [])).toBe(true);
-        expect(durableFunctionNamesForRoles([])).toEqual(["delayedSignalDeliver"]);
+        expect(durableFunctionNamesForRoles([])).toEqual([
+            "delayedSignalDeliver",
+            "connectorSendMessage",
+            "connectorReceiveMessage"
+        ]);
+    });
+
+    it("enables connectorSendMessage only for connectors role", () => {
+        const definition = durableFunctionDefinitionGet("connectorSendMessage");
+
+        expect(definition.name).toBe("connectorSendMessage");
+        expect(definition.description).toContain("connector");
+        expect(definition.enabledRoles).toEqual(["connectors"]);
+        expect(durableFunctionEnabled("connectorSendMessage", ["connectors"])).toBe(true);
+        expect(durableFunctionEnabled("connectorSendMessage", ["agents"])).toBe(false);
+        expect(durableFunctionEnabled("connectorSendMessage", ["api"])).toBe(false);
+    });
+
+    it("enables connectorReceiveMessage only for agents role", () => {
+        const definition = durableFunctionDefinitionGet("connectorReceiveMessage");
+
+        expect(definition.name).toBe("connectorReceiveMessage");
+        expect(definition.description).toContain("inbox");
+        expect(definition.enabledRoles).toEqual(["agents"]);
+        expect(durableFunctionEnabled("connectorReceiveMessage", ["agents"])).toBe(true);
+        expect(durableFunctionEnabled("connectorReceiveMessage", ["connectors"])).toBe(false);
+    });
+
+    it("returns connector functions for their respective roles", () => {
+        expect(durableFunctionNamesForRoles(["connectors"])).toContain("connectorSendMessage");
+        expect(durableFunctionNamesForRoles(["connectors"])).not.toContain("connectorReceiveMessage");
+        expect(durableFunctionNamesForRoles(["agents"])).toContain("connectorReceiveMessage");
+        expect(durableFunctionNamesForRoles(["agents"])).not.toContain("connectorSendMessage");
     });
 });

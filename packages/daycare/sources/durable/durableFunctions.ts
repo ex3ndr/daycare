@@ -1,9 +1,17 @@
-import type { Context } from "@/types";
+import type { AgentInboxItem, AgentPath, ConnectorMessage, ConnectorRecipient, Context, MessageContext } from "@/types";
+import type { ConnectorRegistry } from "../engine/modules/connectorRegistry.js";
 import type { DelayedSignals } from "../engine/signals/delayedSignals.js";
 import type { DaycareRole } from "../utils/hasRole.js";
 
 export type DurableFunctionServices = {
     delayedSignals: Pick<DelayedSignals, "deliver">;
+    connectorRegistry: Pick<ConnectorRegistry, "get">;
+    agentPost: (
+        ctx: Context,
+        target: { path: AgentPath },
+        item: AgentInboxItem,
+        config: { kind: "connector"; foreground: boolean; connector: ConnectorRecipient | null }
+    ) => Promise<void>;
 };
 
 export type DurableFunctionHandlerContext<TInput> = {
@@ -30,7 +38,53 @@ export const durableFunctionDefinitions = {
                 return null;
             });
         }
-    } satisfies DurableFunctionDefinition<"delayedSignalDeliver", { delayedSignalId: string }, null>
+    } satisfies DurableFunctionDefinition<"delayedSignalDeliver", { delayedSignalId: string }, null>,
+
+    connectorSendMessage: {
+        name: "connectorSendMessage",
+        description: "Send a message through a named connector.",
+        enabledRoles: ["connectors"],
+        handler: async ({ ctx, input, services }) => {
+            return ctx.durableStep("send", async () => {
+                const connector = services.connectorRegistry.get(input.connectorName);
+                if (!connector) {
+                    throw new Error(`Connector not loaded: ${input.connectorName}`);
+                }
+                await connector.sendMessage(input.recipient, input.message);
+                return null;
+            });
+        }
+    } satisfies DurableFunctionDefinition<
+        "connectorSendMessage",
+        { connectorName: string; recipient: ConnectorRecipient; message: ConnectorMessage },
+        null
+    >,
+
+    connectorReceiveMessage: {
+        name: "connectorReceiveMessage",
+        description: "Append an incoming connector message to an agent inbox.",
+        enabledRoles: ["agents"],
+        handler: async ({ ctx, input, services }) => {
+            return ctx.durableStep("receive", async () => {
+                await services.agentPost(
+                    ctx,
+                    { path: input.path },
+                    { type: "message", message: input.message, context: input.context },
+                    { kind: "connector", foreground: true, connector: input.connector }
+                );
+                return null;
+            });
+        }
+    } satisfies DurableFunctionDefinition<
+        "connectorReceiveMessage",
+        {
+            path: AgentPath;
+            message: ConnectorMessage;
+            context: MessageContext;
+            connector: ConnectorRecipient | null;
+        },
+        null
+    >
 } as const;
 
 export type DurableFunctionName = keyof typeof durableFunctionDefinitions;

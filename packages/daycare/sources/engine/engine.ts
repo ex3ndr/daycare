@@ -3,11 +3,20 @@ import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import Docker from "dockerode";
 
-import type { AgentPath, Config, ConnectorMessage, ConnectorTarget, Context, MessageContext } from "@/types";
+import type {
+    AgentPath,
+    Config,
+    ConnectorMessage,
+    ConnectorRecipient,
+    ConnectorTarget,
+    Context,
+    MessageContext
+} from "@/types";
 import { AppServer } from "../api/app-server/appServer.js";
 import { AuthStore } from "../auth/store.js";
 import { configLoad } from "../config/configLoad.js";
 import { durableExecute } from "../durable/durableExecute.js";
+import { durableInstanceCurrentGet } from "../durable/durableRegistry.js";
 import { durableResolve } from "../durable/durableResolve.js";
 import type { Durable } from "../durable/durableTypes.js";
 import { getLogger } from "../log.js";
@@ -73,7 +82,7 @@ import { Workspaces } from "./workspaces/workspaces.js";
 const logger = getLogger("engine.runtime");
 const DAYCARE_RUNTIME_IMAGE_REF = "daycare-runtime:latest";
 const INCOMING_MESSAGES_DEBOUNCE_MS = 100;
-const SERVER_DEFAULT_ROLES = new Set<DaycareRole>(["api", "agents"]);
+const SERVER_DEFAULT_ROLES = new Set<DaycareRole>(["api", "agents", "connectors"]);
 
 export type EngineOptions = {
     config: Config;
@@ -163,6 +172,8 @@ export class Engine {
                 durableExecute({
                     ctx,
                     delayedSignals: this.delayedSignals,
+                    connectorRegistry: this.modules.connectors,
+                    agentPost: (postCtx, target, item, config) => this.agentSystem.post(postCtx, target, item, config),
                     input,
                     name
                 }),
@@ -189,15 +200,12 @@ export class Engine {
                             `receive: Connector message received: path=${resolved.path} merged=${item.count} text=${item.message.text?.length ?? 0}chars files=${item.message.files?.length ?? 0}`
                         );
                         const recipient = messageContextRecipientResolve(item.context);
-                        await this.agentSystem.post(
+                        await this.connectorReceive(
                             resolved.ctx,
-                            { path: resolved.path },
-                            { type: "message", message: item.message, context: item.context },
-                            {
-                                kind: "connector",
-                                foreground: true,
-                                connector: recipient ?? null
-                            }
+                            resolved.path,
+                            item.message,
+                            item.context,
+                            recipient ?? null
                         );
                     }
                 });
@@ -768,9 +776,13 @@ export class Engine {
         } else {
             logger.info("skip: Processes role disabled; skipping durable process monitor");
         }
-        logger.debug("reload: Reloading plugins with current config");
-        await this.pluginManager.reload();
-        logger.debug("reload: Plugin reload complete");
+        if (this.roleEnabled("connectors")) {
+            logger.debug("reload: Reloading plugins with current config");
+            await this.pluginManager.reload();
+            logger.debug("reload: Plugin reload complete");
+        } else {
+            logger.info("skip: Connectors role disabled; skipping plugin/connector startup");
+        }
         if (this.roleEnabled("api")) {
             await this.appServer.start();
         } else {
@@ -801,7 +813,9 @@ export class Engine {
             "register: Core tools registered: tasks, topology, user_profile_update, background, agent_ask, inference_summary, inference_classify, agent_reset, agent_compact, send_user_message, skill, session_history, permanent_agents, workspaces, channels, image_generation, speech_generation, voice_list, media_analysis, mermaid_png, reaction, now, say, send_file, pdf_process, generate_signal, signal_events_csv, signal_subscribe, signal_unsubscribe, vault_read, vault_tree, vault_append, vault_patch, vault_write, fragment_create, fragment_read, fragment_list, fragment_update, fragment_archive"
         );
 
-        await this.pluginManager.preStartAll();
+        if (this.roleEnabled("connectors")) {
+            await this.pluginManager.preStartAll();
+        }
 
         if (this.roleEnabled("agents")) {
             logger.debug("start: Starting agent system");
@@ -826,7 +840,9 @@ export class Engine {
             logger.info("skip: Signals role disabled; skipping delayed signal scheduler");
         }
         await this.durable.start();
-        await this.pluginManager.postStartAll();
+        if (this.roleEnabled("connectors")) {
+            await this.pluginManager.postStartAll();
+        }
         logger.debug("start: Engine.start() complete");
     }
 
@@ -856,6 +872,35 @@ export class Engine {
             return SERVER_DEFAULT_ROLES.has(role);
         }
         return hasRole(role);
+    }
+
+    /**
+     * Routes an incoming connector message to the agent inbox.
+     * Uses the durable function when a runtime is active (cross-role), falls back to direct post.
+     */
+    private async connectorReceive(
+        ctx: Context,
+        targetPath: AgentPath,
+        message: ConnectorMessage,
+        context: MessageContext,
+        connector: ConnectorRecipient | null
+    ): Promise<void> {
+        const durableActive = ctx.durable?.instanceId ?? durableInstanceCurrentGet();
+        if (durableActive) {
+            await ctx.durableCall(`connectorReceive:${targetPath}:${Date.now()}`, "connectorReceiveMessage", {
+                path: targetPath,
+                message,
+                context,
+                connector
+            });
+        } else {
+            await this.agentSystem.post(
+                ctx,
+                { path: targetPath },
+                { type: "message", message, context },
+                { kind: "connector", foreground: true, connector }
+            );
+        }
     }
 
     private runtimeRolesResolve(): DaycareRole[] {

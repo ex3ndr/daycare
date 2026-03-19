@@ -224,6 +224,8 @@ async function delayedSignalsBuild(options: {
             durableExecute({
                 ctx,
                 delayedSignals: delayed,
+                connectorRegistry: { get: () => null },
+                agentPost: async () => {},
                 input,
                 name
             }),
