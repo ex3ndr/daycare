@@ -34,6 +34,7 @@ import { agentLoopPendingPhaseResolve } from "./ops/agentLoopPendingPhaseResolve
 import { agentLoopRun } from "./ops/agentLoopRun.js";
 import { agentModelOverrideApply } from "./ops/agentModelOverrideApply.js";
 import { agentRecipientResolve } from "./ops/agentRecipientResolve.js";
+import { agentRestoreHistoryDebug } from "./ops/agentRestoreHistoryDebug.js";
 import { agentSandboxBackendConfigBuild } from "./ops/agentSandboxBackendConfigBuild.js";
 import { agentStateWrite } from "./ops/agentStateWrite.js";
 import { type AgentSystemPromptContext, agentSystemPrompt } from "./ops/agentSystemPrompt.js";
@@ -1206,10 +1207,39 @@ export class Agent {
     }
 
     private async handleRestore(_item: AgentInboxRestore): Promise<boolean> {
+        const restoreStartedAt = Date.now();
+        const sessionId = this.state.activeSessionId ?? null;
+        const memoryBeforeLoad = memoryUsageSummary();
         try {
             await this.completePendingToolCalls("session_crashed");
             const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
+            const historyDebug = agentRestoreHistoryDebug(history);
+            const memoryAfterLoad = memoryUsageSummary();
+            logger.info(
+                {
+                    agentId: this.id,
+                    sessionId,
+                    history: historyDebug,
+                    memoryBeforeLoad,
+                    memoryAfterLoad
+                },
+                "restore: Loaded persisted session history"
+            );
             const historyMessages = await this.buildHistoryContext(history);
+            const memoryAfterContextBuild = memoryUsageSummary();
+            logger.info(
+                {
+                    agentId: this.id,
+                    sessionId,
+                    historyCount: history.length,
+                    contextMessageCount: historyMessages.length,
+                    restoreDurationMs: Date.now() - restoreStartedAt,
+                    memoryBeforeLoad,
+                    memoryAfterLoad,
+                    memoryAfterContextBuild
+                },
+                "restore: Rebuilt agent context from persisted history"
+            );
             this.state.context = {
                 messages: historyMessages
             };
@@ -1621,6 +1651,25 @@ function providersForAgentResolve(
         return selected;
     }
     return providers;
+}
+
+function memoryUsageSummary(): {
+    rssMiB: number;
+    heapTotalMiB: number;
+    heapUsedMiB: number;
+    externalMiB: number;
+} {
+    const usage = process.memoryUsage();
+    return {
+        rssMiB: mebibytesRound(usage.rss),
+        heapTotalMiB: mebibytesRound(usage.heapTotal),
+        heapUsedMiB: mebibytesRound(usage.heapUsed),
+        externalMiB: mebibytesRound(usage.external)
+    };
+}
+
+function mebibytesRound(value: number): number {
+    return Math.round((value / 1024 / 1024) * 10) / 10;
 }
 
 function isAbortError(error: unknown, signal?: AbortSignal): boolean {

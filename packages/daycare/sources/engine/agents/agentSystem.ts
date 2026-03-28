@@ -214,6 +214,14 @@ export class AgentSystem {
         }
         await fs.mkdir(this.config.current.dataDir, { recursive: true });
         const records = await this.storage.agents.findMany();
+        logger.info(
+            {
+                totalAgents: records.length,
+                lifecycleCounts: countBy(records, (record) => record.lifecycle),
+                kindCounts: countBy(records, (record) => record.kind)
+            },
+            "restore: Loaded persisted agent records"
+        );
 
         for (const record of records) {
             const agentId = record.id;
@@ -1460,4 +1468,13 @@ function agentMatchesStrategy(config: AgentConfig, strategy: AgentFetchStrategy)
 
 function poisonPillKindIs(kind: AgentConfig["kind"] | null | undefined): boolean {
     return kind === "sub" || kind === "search" || kind === "app";
+}
+
+function countBy<T>(items: T[], keyResolve: (item: T) => string | null | undefined): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const item of items) {
+        const key = keyResolve(item)?.trim() || "unknown";
+        counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return counts;
 }
