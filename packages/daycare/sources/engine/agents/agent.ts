@@ -29,6 +29,8 @@ import { agentEventEmit } from "./ops/agentEventEmit.js";
 import { agentHistoryAppend } from "./ops/agentHistoryAppend.js";
 import { agentHistoryContext } from "./ops/agentHistoryContext.js";
 import { agentHistoryLoad } from "./ops/agentHistoryLoad.js";
+import { agentHistoryPendingLoad } from "./ops/agentHistoryPendingLoad.js";
+import { agentHistoryRestoreLoad } from "./ops/agentHistoryRestoreLoad.js";
 import type { AgentInbox } from "./ops/agentInbox.js";
 import { agentLoopPendingPhaseResolve } from "./ops/agentLoopPendingPhaseResolve.js";
 import { agentLoopRun } from "./ops/agentLoopRun.js";
@@ -1212,7 +1214,7 @@ export class Agent {
         const memoryBeforeLoad = memoryUsageSummary();
         try {
             await this.completePendingToolCalls("session_crashed");
-            const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
+            const history = await agentHistoryRestoreLoad(this.agentSystem.storage, this.ctx);
             const historyDebug = agentRestoreHistoryDebug(history);
             const memoryAfterLoad = memoryUsageSummary();
             logger.info(
@@ -1348,7 +1350,10 @@ export class Agent {
      * Expects: called before rebuilding context or starting a new inference loop.
      */
     private async completePendingToolCalls(reason: "session_crashed" | "user_aborted"): Promise<void> {
-        const records = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
+        const records =
+            reason === "session_crashed"
+                ? await agentHistoryPendingLoad(this.agentSystem.storage, this.ctx)
+                : await agentHistoryLoad(this.agentSystem.storage, this.ctx);
         const pendingPhase = reason === "session_crashed" ? agentLoopPendingPhaseResolve(records) : null;
         if (!pendingPhase) {
             return;
@@ -1409,7 +1414,7 @@ export class Agent {
             stopAfterPendingPhase: false
         });
 
-        const history = await agentHistoryLoad(this.agentSystem.storage, this.ctx);
+        const history = await agentHistoryRestoreLoad(this.agentSystem.storage, this.ctx);
         const historyMessages = await this.buildHistoryContext(history);
         this.state.context = {
             messages: historyMessages

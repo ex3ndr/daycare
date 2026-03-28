@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, max } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, lt, max } from "drizzle-orm";
 import type { AgentHistoryRecord } from "@/types";
 import type { DaycareDb } from "../schema.js";
 import { sessionHistoryTable, sessionsTable } from "../schema.js";
@@ -81,6 +81,49 @@ export class HistoryRepository {
             .where(and(eq(sessionHistoryTable.sessionId, sessionId), gt(sessionHistoryTable.id, afterId)))
             .orderBy(asc(sessionHistoryTable.id));
         return rows.map((row) => historyParse(row)).filter((record): record is AgentHistoryRecord => record !== null);
+    }
+
+    /**
+     * Loads a descending chunk of history rows for one session.
+     * Expects: limit > 0. When beforeId is provided, all returned ids are smaller than beforeId.
+     */
+    async findChunkBySessionId(
+        sessionId: string,
+        options: {
+            limit: number;
+            beforeId?: number | null;
+            types?: AgentHistoryRecord["type"][];
+        }
+    ): Promise<Array<{ id: number; record: AgentHistoryRecord }>> {
+        const conditions = [eq(sessionHistoryTable.sessionId, sessionId)];
+        if (options.beforeId !== undefined && options.beforeId !== null) {
+            conditions.push(lt(sessionHistoryTable.id, options.beforeId));
+        }
+        if (options.types && options.types.length > 0) {
+            conditions.push(inArray(sessionHistoryTable.type, options.types));
+        }
+
+        const rows = await this.db
+            .select({
+                id: sessionHistoryTable.id,
+                type: sessionHistoryTable.type,
+                at: sessionHistoryTable.at,
+                data: sessionHistoryTable.data
+            })
+            .from(sessionHistoryTable)
+            .where(and(...conditions))
+            .orderBy(desc(sessionHistoryTable.id))
+            .limit(options.limit);
+
+        return rows
+            .map((row) => {
+                const record = historyParse(row);
+                if (!record) {
+                    return null;
+                }
+                return { id: row.id, record };
+            })
+            .filter((row): row is { id: number; record: AgentHistoryRecord } => row !== null);
     }
 
     /**
