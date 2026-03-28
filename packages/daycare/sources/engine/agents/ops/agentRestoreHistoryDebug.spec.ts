@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { agentRestoreHistoryDebug } from "./agentRestoreHistoryDebug.js";
 
 describe("agentRestoreHistoryDebug", () => {
-    it("summarizes counts and text-heavy fields from persisted history", () => {
+    it("summarizes the approximate rebuilt context instead of raw history bulk", () => {
         const result = agentRestoreHistoryDebug([
             {
                 type: "user_message",
@@ -16,8 +16,23 @@ describe("agentRestoreHistoryDebug", () => {
             {
                 type: "assistant_message",
                 at: 200,
-                content: [{ type: "text", text: "world" }],
+                content: [
+                    { type: "text", text: "world" },
+                    {
+                        type: "toolCall",
+                        id: "tool-1",
+                        name: "run_python",
+                        arguments: { code: "print('ok')" }
+                    }
+                ],
                 tokens: null
+            },
+            {
+                type: "assistant_rewrite",
+                at: 250,
+                assistantAt: 200,
+                text: "planet",
+                reason: "run_python_failure_trim"
             },
             {
                 type: "rlm_complete",
@@ -32,14 +47,25 @@ describe("agentRestoreHistoryDebug", () => {
         ]);
 
         expect(result).toEqual({
-            recordCount: 3,
+            recordCount: 4,
             oldestAt: 100,
             newestAt: 300,
             fileCount: 2,
-            textChars: 23,
+            rebuilt: {
+                userMessageCount: 1,
+                assistantMessageCount: 1,
+                toolResultCount: 1,
+                assistantRewriteCount: 1,
+                messageCount: 3,
+                textChars: 84
+            },
+            skippedTypeCounts: {
+                rlm_complete: 1
+            },
             typeCounts: {
                 user_message: 1,
                 assistant_message: 1,
+                assistant_rewrite: 1,
                 rlm_complete: 1
             }
         });
