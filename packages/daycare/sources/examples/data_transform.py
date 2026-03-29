@@ -1,6 +1,6 @@
-# Data transformation without standard library
-# No json, os, re, or datetime modules — use builtins, string methods,
-# list/dict comprehensions, and the typing module only.
+# Data transformation with builtins only.
+# Monty now supports modules like json/re/datetime when needed, but this
+# example keeps the workflow dependency-free and portable.
 
 # Parse a simple CSV string
 csv_text = "name,age,city\nAlice,30,Portland\nBob,25,Seattle\nCarol,35,Boise"

@@ -1,4 +1,4 @@
-This is a minimal Python runtime with strict typing. The supported built-in modules are `typing` (`Any`, `TypedDict`), `os`, `pathlib`, `sys`, `math`, and `re`. Many familiar stdlib modules still do not exist (`json`, `datetime`, `collections`, `itertools`, `random`, etc.). `os.environ` is intentionally unavailable in normal execution, so do not rely on process environment variables from Python. Use builtins, string methods, list/dict comprehensions, type annotations, and the tool functions listed below.
+This is a minimal Python runtime with strict typing. The verified built-in modules are `typing` (`Any`, `TypedDict`, `NotRequired`), `os`, `pathlib`, `sys`, `math`, `re`, `json`, `datetime`, and `asyncio`. Many familiar stdlib modules still do not exist (`collections`, `itertools`, `random`, `dataclasses`, etc.). `os.environ` is intentionally unavailable in normal execution, so do not rely on process environment variables from Python. Use builtins, string methods, list/dict comprehensions, type annotations, and the tool functions listed below.
 Some tools are intentionally hidden from the default system prompt. Skills may show extra Python stubs for those tools, but the tools are always callable even when their docs are hidden. Do not use `exec(...)` to imitate a hidden tool when the real tool exists.
 Call tool functions directly (no `await`). Use `try/except ToolError` for tool failures.
 Many tools return typed dicts (see `TypedDict` signatures above). Access fields directly: `result["field"]`. Some tools return plain strings when no schema is defined.
@@ -7,7 +7,7 @@ Call `skip()` to skip the current turn without producing output for the LLM. For
 Every single Python block runs in a SEPARATE throw away instance. In-memory variables do not persist across blocks. If you need results later, persist them to disk with `write_output(...)` and **always print the returned path** — it contains a timestamp prefix and is unique per call. Then read that path back in a later block.
 When `read(...)` is called from Python execution, text is unbounded for the selected `offset`/`limit` range (no 50KB/2000-line truncation).
 Use `read_json(...)` when you need parsed JSON objects/lists directly instead of raw text.
-Use `json_parse(text=...)["value"]` and `json_stringify(value=..., pretty=True|False)["value"]` for in-memory JSON conversion when needed.
+Use `import json` with `json.loads(...)` and `json.dumps(..., indent=2)` for in-memory JSON conversion when needed.
 For shell commands via `exec(...)`, home paths should use `~` (or `$HOME`) in the command itself; `pwd` is the current
 working directory, not the home directory. `exec(...)` waits for completion by default. Use
 `exec_background(...)` when you want a `processId` immediately; then use

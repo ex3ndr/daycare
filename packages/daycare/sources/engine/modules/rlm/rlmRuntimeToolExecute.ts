@@ -1,11 +1,5 @@
 import type { ToolExecutionContext } from "@/types";
-import {
-    CONTEXT_COMPACT_TOOL_NAME,
-    CONTEXT_RESET_TOOL_NAME,
-    JSON_PARSE_TOOL_NAME,
-    JSON_STRINGIFY_TOOL_NAME,
-    STEP_TOOL_NAME
-} from "./rlmConstants.js";
+import { CONTEXT_COMPACT_TOOL_NAME, CONTEXT_RESET_TOOL_NAME, STEP_TOOL_NAME } from "./rlmConstants.js";
 
 type RuntimeExecuteHandled = {
     handled: true;
@@ -27,32 +21,6 @@ export async function rlmRuntimeToolExecute(
     args: unknown,
     context: ToolExecutionContext
 ): Promise<RlmRuntimeToolExecuteResult> {
-    if (toolName === JSON_PARSE_TOOL_NAME) {
-        const payload = argsRecordResolve(args);
-        const text = argsStringResolve(payload, "text");
-        return {
-            handled: true,
-            value: {
-                value: JSON.parse(text)
-            }
-        };
-    }
-
-    if (toolName === JSON_STRINGIFY_TOOL_NAME) {
-        const payload = argsRecordResolve(args);
-        const pretty = argsBooleanResolve(payload, "pretty");
-        const serialized = JSON.stringify(payload.value, null, pretty ? 2 : undefined);
-        if (typeof serialized !== "string") {
-            throw new Error("json_stringify could not serialize the provided value.");
-        }
-        return {
-            handled: true,
-            value: {
-                value: serialized
-            }
-        };
-    }
-
     if (toolName === STEP_TOOL_NAME) {
         const payload = argsRecordResolve(args);
         const prompt = argsStringResolve(payload, "prompt").trim();
@@ -148,17 +116,6 @@ function argsStringResolve(args: Record<string, unknown>, key: string): string {
     const value = args[key];
     if (typeof value !== "string") {
         throw new Error(`${key} must be a string.`);
-    }
-    return value;
-}
-
-function argsBooleanResolve(args: Record<string, unknown>, key: string): boolean {
-    const value = args[key];
-    if (typeof value === "undefined") {
-        return false;
-    }
-    if (typeof value !== "boolean") {
-        throw new Error(`${key} must be a boolean when provided.`);
     }
     return value;
 }

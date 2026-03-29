@@ -28,12 +28,17 @@ describe("rlmVerify", () => {
     });
 
     it("fails on unsupported module usage via monty typing", () => {
-        const code = "import json\njson.loads('{}')";
+        const code = "import random\nrandom.randint(1, 3)";
         expect(() => rlmVerify(code, createContext())).toThrow("unresolved-import");
     });
 
     it("accepts supported math imports", () => {
         const code = "from math import sqrt\nsqrt(4)";
+        expect(() => rlmVerify(code, createContext())).not.toThrow();
+    });
+
+    it("accepts supported json imports", () => {
+        const code = 'import json\njson.loads("{\\"ok\\":true}")';
         expect(() => rlmVerify(code, createContext())).not.toThrow();
     });
 

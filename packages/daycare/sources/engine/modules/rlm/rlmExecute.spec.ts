@@ -63,8 +63,9 @@ describe("rlmExecute", () => {
 
         const code = [
             "first = echo('one')",
+            "import json",
             "try:",
-            '    echo(json_parse(\'{"nested":{"count":1}}\')["value"])',
+            '    echo(json.loads(\'{"nested":{"count":1}}\'))',
             "except ToolError:",
             "    pass",
             "second = echo(first['text'])",
@@ -74,7 +75,7 @@ describe("rlmExecute", () => {
         const result = await rlmExecute(code, montyPreambleBuild(baseTools), createContext(), resolver, "tool-call-1");
 
         expect(result.output).toBe('{"text":"echo:echo:one"}');
-        expect(result.toolCallCount).toBe(4);
+        expect(result.toolCallCount).toBe(3);
     });
 
     it("captures print output", async () => {
@@ -276,24 +277,25 @@ describe("rlmExecute", () => {
         expect(resolver.execute).not.toHaveBeenCalled();
     });
 
-    it("supports json_parse/json_stringify runtime operations with optional pretty output", async () => {
+    it("supports native json module operations without runtime helpers", async () => {
         const resolver = createResolver(async (name) => {
             throw new Error(`Unexpected tool ${name}`);
         });
 
         const result = await rlmExecute(
             [
-                'parsed = json_parse(\'{"alpha":1,"rows":[{"id":"a"}]}\')["value"]',
-                'json_stringify(parsed, pretty=True)["value"]'
+                "import json",
+                'parsed = json.loads(\'{"alpha":1,"rows":[{"id":"a"}]}\')',
+                "json.dumps(parsed, indent=2)"
             ].join("\n"),
             montyPreambleBuild(baseTools),
             createContext(),
             resolver,
-            "tool-call-json-helpers"
+            "tool-call-json-module"
         );
 
         expect(result.output).toBe('{\n  "alpha": 1,\n  "rows": [\n    {\n      "id": "a"\n    }\n  ]\n}');
-        expect(result.toolCallCount).toBe(2);
+        expect(result.toolCallCount).toBe(0);
         expect(resolver.execute).not.toHaveBeenCalled();
     });
 

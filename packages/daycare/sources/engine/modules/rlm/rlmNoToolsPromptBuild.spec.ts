@@ -28,7 +28,7 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).toContain("executed sequentially from top to bottom");
         expect(prompt).toContain("all remaining `run_python` calls in that response are skipped");
         expect(prompt).toContain("minimal Python runtime with strict typing");
-        expect(prompt).toContain("`os`, `pathlib`, `sys`, `math`, and `re`");
+        expect(prompt).toContain("`os`, `pathlib`, `sys`, `math`, `re`, `json`, `datetime`, and `asyncio`");
         expect(prompt).toContain("`os.environ` is intentionally unavailable");
         expect(prompt).toContain(bundledExamplesDirResolve());
         expect(prompt).toContain("prefer it for user-visible replies");
@@ -40,10 +40,8 @@ describe("rlmNoToolsPromptBuild", () => {
         expect(prompt).toContain("def step(prompt: str) -> None:");
         expect(prompt).toContain("def context_reset(message: str | None = None) -> None:");
         expect(prompt).toContain("def context_compact() -> None:");
-        expect(prompt).toContain("def json_parse(text: str) -> JsonParseResponse:");
-        expect(prompt).toContain(
-            "def json_stringify(value: Any, pretty: bool | None = None) -> JsonStringifyResponse:"
-        );
+        expect(prompt).not.toContain("def json_parse(");
+        expect(prompt).not.toContain("def json_stringify(");
         expect(prompt).not.toContain("Available skills");
         expect(prompt).toContain("Execution results are sent back as `run_python` tool results.");
         expect(prompt).toContain("do not use `print()` for the final return value");

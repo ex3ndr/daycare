@@ -131,27 +131,29 @@ res = exec(
 
 If the command touches multiple services, keep them visible in the command or script source.
 
-### 5) Use runtime JSON helpers for structured payloads
+### 5) Use the native `json` module for structured payloads
 
-When a command or tool returns JSON text, use runtime helpers instead of hand-rolled parsing logic:
+When a command or tool returns JSON text, use the built-in `json` module instead of hand-rolled parsing logic:
 
-1. `json_parse(text=...)["value"]` to convert JSON text into native Python values.
-2. `json_stringify(value=..., pretty=True|False)["value"]` to serialize values safely.
+1. `json.loads(...)` to convert JSON text into native Python values.
+2. `json.dumps(..., separators=(",", ":"))` or `json.dumps(..., indent=2)` to serialize values safely.
 
 Use this pattern when passing structured data between tools, printing compact summaries, or normalizing payloads before decisions.
 
 Example:
 
 ```python
+import json
+
 raw = exec(
     command="curl -fsSL https://api.example.com/v1/incidents"
 )
-incidents = json_parse(text=raw.output)["value"]
+incidents = json.loads(raw.output)
 
 if len(incidents) == 0:
     skip()
 
-compact = json_stringify(value=incidents[:5], pretty=False)["value"]
+compact = json.dumps(incidents[:5], separators=(",", ":"))
 print("Review these incidents and produce triage priorities:")
 print(compact)
 ```
@@ -236,13 +238,15 @@ When a task needs to scrape or parse a website, write a dedicated parser script 
 4. Call it from the task via `exec`.
 
 ```python
+import json
+
 res = exec(command="python3 /developer/tasks/price-monitor/parse.py")
-prices = json_parse(text=res.output)["value"]
+prices = json.loads(res.output)
 
 if len(prices["changes"]) == 0:
     skip()
 
-compact = json_stringify(value=prices["changes"], pretty=False)["value"]
+compact = json.dumps(prices["changes"], separators=(",", ":"))
 print("These prices changed since last check. Summarize the moves:")
 print(compact)
 ```
@@ -292,15 +296,17 @@ The orchestrator should stay simple: read file, validate schema, decide whether 
 Example flow:
 
 ```python
+import json
+
 res = exec(command="node /developer/tasks/codegen/handoff/read-result.mjs")
-payload = json_parse(text=res.output)["value"]
+payload = json.loads(res.output)
 
 if payload["valid"] is not True:
     print("The JSON handoff did not match schema. Complete the missing fields and rewrite result.json.")
     print(payload["errors"])
     return
 
-compact = json_stringify(value=payload["result"], pretty=False)["value"]
+compact = json.dumps(payload["result"], separators=(",", ":"))
 print("Use this validated result for the next step:")
 print(compact)
 ```
