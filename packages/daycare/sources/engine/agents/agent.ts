@@ -1411,7 +1411,7 @@ export class Agent {
             appendHistoryRecord: (record) => agentHistoryAppend(this.agentSystem.storage, this.ctx, record),
             notifySubagentFailure: (failureReason, error) => this.notifySubagentFailure(failureReason, error),
             initialPhase,
-            stopAfterPendingPhase: false
+            stopAfterPendingPhase: true
         });
 
         const history = await agentHistoryRestoreLoad(this.agentSystem.storage, this.ctx);
